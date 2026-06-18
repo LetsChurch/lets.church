@@ -3,6 +3,9 @@ import { type JWTPayload, jwtVerify, SignJWT } from 'jose';
 import { z } from 'zod';
 
 const { JWT_SECRET } = z.object({ JWT_SECRET: z.string() }).parse(process.env);
+// Session cookies derive their HS512 key by decoding JWT_SECRET as HEX. This is
+// intentionally a different derivation than download-URL signing, which uses the
+// raw UTF-8 bytes (see util/server-env.ts). Keep them separate.
 const jwtSecret = Buffer.from(JWT_SECRET, 'hex');
 
 function jwtFactory<T extends StandardSchemaV1<JWTPayload>>(

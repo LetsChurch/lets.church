@@ -10,10 +10,11 @@ import {
   resetPassword,
 } from '@/temporal';
 import { login } from '@/util/auth';
-import { createSessionJwt, SESSION_EXPIRATION_SECONDS } from '@/util/jwt';
+import { createSessionJwt } from '@/util/jwt';
 import logger from '@/util/logger';
 import { getClientIpAddress } from '@/util/request-ip';
 import { generateResetPasswordEmail } from '@/util/reset-password-email';
+import { SESSION_COOKIE, sessionCookieOptions } from '@/util/session-cookie';
 import { validateTurnstile } from '@/util/turnstile';
 import testPassword from '@/util/zxcvbn';
 import { anonProcedure } from '../trpc';
@@ -50,10 +51,11 @@ export const authProcedures = {
         try {
           const session = await login(id, password);
 
-          setCookie('lc-session', await createSessionJwt({ sub: session.id }), {
-            sameSite: 'lax',
-            maxAge: SESSION_EXPIRATION_SECONDS,
-          });
+          setCookie(
+            SESSION_COOKIE,
+            await createSessionJwt({ sub: session.id }),
+            sessionCookieOptions,
+          );
 
           moduleLogger.info(
             { context: { userId: id, sessionId: session.id, clientIp } },

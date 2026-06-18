@@ -244,6 +244,69 @@ export const AppSession = pgTable(
   }),
 );
 
+export const OidcAuthorizationCode = pgTable(
+  'oidc_authorization_code',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // SHA-256 hash of the opaque code; the raw code is never stored.
+    codeHash: text('code_hash').notNull().unique(),
+    appUserId: uuid('app_user_id').notNull(),
+    clientId: text('client_id').notNull(),
+    redirectUri: text('redirect_uri').notNull(),
+    scope: text('scope').notNull(),
+    nonce: text('nonce'),
+    codeChallenge: text('code_challenge').notNull(),
+    codeChallengeMethod: text('code_challenge_method')
+      .notNull()
+      .default('S256'),
+    authTime: timestamp('auth_time', { precision: 3 }).notNull(),
+    expiresAt: timestamp('expires_at', { precision: 3 }).notNull(),
+    consumedAt: timestamp('consumed_at', { precision: 3 }),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+  },
+  (OidcAuthorizationCode) => ({
+    oidc_authorization_code_appUser_fkey: foreignKey({
+      name: 'oidc_authorization_code_appUser_fkey',
+      columns: [OidcAuthorizationCode.appUserId],
+      foreignColumns: [AppUser.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+  }),
+);
+
+export const OidcRefreshToken = pgTable(
+  'oidc_refresh_token',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // SHA-256 hash of the opaque refresh token; the raw token is never stored.
+    tokenHash: text('token_hash').notNull().unique(),
+    // Tokens minted from one authorization share a family; reuse of a rotated
+    // token revokes the entire family.
+    familyId: uuid('family_id').notNull(),
+    appUserId: uuid('app_user_id').notNull(),
+    clientId: text('client_id').notNull(),
+    scope: text('scope').notNull(),
+    authTime: timestamp('auth_time', { precision: 3 }).notNull(),
+    expiresAt: timestamp('expires_at', { precision: 3 }).notNull(),
+    rotatedAt: timestamp('rotated_at', { precision: 3 }),
+    revokedAt: timestamp('revoked_at', { precision: 3 }),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+  },
+  (OidcRefreshToken) => ({
+    oidc_refresh_token_appUser_fkey: foreignKey({
+      name: 'oidc_refresh_token_appUser_fkey',
+      columns: [OidcRefreshToken.appUserId],
+      foreignColumns: [AppUser.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    oidc_refresh_token_family_idx: index('oidc_refresh_token_family_idx').on(
+      OidcRefreshToken.familyId,
+    ),
+  }),
+);
+
 export const ChannelSubscription = pgTable(
   'channel_subscription',
   {
@@ -1522,6 +1585,28 @@ export const AppSessionRelations = relations(AppSession, ({ one }) => ({
     references: [AppUser.id],
   }),
 }));
+
+export const OidcAuthorizationCodeRelations = relations(
+  OidcAuthorizationCode,
+  ({ one }) => ({
+    appUser: one(AppUser, {
+      relationName: 'AppUserToOidcAuthorizationCode',
+      fields: [OidcAuthorizationCode.appUserId],
+      references: [AppUser.id],
+    }),
+  }),
+);
+
+export const OidcRefreshTokenRelations = relations(
+  OidcRefreshToken,
+  ({ one }) => ({
+    appUser: one(AppUser, {
+      relationName: 'AppUserToOidcRefreshToken',
+      fields: [OidcRefreshToken.appUserId],
+      references: [AppUser.id],
+    }),
+  }),
+);
 
 export const ChannelSubscriptionRelations = relations(
   ChannelSubscription,

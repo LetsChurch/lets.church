@@ -42,6 +42,7 @@ COPY --chown=nodeapp:nodeapp packages/elasticsearch/package.json ./packages/elas
 COPY --chown=nodeapp:nodeapp packages/temporal/package.json ./packages/temporal/
 COPY --chown=nodeapp:nodeapp packages/background-worker/package.json ./packages/background-worker/
 COPY --chown=nodeapp:nodeapp packages/web/package.json ./packages/web/
+COPY --chown=nodeapp:nodeapp packages/oidc-client/package.json ./packages/oidc-client/
 COPY --chown=nodeapp:nodeapp packages/import-worker/package.json ./packages/import-worker/
 COPY --chown=nodeapp:nodeapp packages/probe-worker/package.json ./packages/probe-worker/
 COPY --chown=nodeapp:nodeapp packages/transcode-worker/package.json ./packages/transcode-worker/
@@ -82,6 +83,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 imagema
 RUN pnpm --filter @letschurch/temporal exec playwright install-deps chromium
 USER nodeapp
 RUN pnpm --filter @letschurch/temporal exec playwright install chromium
+
+# Lightweight dev image for the OIDC client example. It only needs node_modules
+# and the workspace metadata; the example source is bind-mounted in dev. We skip
+# the heavy `dev`/`build` layers (ffmpeg, playwright, web build) entirely.
+FROM base AS oidc-client-dev
+COPY --chown=nodeapp:nodeapp --from=deps /usr/src/app/node_modules ./node_modules
+COPY --chown=nodeapp:nodeapp --from=deps /usr/src/app/packages/ ./packages/
+COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml tsconfig.json package.json ./
+COPY --chown=nodeapp:nodeapp packages/ ./packages/
+ENV NODE_ENV=development
 
 FROM base AS prod
 COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml package.json ./

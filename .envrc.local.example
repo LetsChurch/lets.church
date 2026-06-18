@@ -1,5 +1,10 @@
 export ZXCVBN_MINIMUM_SCORE=0
 
+# Embedded OIDC provider. The `.envrc` ships a dev signing key and defaults the
+# issuer to the web URL. Clients are public (PKCE-only) and declared entirely in
+# code in packages/web/src/util/oidc/clients.ts — no per-client secrets or env
+# vars. To add a client, add an entry to that file.
+
 export SENTRY_WEB_SERVER_DSN=https://foo@bar.ingest.sentry.io/baz
 export SENTRY_GATEWAY_DSN=https://foo@bar.ingest.sentry.io/baz
 export SENTRY_BACKGROUND_WORKER_DSN=https://foo@bar.ingest.sentry.io/baz

@@ -20,6 +20,11 @@ const {
   })
   .parse(process.env);
 
+// NOTE: this derives the key from JWT_SECRET as raw UTF-8 bytes, which is a
+// DIFFERENT derivation than session cookies use (those decode JWT_SECRET as hex
+// — see util/jwt.ts). These are independent signing domains (download URLs vs
+// session cookies) and each must verify with the same derivation it signs with;
+// don't "unify" them or you'll invalidate the other's tokens.
 const jwtSecret = new TextEncoder().encode(JWT_SECRET);
 
 export async function makeDownloadServiceUrl(

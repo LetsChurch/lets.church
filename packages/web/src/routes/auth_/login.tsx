@@ -16,14 +16,33 @@ import { useAppMantineForm } from '@/components/mantine';
 import { loginSchema } from '@/schemas/auth';
 import { useTRPC } from '@/trpc/react';
 
+// Only allow internal absolute paths as a post-login destination, so a crafted
+// `?redirect=` can't turn the login page into an open redirector. Callers (the
+// OIDC authorize server route, the invitation-accept flow) pass a relative path.
+function safeRedirect(redirectTo?: string): string | undefined {
+  if (
+    !redirectTo ||
+    !redirectTo.startsWith('/') ||
+    redirectTo.startsWith('//')
+  ) {
+    return undefined;
+  }
+  return redirectTo;
+}
+
 export const Route = createFileRoute('/auth_/login')({
   component: LoginRoute,
-  beforeLoad: async ({ context }) => {
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } =>
+    typeof search.redirect === 'string' ? { redirect: search.redirect } : {},
+  beforeLoad: async ({ context, search }) => {
     const hasSession = await context.queryClient.fetchQuery(
       context.trpc.common.hasValidSession.queryOptions(),
     );
     if (hasSession) {
-      throw redirect({ to: '/' });
+      const dest = safeRedirect(search.redirect);
+      // The destination may be a server route (e.g. /oidc/authorize); use a hard
+      // redirect so the request actually hits the server handler.
+      throw dest ? redirect({ href: dest }) : redirect({ to: '/' });
     }
   },
   loader: ({ context: { queryClient, trpc } }) =>
@@ -34,6 +53,7 @@ function LoginRoute() {
   const [error, setError] = useState<string | false>(false);
 
   const router = useRouter();
+  const { redirect: redirectTo } = Route.useSearch();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const { data: env } = useSuspenseQuery(
@@ -56,6 +76,16 @@ function LoginRoute() {
         // staleTime would otherwise keep the logged-out session data "fresh",
         // leaving the UI (e.g. the header's login button) stuck.
         await queryClient.invalidateQueries();
+
+        // If we arrived here with a redirect target (e.g. an OIDC authorize
+        // request), send the user back with a full navigation so the server
+        // route can resume the flow.
+        const dest = safeRedirect(redirectTo);
+        if (dest) {
+          window.location.assign(dest);
+          return;
+        }
+
         await router.invalidate();
         await router.navigate({ to: '/' });
       },

@@ -19,6 +19,10 @@ const dirname =
 export default defineConfig((_config) => ({
   server: {
     port: 3000,
+    // Allow the in-cluster service hostname so other dev containers (e.g. the
+    // oidc-client example) can make back-channel calls to http://web:3000
+    // without Vite's dev-server host check rejecting them.
+    allowedHosts: ['web'],
   },
   plugins: [
     tsConfigPaths(),

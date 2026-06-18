@@ -60,6 +60,12 @@ services:
       TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
       WEB_URL: ${HOST_WEB_URL}
       ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
+      # Embedded OIDC provider (lets.church as identity provider for first-party
+      # satellite sites). Signing key is asymmetric (ES256) and separate from
+      # JWT_SECRET. Clients are public (PKCE-only) and declared in code — no
+      # per-client secrets or env vars.
+      OIDC_ISSUER: ${OIDC_ISSUER:-${HOST_WEB_URL}}
+      OIDC_SIGNING_JWK: ${OIDC_SIGNING_JWK}
       # OpenRouter access for the admin LLM-eval surface
       # (`evaluateLlmModel` tRPC mutation) and for dev-only seed bootstrap
       # scripts (`just generate-seed-annotations`) — both execute inside
@@ -88,6 +94,34 @@ services:
       # under seed-data/llm/ aren't S3-synced, they're consumed directly off
       # disk). Also lets `just dump-llm-seed-data` write back into the repo.
       - ./seed-data:/seed-data
+
+  # Example Relying Party that authenticates users against the embedded OIDC
+  # provider in `web`. Exposed on host port 4001. Browser-facing OIDC URLs use
+  # OIDC_ISSUER (http://localhost:4000); back-channel calls use the internal
+  # service URL (http://web:3000).
+  oidc-client:
+    build:
+      context: .
+      target: oidc-client-dev
+    command: pnpm --filter @letschurch/oidc-client run dev
+    restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      - 127.0.0.1:${HOST_OIDC_CLIENT_PORT}:3000
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      OIDC_ISSUER: ${OIDC_ISSUER:-${HOST_WEB_URL}}
+      OIDC_INTERNAL_URL: http://web:3000
+      OIDC_CLIENT_ID: example-app
+      OIDC_REDIRECT_URI: ${OIDC_CLIENT_EXAMPLE_REDIRECT_URI}
+      OIDC_POST_LOGOUT_REDIRECT_URI: ${OIDC_CLIENT_EXAMPLE_POST_LOGOUT_URI}
+    volumes:
+      - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
+      - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
+      - ./packages/oidc-client:/usr/src/app/packages/oidc-client
+      - /usr/src/app/packages/oidc-client/node_modules
 
   background-worker:
     build:
