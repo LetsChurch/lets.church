@@ -4,7 +4,7 @@ import {
   importJWK,
   type JWK,
 } from 'jose';
-import { rawSigningJwk } from './config';
+import { getRawSigningJwk } from './config';
 
 // All OIDC tokens are signed with ES256 (EC P-256). Satellites verify them via
 // the public JWKS endpoint, so the algorithm must be asymmetric.
@@ -19,7 +19,7 @@ type SigningKey = {
 };
 
 const parsedJwks: JWK[] = (() => {
-  const json: unknown = JSON.parse(rawSigningJwk);
+  const json: unknown = JSON.parse(getRawSigningJwk());
   const arr = Array.isArray(json) ? json : [json];
   if (arr.length === 0) {
     throw new Error('OIDC_SIGNING_JWK must contain at least one JWK');

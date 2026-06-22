@@ -55,7 +55,7 @@ describe.skipIf(!hasEnv)('oidc token JWTs', () => {
   test('ID token verifies against the published JWKS and carries claims', async () => {
     const { mintIdToken } = await import('./tokens');
     const { getVerificationKeySet } = await import('./keys');
-    const { issuer } = await import('./config');
+    const { getIssuer } = await import('./config');
     const { jwtVerify } = await import('jose');
 
     const idToken = await mintIdToken({
@@ -68,7 +68,7 @@ describe.skipIf(!hasEnv)('oidc token JWTs', () => {
 
     const keySet = await getVerificationKeySet();
     const { payload } = await jwtVerify(idToken, keySet, {
-      issuer,
+      issuer: getIssuer(),
       audience: 'app-1',
     });
 

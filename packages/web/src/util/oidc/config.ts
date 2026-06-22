@@ -9,24 +9,42 @@ import { z } from 'zod';
 // to support key rotation). This is deliberately separate from `JWT_SECRET`,
 // which signs first-party session cookies with HS512 and must never leave the
 // server.
-const { OIDC_ISSUER, OIDC_SIGNING_JWK } = z
-  .object({
-    OIDC_ISSUER: z.string().url(),
-    OIDC_SIGNING_JWK: z.string(),
-  })
-  .parse(process.env);
+// The env parse is deliberately lazy and memoized rather than run at import
+// time: the static constants below (scopes, TTLs) and the pure client-registry
+// helpers in `clients.ts` must be importable without OIDC env configured (e.g.
+// in unit tests). Anything that actually serves OIDC calls `oidcEnv()` and so
+// still fails fast if `OIDC_ISSUER`/`OIDC_SIGNING_JWK` are missing at runtime.
+let cachedEnv: { OIDC_ISSUER: string; OIDC_SIGNING_JWK: string } | null = null;
+function oidcEnv() {
+  if (!cachedEnv) {
+    cachedEnv = z
+      .object({
+        OIDC_ISSUER: z.string().url(),
+        OIDC_SIGNING_JWK: z.string(),
+      })
+      .parse(process.env);
+  }
+  return cachedEnv;
+}
 
-export const issuer = OIDC_ISSUER.replace(/\/+$/, '');
+export function getIssuer() {
+  return oidcEnv().OIDC_ISSUER.replace(/\/+$/, '');
+}
 
-export const rawSigningJwk = OIDC_SIGNING_JWK;
+export function getRawSigningJwk() {
+  return oidcEnv().OIDC_SIGNING_JWK;
+}
 
-export const oidcEndpoints = {
-  authorization: `${issuer}/oidc/authorize`,
-  token: `${issuer}/oidc/token`,
-  userinfo: `${issuer}/oidc/userinfo`,
-  jwks: `${issuer}/.well-known/jwks.json`,
-  endSession: `${issuer}/oidc/logout`,
-} as const;
+export function getOidcEndpoints() {
+  const issuer = getIssuer();
+  return {
+    authorization: `${issuer}/oidc/authorize`,
+    token: `${issuer}/oidc/token`,
+    userinfo: `${issuer}/oidc/userinfo`,
+    jwks: `${issuer}/.well-known/jwks.json`,
+    endSession: `${issuer}/oidc/logout`,
+  } as const;
+}
 
 // The login page users are bounced to when no lets.church session exists.
 export const loginPath = '/auth/login';

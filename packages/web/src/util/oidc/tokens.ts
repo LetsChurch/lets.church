@@ -5,8 +5,8 @@ import { jwtVerify, SignJWT } from 'jose';
 import {
   ACCESS_TOKEN_TTL_SECONDS,
   AUTH_CODE_TTL_SECONDS,
+  getIssuer,
   ID_TOKEN_TTL_SECONDS,
-  issuer,
   REFRESH_TOKEN_TTL_SECONDS,
 } from './config';
 import {
@@ -51,7 +51,7 @@ export async function mintIdToken(params: {
   }
   return new SignJWT(payload)
     .setProtectedHeader({ alg: SIGNING_ALG, kid })
-    .setIssuer(issuer)
+    .setIssuer(getIssuer())
     .setSubject(params.sub)
     .setAudience(params.clientId)
     .setIssuedAt(iat)
@@ -66,6 +66,7 @@ export async function mintAccessToken(params: {
 }): Promise<string> {
   const { kid, privateKey } = await getActiveSigningKey();
   const iat = nowSeconds();
+  const issuer = getIssuer();
   // Audience is the issuer itself: the access token is consumed by our own
   // /userinfo endpoint. `token_use` distinguishes it from ID tokens.
   return new SignJWT({
@@ -88,6 +89,7 @@ export async function verifyAccessToken(token: string): Promise<{
 } | null> {
   try {
     const keySet = await getVerificationKeySet();
+    const issuer = getIssuer();
     const { payload } = await jwtVerify(token, keySet, {
       issuer,
       audience: issuer,
@@ -117,7 +119,7 @@ export async function verifyIdTokenHint(token: string): Promise<string | null> {
   try {
     const keySet = await getVerificationKeySet();
     const { payload } = await jwtVerify(token, keySet, {
-      issuer,
+      issuer: getIssuer(),
       algorithms: [SIGNING_ALG],
       clockTolerance: HINT_CLOCK_TOLERANCE_SECONDS,
     });
