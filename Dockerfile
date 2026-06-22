@@ -42,7 +42,7 @@ COPY --chown=nodeapp:nodeapp packages/elasticsearch/package.json ./packages/elas
 COPY --chown=nodeapp:nodeapp packages/temporal/package.json ./packages/temporal/
 COPY --chown=nodeapp:nodeapp packages/background-worker/package.json ./packages/background-worker/
 COPY --chown=nodeapp:nodeapp packages/web/package.json ./packages/web/
-COPY --chown=nodeapp:nodeapp packages/oidc-client/package.json ./packages/oidc-client/
+COPY --chown=nodeapp:nodeapp packages/lets.bible/package.json ./packages/lets.bible/
 COPY --chown=nodeapp:nodeapp packages/import-worker/package.json ./packages/import-worker/
 COPY --chown=nodeapp:nodeapp packages/probe-worker/package.json ./packages/probe-worker/
 COPY --chown=nodeapp:nodeapp packages/transcode-worker/package.json ./packages/transcode-worker/
@@ -84,10 +84,10 @@ RUN pnpm --filter @letschurch/temporal exec playwright install-deps chromium
 USER nodeapp
 RUN pnpm --filter @letschurch/temporal exec playwright install chromium
 
-# Lightweight dev image for the OIDC client example. It only needs node_modules
-# and the workspace metadata; the example source is bind-mounted in dev. We skip
-# the heavy `dev`/`build` layers (ffmpeg, playwright, web build) entirely.
-FROM base AS oidc-client-dev
+# Lightweight dev image for the lets.bible app. It only needs node_modules and
+# the workspace metadata; the app source is bind-mounted in dev. We skip the
+# heavy `dev`/`build` layers (ffmpeg, playwright, web build) entirely.
+FROM base AS lets-bible-dev
 COPY --chown=nodeapp:nodeapp --from=deps /usr/src/app/node_modules ./node_modules
 COPY --chown=nodeapp:nodeapp --from=deps /usr/src/app/packages/ ./packages/
 COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml tsconfig.json package.json ./
@@ -133,6 +133,12 @@ USER nodeapp
 
 FROM prod AS web
 WORKDIR /usr/src/app/packages/web
+CMD ["pnpm", "run", "start"]
+
+# lets.bible app (TanStack Start). `prod` already carries its built `.output`
+# (the recursive `pnpm run -r build` above builds it) + prod node_modules.
+FROM prod AS lets-bible
+WORKDIR /usr/src/app/packages/lets.bible
 CMD ["pnpm", "run", "start"]
 
 FROM prod-with-image-tools AS background-worker

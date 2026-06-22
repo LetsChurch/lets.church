@@ -1,4 +1,4 @@
-import { Autocomplete } from '@base-ui-components/react/autocomplete';
+import { Autocomplete } from '@base-ui/react/autocomplete';
 import { IconSearch, IconX } from '@tabler/icons-react';
 import { useInfiniteQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, notFound, useNavigate } from '@tanstack/react-router';
@@ -590,7 +590,6 @@ function Result({
         <div className="mt-2 space-y-2">
           {displayedSegments.map((segment, index) => (
             <a
-              // biome-ignore lint/suspicious/noArrayIndexKey: index is stable here
               key={index}
               href={`https://lets.church/media/${item.id}#t=${segment.start / 1000}`}
               target="_blank"
@@ -603,7 +602,6 @@ function Result({
               </div>
               <div
                 className="[&_mark]:-my-0.5 [&_mark]:-mx-1 text-gray-950/80 text-sm [&_mark]:rounded-sm [&_mark]:bg-orange-400/40 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:text-gray-950"
-                // biome-ignore lint/security/noDangerouslySetInnerHtml: escaped ElasticSearch output
                 dangerouslySetInnerHTML={{
                   __html: segment.text,
                 }}

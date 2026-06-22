@@ -227,7 +227,6 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         <HeadContent />
         {!isEmbedRoute ? (
           <script
-            // biome-ignore lint/security/noDangerouslySetInnerHtml: intentional blocking script to set theme before first paint
             dangerouslySetInnerHTML={{
               __html: `(function(){try{var m=document.cookie.match(/lc-theme=([^;]+)/);var t=m?m[1]:(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mantine-color-scheme',t);}}catch(e){}})();`,
             }}

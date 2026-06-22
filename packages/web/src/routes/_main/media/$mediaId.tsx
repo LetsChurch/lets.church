@@ -1,4 +1,4 @@
-import { AlertDialog } from '@base-ui-components/react/alert-dialog';
+import { AlertDialog } from '@base-ui/react/alert-dialog';
 import { UploadViewSource } from '@letschurch/db/types';
 import { useStore } from '@nanostores/react';
 import {
@@ -109,9 +109,16 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
     // the same media isn't served under two URLs. `params.mediaId` is already
     // normalized to a full lowercase UUID by the parser above; we inspect the
     // raw path segment to know which form the visitor actually used.
-    const rawId = decodeURIComponent(
-      location.pathname.split('/').filter(Boolean).pop() ?? '',
-    );
+    const lastSegment =
+      location.pathname.split('/').filter(Boolean).pop() ?? '';
+    // decodeURIComponent throws on malformed input (e.g. `/media/%E`); fall back
+    // to the raw segment so a bad URL 404s rather than erroring the loader.
+    let rawId: string;
+    try {
+      rawId = decodeURIComponent(lastSegment);
+    } catch {
+      rawId = lastSegment;
+    }
     if (z.uuid().safeParse(rawId).success) {
       throw redirect({
         to: '/media/$mediaId',
@@ -671,7 +678,6 @@ function RouteComponent() {
   // is module-global and otherwise persists across routes, leaving the
   // next page's first search running against the previous page's
   // transcript until the user manually closes search.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the body doesn't reference `params.mediaId`, but its value change is exactly the trigger we want — same-route navigation between media ids must re-run cleanup.
   useEffect(() => {
     return () => {
       resetSearch();

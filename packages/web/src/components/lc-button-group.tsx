@@ -1,4 +1,4 @@
-import { Tooltip } from '@base-ui-components/react/tooltip';
+import { Tooltip } from '@base-ui/react/tooltip';
 import { type ComponentPropsWithoutRef, Fragment } from 'react';
 import { cn } from '@/util/cn';
 
@@ -33,10 +33,7 @@ export default function LcButtonGroup({
           );
 
           return (
-            <Fragment
-              // biome-ignore lint/suspicious/noArrayIndexKey: Fixed groups
-              key={i}
-            >
+            <Fragment key={i}>
               {tooltip ? (
                 <Tooltip.Root>
                   <Tooltip.Trigger render={content} />

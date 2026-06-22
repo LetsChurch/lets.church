@@ -17,6 +17,7 @@ variable "PLATFORMS" {
 group "default" {
   targets = [
     "web",
+    "lets-bible",
     "background-worker",
     "probe-worker",
     "transcode-worker",
@@ -69,6 +70,13 @@ target "web" {
   tags = ["${REGISTRY}/web:${TAG}"]
   platforms = PLATFORMS
   project-id = "letschurch-web"
+}
+
+target "lets-bible" {
+  target = "lets-bible"
+  tags = ["${REGISTRY}/lets-bible:${TAG}"]
+  platforms = PLATFORMS
+  project-id = "letschurch-lets-bible"
 }
 
 target "background-worker" {

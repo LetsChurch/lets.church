@@ -47,7 +47,6 @@ import { Route as MainAboutRouteImport } from './routes/_main.about'
 import { Route as MainSlugRouteImport } from './routes/_main/$slug'
 import { Route as DotwellKnownOpenidConfigurationRouteImport } from './routes/[.]well-known.openid-configuration'
 import { Route as DotwellKnownJwksDotjsonRouteImport } from './routes/[.]well-known.jwks[.]json'
-import { Route as DashboardAdminReindexRouteImport } from './routes/dashboard_/admin_.reindex'
 import { Route as MainAboutIndexRouteImport } from './routes/_main/about/index'
 import { Route as SeriesSeriesIdRssDotxmlRouteImport } from './routes/series.$seriesId.rss[.]xml'
 import { Route as PlaylistPlaylistIdRssDotxmlRouteImport } from './routes/playlist.$playlistId.rss[.]xml'
@@ -64,6 +63,7 @@ import { Route as DashboardAdminUploadBackupsRouteImport } from './routes/dashbo
 import { Route as DashboardAdminStorageAuditRouteImport } from './routes/dashboard_/admin_.storage-audit'
 import { Route as DashboardAdminSearchesRouteImport } from './routes/dashboard_/admin_/searches'
 import { Route as DashboardAdminReprocessRouteImport } from './routes/dashboard_/admin_.reprocess'
+import { Route as DashboardAdminReindexRouteImport } from './routes/dashboard_/admin_.reindex'
 import { Route as DashboardAdminProcessingUploadsRouteImport } from './routes/dashboard_/admin_.processing-uploads'
 import { Route as DashboardAdminOrganizationsRouteImport } from './routes/dashboard_/admin_.organizations'
 import { Route as DashboardAdminOrganizationTagsRouteImport } from './routes/dashboard_/admin_.organization-tags'
@@ -300,11 +300,6 @@ const DotwellKnownJwksDotjsonRoute = DotwellKnownJwksDotjsonRouteImport.update({
   path: '/.well-known/jwks.json',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DashboardAdminReindexRoute = DashboardAdminReindexRouteImport.update({
-  id: '/admin_/reindex',
-  path: '/admin/reindex',
-  getParentRoute: () => DashboardRoute,
-} as any)
 const MainAboutIndexRoute = MainAboutIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -390,6 +385,11 @@ const DashboardAdminSearchesRoute = DashboardAdminSearchesRouteImport.update({
 const DashboardAdminReprocessRoute = DashboardAdminReprocessRouteImport.update({
   id: '/admin_/reprocess',
   path: '/admin/reprocess',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardAdminReindexRoute = DashboardAdminReindexRouteImport.update({
+  id: '/admin_/reindex',
+  path: '/admin/reindex',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardAdminProcessingUploadsRoute =
@@ -647,6 +647,7 @@ const DashboardChannelsChannelIdPlaylistsPlaylistIdRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof MainIndexRoute
   '/auth': typeof AuthRouteWithChildren
   '/dashboard': typeof DashboardRouteWithChildren
   '/maintenance': typeof MaintenanceRoute
@@ -682,7 +683,6 @@ export interface FileRoutesByFullPath {
   '/oidc/token': typeof OidcTokenRoute
   '/oidc/userinfo': typeof OidcUserinfoRoute
   '/trpc/$': typeof TrpcSplatRoute
-  '/': typeof MainIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/about/add-church': typeof MainAboutAddChurchRoute
   '/about/add-content': typeof MainAboutAddContentRoute
@@ -952,6 +952,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/auth'
     | '/dashboard'
     | '/maintenance'
@@ -987,7 +988,6 @@ export interface FileRouteTypes {
     | '/oidc/token'
     | '/oidc/userinfo'
     | '/trpc/$'
-    | '/'
     | '/dashboard/'
     | '/about/add-church'
     | '/about/add-content'
@@ -1305,7 +1305,7 @@ declare module '@tanstack/react-router' {
     '/_main': {
       id: '/_main'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof MainRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -1547,13 +1547,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DotwellKnownJwksDotjsonRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dashboard_/admin_/reindex': {
-      id: '/dashboard_/admin_/reindex'
-      path: '/admin/reindex'
-      fullPath: '/dashboard/admin/reindex'
-      preLoaderRoute: typeof DashboardAdminReindexRouteImport
-      parentRoute: typeof DashboardRoute
-    }
     '/_main/about/': {
       id: '/_main/about/'
       path: '/'
@@ -1664,6 +1657,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/reprocess'
       fullPath: '/dashboard/admin/reprocess'
       preLoaderRoute: typeof DashboardAdminReprocessRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard_/admin_/reindex': {
+      id: '/dashboard_/admin_/reindex'
+      path: '/admin/reindex'
+      fullPath: '/dashboard/admin/reindex'
+      preLoaderRoute: typeof DashboardAdminReindexRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard_/admin_/processing-uploads': {
@@ -2216,6 +2216,7 @@ import type { getRouter } from './router.tsx'
 import type { createStart } from '@tanstack/react-start'
 declare module '@tanstack/react-start' {
   interface Register {
+    ssr: true
     router: Awaited<ReturnType<typeof getRouter>>
   }
 }

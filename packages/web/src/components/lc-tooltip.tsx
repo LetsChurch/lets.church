@@ -1,4 +1,4 @@
-import { Tooltip } from '@base-ui-components/react/tooltip';
+import { Tooltip } from '@base-ui/react/tooltip';
 import type { ComponentProps, ReactNode } from 'react';
 
 type LcTooltipProps = {

@@ -60,7 +60,6 @@ export function TranscriptSearchResults() {
             <div className="flex flex-col gap-1.5">
               <p
                 className="[&_mark]:-my-0.5 [&_mark]:-mx-1 text-primary text-sm leading-[1.4] [&_mark]:rounded-sm [&_mark]:bg-orange-400/40 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:text-primary"
-                // biome-ignore lint/security/noDangerouslySetInnerHtml: Controlled highlighting from search
                 dangerouslySetInnerHTML={{ __html: line.highlighted }}
               />
             </div>

@@ -1,4 +1,4 @@
-import { Combobox } from '@base-ui-components/react/combobox';
+import { Combobox } from '@base-ui/react/combobox';
 import { IconCheck, IconX } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useId, useMemo, useRef, useState } from 'react';
@@ -313,7 +313,7 @@ export function ChurchCombobox({
   };
 
   return (
-    <Combobox.Root<MenuItem, MenuItem, true>
+    <Combobox.Root<MenuItem, true>
       items={menuItems}
       value={selectedValues}
       multiple

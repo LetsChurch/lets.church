@@ -27,11 +27,12 @@ check-health:
   docker compose exec postgres sh -c 'timeout 60 sh -c "until pg_isready; do sleep 1; done"'
   docker compose exec elasticsearch sh -c 'timeout 60 sh -c "until curl -sf elasticsearch:9200/_cat/health >/dev/null; do sleep 1; done"'
 
-# Start development services, initialize database, and seed data
+# Start development services, initialize database, and seed data (web + lets.bible)
 up:
   just start
   just check-health
   just init seed
+  just lets-bible-up
 
 # Start preview (production) services, initialize database, and seed data
 pup:
@@ -91,6 +92,37 @@ db-studio:
 db-reset:
   docker compose restart postgres
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run db:migrate'
+
+# lets.bible — its own `letsbible` database + `lets_bible_*` ES indices, separate
+# from web's. `just up` runs `lets-bible-up` to push/seed/index it end to end;
+# the individual recipes below are for re-running a single step.
+
+# Apply lets.bible migrations
+lets-bible-migrate:
+  docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run db:migrate'
+
+# Create/update the lets.bible search index mappings (its own lets_bible_* indices)
+lets-bible-es-push:
+  docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:push-mappings'
+
+# Ingest the BSB Bible text (default translation; run after lets-bible-migrate)
+lets-bible-seed-bsb:
+  docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run seed:bible'
+
+# Ingest the MSB Bible text (second translation)
+lets-bible-seed-msb:
+  docker compose exec lets-bible sh -c 'cd /usr/src/app && TRANSLATION_ID=MSB TRANSLATION_NAME="Majority Standard Bible" TRANSLATION_IS_DEFAULT=false USX_DIR="$(pwd)/packages/lets.bible/seed/msb/USX_1" pnpm --filter @letschurch/lets.bible run seed:bible'
+
+# Seed the Strong's lexicon (translation-agnostic)
+lets-bible-seed-lexicon:
+  docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run seed:lexicon'
+
+# Index all verses into the lets.bible search index (after seed + es-push)
+lets-bible-index:
+  docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:index-verses'
+
+# Full lets.bible setup: migrate, push ES mappings, seed (BSB/MSB/lexicon), index
+lets-bible-up: lets-bible-migrate lets-bible-es-push lets-bible-seed-bsb lets-bible-seed-msb lets-bible-seed-lexicon lets-bible-index
 
 es-push-mappings:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/elasticsearch run push-mappings'

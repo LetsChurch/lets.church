@@ -36,7 +36,6 @@ export function PlaylistSidebar({
   const currentIndex = items.findIndex((item) => item.id === currentMediaId);
 
   // Auto-scroll to current item on mount and when currentMediaId changes
-  // biome-ignore lint/correctness/useExhaustiveDependencies: currentMediaId is needed to trigger scroll
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;

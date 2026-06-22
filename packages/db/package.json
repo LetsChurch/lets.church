@@ -24,17 +24,17 @@
   },
   "dependencies": {
     "@letschurch/util": "workspace:*",
-    "drizzle-orm": "^0.45.1",
+    "drizzle-orm": "catalog:",
     "es-toolkit": "catalog:",
-    "pg": "^8.13.0",
+    "pg": "catalog:",
     "tsx": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
     "@types/node": "catalog:",
-    "@types/pg": "^8.11.0",
-    "drizzle-kit": "^0.31.0",
+    "@types/pg": "catalog:",
+    "drizzle-kit": "catalog:",
     "typescript": "catalog:",
     "uuid": "catalog:"
   }

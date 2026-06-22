@@ -1,4 +1,4 @@
-import { Dialog } from '@base-ui-components/react/dialog';
+import { Dialog } from '@base-ui/react/dialog';
 import { IconX } from '@tabler/icons-react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
@@ -120,19 +120,15 @@ export function LcModalDescription({
 type LcModalCloseProps = ComponentPropsWithoutRef<typeof Dialog.Close>;
 
 export function LcModalClose({ className = '', ...props }: LcModalCloseProps) {
+  // Dialog.Close renders a native <button type="button"> by default, so we style
+  // it directly rather than composing one via render.
   return (
     <Dialog.Close
-      render={(closeProps) => (
-        <button
-          {...closeProps}
-          {...props}
-          type="button"
-          className={`flex size-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-primary dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-primary ${className}`}
-        >
-          <IconX size={20} />
-        </button>
-      )}
-    />
+      {...props}
+      className={`flex size-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-primary dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-primary ${className}`}
+    >
+      <IconX size={20} />
+    </Dialog.Close>
   );
 }
 

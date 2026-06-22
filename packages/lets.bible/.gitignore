@@ -1,0 +1,13 @@
+# Build output (TanStack Start / Vite / Nitro) — matches packages/web
+.nitro
+.output
+.tanstack
+.vite
+dist
+storybook-static
+
+# Playwright e2e
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

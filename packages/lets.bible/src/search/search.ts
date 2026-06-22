@@ -1,0 +1,139 @@
+import { client, VERSE_INDEX } from './client';
+
+export type VerseHit = {
+  ref: string;
+  book: string; // USFM
+  slug: string;
+  name: string;
+  chapter: number;
+  verse: number;
+  text: string;
+  highlight: string; // verse text with <mark> around matches (html-encoded)
+};
+
+type VerseSource = {
+  book: string;
+  slug: string;
+  name: string;
+  ref: string;
+  chapter: number;
+  verse: number;
+  text: string;
+};
+
+// Full-text verse search within a single translation. Combines an exact-phrase
+// match (highest boost), a slop-2 phrase match on the stemmed field, and a plain
+// stemmed match (recall), so exact wording ranks above looser matches.
+export async function searchVerses(params: {
+  q: string;
+  translationId: string;
+  from?: number;
+  size?: number;
+}): Promise<VerseHit[]> {
+  const trimmed = params.q.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  const res = await client.search<VerseSource>({
+    index: VERSE_INDEX,
+    from: params.from ?? 0,
+    size: params.size ?? 20,
+    query: {
+      bool: {
+        filter: [{ term: { translationId: params.translationId } }],
+        minimum_should_match: 1,
+        should: [
+          { match_phrase: { 'text.exact': { query: trimmed, boost: 5 } } },
+          { match_phrase: { text: { query: trimmed, slop: 2, boost: 2 } } },
+          { match: { text: { query: trimmed } } },
+        ],
+      },
+    },
+    highlight: {
+      pre_tags: ['<mark>'],
+      post_tags: ['</mark>'],
+      // html encoder makes the fragments safe to render: the verse text is
+      // HTML-escaped and only our <mark> tags are injected.
+      encoder: 'html',
+      number_of_fragments: 0, // verses are short — highlight the whole field
+      fields: { text: {}, 'text.exact': {} },
+    },
+  });
+
+  return res.hits.hits.flatMap((hit) => {
+    const s = hit._source;
+    if (!s) {
+      return [];
+    }
+    const highlight =
+      hit.highlight?.['text.exact']?.[0] ?? hit.highlight?.text?.[0] ?? s.text;
+    return [
+      {
+        ref: s.ref,
+        book: s.book,
+        slug: s.slug,
+        name: s.name,
+        chapter: s.chapter,
+        verse: s.verse,
+        text: s.text,
+        highlight,
+      },
+    ];
+  });
+}
+
+function toHit(s: VerseSource): VerseHit {
+  return {
+    ref: s.ref,
+    book: s.book,
+    slug: s.slug,
+    name: s.name,
+    chapter: s.chapter,
+    verse: s.verse,
+    text: s.text,
+    highlight: s.text,
+  };
+}
+
+// "Related passages" via Elasticsearch's more_like_this — lexical similarity
+// (shared significant terms) over verse text. No embeddings required; a future
+// upgrade could fuse in dense-vector kNN for true semantic similarity. `like`
+// is usually a reference verse's text (find passages like John 3:16) or the raw
+// query; `excludeRefs` drops verses already shown as exact matches.
+export async function relatedVerses(params: {
+  like: string;
+  translationId: string;
+  excludeRefs?: string[];
+  size?: number;
+}): Promise<VerseHit[]> {
+  const like = params.like.trim();
+  if (!like) {
+    return [];
+  }
+  const res = await client.search<VerseSource>({
+    index: VERSE_INDEX,
+    size: params.size ?? 6,
+    query: {
+      bool: {
+        filter: [{ term: { translationId: params.translationId } }],
+        must: [
+          {
+            more_like_this: {
+              fields: ['text'],
+              like,
+              min_term_freq: 1,
+              min_doc_freq: 2,
+              max_query_terms: 25,
+              minimum_should_match: '30%',
+            },
+          },
+        ],
+        must_not: (params.excludeRefs ?? []).map((ref) => ({ term: { ref } })),
+      },
+    },
+  });
+  return res.hits.hits.flatMap((hit) =>
+    hit._source ? [toHit(hit._source)] : [],
+  );
+}

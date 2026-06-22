@@ -1,0 +1,28 @@
+import type { estypes } from '@elastic/elasticsearch';
+
+// One document per (translation, verse). `text` is dual-analyzed: the top-level
+// field uses the `english` analyzer (stemming → recall for phrase/topic queries)
+// while `text.exact` uses the `standard` analyzer so exact phrasing scores
+// higher (matches the "exact matches win" relevance preference).
+export const verseSettings: estypes.IndicesIndexSettings = {
+  number_of_replicas: 0,
+};
+
+export const verseProperties: Record<string, estypes.MappingProperty> = {
+  translationId: { type: 'keyword' },
+  book: { type: 'keyword' }, // USFM code, e.g. JHN
+  slug: { type: 'keyword' }, // url slug, e.g. john
+  name: { type: 'keyword' }, // display name, e.g. John
+  testament: { type: 'keyword' }, // OT | NT
+  chapter: { type: 'integer' },
+  verse: { type: 'integer' },
+  ref: { type: 'keyword' }, // canonical, e.g. JHN.3.16
+  ordinal: { type: 'integer' }, // global canonical order
+  text: {
+    type: 'text',
+    analyzer: 'english',
+    fields: {
+      exact: { type: 'text', analyzer: 'standard' },
+    },
+  },
+};

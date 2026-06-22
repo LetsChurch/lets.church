@@ -609,7 +609,6 @@ function Result({
         <div className="mt-2 space-y-2">
           {displayedSegments.map((segment, index) => (
             <Link
-              // biome-ignore lint/suspicious/noArrayIndexKey: index is stable here
               key={index}
               to="/media/$mediaId"
               params={{ mediaId: item.id }}
@@ -625,7 +624,6 @@ function Result({
               </div>
               <div
                 className="[&_mark]:-my-0.5 [&_mark]:-mx-1 text-primary/80 text-sm [&_mark]:rounded-sm [&_mark]:bg-orange-400/40 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:text-primary"
-                // biome-ignore lint/security/noDangerouslySetInnerHtml: escaped ElasticSearch output
                 dangerouslySetInnerHTML={{
                   __html: segment.text,
                 }}

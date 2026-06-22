@@ -1,4 +1,4 @@
-import { Menu } from '@base-ui-components/react/menu';
+import { Menu } from '@base-ui/react/menu';
 import type { LinkProps } from '@tanstack/react-router';
 import { Link } from '@tanstack/react-router';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';

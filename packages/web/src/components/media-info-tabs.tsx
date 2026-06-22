@@ -1,4 +1,4 @@
-import { Tabs } from '@base-ui-components/react/tabs';
+import { Tabs } from '@base-ui/react/tabs';
 import type { UploadLicense } from '@letschurch/db/types';
 import {
   IconClock,
@@ -186,7 +186,6 @@ export function MediaInfoTabs({
           <div
             ref={descriptionRef}
             className="prose px-5 text-sm"
-            // biome-ignore lint/security/noDangerouslySetInnerHtml: HTML is compiled from markdown on server using micromark
             dangerouslySetInnerHTML={{ __html: descriptionHtml }}
           />
         ) : (

@@ -62,10 +62,15 @@ services:
       ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
       # Embedded OIDC provider (lets.church as identity provider for first-party
       # satellite sites). Signing key is asymmetric (ES256) and separate from
-      # JWT_SECRET. Clients are public (PKCE-only) and declared in code — no
-      # per-client secrets or env vars.
+      # JWT_SECRET. Clients are public (PKCE-only); the SET of clients is declared
+      # in code (first-party-only by construction), but each client's redirect/
+      # post-logout/scope allowlists are overridable per client via
+      # OIDC_CLIENT_<ID>_* env vars. In dev these reuse the client's own URIs so
+      # provider and client agree from one source; set real https origins in prod.
       OIDC_ISSUER: ${OIDC_ISSUER:-${HOST_WEB_URL}}
       OIDC_SIGNING_JWK: ${OIDC_SIGNING_JWK}
+      OIDC_CLIENT_LETS_BIBLE_REDIRECT_URIS: ${OIDC_LETS_BIBLE_REDIRECT_URI}
+      OIDC_CLIENT_LETS_BIBLE_POST_LOGOUT_REDIRECT_URIS: ${OIDC_LETS_BIBLE_POST_LOGOUT_URI}
       # OpenRouter access for the admin LLM-eval surface
       # (`evaluateLlmModel` tRPC mutation) and for dev-only seed bootstrap
       # scripts (`just generate-seed-annotations`) — both execute inside
@@ -99,29 +104,51 @@ services:
   # provider in `web`. Exposed on host port 4001. Browser-facing OIDC URLs use
   # OIDC_ISSUER (http://localhost:4000); back-channel calls use the internal
   # service URL (http://web:3000).
-  oidc-client:
+  lets-bible:
     build:
       context: .
-      target: oidc-client-dev
-    command: pnpm --filter @letschurch/oidc-client run dev
+      target: lets-bible-dev
+    command: pnpm --filter @letschurch/lets.bible run dev --host
     restart: unless-stopped
     depends_on:
-      - web
+      web:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
     ports:
-      - 127.0.0.1:${HOST_OIDC_CLIENT_PORT}:3000
+      - 127.0.0.1:${HOST_LETS_BIBLE_PORT}:3000
     environment:
       NODE_ENV: development
       PORT: 3000
+      LETS_BIBLE_DATABASE_URL: postgres://letsbible:password@postgres:5432/letsbible
+      ELASTICSEARCH_URL: http://elasticsearch:9200
       OIDC_ISSUER: ${OIDC_ISSUER:-${HOST_WEB_URL}}
       OIDC_INTERNAL_URL: http://web:3000
-      OIDC_CLIENT_ID: example-app
-      OIDC_REDIRECT_URI: ${OIDC_CLIENT_EXAMPLE_REDIRECT_URI}
-      OIDC_POST_LOGOUT_REDIRECT_URI: ${OIDC_CLIENT_EXAMPLE_POST_LOGOUT_URI}
+      OIDC_CLIENT_ID: lets.bible
+      OIDC_REDIRECT_URI: ${OIDC_LETS_BIBLE_REDIRECT_URI}
+      OIDC_POST_LOGOUT_REDIRECT_URI: ${OIDC_LETS_BIBLE_POST_LOGOUT_URI}
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
-      - ./packages/oidc-client:/usr/src/app/packages/oidc-client
-      - /usr/src/app/packages/oidc-client/node_modules
+      - ./packages/lets.bible:/usr/src/app/packages/lets.bible
+      - /usr/src/app/packages/lets.bible/node_modules
+
+  # Storybook for the lets.bible component library + design language.
+  lets-bible-storybook:
+    build:
+      context: .
+      target: lets-bible-dev
+    command: pnpm --filter @letschurch/lets.bible run storybook
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:${HOST_LETS_BIBLE_STORYBOOK_PORT}:6006
+    volumes:
+      - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
+      - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
+      - ./packages/lets.bible:/usr/src/app/packages/lets.bible
+      - /usr/src/app/packages/lets.bible/node_modules
 
   background-worker:
     build:

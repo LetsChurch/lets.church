@@ -1,0 +1,277 @@
+@import "tailwindcss";
+
+/* lets.bible design tokens — warm paper, gold accent, Hanken Grotesk for UI.
+   The wordmark is Begum Bold, shipped as outlined logo artwork (see logo.tsx /
+   logo.svg), so it needs no web font. Georgia is the reading serif used for
+   scripture body text. Mirrors the Claude Design concept. */
+@theme {
+  --font-sans: "Hanken Grotesk", system-ui, sans-serif;
+  /* Reading serif for scripture (the Begum Bold wordmark is SVG artwork). */
+  --font-serif: Georgia, "Times New Roman", serif;
+  /* Hebrew face for acrostic letters + interlinear. */
+  --font-hebrew: "Frank Ruhl Libre", "Noto Serif", serif;
+  /* Greek face for the interlinear original-language line. */
+  --font-greek: "Noto Serif", Georgia, serif;
+  --font-mono: ui-monospace, Menlo, monospace;
+
+  --color-paper: #f4f1e9;
+  --color-paper-raised: #fffdf8;
+  --color-paper-soft: #fbf9f4;
+  --color-ink: #2b2a26;
+  --color-ink-strong: #26251f;
+  --color-muted: #6b665b;
+  --color-muted-2: #8a857a;
+  --color-faint: #a59f91;
+  --color-faint-2: #b3ac9d;
+  --color-gold: #9a7b3f;
+  --color-gold-soft: #b39a5e;
+  --color-line: #e7e0d0;
+  --color-line-strong: #ddd6c6;
+  --color-slate: #5a6b7d;
+
+  /* Scripture rendering */
+  --color-redletter: #a3402c; /* words of Christ — warm terracotta, never pure red */
+  --color-verse-num: #bfb59c; /* superscript verse numbers */
+  --color-context: #ada696; /* receded surrounding verses (faded-context mode) */
+  --color-scripture-edge: #c8ad6b; /* gold edge marking the focused line */
+}
+
+/* Highlight palette accents (sage/rose/sky/plum) — defined in a plain :root, NOT
+   in @theme, so they're ALWAYS emitted. They're consumed only via inline
+   `var(--color-<key>)` (highlightVarStyle / highlightDotStyle), which Tailwind's
+   static scanner can't see, so an @theme entry gets tree-shaken out when nothing
+   references it as a background/text color utility — which silently broke the
+   sage highlight once its last bg-sage usage was removed. (gold and slate stay in
+   @theme: gold is used as utilities everywhere; slate via bg-slate / text-slate —
+   both stay emitted.) Dark overrides live in the dark blocks below. Keep in sync
+   with HIGHLIGHT_COLORS in src/lib/highlight-colors.ts. */
+:root {
+  --color-sage: #6f8a6b;
+  --color-rose: #a8566b;
+  --color-sky: #3f7e9e;
+  --color-plum: #835a86;
+}
+
+/* Dark palette — the warm-paper system inverted: deep warm ink surfaces, light
+   warm text, gold accent preserved (slightly brightened for contrast). Because
+   the UI is built on these semantic tokens, redefining them re-themes the whole
+   app. It applies via OS preference (the real app, which sets no data-theme) and
+   via an explicit `data-theme="dark"` (the Storybook theme toggle / overrides).
+   The OS rule is suppressed when `data-theme="light"` is forced. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-paper: #1c1b18;
+    --color-paper-raised: #26251f;
+    --color-paper-soft: #211f1b;
+    --color-ink: #e8e3d7;
+    --color-ink-strong: #f4f1e9;
+    --color-muted: #b3ac9d;
+    --color-muted-2: #968f80;
+    --color-faint: #7c7668;
+    --color-faint-2: #6b665b;
+    --color-gold: #c2a86a;
+    --color-gold-soft: #b39a5e;
+    --color-line: #34322b;
+    --color-line-strong: #403d34;
+    --color-slate: #8ea3b8;
+    --color-sage: #8ba386;
+    --color-rose: #cf8a9c;
+    --color-sky: #82b2cf;
+    --color-plum: #b08fb8;
+    --color-redletter: #dd9b86;
+    --color-verse-num: #6f6a5e;
+    --color-context: #6b665b;
+    --color-scripture-edge: #b89a5c;
+  }
+}
+
+[data-theme="dark"] {
+  --color-paper: #1c1b18;
+  --color-paper-raised: #26251f;
+  --color-paper-soft: #211f1b;
+  --color-ink: #e8e3d7;
+  --color-ink-strong: #f4f1e9;
+  --color-muted: #b3ac9d;
+  --color-muted-2: #968f80;
+  --color-faint: #7c7668;
+  --color-faint-2: #6b665b;
+  --color-gold: #c2a86a;
+  --color-gold-soft: #b39a5e;
+  --color-line: #34322b;
+  --color-line-strong: #403d34;
+  --color-slate: #8ea3b8;
+  --color-sage: #8ba386;
+  --color-rose: #cf8a9c;
+  --color-sky: #82b2cf;
+  --color-plum: #b08fb8;
+  --color-redletter: #dd9b86;
+  --color-verse-num: #6f6a5e;
+  --color-context: #6b665b;
+  --color-scripture-edge: #b89a5c;
+}
+
+@layer base {
+  html,
+  body {
+    margin: 0;
+  }
+
+  body {
+    background: radial-gradient(120% 80% at 50% -10%, #faf8f1 0%, #f4f1e9 60%);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) body {
+      background: radial-gradient(
+        120% 80% at 50% -10%,
+        #211f1b 0%,
+        #1c1b18 60%
+      );
+    }
+  }
+
+  [data-theme="dark"] body {
+    background: radial-gradient(120% 80% at 50% -10%, #211f1b 0%, #1c1b18 60%);
+  }
+
+  ::selection {
+    /* theme-aware gold tint (adapts to light/dark via --color-gold) */
+    background: color-mix(in srgb, var(--color-gold) 22%, transparent);
+  }
+}
+
+@keyframes lb-fade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes lb-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility animate-fade {
+  animation: lb-fade 0.25s ease;
+}
+
+@utility animate-drop {
+  animation: lb-drop 0.14s ease;
+}
+
+/* Inline highlight for a matched phrase within scripture. The color-mix on the
+   theme tokens keeps these adapting to light/dark mode. */
+@utility scripture-mark {
+  background: color-mix(in srgb, var(--color-gold) 14%, transparent);
+  box-shadow: inset 0 -2px 0
+    color-mix(in srgb, var(--color-gold) 50%, transparent);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* User highlight on a verse. The chosen color arrives via the `--hl` custom
+   property (set inline from the color token — see highlightVarStyle). Light mode:
+   a translucent background fill. Dark mode: tint the TEXT instead of boxing it in
+   a translucent background (reads better on dark surfaces). A plain (unlayered)
+   class so the dark text color wins over the `text-ink` utility. */
+.verse-highlight {
+  background: color-mix(in srgb, var(--hl) 18%, transparent);
+  border-radius: 3px;
+}
+/* Dark mode: tint the text instead of a background box. The explicit
+   `[data-theme="dark"]` rules come first (lower specificity), then the OS-dark
+   `:root:not([data-theme="light"])` rules (higher, via `:not`), so specificity
+   ascends through the file (non-descending). The highlight color also takes
+   precedence over red-letter text within a highlight. */
+[data-theme="dark"] .verse-highlight {
+  background: transparent;
+  color: var(--hl);
+}
+[data-theme="dark"] .verse-highlight .text-redletter {
+  color: var(--hl);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .verse-highlight {
+    background: transparent;
+    color: var(--hl);
+  }
+  :root:not([data-theme="light"]) .verse-highlight .text-redletter {
+    color: var(--hl);
+  }
+}
+
+/* Search-result match highlights — the <mark> tags Elasticsearch injects into a
+   verse snippet (see routes/search.tsx). Light mode: a translucent gold fill.
+   Dark mode: tint the text gold instead of boxing it in a rectangle (matches
+   .verse-highlight — reads better on dark surfaces). Specificity ascends
+   (base → data-theme → OS-dark) like .verse-highlight so it stays
+   non-descending. */
+.search-result mark {
+  border-radius: 2px;
+  padding: 0 1px;
+  background: color-mix(in srgb, var(--color-gold) 22%, transparent);
+}
+[data-theme="dark"] .search-result mark {
+  background: transparent;
+  color: var(--color-gold);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .search-result mark {
+    background: transparent;
+    color: var(--color-gold);
+  }
+}
+
+/* Selected verse — a gold underline. It sits on a *different* CSS property than
+   the highlight fill (background), so a verse can be highlighted AND selected at
+   once: you see the highlight color fill plus this gold underline. (User
+   highlights themselves render fill-only, inline from the color token — see
+   highlightFillStyle in src/lib/highlight-colors.ts.) */
+@utility verse-selected {
+  box-shadow: inset 0 -2px 0 var(--color-gold);
+}
+
+/* Transient highlight when arriving at a verse via a direct reference (?v=): a
+   gold flash that fades out, so the linked verse is briefly emphasized without
+   becoming a persistent selection. The gold is a big *inset* box-shadow overlay
+   (painted over the background, under the text) — NOT a `background` animation —
+   so the verse's own highlight background stays visible underneath the whole
+   time: the gold simply fades off it, revealing the highlight color (no pop-in).
+   The second shadow is the outer glow ring. */
+@keyframes lb-verse-flash {
+  from {
+    box-shadow:
+      inset 0 0 0 999px color-mix(in srgb, var(--color-gold) 30%, transparent),
+      0 0 0 6px color-mix(in srgb, var(--color-gold) 30%, transparent);
+  }
+  to {
+    box-shadow:
+      inset 0 0 0 999px transparent,
+      0 0 0 6px transparent;
+  }
+}
+
+@utility verse-flash {
+  border-radius: 3px;
+  animation: lb-verse-flash 1.8s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .verse-flash {
+    animation-duration: 0.6s;
+  }
+}

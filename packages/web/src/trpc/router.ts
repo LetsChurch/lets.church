@@ -31,4 +31,4 @@ export const appRouter = router({
   series: seriesProcedures,
 });
 
-export type AppRouter = typeof appRouter;
+// AppRouter type lives in ./types (re-exported from ./index); see trpc/types.ts.
