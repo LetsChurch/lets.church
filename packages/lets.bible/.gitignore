@@ -6,6 +6,12 @@
 dist
 storybook-static
 
+# Generated client-side search + reading assets — built from the committed USX
+# seed (no DB) by `pnpm build` (runs build-flex-index.ts before `vite build`, so
+# they ship in the image); regenerate for dev with `just lets-bible-flex`.
+/public/search/
+/public/reading/
+
 # Playwright e2e
 /test-results/
 /playwright-report/

@@ -10,7 +10,7 @@ import {
   bibleVerse,
   db,
 } from '@/db';
-import { bookBySlug, CANON } from '@/lib/canon';
+import { bookBySlug } from '@/lib/canon';
 import { parseReference } from '@/lib/reference';
 import { relatedVerses, searchVerses } from '@/search/search';
 import { resolvePreferences } from '@/server/preferences';
@@ -238,95 +238,6 @@ export const bibleProcedures = {
         crossReferences,
         translation: translationId,
       };
-    }),
-
-  // Live autocomplete suggestions: mixes entry KINDS — a reference jump, book
-  // name matches, top verse matches, and a catch-all "search everything" — each
-  // labeled so the menu shows what kind of result it is.
-  suggest: publicProcedure
-    .input(z.object({ q: z.string(), translation: z.string().optional() }))
-    .query(async ({ ctx, input }) => {
-      const q = input.q.trim();
-      if (!q) {
-        return { suggestions: [] };
-      }
-      const translationId = await resolveTranslation(ctx, input.translation);
-
-      type Suggestion = {
-        id: string;
-        kind: 'reference' | 'book' | 'verse' | 'search';
-        icon: string;
-        label: string;
-        meta: string;
-        book?: string | null;
-        chapter?: number | null;
-        verse?: number | null;
-        q?: string;
-      };
-      const out: Suggestion[] = [];
-
-      const parsed = parseReference(q);
-      if (parsed) {
-        out.push({
-          id: `ref:${parsed.book}.${parsed.chapter}.${parsed.verse ?? ''}`,
-          kind: 'reference',
-          icon: '↪',
-          label: `${bookBySlug(parsed.book)?.name ?? parsed.book} ${
-            parsed.chapter
-          }${parsed.verse != null ? `:${parsed.verse}` : ''}`,
-          meta: 'Reference',
-          book: parsed.book,
-          chapter: parsed.chapter,
-          verse: parsed.verse ?? null,
-        });
-      }
-
-      const ql = q.toLowerCase();
-      const books = CANON.filter(
-        (b) =>
-          b.name.toLowerCase().startsWith(ql) ||
-          b.aliases.some((a) => a.startsWith(ql)),
-      ).slice(0, 3);
-      for (const b of books) {
-        if (parsed?.book === b.slug) {
-          continue;
-        }
-        out.push({
-          id: `book:${b.slug}`,
-          kind: 'book',
-          icon: '☰',
-          label: b.name,
-          meta: 'Book',
-          book: b.slug,
-          chapter: 1,
-          verse: null,
-        });
-      }
-
-      const verses = await searchVerses({ q, translationId, size: 4 });
-      for (const v of verses) {
-        out.push({
-          id: `v:${v.ref}`,
-          kind: 'verse',
-          icon: '“',
-          label: v.text.length > 70 ? `${v.text.slice(0, 70)}…` : v.text,
-          meta: `${v.name} ${v.chapter}:${v.verse}`,
-          book: v.slug,
-          chapter: v.chapter,
-          verse: v.verse,
-        });
-      }
-
-      out.push({
-        id: 'search',
-        kind: 'search',
-        icon: '↵',
-        label: `Search “${q}”`,
-        meta: 'All results',
-        q,
-      });
-
-      return { suggestions: out };
     }),
 
   // Returns one chapter's reading blocks + verse text, sliced out of the book's

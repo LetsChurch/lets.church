@@ -26,7 +26,9 @@ import { adjacentChapter, chapterLink } from '@/lib/reference';
 import {
   chapterQueryOptions,
   persistTranslations,
+  resolveTranslationId,
 } from '@/local/chapter-cache';
+import { precacheTranslation } from '@/local/precache';
 import { recordReading, useChapterMarks } from '@/local/store';
 import { trpcClient, useTRPC } from '@/trpc/react';
 
@@ -96,21 +98,27 @@ export const Route = createFileRoute('/bible/$book/$chapter')({
         }),
       )
       .catch(() => undefined);
-    await Promise.all([
-      queryClient.ensureQueryData(
-        chapterQueryOptions({
-          book: params.book,
-          chapter,
-          translation: deps.translation,
-        }),
-      ),
+    // Resolve the concrete translation first (from the small metadata queries)
+    // so the static reading asset + cross-refs/interlinear all key off the same
+    // id on the server and the client.
+    const [translations, prefs] = await Promise.all([
       queryClient.ensureQueryData(trpc.bible.translations.queryOptions()),
       queryClient.ensureQueryData(trpc.common.preferences.queryOptions()),
+    ]);
+    const translationId = resolveTranslationId(
+      deps.translation,
+      prefs.translation,
+      translations,
+    );
+    await Promise.all([
+      queryClient.ensureQueryData(
+        chapterQueryOptions({ book: params.book, chapter, translationId }),
+      ),
       queryClient.ensureQueryData(
         crossRefsQueryOptions(trpc, {
           book: params.book,
           chapter,
-          translation: deps.translation,
+          translation: translationId,
         }),
       ),
       // Prefetch the interlinear words only when that view is requested.
@@ -121,7 +129,7 @@ export const Route = createFileRoute('/bible/$book/$chapter')({
               trpc.bible.interlinear.queryOptions({
                 book: params.book,
                 chapter,
-                translation: deps.translation,
+                translation: translationId,
               }),
             )
             .catch(() => undefined)
@@ -209,8 +217,25 @@ function Reader() {
   const interlinearView = view === 'interlinear';
   const [interlinearOptions, setInterlinearOptions] =
     useState<InterlinearOptions>(DEFAULT_INTERLINEAR_OPTIONS);
+  const { data: translations } = useSuspenseQuery(
+    trpc.bible.translations.queryOptions(),
+  );
+  const { data: prefs } = useSuspenseQuery(
+    trpc.common.preferences.queryOptions(),
+  );
+  // URL ?translation= wins, then the saved preference, then the default. Resolved
+  // before the chapter query so its key matches the loader's prefetch.
+  const currentTranslation = resolveTranslationId(
+    translation,
+    prefs.translation,
+    translations,
+  );
   const { data } = useSuspenseQuery(
-    chapterQueryOptions({ book: bookSlug, chapter: chapterNum, translation }),
+    chapterQueryOptions({
+      book: bookSlug,
+      chapter: chapterNum,
+      translationId: currentTranslation,
+    }),
   );
   // Interlinear words — only fetched when that view is active (prefetched by the
   // loader, so it's ready on first paint).
@@ -218,16 +243,10 @@ function Reader() {
     ...trpc.bible.interlinear.queryOptions({
       book: bookSlug,
       chapter: chapterNum,
-      translation,
+      translation: currentTranslation,
     }),
     enabled: interlinearView,
   });
-  const { data: translations } = useSuspenseQuery(
-    trpc.bible.translations.queryOptions(),
-  );
-  const { data: prefs } = useSuspenseQuery(
-    trpc.common.preferences.queryOptions(),
-  );
   // Highlights + notes: the server is the source of truth (prefetched in the
   // loader → SSR'd, so they render on first paint and stay consistent across
   // devices). The local-first store overlays this for optimistic writes +
@@ -243,15 +262,9 @@ function Reader() {
     crossRefsQueryOptions(trpc, {
       book: bookSlug,
       chapter: chapterNum,
-      translation,
+      translation: currentTranslation,
     }),
   );
-  // URL ?translation= wins, then the saved preference, then the default.
-  const currentTranslation =
-    translation ??
-    prefs.translation ??
-    translations.find((t) => t.isDefault)?.id ??
-    'BSB';
   // Verse and word selection are mutually exclusive — one selection state, so a
   // word never coexists with a selected verse. The study panel reads this and
   // renders the matching view (a word still knows its verse for context). A
@@ -306,10 +319,16 @@ function Reader() {
     recordReading(bookSlug, chapterNum, v);
   }, [bookSlug, chapterNum, v]);
 
-  // Keep the translations list available offline (for cache key resolution).
+  // Keep the translations list available offline (for translation resolution).
   useEffect(() => {
     persistTranslations(translations);
   }, [translations]);
+
+  // Make the whole active translation available offline (reading + search) in an
+  // idle background pass — replaces the manual download. Runs once per version.
+  useEffect(() => {
+    precacheTranslation(currentTranslation);
+  }, [currentTranslation]);
 
   const book = bookBySlug(bookSlug);
   if (!book) {

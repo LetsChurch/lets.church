@@ -6,16 +6,21 @@ import { chapterLink } from '@/lib/reference';
 import { useTRPC } from '@/trpc/react';
 
 export const Route = createFileRoute('/search')({
-  validateSearch: (search: Record<string, unknown>): { q?: string } =>
-    typeof search.q === 'string' ? { q: search.q } : {},
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { q?: string; translation?: string } => ({
+    q: typeof search.q === 'string' ? search.q : undefined,
+    translation:
+      typeof search.translation === 'string' ? search.translation : undefined,
+  }),
   component: SearchResults,
 });
 
 function SearchResults() {
-  const { q } = Route.useSearch();
+  const { q, translation } = Route.useSearch();
   const trpc = useTRPC();
   const { data, isLoading, isError } = useQuery({
-    ...trpc.bible.search.queryOptions({ q: q ?? '' }),
+    ...trpc.bible.search.queryOptions({ q: q ?? '', translation }),
     enabled: !!q?.trim(),
   });
 
@@ -71,6 +76,37 @@ type SearchData = {
     text: string | null;
   }>;
 };
+
+// Labeled placeholder for the upcoming AI-assisted answer. The grounded,
+// cited-answer backend (query → verse retrieval + LLM synthesis) isn't built
+// yet, so this reserves its slot at the top of the results and sets expectations
+// rather than rendering anything generated. See docs/search-answer-abuse-mitigation.md
+// for the abuse controls that gate the real feature before it ships.
+function AiAnswerPlaceholder() {
+  return (
+    <section
+      aria-label="AI answer (coming soon)"
+      className="rounded-2xl border border-gold-soft/40 border-dashed bg-paper-raised px-5 py-4"
+    >
+      <div className="flex items-center gap-2">
+        <span aria-hidden="true" className="text-[15px] text-gold">
+          ✦
+        </span>
+        <span className="font-bold text-[11px] text-gold-soft uppercase tracking-[0.14em]">
+          AI answer
+        </span>
+        <span className="rounded-full border border-line-strong bg-paper px-[9px] py-[2px] font-semibold text-[10.5px] text-faint uppercase tracking-[0.08em]">
+          Coming soon
+        </span>
+      </div>
+      <p className="mt-2 text-[14px] text-muted leading-relaxed">
+        We're building grounded, cited answers drawn straight from Scripture.
+        Until then, the labeled results below cover exact text,
+        cross-references, and related passages.
+      </p>
+    </section>
+  );
+}
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -140,6 +176,8 @@ function Results({
 
   return (
     <div className="space-y-9">
+      <AiAnswerPlaceholder />
+
       {reference ? (
         <Link
           {...chapterLink(reference.book, reference.chapter, reference.verse)}

@@ -5,7 +5,6 @@ import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { type CanonBook, NEW_TESTAMENT, OLD_TESTAMENT } from '@/lib/canon';
 import { useIsDesktop } from '@/lib/use-media-query';
-import { useTranslationDownload } from '@/local/use-download';
 import { useTRPC } from '@/trpc/react';
 import { PickerDrawer } from './picker-drawer';
 
@@ -255,75 +254,6 @@ type TranslationOption = {
 const rowActionClass =
   'inline-flex h-7 flex-shrink-0 items-center justify-center rounded-md border border-line-strong font-semibold text-[11.5px] text-muted-2 outline-none hover:border-gold-soft hover:bg-paper hover:text-gold focus-visible:ring-2 focus-visible:ring-gold/40';
 
-function DownloadGlyph() {
-  return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <title>Download</title>
-      <path d="M8 2v8" />
-      <path d="M4.5 7 8 10.5 11.5 7" />
-      <path d="M3 13h10" />
-    </svg>
-  );
-}
-
-// Per-translation offline download toggle in the picker row. Mirrors the
-// Settings "Offline" list (shared `useTranslationDownload`): download caches the
-// whole translation to IndexedDB for offline reading; a downloaded row shows a
-// check that removes it. Stops propagation so it never triggers the row's
-// navigation or closes the picker.
-function TranslationDownloadButton({ id }: { id: string }) {
-  const { state, download, remove } = useTranslationDownload(id);
-
-  if (state.phase === 'downloading') {
-    return (
-      <span
-        className="inline-flex h-7 w-9 flex-shrink-0 items-center justify-center font-mono text-[10px] text-gold-soft"
-        title={`Downloading ${id}… ${state.done}/${state.total} books`}
-      >
-        {state.total > 0 ? Math.round((state.done / state.total) * 100) : 0}%
-      </span>
-    );
-  }
-  if (state.phase === 'downloaded') {
-    return (
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          void remove();
-        }}
-        title={`${id} saved for offline — tap to remove`}
-        className={`${rowActionClass} w-9 border-gold-soft text-gold`}
-      >
-        ✓
-      </button>
-    );
-  }
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        void download();
-      }}
-      title={`Download ${id} for offline reading`}
-      className={`${rowActionClass} w-9`}
-    >
-      <DownloadGlyph />
-    </button>
-  );
-}
-
 // The list of translations, shared by the desktop popover and the mobile drawer.
 // Each row switches the reading translation; rows with an interlinear get an
 // "Aα" interlinear button, and non-current rows get a "Compare" button (compare
@@ -368,8 +298,6 @@ function TranslationRows({
                 {t.name}
               </span>
             </Link>
-            {/* Download for offline — same fixed-width column for every row. */}
-            <TranslationDownloadButton id={t.id} />
             {/* Interlinear (Aα) — fixed-width column so it aligns across rows. */}
             {t.hasInterlinear ? (
               <Link

@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "tsx src/search/build-flex-index.ts && vite build",
     "start": "node .output/server/index.mjs",
     "check": "pnpm run /^check:/",
     "check:biome": "biome check",
@@ -21,6 +21,7 @@
     "seed:lexicon": "tsx src/db/seed-lexicon.ts",
     "es:push-mappings": "tsx src/search/push-mappings.ts",
     "es:index-verses": "tsx src/search/index-verses.ts",
+    "flex:build": "tsx src/search/build-flex-index.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },
@@ -29,6 +30,7 @@
     "@elastic/elasticsearch": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "drizzle-orm": "catalog:",
+    "flexsearch": "^0.8.212",
     "pg": "catalog:",
     "@tanstack/db": "^0.6.9",
     "@tanstack/react-db": "^0.1.87",

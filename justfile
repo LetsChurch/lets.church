@@ -121,8 +121,12 @@ lets-bible-seed-lexicon:
 lets-bible-index:
   docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:index-verses'
 
+# Build the client-side FlexSearch search assets per translation (public/search/*)
+lets-bible-flex:
+  docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run flex:build'
+
 # Full lets.bible setup: migrate, push ES mappings, seed (BSB/MSB/lexicon), index
-lets-bible-up: lets-bible-migrate lets-bible-es-push lets-bible-seed-bsb lets-bible-seed-msb lets-bible-seed-lexicon lets-bible-index
+lets-bible-up: lets-bible-migrate lets-bible-es-push lets-bible-seed-bsb lets-bible-seed-msb lets-bible-seed-lexicon lets-bible-index lets-bible-flex
 
 es-push-mappings:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/elasticsearch run push-mappings'

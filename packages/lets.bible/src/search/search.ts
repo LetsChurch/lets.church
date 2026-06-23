@@ -96,6 +96,29 @@ function toHit(s: VerseSource): VerseHit {
   };
 }
 
+// Count of verses containing the query as an EXACT phrase (standard-analyzed,
+// no stemming) within a translation — powers the autocomplete's "Exact phrase"
+// entry ("…in N verses"). Cheap: a count query, no documents returned.
+export async function countExactPhrase(params: {
+  q: string;
+  translationId: string;
+}): Promise<number> {
+  const trimmed = params.q.trim();
+  if (!trimmed) {
+    return 0;
+  }
+  const res = await client.count({
+    index: VERSE_INDEX,
+    query: {
+      bool: {
+        filter: [{ term: { translationId: params.translationId } }],
+        must: [{ match_phrase: { 'text.exact': trimmed } }],
+      },
+    },
+  });
+  return res.count;
+}
+
 // "Related passages" via Elasticsearch's more_like_this — lexical similarity
 // (shared significant terms) over verse text. No embeddings required; a future
 // upgrade could fuse in dense-vector kNN for true semantic similarity. `like`

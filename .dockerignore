@@ -9,6 +9,15 @@ packages/web/.nitro
 packages/web/.output
 packages/web/dist
 packages/db/src/generated
+packages/lets.bible/.nitro
+packages/lets.bible/.output
+packages/lets.bible/.tanstack
+packages/lets.bible/dist
+# lets.bible search + reading assets are regenerated in the build stage
+# (`pnpm build` runs build-flex-index.ts before `vite build`) — don't ship the
+# local copy into the build context.
+packages/lets.bible/public/search
+packages/lets.bible/public/reading
 
 # Dependencies (installed during build stage)
 **/node_modules

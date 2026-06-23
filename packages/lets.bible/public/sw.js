@@ -4,23 +4,27 @@
    static file served at the root scope. Strategies:
      - navigations          → network-first, fall back to the cached page, then
                               any cached page (the client router re-routes).
+     - reading + search     → cache-first (the /reading/ chapter assets and
+       static content          /search/ index assets are content-stable per
+                              deploy; rolled by VERSION). This is what makes the
+                              whole Bible + search work offline — the reader
+                              fetches chapters from /reading/<id>/<slug>.json and
+                              an idle pass precaches them (see local/precache.ts).
      - built static assets  → stale-while-revalidate.
      - Google Fonts         → cache-first (they rarely change).
      - tRPC query GETs       → network-first, so an opened chapter's
                               cross-references / preferences / translations are
                               available offline.
 
-   Chapter *text* is cached separately in IndexedDB (see local/chapter-cache.ts),
-   including full per-translation downloads, so it does not rely on this cache.
-
    Bump VERSION to roll all caches on the next activation. */
 
-const VERSION = 'v1';
+const VERSION = 'v2';
 const PAGES = `lb-pages-${VERSION}`;
 const ASSETS = `lb-assets-${VERSION}`;
 const FONTS = `lb-fonts-${VERSION}`;
 const API = `lb-api-${VERSION}`;
-const KEEP = new Set([PAGES, ASSETS, FONTS, API]);
+const CONTENT = `lb-content-${VERSION}`;
+const KEEP = new Set([PAGES, ASSETS, FONTS, API, CONTENT]);
 
 // Dev vs prod is signalled explicitly by the registration URL (`/sw.js?dev`),
 // not by sniffing request shapes. In dev we use network-first for *everything*
@@ -67,6 +71,12 @@ function cacheNameFor(url, isDoc) {
   }
   if (url.pathname.startsWith('/trpc/')) {
     return API;
+  }
+  if (
+    url.pathname.startsWith('/reading/') ||
+    url.pathname.startsWith('/search/')
+  ) {
+    return CONTENT;
   }
   return ASSETS;
 }
@@ -198,6 +208,19 @@ self.addEventListener('fetch', (event) => {
   // tRPC query GETs — network-first (cross-refs / prefs / translations etc.).
   if (url.pathname.startsWith('/trpc/')) {
     event.respondWith(networkFirst(request, API));
+    return;
+  }
+
+  // Reading chapters + search index — content-stable per deploy. Cache-first in
+  // prod (instant + offline once fetched; rolled by VERSION); network-first in
+  // dev so a `flex:build` regen is picked up while online.
+  if (
+    url.pathname.startsWith('/reading/') ||
+    url.pathname.startsWith('/search/')
+  ) {
+    event.respondWith(
+      DEV ? networkFirst(request, CONTENT) : cacheFirst(request, CONTENT),
+    );
     return;
   }
 

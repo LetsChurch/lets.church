@@ -9,7 +9,6 @@ import {
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 import { PageShell } from '@/components/chrome';
-import { useTranslationDownload } from '@/local/use-download';
 import { useTRPC } from '@/trpc/react';
 
 // Mirror of the server-side bounds (server/preferences.ts) — kept here so the
@@ -250,56 +249,12 @@ function Settings() {
         <div className="mt-9 mb-3 font-serif text-[20px] text-ink-strong">
           Offline
         </div>
-        <p className="mb-3 text-[13px] text-muted">
-          Download a translation to read it without a connection. Your
-          highlights, notes, and reading position already work offline.
+        <p className="text-[13px] text-muted">
+          lets.bible works offline automatically — every translation, search,
+          and your highlights, notes, and reading position are cached on this
+          device. No download needed.
         </p>
-        <div className="space-y-2">
-          {translations.map((t) => (
-            <OfflineTranslationRow key={t.id} id={t.id} name={t.name} />
-          ))}
-        </div>
       </div>
     </PageShell>
-  );
-}
-
-function OfflineTranslationRow({ id, name }: { id: string; name: string }) {
-  const { state, download, remove } = useTranslationDownload(id);
-
-  return (
-    <div className="flex items-center justify-between gap-4 border-line border-t py-[13px]">
-      <div>
-        <div className="font-semibold text-[14.5px] text-ink">{name}</div>
-        <div className="text-[12.5px] text-muted-2">
-          {state.phase === 'downloaded'
-            ? 'Available offline'
-            : state.phase === 'downloading'
-              ? `Downloading… ${state.done}/${state.total} books`
-              : `${id} · not downloaded`}
-        </div>
-      </div>
-      {state.phase === 'downloaded' ? (
-        <button
-          type="button"
-          onClick={remove}
-          className="rounded-[9px] border border-line-strong px-3 py-1.5 font-semibold text-[13px] text-muted hover:bg-paper-soft"
-        >
-          Remove
-        </button>
-      ) : state.phase === 'downloading' ? (
-        <span className="font-mono text-[12px] text-gold-soft">
-          {state.total > 0 ? Math.round((state.done / state.total) * 100) : 0}%
-        </span>
-      ) : (
-        <button
-          type="button"
-          onClick={download}
-          className="rounded-[9px] bg-ink-strong px-3 py-1.5 font-semibold text-[13px] text-white dark:text-paper"
-        >
-          Download
-        </button>
-      )}
-    </div>
   );
 }

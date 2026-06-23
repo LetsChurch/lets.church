@@ -1,42 +1,67 @@
 import type { BookChapter } from '@/db';
-import { CANON } from '@/lib/canon';
-import { trpcClient } from '@/trpc/react';
-import { kvDelete, kvGet, kvKeys, kvSet } from './db';
 
-// Offline reading cache: chapter reading-blocks stored in IndexedDB, keyed by
-// `ch:<translation>:<slug>:<chapter>`. Chapters are cached as they're viewed
-// (so recently-read passages work offline) and can be bulk-"downloaded" per
-// translation. `dl:<translation>` marks a completed full download.
+// Reading source: the reader fetches a book's chapters from the static asset
+// /reading/<id>/<slug>.json (built at image time from USX by build-flex-index.ts,
+// service-worker cached for offline). No Postgres and no IndexedDB — the SW is
+// the offline cache, and an idle pass (local/precache.ts) pulls the whole active
+// translation so it all works offline without a download step.
 
-function chapterKey(
-  translation: string,
-  slug: string,
-  chapter: number,
-): string {
-  return `ch:${translation}:${slug}:${chapter}`;
+const isClient = typeof window !== 'undefined';
+
+// On the server (SSR) fetch from the app's own static handler, like the tRPC
+// client does; on the client use a relative URL (served by the SW / network).
+function assetBase(): string {
+  return isClient ? '' : `http://localhost:${process.env.PORT ?? 3000}`;
 }
 
-export async function cacheChapter(
-  translation: string,
-  slug: string,
-  chapter: number,
-  content: BookChapter,
-): Promise<void> {
-  await kvSet(chapterKey(translation, slug, chapter), content);
+// Per-(translation, book) in-memory cache so navigating chapters within a book
+// doesn't re-fetch/re-parse the book JSON. Client-only: the content is static, so
+// this is safe, while the server avoids unbounded per-book memory growth.
+const bookCache = new Map<string, Record<string, BookChapter>>();
+
+async function loadBook(
+  translationId: string,
+  book: string,
+): Promise<Record<string, BookChapter>> {
+  const key = `${translationId}/${book}`;
+  if (isClient) {
+    const hit = bookCache.get(key);
+    if (hit) {
+      return hit;
+    }
+  }
+  const res = await fetch(`${assetBase()}/reading/${key}.json`);
+  if (!res.ok) {
+    throw new Error(`Failed to load reading asset ${key} (${res.status})`);
+  }
+  const chapters = (await res.json()) as Record<string, BookChapter>;
+  if (isClient) {
+    bookCache.set(key, chapters);
+  }
+  return chapters;
 }
 
-export async function getCachedChapter(
-  translation: string,
-  slug: string,
-  chapter: number,
-): Promise<BookChapter | null> {
-  return (
-    (await kvGet<BookChapter>(chapterKey(translation, slug, chapter))) ?? null
-  );
+// A chapter query backed by the static reading asset. The service worker serves
+// it offline (cache-first in prod), so there's no separate IndexedDB fallback.
+// Shared by the route loader (SSR/prefetch) and the component so they hit one
+// cache entry — callers pass a concrete, resolved translation id.
+export function chapterQueryOptions(params: {
+  book: string;
+  chapter: number;
+  translationId: string;
+}) {
+  const { book, chapter, translationId } = params;
+  return {
+    queryKey: ['bible.chapter', translationId, book, chapter] as const,
+    queryFn: async (): Promise<BookChapter | null> => {
+      const chapters = await loadBook(translationId, book);
+      return chapters[String(chapter)] ?? null;
+    },
+  };
 }
 
-// Persisted translations list, so the reader can resolve the default translation
-// (for cache lookups) while offline. Written whenever the list is fetched.
+// Persisted translations list, so the translation can be resolved (for asset
+// keys) while offline before the translations query rehydrates.
 const TRANSLATIONS_KEY = 'lb-translations';
 
 export type CachedTranslation = {
@@ -70,117 +95,19 @@ export function cachedDefaultTranslation(): string {
   }
 }
 
-// Resolve the translation the same way the server does, but client-side and
-// offline-capable: explicit URL param > the `lb-prefs` cookie's translation
-// (not HttpOnly, readable here) > the cached default. Used so the offline cache
-// is read/written under the same id the reader actually shows.
-function readPrefTranslation(): string | null {
-  if (typeof document === 'undefined') {
-    return null;
-  }
-  const m = document.cookie.match(/(?:^|;\s*)lb-prefs=([^;]+)/);
-  if (!m) {
-    return null;
-  }
-  try {
-    const o = JSON.parse(decodeURIComponent(m[1])) as { translation?: unknown };
-    return typeof o.translation === 'string' ? o.translation : null;
-  } catch {
-    return null;
-  }
-}
-
-export function resolveTranslationClient(param?: string): string {
-  return param ?? readPrefTranslation() ?? cachedDefaultTranslation();
-}
-
-// A chapter query that caches on success and falls back to the IndexedDB cache
-// when the network is unavailable — giving offline reading for any chapter
-// that's been viewed or downloaded. Shared by the route loader (SSR/prefetch)
-// and the component so they share one cache entry.
-export function chapterQueryOptions(params: {
-  book: string;
-  chapter: number;
-  translation?: string;
-}) {
-  const { book, chapter, translation } = params;
-  return {
-    queryKey: ['bible.chapter', translation ?? null, book, chapter] as const,
-    queryFn: async (): Promise<BookChapter | null> => {
-      try {
-        const data = await trpcClient.bible.chapter.query({
-          book,
-          chapter,
-          translation,
-        });
-        if (data) {
-          // Cache under the resolved id (no-op on the server).
-          void cacheChapter(
-            resolveTranslationClient(translation),
-            book,
-            chapter,
-            data,
-          );
-        }
-        return data;
-      } catch (err) {
-        const cached = await getCachedChapter(
-          resolveTranslationClient(translation),
-          book,
-          chapter,
-        );
-        if (cached) {
-          return cached;
-        }
-        throw err;
-      }
-    },
-  };
-}
-
-// --- per-translation download ----------------------------------------------
-
-function downloadedKey(translation: string): string {
-  return `dl:${translation}`;
-}
-
-export async function isDownloaded(translation: string): Promise<boolean> {
-  return (await kvGet<boolean>(downloadedKey(translation))) === true;
-}
-
-// Download an entire translation, one book at a time, reporting progress
-// (0..1). Resolves when every book is cached.
-export async function downloadTranslation(
-  translation: string,
-  onProgress?: (done: number, total: number) => void,
-): Promise<void> {
-  const total = CANON.length;
-  let done = 0;
-  for (const b of CANON) {
-    const book = await trpcClient.bible.book.query({
-      translation,
-      book: b.slug,
-    });
-    if (book) {
-      for (const [num, content] of Object.entries(book.chapters)) {
-        await cacheChapter(translation, b.slug, Number(num), content);
-      }
-    }
-    done += 1;
-    onProgress?.(done, total);
-  }
-  await kvSet(downloadedKey(translation), true);
-}
-
-// Remove a downloaded translation's cached chapters.
-export async function removeDownload(translation: string): Promise<void> {
-  const keys = await kvKeys(`ch:${translation}:`);
-  for (const k of keys) {
-    try {
-      await kvDelete(k);
-    } catch {
-      // keep deleting the rest even if one fails
-    }
-  }
-  await kvDelete(downloadedKey(translation));
+// Resolve the translation to read: explicit URL param > saved preference >
+// default translation (from the translations list, falling back to the cached
+// default). Used by both the loader and the reader so their query keys match.
+export function resolveTranslationId(
+  param: string | undefined,
+  prefTranslation: string | null | undefined,
+  translations: { id: string; isDefault: boolean }[] | undefined,
+): string {
+  return (
+    param ??
+    prefTranslation ??
+    translations?.find((t) => t.isDefault)?.id ??
+    translations?.[0]?.id ??
+    cachedDefaultTranslation()
+  );
 }
