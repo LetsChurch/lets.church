@@ -13,6 +13,7 @@ import {
   makeDownloadServiceUrl,
 } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
+import { escapeHtml } from '@/util/xss';
 
 const moduleLogger = logger.child({
   module: 'routes/channel/$slug/podcast.xml',
@@ -207,9 +208,11 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
 
             const content = [
               thumbnailUrl
-                ? `<p><img src="${thumbnailUrl}" alt="${upload.title ?? 'Upload'}" /></p>`
+                ? `<p><img src="${thumbnailUrl}" alt="${escapeHtml(upload.title ?? 'Upload')}" /></p>`
                 : '',
-              upload.description ? `<p>${upload.description}</p>` : '',
+              upload.description
+                ? `<p>${escapeHtml(upload.description)}</p>`
+                : '',
             ]
               .filter(Boolean)
               .join('\n');

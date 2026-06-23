@@ -15,20 +15,7 @@ import { useState } from 'react';
 import { useAppMantineForm } from '@/components/mantine';
 import { loginSchema } from '@/schemas/auth';
 import { useTRPC } from '@/trpc/react';
-
-// Only allow internal absolute paths as a post-login destination, so a crafted
-// `?redirect=` can't turn the login page into an open redirector. Callers (the
-// OIDC authorize server route, the invitation-accept flow) pass a relative path.
-function safeRedirect(redirectTo?: string): string | undefined {
-  if (
-    !redirectTo ||
-    !redirectTo.startsWith('/') ||
-    redirectTo.startsWith('//')
-  ) {
-    return undefined;
-  }
-  return redirectTo;
-}
+import { safeRedirect } from '@/util/safe-redirect';
 
 export const Route = createFileRoute('/auth_/login')({
   component: LoginRoute,

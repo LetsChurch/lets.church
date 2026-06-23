@@ -1,5 +1,7 @@
+import { AppSession, db } from '@letschurch/db';
 import { createFileRoute } from '@tanstack/react-router';
 import { deleteCookie } from '@tanstack/react-start/server';
+import { eq } from 'drizzle-orm';
 import { getSession } from '@/util/auth';
 import {
   clients,
@@ -57,6 +59,12 @@ export const Route = createFileRoute('/oidc/logout')({
           ? await verifyIdTokenHint(idTokenHint)
           : null;
         if (session && hintSub && hintSub === session.appUserId) {
+          // Revoke the server-side session too, so a captured cookie can't be
+          // replayed after RP-initiated logout.
+          await db
+            .update(AppSession)
+            .set({ deletedAt: new Date(), updatedAt: new Date() })
+            .where(eq(AppSession.id, session.id));
           deleteCookie(SESSION_COOKIE, clearSessionCookieOptions);
         }
 

@@ -5,6 +5,10 @@ const xss = new FilterXSS({ whiteList: {} });
 
 export default { xss };
 
+// Re-exported for existing import sites (e.g. the RSS/feed routes). New code can
+// import directly from `@/util/html-escape` to avoid pulling the `xss` library.
+export { escapeHtml } from './html-escape';
+
 export function escapeDocument<T extends JsonValue>(doc: T): T {
   if (!doc) {
     return doc;

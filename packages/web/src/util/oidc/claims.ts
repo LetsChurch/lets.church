@@ -1,5 +1,5 @@
 import { AppUser, AppUserEmail, db } from '@letschurch/db';
-import { desc, eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { getPublicImageUrl } from '@/util/server-env';
 
 // Resolve the OIDC claims for a user, gated by the granted scopes. `sub` is the
@@ -37,10 +37,13 @@ export async function buildUserClaims(
   }
 
   if (scopes.has('email')) {
-    // Prefer a verified email; fall back to the most recently keyed one.
+    // Prefer a verified email. Postgres sorts NULLs first under plain `DESC`, so
+    // a bare `desc(verifiedAt)` would surface an *unverified* address before a
+    // verified one; `NULLS LAST` keeps verified (non-null, most-recent) first and
+    // only falls back to an unverified row when none are verified.
     const email = await db.query.AppUserEmail.findFirst({
       where: eq(AppUserEmail.appUserId, appUserId),
-      orderBy: [desc(AppUserEmail.verifiedAt)],
+      orderBy: sql`${AppUserEmail.verifiedAt} desc nulls last`,
       columns: { email: true, verifiedAt: true },
     });
     if (email) {

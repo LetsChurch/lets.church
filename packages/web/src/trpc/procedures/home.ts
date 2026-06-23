@@ -6,6 +6,11 @@ import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarSm2x, appAvatarXs2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
+import {
+  canViewMedia,
+  getMemberChannelIds,
+  isChannelRoutable,
+} from '@/util/media-visibility';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { authProcedure, publicProcedure } from '../trpc';
@@ -42,6 +47,8 @@ export const homeProcedures = {
       'Fetching followed channels',
     );
 
+    const memberChannelIds = await getMemberChannelIds(ctx.session.appUserId);
+
     const subscriptions = await db.query.ChannelSubscription.findMany({
       columns: {},
       with: {
@@ -51,6 +58,8 @@ export const homeProcedures = {
             name: true,
             slug: true,
             avatarPath: true,
+            visibility: true,
+            approvedAt: true,
             deletedAt: true,
           },
         },
@@ -59,8 +68,22 @@ export const homeProcedures = {
     });
 
     const channelsWithAvatars = subscriptions
-      .filter(({ channel }) => channel.deletedAt === null)
+      // Only return channels the user can actually see: public/approved, or a
+      // private channel they are a member of. A subscription row alone (which
+      // could have been created for a private channel id) must not expose
+      // channel metadata.
+      .filter(
+        ({ channel }) =>
+          isChannelRoutable(channel) || memberChannelIds.has(channel.id),
+      )
       .map(({ channel }) => {
+        const {
+          visibility: _visibility,
+          approvedAt: _approvedAt,
+          deletedAt: _deletedAt,
+          ...channelRest
+        } = channel;
+
         const avatarUrl = channel.avatarPath
           ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
               resize: appAvatarSm2x,
@@ -68,7 +91,7 @@ export const homeProcedures = {
           : null;
 
         return {
-          ...channel,
+          ...channelRest,
           id: OutgoingIdSchema.parse(channel.id),
           avatarUrl,
         };
@@ -367,6 +390,44 @@ export const homeProcedures = {
       );
 
       try {
+        // Only allow following channels the user can see: public/approved, or a
+        // private channel they belong to. Otherwise a user who guesses a private
+        // channel id could subscribe and then read its metadata back through
+        // getFollowedChannels.
+        const channel = await db.query.Channel.findFirst({
+          columns: {
+            id: true,
+            visibility: true,
+            approvedAt: true,
+            deletedAt: true,
+          },
+          where: (t, { eq }) => eq(t.id, input.channelId),
+        });
+
+        if (!channel || channel.deletedAt) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Channel not found',
+          });
+        }
+
+        if (!isChannelRoutable(channel)) {
+          const membership = await db.query.ChannelMembership.findFirst({
+            columns: { appUserId: true },
+            where: (t, { and, eq }) =>
+              and(
+                eq(t.channelId, input.channelId),
+                eq(t.appUserId, ctx.session.appUserId),
+              ),
+          });
+          if (!membership) {
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'Channel not found',
+            });
+          }
+        }
+
         await db.insert(ChannelSubscription).values({
           appUserId: ctx.session.appUserId,
           channelId: input.channelId,
@@ -379,6 +440,10 @@ export const homeProcedures = {
 
         return { success: true };
       } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
         moduleLogger.error(
           {
             appUserId: ctx.session.appUserId,
@@ -462,6 +527,8 @@ export const homeProcedures = {
         'Fetching in-progress uploads',
       );
 
+      const memberChannelIds = await getMemberChannelIds(ctx.session.appUserId);
+
       // Get user's upload views with their most recent viewed seconds
       const views = await db.query.UploadView.findMany({
         columns: {
@@ -479,6 +546,9 @@ export const homeProcedures = {
               lengthSeconds: true,
               defaultThumbnailPath: true,
               overrideThumbnailPath: true,
+              visibility: true,
+              deletedAt: true,
+              channelId: true,
             },
             with: {
               channel: {
@@ -488,6 +558,9 @@ export const homeProcedures = {
                   slug: true,
                   avatarPath: true,
                   defaultThumbnailPath: true,
+                  visibility: true,
+                  approvedAt: true,
+                  deletedAt: true,
                 },
               },
             },
@@ -528,12 +601,36 @@ export const homeProcedures = {
             return null;
           }
 
+          // Skip media the user can no longer view (made private/unapproved/
+          // deleted, or seeded via the public view-recording endpoints).
+          if (
+            !canViewMedia({
+              upload: view.upload,
+              channelId: view.upload.channelId,
+              channel: view.upload.channel,
+              isSiteAdmin: Boolean(ctx.isSiteAdmin),
+              memberChannelIds,
+            })
+          ) {
+            return null;
+          }
+
           const {
             defaultThumbnailPath,
             overrideThumbnailPath,
             channel,
+            visibility: _visibility,
+            deletedAt: _deletedAt,
+            channelId: _channelId,
             ...uploadRest
           } = view.upload;
+
+          const {
+            visibility: _channelVisibility,
+            approvedAt: _channelApprovedAt,
+            deletedAt: _channelDeletedAt,
+            ...channelRest
+          } = channel;
 
           const thumbnailUrl = resolveThumbnailUrl({
             overrideThumbnailPath,
@@ -554,7 +651,7 @@ export const homeProcedures = {
             thumbnailUrl,
             progress,
             channel: {
-              ...channel,
+              ...channelRest,
               id: OutgoingIdSchema.parse(channel.id),
               avatarUrl: channelAvatarUrl,
             },

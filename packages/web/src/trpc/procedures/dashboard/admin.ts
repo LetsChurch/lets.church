@@ -51,6 +51,7 @@ import {
   sum,
 } from 'drizzle-orm';
 import { z } from 'zod';
+import { usernameSchema } from '@/schemas/auth';
 import { IncomingIdSchema } from '@/schemas/common';
 import {
   addFeaturedUploadSchema,
@@ -1192,7 +1193,7 @@ export const adminRouter = router({
   createUser: adminProcedure
     .input(
       z.object({
-        username: z.string().min(1),
+        username: usernameSchema,
         password: z.string().min(6),
         fullName: z.string().optional(),
         email: z.email(),
@@ -1289,7 +1290,7 @@ export const adminRouter = router({
     .input(
       z.object({
         appUserId: z.string(),
-        username: z.string().min(1).optional(),
+        username: usernameSchema.optional(),
         fullName: z.string().optional(),
         role: z.enum(['USER', 'ADMIN']).optional(),
         email: z.email().optional(),

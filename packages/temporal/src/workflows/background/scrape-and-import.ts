@@ -103,7 +103,11 @@ export async function scrapeAndImportWorkflow(
     let imported = 0;
     let skipped = 0;
     let failed = 0;
+    // Max publishedAt among successful imports, and min among failures. The
+    // cursor must not advance past the oldest failure, or that item (and any
+    // older ones in the run) would be filtered out by the scraper next run.
     let latestUploadDate: string | undefined;
+    let oldestFailedDate: string | undefined;
 
     // Process each item
     for (const item of items) {
@@ -116,14 +120,6 @@ export async function scrapeAndImportWorkflow(
         if (isDuplicate) {
           skipped++;
           continue;
-        }
-
-        // Track latest upload date
-        if (item.publishedAt) {
-          const publishedAtStr = String(item.publishedAt);
-          if (!latestUploadDate || publishedAtStr > latestUploadDate) {
-            latestUploadDate = publishedAtStr;
-          }
         }
 
         // Start import workflow for each item
@@ -158,8 +154,25 @@ export async function scrapeAndImportWorkflow(
         });
         uploadRecordId = await handle.result();
         imported++;
+
+        // Advance the cursor only AFTER a successful import. Doing it before
+        // (the old behavior) meant a failed item — especially one with a newer
+        // publishedAt — pushed lastImportedUploadDate past itself, so it and any
+        // older failed items in the run were skipped permanently on later runs.
+        if (item.publishedAt) {
+          const publishedAtStr = String(item.publishedAt);
+          if (!latestUploadDate || publishedAtStr > latestUploadDate) {
+            latestUploadDate = publishedAtStr;
+          }
+        }
       } catch (_error) {
         failed++;
+        if (item.publishedAt) {
+          const publishedAtStr = String(item.publishedAt);
+          if (!oldestFailedDate || publishedAtStr < oldestFailedDate) {
+            oldestFailedDate = publishedAtStr;
+          }
+        }
         continue;
       }
 
@@ -198,8 +211,14 @@ export async function scrapeAndImportWorkflow(
       itemsFailed: failed,
     });
 
-    // Update import source timestamps
-    await updateImportSourceTimestamps(importSourceId, latestUploadDate);
+    // Advance the cursor to the newest successful import, but never past the
+    // oldest failure so failed items are re-fetched next run (re-fetched
+    // successes are deduped). An all-failed run leaves it unchanged (undefined).
+    let cursorDate = latestUploadDate;
+    if (cursorDate && oldestFailedDate && oldestFailedDate < cursorDate) {
+      cursorDate = oldestFailedDate;
+    }
+    await updateImportSourceTimestamps(importSourceId, cursorDate);
   } catch (error) {
     // Handle scraper failures
     const errorMessage = error instanceof Error ? error.message : String(error);

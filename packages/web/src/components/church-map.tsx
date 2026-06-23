@@ -6,7 +6,9 @@ import mapboxgl from 'mapbox-gl';
 import type { ParsedFilters } from '@/routes/_main/churches';
 import { getInitialTheme, THEME_CHANGE_EVENT } from '@/stores/theme';
 import { useTRPC } from '@/trpc/react';
+import { escapeHtml } from '@/util/html-escape';
 import { getInitials } from '@/util/misc';
+import { safeHttpHref } from '@/util/safe-url';
 
 type ChurchDatum = {
   items: Array<{
@@ -64,12 +66,6 @@ function getTagColorClass(color: string): string {
   }
 }
 
-function escapeHtml(text: string): string {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
 function buildPopupHTML(properties: {
   title?: string;
   slug?: string;
@@ -95,6 +91,12 @@ function buildPopupHTML(properties: {
 
   if (!title || !slug) return '';
 
+  // The slug is interpolated into href path segments below; encode it so a
+  // stored value containing quotes/markup can't break out of the attribute.
+  const slugPath = encodeURIComponent(slug);
+  // Drop non-http(s) website URLs (e.g. `javascript:`) before they reach href.
+  const safeWebsiteUrl = safeHttpHref(websiteUrl);
+
   let parsedTags: Array<{ label: string; color: string }> = [];
   if (tags) {
     try {
@@ -113,7 +115,7 @@ function buildPopupHTML(properties: {
 
   return `
     <div class="min-w-[280px] max-w-[320px] p-4 bg-white dark:bg-zinc-900 rounded-xl border-fancy-pants">
-      <a href="/churches/${slug}" class="block hover:opacity-90 transition-opacity">
+      <a href="/churches/${slugPath}" class="block hover:opacity-90 transition-opacity">
         <div class="flex items-center gap-3 mb-3">
           ${
             avatarUrl
@@ -143,10 +145,10 @@ function buildPopupHTML(properties: {
       <div class="space-y-1.5 mb-3">
         ${primaryEmail ? `<a href="mailto:${escapeHtml(primaryEmail)}" class="block text-sm text-indigo-600 hover:underline dark:text-white">${escapeHtml(primaryEmail)}</a>` : ''}
         ${primaryPhoneNumber ? `<a href="tel:${escapeHtml(primaryPhoneNumber)}" class="block text-sm text-indigo-600 hover:underline dark:text-white">${escapeHtml(primaryPhoneNumber)}</a>` : ''}
-        ${websiteUrl ? `<a href="${escapeHtml(websiteUrl)}" target="_blank" rel="noopener noreferrer" class="block text-sm text-indigo-600 hover:underline dark:text-white">${escapeHtml(websiteUrl.replace(/^https?:\/\//, ''))}</a>` : ''}
+        ${safeWebsiteUrl ? `<a href="${escapeHtml(safeWebsiteUrl)}" target="_blank" rel="noopener noreferrer" class="block text-sm text-indigo-600 hover:underline dark:text-white">${escapeHtml(safeWebsiteUrl.replace(/^https?:\/\//, ''))}</a>` : ''}
       </div>
 
-      <a href="/churches/${slug}" class="block w-full text-center bg-indigo-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors text-sm">
+      <a href="/churches/${slugPath}" class="block w-full text-center bg-indigo-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors text-sm">
         See Church
       </a>
     </div>

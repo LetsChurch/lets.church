@@ -3,6 +3,7 @@ import { invariant, noop } from 'es-toolkit';
 import { execa } from 'execa';
 import type { Logger } from '../logger';
 import { downloadUrl } from './download';
+import { assertPublicUrl } from './safe-url';
 import { downloadSubsplash } from './subsplash';
 import { ytdlp } from './yt-dlp';
 
@@ -25,7 +26,10 @@ export async function downloadFromUrl(
     trimSilence?: boolean;
   },
 ): Promise<DownloadResult> {
-  const url = new URL(input);
+  // Validate the import target before any fetch/yt-dlp/Playwright work. The
+  // direct path re-validates per-redirect via safeFetch; yt-dlp/Playwright run
+  // their own requests, so input validation is the bounded mitigation there.
+  const url = await assertPublicUrl(input);
 
   let mediaPath: string;
   let thumbnailPath: string | null = null;

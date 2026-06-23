@@ -310,6 +310,36 @@ export const playlistProcedures = {
         'Fetching first playlist thumbnail',
       );
 
+      // Apply the same visibility checks as getPublicPlaylist before resolving a
+      // thumbnail, so a private/unapproved channel's playlist id can't leak a
+      // thumbnail URL through this endpoint.
+      const playlist = await db.query.UploadList.findFirst({
+        where: (t, { eq }) => eq(t.id, playlistId),
+        columns: { id: true, type: true },
+        with: {
+          channel: {
+            columns: {
+              visibility: true,
+              approvedAt: true,
+              deletedAt: true,
+            },
+          },
+        },
+      });
+
+      if (!playlist || playlist.type !== 'PLAYLIST') {
+        return null;
+      }
+
+      if (
+        playlist.channel &&
+        (playlist.channel.visibility !== 'PUBLIC' ||
+          !playlist.channel.approvedAt ||
+          playlist.channel.deletedAt)
+      ) {
+        return null;
+      }
+
       // Get first public, transcoded, non-deleted entry for SEO thumbnail
       const firstEntry = await db
         .select({

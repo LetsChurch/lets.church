@@ -1,5 +1,6 @@
 import { parseFeed } from '@rowanmanning/feed-parser';
 import { htmlToMarkdown } from '../../../util/import/html-to-markdown';
+import { safeFetch } from '../../../util/import/safe-url';
 import { USER_AGENT } from '../../../util/import/user-agent';
 import logger from '../../../util/logger';
 import type { ScrapedMediaItem } from '../scrape-import-source';
@@ -16,10 +17,15 @@ export async function scrapeRssFeed(
   moduleLogger.info('RSS feed scraper starting');
 
   try {
-    // Fetch and parse the RSS feed
-    const response = await fetch(url, {
-      headers: { 'User-Agent': USER_AGENT },
-    });
+    // Fetch and parse the RSS feed. safeFetch enforces the SSRF policy on the
+    // feed URL (and redirects) so a malicious feed source can't point the worker
+    // at internal services. Cap the body since we buffer the whole feed via
+    // `.text()` — a feed has no business being larger than this.
+    const response = await safeFetch(
+      url,
+      { headers: { 'User-Agent': USER_AGENT } },
+      { maxBytes: 32 * 1024 * 1024 },
+    );
 
     if (!response.ok) {
       throw new Error(`Failed to fetch RSS feed: ${response.statusText}`);

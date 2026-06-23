@@ -11,6 +11,59 @@ export type TrpcLogContext = {
   [key: string]: unknown;
 };
 
+// Field names whose values must never reach durable logs. The base pino logger
+// only redacts top-level `password`/`cookie`, but procedure input is nested
+// under `context.input` (and serialized to a JSON string), so we redact it here
+// before it is ever handed to the logger.
+//
+// Matched as substrings (case-insensitive) so composite names are also covered:
+// `password` catches `newPassword`/`passwordHash`; `token` catches
+// `accessToken`/`refreshToken`; `secret` catches `clientSecret`; etc.
+const SENSITIVE_SUBSTRINGS = [
+  'password',
+  'secret',
+  'token',
+  'turnstile',
+  'authorization',
+  'cookie',
+  'credential',
+  'apikey',
+  'jwt',
+];
+
+function isSensitiveKey(key: string): boolean {
+  const k = key.toLowerCase();
+  if (SENSITIVE_SUBSTRINGS.some((s) => k.includes(s))) {
+    return true;
+  }
+  // `key` on its own (the reset key) and `...Key` suffixes (apiKey, signingKey,
+  // privateKey) — but not arbitrary words that merely contain "key".
+  return k === 'key' || k.endsWith('key');
+}
+
+/**
+ * Recursively redact sensitive values (passwords, CAPTCHA tokens, invitation/
+ * reset tokens) from an arbitrary value so it is safe to log.
+ */
+export function redactSensitive(value: unknown, depth = 0): unknown {
+  if (depth > 8 || value === null || typeof value !== 'object') {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((v) => redactSensitive(v, depth + 1));
+  }
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, val]) => {
+      if (isSensitiveKey(key)) {
+        return [key, '[REDACTED]'];
+      }
+      return [key, redactSensitive(val, depth + 1)];
+    }),
+  );
+}
+
 /**
  * Create a child logger for a tRPC procedure
  */
@@ -41,7 +94,7 @@ export function logProcedureStart(
       appUserId: ctx?.userId as string | undefined,
       context: {
         ...ctx,
-        input,
+        input: redactSensitive(input),
       },
     },
     `tRPC procedure started: ${procedure}`,
@@ -122,7 +175,7 @@ export async function withProcedureLogging<T>(
     return result;
   } catch (error) {
     logProcedureError(logger, procedure, error, {
-      input,
+      input: redactSensitive(input),
       ...context,
     });
     throw error;

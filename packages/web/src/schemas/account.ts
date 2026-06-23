@@ -1,9 +1,10 @@
 import { z } from 'zod';
+import { usernameSchema } from './auth';
 
 export const profileUpdateSchema = z.object({
   fullName: z.string(),
   email: z.email('Invalid email address').min(1, 'Email is required'),
-  username: z.string().min(1, 'Username is required'),
+  username: usernameSchema,
 });
 
 export const passwordChangeSchema = z

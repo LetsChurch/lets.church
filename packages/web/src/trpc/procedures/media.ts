@@ -5,6 +5,7 @@ import {
   TranscriptParagraph,
   UploadList,
   UploadListEntry,
+  UploadRecord,
   UploadUserComment,
   UploadUserCommentRating,
   UploadUserRating,
@@ -31,7 +32,9 @@ import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarXs2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
+import { canViewMediaById } from '@/util/media-visibility';
 import { getClientIpAddress } from '@/util/request-ip';
+import { isSafeUrl } from '@/util/safe-url';
 import {
   getPublicImageUrl,
   getPublicMediaUrl,
@@ -115,6 +118,33 @@ function rehypeTimestamps() {
   return (tree: AnyNode) => walkTimestamps(tree);
 }
 
+// Markdown is rendered to HTML and injected with dangerouslySetInnerHTML on the
+// public media page. remark-rehype drops raw HTML, but Markdown links are still
+// turned into <a href>, and the default URL handling does not reject
+// `javascript:`/`data:`/`vbscript:` schemes — so `[click](javascript:alert(1))`
+// would render as an executable href. Strip unsafe url-bearing attributes here.
+const URL_ATTRS = ['href', 'src'] as const;
+
+function walkSafeUrls(node: AnyNode): void {
+  if (node.properties) {
+    for (const attr of URL_ATTRS) {
+      const value = node.properties[attr];
+      if (typeof value === 'string' && !isSafeUrl(value)) {
+        delete node.properties[attr];
+      }
+    }
+  }
+  if (node.children) {
+    for (const child of node.children) {
+      walkSafeUrls(child);
+    }
+  }
+}
+
+function rehypeSafeUrls() {
+  return (tree: AnyNode) => walkSafeUrls(tree);
+}
+
 const md = unified()
   .use(remarkLinkify)
   .use(remarkParse)
@@ -124,6 +154,7 @@ const md = unified()
     target: '_blank',
   })
   .use(rehypeTimestamps)
+  .use(rehypeSafeUrls)
   .use(rehypeStringify);
 
 const TWO64 = 1n << 64n;
@@ -804,6 +835,13 @@ export const mediaProcedures = {
         'Creating upload view',
       );
 
+      // Only record views for media the caller can actually view. Otherwise an
+      // arbitrary upload id could be planted into the caller's history/progress
+      // (and later read back through library/home endpoints).
+      if (!(await canViewMediaById(uploadRecordId, ctx))) {
+        return null;
+      }
+
       const trackingSalt = await db.query.TrackingSalt.findFirst({
         orderBy: (t, { desc }) => [desc(t.id)],
       });
@@ -869,12 +907,16 @@ export const mediaProcedures = {
       z.object({
         uploadRecordId: IncomingIdSchema,
         viewHash: z.string(),
-        ranges: z.array(
-          z.object({
-            start: z.number(),
-            end: z.number(),
-          }),
-        ),
+        ranges: z
+          .array(
+            z.object({
+              start: z.number().finite().nonnegative(),
+              end: z.number().finite().nonnegative(),
+            }),
+          )
+          // Bound the request so a caller can't submit a huge range set and
+          // force unbounded second-by-second expansion + row inserts.
+          .max(1000),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -889,13 +931,32 @@ export const mediaProcedures = {
         'Recording view seconds',
       );
 
+      // Don't seed view/progress rows for media the caller can't view.
+      if (!(await canViewMediaById(uploadRecordId, ctx))) {
+        return { success: false, secondsRecorded: 0 };
+      }
+
+      // Cap the total number of expanded seconds so a few very large ranges
+      // can't allocate an unbounded Set / insert batch (24h of seconds is far
+      // beyond any real media length).
+      const MAX_SECONDS = 86_400;
+
       // Convert ranges to individual seconds
       const seconds = new Set<number>();
       for (const range of ranges) {
+        if (range.end < range.start) {
+          continue;
+        }
         const startSecond = Math.floor(range.start);
         const endSecond = Math.floor(range.end);
         for (let second = startSecond; second <= endSecond; second++) {
           seconds.add(second);
+          if (seconds.size >= MAX_SECONDS) {
+            break;
+          }
+        }
+        if (seconds.size >= MAX_SECONDS) {
+          break;
         }
       }
 
@@ -1142,11 +1203,21 @@ export const mediaProcedures = {
 
       moduleLogger.info('Rating media');
 
+      // Don't allow rating media the caller can't view (private/unapproved/
+      // deleted), which would otherwise let anyone manipulate engagement on
+      // media they have no access to.
+      if (!(await canViewMediaById(mediaId, ctx))) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Media not found' });
+      }
+
       // Check if user already rated this media
       const existingRating = await db.query.UploadUserRating.findFirst({
         where: (t, { and, eq }) =>
           and(eq(t.appUserId, userId), eq(t.uploadRecordId, mediaId)),
       });
+
+      type RatingValue = 'LIKE' | 'DISLIKE' | null;
+      let result: { userRating: RatingValue; previousRating: RatingValue };
 
       if (existingRating) {
         if (existingRating.rating === rating) {
@@ -1162,10 +1233,7 @@ export const mediaProcedures = {
 
           moduleLogger.info('Rating removed');
 
-          return {
-            userRating: null,
-            previousRating: rating,
-          };
+          result = { userRating: null, previousRating: rating };
         } else {
           // User is changing their rating
           await db
@@ -1187,7 +1255,7 @@ export const mediaProcedures = {
             'Rating updated',
           );
 
-          return {
+          result = {
             userRating: rating,
             previousRating: existingRating.rating,
           };
@@ -1202,11 +1270,19 @@ export const mediaProcedures = {
 
         moduleLogger.info('New rating created');
 
-        return {
-          userRating: rating,
-          previousRating: null,
-        };
+        result = { userRating: rating, previousRating: null };
       }
+
+      // Any rating change affects the upload's score. Re-mark it stale so the
+      // background score worker recomputes it — the worker clears scoreStaleAt
+      // after each pass, so without re-staling here, ratings made after the
+      // first pass would never be reflected in the trending score.
+      await db
+        .update(UploadRecord)
+        .set({ scoreStaleAt: new Date() })
+        .where(eq(UploadRecord.id, mediaId));
+
+      return result;
     }),
 
   getMediaRating: publicProcedure
@@ -1223,6 +1299,11 @@ export const mediaProcedures = {
       );
 
       const sessionUserId = ctx.session?.appUserId;
+
+      // Don't expose engagement counts for media the caller can't view.
+      if (!(await canViewMediaById(input.mediaId, ctx))) {
+        return { likes: 0, dislikes: 0, userRating: null };
+      }
 
       // Get counts of likes and dislikes
       const [likesResult, dislikesResult, userRating] = await Promise.all([
@@ -1502,25 +1583,40 @@ export const mediaProcedures = {
         columns: {
           id: true,
           visibility: true,
+          userCommentsEnabled: true,
+          deletedAt: true,
         },
         with: {
           channel: {
             columns: {
               id: true,
               visibility: true,
+              approvedAt: true,
+              deletedAt: true,
             },
           },
         },
         where: (t, { eq }) => eq(t.id, mediaId),
       });
 
-      if (!upload) {
-        throw new Error('Media not found');
+      if (!upload || upload.deletedAt || upload.channel.deletedAt) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Media not found' });
       }
 
-      // Check authorization based on channel and upload visibility
+      // Respect the per-upload comments toggle (server-side, not just the UI).
+      if (!upload.userCommentsEnabled) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Comments are disabled for this media',
+        });
+      }
+
+      // Check authorization based on channel and upload visibility. Unapproved
+      // channels are treated like private (membership required) so comments
+      // can't be attached to not-yet-public media.
       const needsChannelMembership =
         upload.channel.visibility === 'PRIVATE' ||
+        !upload.channel.approvedAt ||
         upload.visibility === 'PRIVATE';
 
       if (needsChannelMembership) {
@@ -1532,14 +1628,29 @@ export const mediaProcedures = {
         });
 
         if (!membership) {
-          const reason =
-            upload.channel.visibility === 'PRIVATE'
-              ? 'private channel'
-              : 'private video';
           moduleLogger.warn('Unauthorized comment attempt');
-          throw new Error(
-            `You must be a member of the channel to comment on this ${reason === 'private channel' ? 'channel' : 'video'}`,
-          );
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message:
+              'You must be a member of the channel to comment on this media',
+          });
+        }
+      }
+
+      // If this is a reply, the parent comment must belong to the same media.
+      // Otherwise a reply could be attached under another upload's comment
+      // thread (and surfaced there via getReplies).
+      if (replyingToId) {
+        const parent = await db.query.UploadUserComment.findFirst({
+          columns: { uploadRecordId: true },
+          where: (t, { eq }) => eq(t.id, replyingToId),
+        });
+
+        if (!parent || parent.uploadRecordId !== mediaId) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Parent comment not found for this media',
+          });
         }
       }
 
@@ -1610,11 +1721,27 @@ export const mediaProcedures = {
 
       moduleLogger.info('Rating comment');
 
+      // The caller must be able to view the comment's media before rating it.
+      const comment = await db.query.UploadUserComment.findFirst({
+        columns: { uploadRecordId: true },
+        where: (t, { eq }) => eq(t.id, commentId),
+      });
+
+      if (!comment || !(await canViewMediaById(comment.uploadRecordId, ctx))) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Comment not found',
+        });
+      }
+
       // Check if user already rated this comment
       const existingRating = await db.query.UploadUserCommentRating.findFirst({
         where: (t, { and, eq }) =>
           and(eq(t.appUserId, userId), eq(t.uploadUserCommentId, commentId)),
       });
+
+      type RatingValue = 'LIKE' | 'DISLIKE' | null;
+      let result: { userRating: RatingValue; previousRating: RatingValue };
 
       if (existingRating) {
         if (existingRating.rating === rating) {
@@ -1630,10 +1757,7 @@ export const mediaProcedures = {
 
           moduleLogger.info('Comment rating removed');
 
-          return {
-            userRating: null,
-            previousRating: rating,
-          };
+          result = { userRating: null, previousRating: rating };
         } else {
           // User is changing their rating
           await db
@@ -1655,7 +1779,7 @@ export const mediaProcedures = {
             'Comment rating updated',
           );
 
-          return {
+          result = {
             userRating: rating,
             previousRating: existingRating.rating,
           };
@@ -1670,11 +1794,18 @@ export const mediaProcedures = {
 
         moduleLogger.info('New comment rating created');
 
-        return {
-          userRating: rating,
-          previousRating: null,
-        };
+        result = { userRating: rating, previousRating: null };
       }
+
+      // Re-mark the comment's score stale so the background score worker
+      // recomputes it; it clears scoreStaleAt after each pass, so later rating
+      // changes would otherwise never affect comment ordering.
+      await db
+        .update(UploadUserComment)
+        .set({ scoreStaleAt: new Date() })
+        .where(eq(UploadUserComment.id, commentId));
+
+      return result;
     }),
 
   getRelatedMedia: publicProcedure

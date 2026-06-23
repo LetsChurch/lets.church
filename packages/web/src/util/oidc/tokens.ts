@@ -1,5 +1,10 @@
 import crypto from 'node:crypto';
-import { db, OidcAuthorizationCode, OidcRefreshToken } from '@letschurch/db';
+import {
+  db,
+  OidcAuthorizationCode,
+  OidcRefreshToken,
+  type TransactionClient,
+} from '@letschurch/db';
 import { and, eq, gt, isNull } from 'drizzle-orm';
 import { jwtVerify, SignJWT } from 'jose';
 import {
@@ -14,6 +19,10 @@ import {
   getVerificationKeySet,
   SIGNING_ALG,
 } from './keys';
+
+// Either the base db handle or a transaction handle — lets the refresh-token
+// helpers run inside the rotation transaction (for row-locked serialization).
+type DbClient = typeof db | TransactionClient;
 
 function randomToken() {
   return crypto.randomBytes(32).toString('base64url');
@@ -194,15 +203,18 @@ export async function consumeAuthorizationCode(
 // Refresh tokens (opaque, hashed, rotating, with reuse detection)
 // ---------------------------------------------------------------------------
 
-export async function mintRefreshToken(params: {
-  appUserId: string;
-  clientId: string;
-  scope: string;
-  authTime: number;
-  familyId?: string;
-}): Promise<string> {
+export async function mintRefreshToken(
+  params: {
+    appUserId: string;
+    clientId: string;
+    scope: string;
+    authTime: number;
+    familyId?: string;
+  },
+  client: DbClient = db,
+): Promise<string> {
   const token = randomToken();
-  await db.insert(OidcRefreshToken).values({
+  await client.insert(OidcRefreshToken).values({
     tokenHash: hashToken(token),
     familyId: params.familyId ?? crypto.randomUUID(),
     appUserId: params.appUserId,
@@ -214,8 +226,8 @@ export async function mintRefreshToken(params: {
   return token;
 }
 
-async function revokeFamily(familyId: string) {
-  await db
+async function revokeFamily(familyId: string, client: DbClient = db) {
+  await client
     .update(OidcRefreshToken)
     .set({ revokedAt: new Date() })
     .where(
@@ -238,57 +250,59 @@ export async function rotateRefreshToken(
   rawToken: string,
   clientId: string,
 ): Promise<{ rotation: RefreshRotation; newRefreshToken?: string }> {
-  const row = await db.query.OidcRefreshToken.findFirst({
-    where: eq(OidcRefreshToken.tokenHash, hashToken(rawToken)),
+  // Serialize rotations of the same token with a row lock so reuse detection and
+  // successor minting can't interleave: two concurrent requests for one token
+  // would otherwise let the loser revoke the family *before* the winner inserts
+  // its successor, leaving a live successor in a family that should be dead.
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(OidcRefreshToken)
+      .where(eq(OidcRefreshToken.tokenHash, hashToken(rawToken)))
+      .for('update');
+
+    if (!row || row.clientId !== clientId) {
+      return { rotation: { ok: false, reason: 'invalid' } };
+    }
+
+    // Already rotated/revoked → presumed token theft; kill the whole family.
+    // With the lock held, a concurrent winner has already committed (including
+    // its successor), so revokeFamily here also revokes that successor.
+    if (row.revokedAt || row.rotatedAt) {
+      await revokeFamily(row.familyId, tx);
+      return { rotation: { ok: false, reason: 'reuse' } };
+    }
+
+    if (row.expiresAt <= new Date()) {
+      return { rotation: { ok: false, reason: 'invalid' } };
+    }
+
+    // We hold the row lock, so this claim can't race another rotation.
+    await tx
+      .update(OidcRefreshToken)
+      .set({ rotatedAt: new Date() })
+      .where(eq(OidcRefreshToken.id, row.id));
+
+    const authTime = Math.floor(row.authTime.getTime() / 1000);
+    const newRefreshToken = await mintRefreshToken(
+      {
+        appUserId: row.appUserId,
+        clientId,
+        scope: row.scope,
+        authTime,
+        familyId: row.familyId,
+      },
+      tx,
+    );
+
+    return {
+      rotation: {
+        ok: true,
+        appUserId: row.appUserId,
+        scope: row.scope,
+        authTime,
+      },
+      newRefreshToken,
+    };
   });
-
-  if (!row || row.clientId !== clientId) {
-    return { rotation: { ok: false, reason: 'invalid' } };
-  }
-
-  if (row.revokedAt || row.rotatedAt) {
-    await revokeFamily(row.familyId);
-    return { rotation: { ok: false, reason: 'reuse' } };
-  }
-
-  if (row.expiresAt <= new Date()) {
-    return { rotation: { ok: false, reason: 'invalid' } };
-  }
-
-  // Atomically claim this token for rotation; lose the race -> treat as reuse.
-  const [claimed] = await db
-    .update(OidcRefreshToken)
-    .set({ rotatedAt: new Date() })
-    .where(
-      and(
-        eq(OidcRefreshToken.id, row.id),
-        isNull(OidcRefreshToken.rotatedAt),
-        isNull(OidcRefreshToken.revokedAt),
-      ),
-    )
-    .returning();
-
-  if (!claimed) {
-    await revokeFamily(row.familyId);
-    return { rotation: { ok: false, reason: 'reuse' } };
-  }
-
-  const authTime = Math.floor(claimed.authTime.getTime() / 1000);
-  const newRefreshToken = await mintRefreshToken({
-    appUserId: claimed.appUserId,
-    clientId,
-    scope: claimed.scope,
-    authTime,
-    familyId: claimed.familyId,
-  });
-
-  return {
-    rotation: {
-      ok: true,
-      appUserId: claimed.appUserId,
-      scope: claimed.scope,
-      authTime,
-    },
-    newRefreshToken,
-  };
 }

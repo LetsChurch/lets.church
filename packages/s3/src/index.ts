@@ -414,14 +414,25 @@ export class LcS3Client {
           UploadId: uploadId,
         }),
       );
-    } catch {
-      await this.client.send(
-        new AbortMultipartUploadCommand({
-          Bucket: this.bucket,
-          Key: key,
-          UploadId: uploadId,
-        }),
-      );
+    } catch (err) {
+      // Abort is best-effort cleanup — it must NOT swallow the original failure.
+      // Returning normally here would make callers (Glacier backup, import)
+      // treat a never-completed upload as success and record it as stored.
+      try {
+        await this.client.send(
+          new AbortMultipartUploadCommand({
+            Bucket: this.bucket,
+            Key: key,
+            UploadId: uploadId,
+          }),
+        );
+      } catch (abortErr) {
+        throw new AggregateError(
+          [err, abortErr],
+          'Multipart upload failed and the subsequent abort also failed',
+        );
+      }
+      throw err;
     }
   }
 

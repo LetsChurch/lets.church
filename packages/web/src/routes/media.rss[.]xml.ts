@@ -5,6 +5,7 @@ import { Feed } from 'feed';
 import { idTranslator } from '@/schemas/common';
 import logger from '@/util/logger';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
+import { escapeHtml } from '@/util/xss';
 
 const moduleLogger = logger.child({
   module: 'routes/media/rss.xml',
@@ -87,9 +88,11 @@ export const Route = createFileRoute('/media/rss.xml')({
 
             const content = [
               thumbnailUrl
-                ? `<img src="${thumbnailUrl}" alt="${upload.title}" />`
+                ? `<img src="${thumbnailUrl}" alt="${escapeHtml(upload.title)}" />`
                 : '',
-              upload.description ? `<p>${upload.description}</p>` : '',
+              upload.description
+                ? `<p>${escapeHtml(upload.description)}</p>`
+                : '',
             ]
               .filter(Boolean)
               .join('\n');

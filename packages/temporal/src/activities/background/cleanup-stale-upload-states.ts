@@ -61,15 +61,25 @@ export async function cleanupStaleUploadStatesBatch(
     return { deleted: 0, remaining: 0 };
   }
 
-  // Delete the stale states
-  await db.delete(UploadState).where(
-    inArray(
-      UploadState.id,
-      staleStates.map((s) => s.id),
-    ),
-  );
+  // Re-apply the stale predicate in the DELETE itself (not just the SELECT) so a
+  // row the bulk-backup workflow claimed (NOT_BACKED_UP -> BACKING_UP) between
+  // the select and the delete is NOT removed out from under an in-progress
+  // backup. RETURNING gives the true deleted count.
+  const deletedRows = await db
+    .delete(UploadState)
+    .where(
+      and(
+        inArray(
+          UploadState.id,
+          staleStates.map((s) => s.id),
+        ),
+        eq(UploadState.backupStatus, 'NOT_BACKED_UP'),
+        lt(UploadState.createdAt, thresholdDate),
+      ),
+    )
+    .returning({ id: UploadState.id });
 
-  const deleted = staleStates.length;
+  const deleted = deletedRows.length;
   const remaining = await getStaleUploadStatesCount(olderThanDays);
 
   logger.info(

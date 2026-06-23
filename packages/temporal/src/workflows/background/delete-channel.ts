@@ -67,9 +67,10 @@ export async function deleteChannelWorkflow(
   progressState.totalUploads = uploadIds.length;
 
   // Step 3: Spawn child workflows to delete each upload
+  const childHandles: Array<Awaited<ReturnType<typeof startChild>>> = [];
   for (const uploadId of uploadIds) {
     try {
-      await startChild(deleteUploadWorkflow, {
+      const handle = await startChild(deleteUploadWorkflow, {
         args: [uploadId],
         workflowId: `deleteUpload:${uploadId}:${Date.now()}`,
         taskQueue: BACKGROUND_QUEUE,
@@ -77,6 +78,7 @@ export async function deleteChannelWorkflow(
         typedSearchAttributes: [{ key: CHANNEL_ID_KEY, value: channelId }],
         retry: { maximumAttempts: 3 },
       });
+      childHandles.push(handle);
       progressState.uploadsStarted += 1;
     } catch (err) {
       const isAlreadyStartedError =
@@ -99,6 +101,13 @@ export async function deleteChannelWorkflow(
   progressState.currentStep = 'deleting_associations';
   await deleteChannelAssociations(channelId);
   progressState.associationsDeleted = true;
+
+  // Wait for the per-upload deletion children to finish before removing the
+  // channel row. Deleting the channel cascades its UploadRecord rows away, so
+  // doing it while the children are still cleaning up S3 objects / search
+  // documents would orphan those. A failed child surfaces here and fails the
+  // workflow rather than silently leaving the channel half-deleted.
+  await Promise.all(childHandles.map((handle) => handle.result()));
 
   // Step 6: Final database deletion
   progressState.currentStep = 'deleting_channel_db';

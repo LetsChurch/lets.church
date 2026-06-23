@@ -276,7 +276,15 @@ export const accountProcedures = {
 
   createMultipartUpload: authProcedure
     .input(multipartUploadSchema)
-    .mutation(async ({ input: { targetId, uploadMimeType, bytes } }) => {
+    .mutation(async ({ ctx, input: { uploadMimeType, bytes } }) => {
+      // The profile avatar always belongs to the authenticated user. Ignore any
+      // client-supplied targetId: trusting it would let any logged-in user
+      // overwrite another user's avatar (and, because targetId is also used as
+      // the image worker's working-directory name, supply path-traversal
+      // values). Derive the target from the session instead.
+      const targetId = ctx.session?.appUserId;
+      invariant(targetId, 'No user found');
+
       const { uploadKey, uploadId } = await ingestS3.createMultipartUpload(
         targetId,
         uploadMimeType,

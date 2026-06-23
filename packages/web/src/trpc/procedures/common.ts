@@ -166,7 +166,9 @@ export const commonProcedures = {
     .query(async ({ input }) => {
       const { token } = input;
 
-      moduleLogger.info({ context: { token } }, 'Getting invitation details');
+      // Don't log the raw invitation token: it is a bearer credential that
+      // grants access to invitation details and the decline action.
+      moduleLogger.info('Getting invitation details');
 
       // Try organization invitation first
       const orgInvitation = await db.query.OrganizationInvitation.findFirst({
@@ -265,10 +267,7 @@ export const commonProcedures = {
       });
 
       if (!channelInvitation) {
-        moduleLogger.info(
-          { context: { token } },
-          'Invitation not found for token',
-        );
+        moduleLogger.info('Invitation not found for token');
         return null;
       }
 

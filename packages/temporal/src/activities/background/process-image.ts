@@ -35,7 +35,11 @@ export default async function processImage(
 
   Context.current().heartbeat();
 
-  const dir = join(WORK_DIR, targetId);
+  // Use a random, server-generated working directory rather than one derived
+  // from the client-controlled targetId. targetId reaches this activity as a
+  // plain string from the multipart upload API, so a value like `..` would make
+  // `rimraf(dir)` in the finally block delete paths outside WORK_DIR.
+  const dir = join(WORK_DIR, nanoid());
   const downloadPath = join(dir, 'download');
 
   try {

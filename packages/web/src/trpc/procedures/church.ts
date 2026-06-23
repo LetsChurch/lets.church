@@ -15,6 +15,7 @@ import {
   organizationAvatarTiny,
 } from '@/util/image-sizes';
 import logger from '@/util/logger';
+import { isChannelRoutable } from '@/util/media-visibility';
 import { formatPhoneNumber } from '@/util/phone';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
@@ -154,8 +155,14 @@ export const churchProcedures = {
                   },
                 },
               },
-              where: (t, { and, inArray, eq }) =>
-                and(inArray(t.id, organizationIds), eq(t.type, 'CHURCH')),
+              // Exclude pending/unapproved organizations from public search
+              // results even if they were indexed.
+              where: (t, { and, inArray, eq, isNotNull }) =>
+                and(
+                  inArray(t.id, organizationIds),
+                  eq(t.type, 'CHURCH'),
+                  isNotNull(t.approvedAt),
+                ),
             })
           : [];
 
@@ -235,8 +242,14 @@ export const churchProcedures = {
                 slug: true,
                 name: true,
               },
-              where: (t, { and, inArray, eq }) =>
-                and(inArray(t.id, organizationIds), eq(t.type, 'MINISTRY')),
+              // Exclude pending/unapproved organizations from public search
+              // results even if they were indexed.
+              where: (t, { and, inArray, eq, isNotNull }) =>
+                and(
+                  inArray(t.id, organizationIds),
+                  eq(t.type, 'MINISTRY'),
+                  isNotNull(t.approvedAt),
+                ),
             })
           : [];
 
@@ -274,7 +287,10 @@ export const churchProcedures = {
           id: true,
           name: true,
         },
-        where: (t, { eq }) => eq(t.id, input.id),
+        // Only approved organizations are public; pending/unapproved ones must
+        // not be reachable through public endpoints.
+        where: (t, { and, eq, isNotNull }) =>
+          and(eq(t.id, input.id), isNotNull(t.approvedAt)),
       });
 
       if (!organization) {
@@ -378,12 +394,18 @@ export const churchProcedures = {
                   slug: true,
                   name: true,
                   avatarPath: true,
+                  visibility: true,
+                  approvedAt: true,
+                  deletedAt: true,
                 },
               },
             },
           },
         },
-        where: (t, { eq }) => eq(t.slug, input.slug),
+        // Only approved organizations are public; a pending org must not be
+        // viewable by guessing/knowing its slug.
+        where: (t, { and, eq, isNotNull }) =>
+          and(eq(t.slug, input.slug), isNotNull(t.approvedAt)),
       });
 
       if (!organization) {
@@ -405,7 +427,14 @@ export const churchProcedures = {
         ? getPublicImageUrl(publicS3.getS3ProtocolUri(organization.coverPath))
         : null;
 
-      const officialChannels = organization.channelAssociations
+      // Only surface associated channels that are themselves publicly viewable;
+      // a church admin can associate any channel id, so filter out private/
+      // unapproved/deleted channels rather than leaking their metadata.
+      const visibleAssociations = organization.channelAssociations.filter(
+        (assoc) => isChannelRoutable(assoc.channel),
+      );
+
+      const officialChannels = visibleAssociations
         .filter((assoc) => assoc.officialChannel)
         .map((assoc) => {
           const channelAvatarUrl = assoc.channel.avatarPath
@@ -424,7 +453,7 @@ export const churchProcedures = {
           };
         });
 
-      const endorsedChannels = organization.channelAssociations
+      const endorsedChannels = visibleAssociations
         .filter((assoc) => !assoc.officialChannel)
         .map((assoc) => {
           const channelAvatarUrl = assoc.channel.avatarPath
@@ -493,9 +522,10 @@ export const churchProcedures = {
         'Fetching organization media',
       );
 
-      // Get the organization and its official channels
+      // Get the organization and its official channels (approved orgs only).
       const organization = await db.query.Organization.findFirst({
-        where: (t, { eq }) => eq(t.slug, slug),
+        where: (t, { and, eq, isNotNull }) =>
+          and(eq(t.slug, slug), isNotNull(t.approvedAt)),
         columns: {
           id: true,
         },

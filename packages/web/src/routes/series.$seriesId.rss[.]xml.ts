@@ -8,6 +8,7 @@ import { rssFeedIcon } from '@/util/image-sizes';
 import logger from '@/util/logger';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
+import { escapeHtml } from '@/util/xss';
 
 const moduleLogger = logger.child({
   module: 'routes/series/$seriesId/rss.xml',
@@ -175,9 +176,11 @@ export const Route = createFileRoute('/series/$seriesId/rss.xml')({
 
             const content = [
               thumbnailUrl
-                ? `<img src="${thumbnailUrl}" alt="${upload.title}" />`
+                ? `<img src="${thumbnailUrl}" alt="${escapeHtml(upload.title)}" />`
                 : '',
-              upload.description ? `<p>${upload.description}</p>` : '',
+              upload.description
+                ? `<p>${escapeHtml(upload.description)}</p>`
+                : '',
             ]
               .filter(Boolean)
               .join('\n');

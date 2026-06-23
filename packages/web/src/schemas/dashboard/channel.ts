@@ -31,17 +31,50 @@ export const channelFormSchema = z.object({
     ),
   description: z.string(),
   visibility: z.nativeEnum(ChannelVisibility),
-  websiteUrl: z.url('Invalid URL').optional().or(z.literal('')),
-  facebookUrl: z.url('Invalid URL').optional().or(z.literal('')),
-  instagramUrl: z.url('Invalid URL').optional().or(z.literal('')),
-  xUrl: z.url('Invalid URL').optional().or(z.literal('')),
-  youtubeUrl: z.url('Invalid URL').optional().or(z.literal('')),
-  tiktokUrl: z.url('Invalid URL').optional().or(z.literal('')),
-  linkedinUrl: z.url('Invalid URL').optional().or(z.literal('')),
-  threadsUrl: z.url('Invalid URL').optional().or(z.literal('')),
-  applePodcastsUrl: z.url('Invalid URL').optional().or(z.literal('')),
-  spotifyUrl: z.url('Invalid URL').optional().or(z.literal('')),
-  rssUrl: z.url('Invalid URL').optional().or(z.literal('')),
+  websiteUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
+  facebookUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
+  instagramUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
+  xUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
+  youtubeUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
+  tiktokUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
+  linkedinUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
+  threadsUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
+  applePodcastsUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
+  spotifyUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
+  rssUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
   defaultUploadVisibility: z.nativeEnum(UploadVisibility).nullable().optional(),
   defaultUploadLicense: z.nativeEnum(UploadLicense).nullable().optional(),
   defaultUploadCommentsEnabled: z.boolean().nullable().optional(),
@@ -210,7 +243,10 @@ export const searchChannelSeriesSchema = z.object({
 
 export const importMediaSchema = z.object({
   channelId: channelIdSchema,
-  url: z.url('Please enter a valid URL'),
+  // NOTE: scheme restriction only. Full SSRF protection (blocking
+  // loopback/private/link-local/metadata IPs after DNS resolution, redirect
+  // revalidation) must be enforced in the import worker before fetching.
+  url: z.url({ protocol: /^https?$/, message: 'Please enter a valid URL' }),
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   license: z.nativeEnum(UploadLicense).default('STANDARD'),

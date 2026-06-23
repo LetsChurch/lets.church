@@ -6,7 +6,14 @@ import type { ResizeType } from '@/util/url';
 export const multipartUploadSchema = z.object({
   targetId: z.string(),
   uploadMimeType: z.string(),
-  bytes: z.number(),
+  // Cap the declared size so a caller can't force a huge presigned-part-URL
+  // array (one URL per PART_SIZE chunk). PART_SIZE is 10MB and S3 allows at most
+  // 10,000 parts, so 100GB is the hard ceiling regardless.
+  bytes: z
+    .number()
+    .int()
+    .nonnegative()
+    .max(10_000_000 * 10_000),
 });
 
 export const finalizeMultipartUploadSchema = z.object({

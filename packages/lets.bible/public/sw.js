@@ -57,6 +57,18 @@ function isGoogleFonts(url) {
   );
 }
 
+// Never store a response the server marked private/uncacheable — authenticated
+// chapter pages (SSR'd notes/highlights) and user-specific tRPC responses. The
+// caches are keyed by URL only, so caching those would let the previous user's
+// data be served to the next user on a shared device.
+function isCacheable(res) {
+  if (!res || !res.ok) {
+    return false;
+  }
+  const cc = res.headers.get('Cache-Control') || '';
+  return !/(^|[\s,])(no-store|private)(\s|,|;|$)/i.test(cc);
+}
+
 // Which cache a URL belongs in — kept consistent with the fetch handler's
 // lookups so a warm-cached entry is found on the offline path.
 function cacheNameFor(url, isDoc) {
@@ -85,7 +97,7 @@ async function networkFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
   try {
     const res = await fetch(request);
-    if (res?.ok) {
+    if (isCacheable(res)) {
       cache.put(request, res.clone());
     }
     return res;
@@ -103,7 +115,7 @@ async function staleWhileRevalidate(request, cacheName) {
   const cached = await cache.match(request);
   const network = fetch(request)
     .then((res) => {
-      if (res?.ok) {
+      if (isCacheable(res)) {
         cache.put(request, res.clone());
       }
       return res;
@@ -126,7 +138,7 @@ async function cacheFirst(request, cacheName) {
     return cached;
   }
   const res = await fetch(request);
-  if (res?.ok) {
+  if (isCacheable(res)) {
     cache.put(request, res.clone());
   }
   return res;
@@ -136,7 +148,7 @@ async function handleNavigation(request) {
   const cache = await caches.open(PAGES);
   try {
     const res = await fetch(request);
-    if (res?.ok) {
+    if (isCacheable(res)) {
       cache.put(request, res.clone());
     }
     return res;
@@ -161,7 +173,19 @@ async function handleNavigation(request) {
 // page (i.e. the *second* load onward).
 self.addEventListener('message', (event) => {
   const data = event.data;
-  if (!data || data.type !== 'lb-precache') {
+  if (!data) {
+    return;
+  }
+  // On sign-out / session loss the client tells us to drop the per-user caches
+  // (pages may contain SSR'd notes/highlights; the API cache holds user-specific
+  // tRPC). Static reading content (CONTENT/ASSETS/FONTS) is left intact.
+  if (data.type === 'lb-clear-private') {
+    event.waitUntil(
+      Promise.all([caches.delete(PAGES), caches.delete(API)]),
+    );
+    return;
+  }
+  if (data.type !== 'lb-precache') {
     return;
   }
   const items = [{ url: data.doc, isDoc: true }].concat(
@@ -176,7 +200,7 @@ self.addEventListener('message', (event) => {
             return;
           }
           const res = await fetch(url);
-          if (res.ok) {
+          if (isCacheable(res)) {
             (await caches.open(name)).put(url, res.clone());
           }
         } catch {

@@ -39,22 +39,18 @@ export async function deleteUploadRecordGlacierBackups(
   for (const uploadState of uploadStates) {
     Context.current().heartbeat(`Deleting backup ${uploadState.id}`);
 
-    // Delete from backup if backed up
+    // Delete from backup if backed up. Let failures propagate so Temporal
+    // retries: previously this swallowed the error and then deleted the
+    // UploadState row anyway, orphaning the archive object (its backupKey/status
+    // record was gone, so nothing could retry the object delete). S3 deletes are
+    // idempotent and the row select re-runs each attempt, so retry is safe.
     if (uploadState.backupKey && uploadState.backupStatus === 'BACKED_UP') {
-      try {
-        await backupS3.deleteFile(uploadState.backupKey);
-        activityLogger.info(`Deleted backup object ${uploadState.backupKey}`);
-        deletedCount += 1;
-      } catch (error) {
-        activityLogger.error(
-          { err: error instanceof Error ? error : new Error(String(error)) },
-          `Failed to delete backup object ${uploadState.backupKey}`,
-        );
-        // Continue with other deletions even if one fails
-      }
+      await backupS3.deleteFile(uploadState.backupKey);
+      activityLogger.info(`Deleted backup object ${uploadState.backupKey}`);
+      deletedCount += 1;
     }
 
-    // Delete the UploadState record
+    // Only delete the tracking row once any backup object is confirmed gone.
     await db.delete(UploadState).where(eq(UploadState.id, uploadState.id));
     activityLogger.info(`Deleted UploadState record ${uploadState.id}`);
   }

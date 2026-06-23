@@ -1,10 +1,16 @@
 import { db, SavedMedia } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
+import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarXs2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
+import {
+  canViewMedia,
+  canViewMediaById,
+  getMemberChannelIds,
+} from '@/util/media-visibility';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { authProcedure } from '../trpc';
@@ -52,6 +58,16 @@ export const libraryProcedures = {
 
         return { saved: false };
       } else {
+        // Don't let a caller plant a private/unapproved/deleted upload into
+        // their saved list (and then read its metadata back through
+        // getSavedMedia) by passing an id they can't actually view.
+        if (!(await canViewMediaById(mediaId, ctx))) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Media not found',
+          });
+        }
+
         // User is saving for the first time
         await db.insert(SavedMedia).values({
           appUserId: userId,
@@ -90,6 +106,8 @@ export const libraryProcedures = {
         'Fetching saved media',
       );
 
+      const memberChannelIds = await getMemberChannelIds(ctx.session.appUserId);
+
       const savedMedia = await db.query.SavedMedia.findMany({
         columns: {
           createdAt: true,
@@ -105,6 +123,9 @@ export const libraryProcedures = {
               lengthSeconds: true,
               defaultThumbnailPath: true,
               overrideThumbnailPath: true,
+              visibility: true,
+              deletedAt: true,
+              channelId: true,
             },
             with: {
               channel: {
@@ -114,6 +135,9 @@ export const libraryProcedures = {
                   slug: true,
                   avatarPath: true,
                   defaultThumbnailPath: true,
+                  visibility: true,
+                  approvedAt: true,
+                  deletedAt: true,
                 },
               },
             },
@@ -134,38 +158,59 @@ export const libraryProcedures = {
         ? items[items.length - 1].createdAt.toISOString()
         : null;
 
-      const uploadsWithThumbnails = items.map(({ uploadRecord }) => {
-        const {
-          defaultThumbnailPath,
-          overrideThumbnailPath,
-          channel,
-          ...uploadRest
-        } = uploadRecord;
+      const uploadsWithThumbnails = items
+        .filter(({ uploadRecord }) =>
+          canViewMedia({
+            upload: uploadRecord,
+            channelId: uploadRecord.channelId,
+            channel: uploadRecord.channel,
+            isSiteAdmin: Boolean(ctx.isSiteAdmin),
+            memberChannelIds,
+          }),
+        )
+        .map(({ uploadRecord }) => {
+          const {
+            defaultThumbnailPath,
+            overrideThumbnailPath,
+            channel,
+            // Drop visibility/internal fields from the response shape.
+            visibility: _visibility,
+            deletedAt: _deletedAt,
+            channelId: _channelId,
+            ...uploadRest
+          } = uploadRecord;
 
-        const thumbnailUrl = resolveThumbnailUrl({
-          overrideThumbnailPath,
-          defaultThumbnailPath,
-          channelDefaultThumbnailPath: channel.defaultThumbnailPath,
-          size: 'card',
+          const {
+            visibility: _channelVisibility,
+            approvedAt: _channelApprovedAt,
+            deletedAt: _channelDeletedAt,
+            ...channelRest
+          } = channel;
+
+          const thumbnailUrl = resolveThumbnailUrl({
+            overrideThumbnailPath,
+            defaultThumbnailPath,
+            channelDefaultThumbnailPath: channel.defaultThumbnailPath,
+            size: 'card',
+          });
+
+          const channelAvatarUrl = channel.avatarPath
+            ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
+                resize: appAvatarXs2x,
+              })
+            : null;
+
+          return {
+            ...uploadRest,
+            id: OutgoingIdSchema.parse(uploadRest.id),
+            thumbnailUrl,
+            channel: {
+              ...channelRest,
+              id: OutgoingIdSchema.parse(channel.id),
+              avatarUrl: channelAvatarUrl,
+            },
+          };
         });
-
-        const channelAvatarUrl = channel.avatarPath
-          ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
-              resize: appAvatarXs2x,
-            })
-          : null;
-
-        return {
-          ...uploadRest,
-          id: OutgoingIdSchema.parse(uploadRest.id),
-          thumbnailUrl,
-          channel: {
-            ...channel,
-            id: OutgoingIdSchema.parse(channel.id),
-            avatarUrl: channelAvatarUrl,
-          },
-        };
-      });
 
       return {
         items: uploadsWithThumbnails,
@@ -187,6 +232,8 @@ export const libraryProcedures = {
 
       const BATCH_SIZE = 100;
 
+      const memberChannelIds = await getMemberChannelIds(ctx.session.appUserId);
+
       // Helper typed so dedupedHistory can infer its element type
       const fetchBatch = (cur: string | null | undefined) =>
         db.query.UploadView.findMany({
@@ -205,6 +252,9 @@ export const libraryProcedures = {
                 lengthSeconds: true,
                 defaultThumbnailPath: true,
                 overrideThumbnailPath: true,
+                visibility: true,
+                deletedAt: true,
+                channelId: true,
               },
               with: {
                 channel: {
@@ -214,6 +264,9 @@ export const libraryProcedures = {
                     slug: true,
                     avatarPath: true,
                     defaultThumbnailPath: true,
+                    visibility: true,
+                    approvedAt: true,
+                    deletedAt: true,
                   },
                 },
               },
@@ -246,11 +299,26 @@ export const libraryProcedures = {
         const batch = await fetchBatch(batchCursor);
 
         for (const item of batch) {
-          if (!seen.has(item.uploadRecordId)) {
-            seen.add(item.uploadRecordId);
-            dedupedHistory.push(item);
-            if (dedupedHistory.length > limit) break outer;
+          if (seen.has(item.uploadRecordId)) {
+            continue;
           }
+          seen.add(item.uploadRecordId);
+          // Skip history rows for media the user can no longer view (made
+          // private/unapproved/deleted after the view was recorded, or planted
+          // via the public view-recording endpoints).
+          if (
+            !canViewMedia({
+              upload: item.upload,
+              channelId: item.upload.channelId,
+              channel: item.upload.channel,
+              isSiteAdmin: Boolean(ctx.isSiteAdmin),
+              memberChannelIds,
+            })
+          ) {
+            continue;
+          }
+          dedupedHistory.push(item);
+          if (dedupedHistory.length > limit) break outer;
         }
 
         if (batch.length < BATCH_SIZE) break;
@@ -269,8 +337,18 @@ export const libraryProcedures = {
             defaultThumbnailPath,
             overrideThumbnailPath,
             channel,
+            visibility: _visibility,
+            deletedAt: _deletedAt,
+            channelId: _channelId,
             ...uploadRest
           } = upload;
+
+          const {
+            visibility: _channelVisibility,
+            approvedAt: _channelApprovedAt,
+            deletedAt: _channelDeletedAt,
+            ...channelRest
+          } = channel;
 
           const thumbnailUrl = resolveThumbnailUrl({
             overrideThumbnailPath,
@@ -297,7 +375,7 @@ export const libraryProcedures = {
             thumbnailUrl,
             progress,
             channel: {
-              ...channel,
+              ...channelRest,
               id: OutgoingIdSchema.parse(channel.id),
               avatarUrl: channelAvatarUrl,
             },

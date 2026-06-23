@@ -305,6 +305,36 @@ export const seriesProcedures = {
         'Fetching first series thumbnail',
       );
 
+      // Apply the same visibility checks as getPublicSeries before resolving a
+      // thumbnail, so a private/unapproved channel's series id can't leak a
+      // thumbnail URL through this endpoint.
+      const series = await db.query.UploadList.findFirst({
+        where: (t, { eq }) => eq(t.id, seriesId),
+        columns: { id: true, type: true },
+        with: {
+          channel: {
+            columns: {
+              visibility: true,
+              approvedAt: true,
+              deletedAt: true,
+            },
+          },
+        },
+      });
+
+      if (!series || series.type !== 'SERIES') {
+        return null;
+      }
+
+      if (
+        series.channel &&
+        (series.channel.visibility !== 'PUBLIC' ||
+          !series.channel.approvedAt ||
+          series.channel.deletedAt)
+      ) {
+        return null;
+      }
+
       const firstEntry = await db
         .select({
           overrideThumbnailPath: UploadRecord.overrideThumbnailPath,

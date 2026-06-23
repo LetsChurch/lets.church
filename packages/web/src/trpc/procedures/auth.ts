@@ -215,38 +215,43 @@ export const authProcedures = {
         }
 
         try {
-          // Look up user by username
-          const userByUsername = await db.query.AppUser.findFirst({
-            where: (t, { eq }) => eq(t.username, input.identifier),
-            columns: { id: true, username: true },
-            with: {
-              emails: {
-                columns: { email: true, key: true },
-                limit: 1,
+          const lookupByUsername = () =>
+            db.query.AppUser.findFirst({
+              where: (t, { eq }) => eq(t.username, input.identifier),
+              columns: { id: true, username: true },
+              with: {
+                emails: {
+                  columns: { email: true, key: true },
+                  limit: 1,
+                },
               },
-            },
-          });
+            }).then((u) => u ?? null);
 
-          // Look up user by email
-          const userByEmail = userByUsername
-            ? null
-            : await db.query.AppUserEmail.findFirst({
-                where: (t, { eq }) => eq(t.email, input.identifier),
-                columns: { appUserId: true, email: true, key: true },
-              }).then(async (emailRecord) => {
-                if (!emailRecord) return null;
-                const u = await db.query.AppUser.findFirst({
-                  where: (t, { eq }) => eq(t.id, emailRecord.appUserId),
-                  columns: { id: true, username: true },
-                });
-                if (!u) return null;
-                return {
-                  ...u,
-                  emails: [{ email: emailRecord.email, key: emailRecord.key }],
-                };
+          const lookupByEmail = () =>
+            db.query.AppUserEmail.findFirst({
+              where: (t, { eq }) => eq(t.email, input.identifier),
+              columns: { appUserId: true, email: true, key: true },
+            }).then(async (emailRecord) => {
+              if (!emailRecord) return null;
+              const u = await db.query.AppUser.findFirst({
+                where: (t, { eq }) => eq(t.id, emailRecord.appUserId),
+                columns: { id: true, username: true },
               });
+              if (!u) return null;
+              return {
+                ...u,
+                emails: [{ email: emailRecord.email, key: emailRecord.key }],
+              };
+            });
 
-          const user = userByUsername ?? userByEmail;
+          // Resolve an email-shaped identifier through AppUserEmail first (same
+          // as login): otherwise a user who set their username to a victim's
+          // email would shadow the victim here, and the reset email would go to
+          // the shadower's own address — hijacking/denying the victim's reset.
+          const looksLikeEmail = input.identifier.includes('@');
+          const user = looksLikeEmail
+            ? ((await lookupByEmail()) ?? (await lookupByUsername()))
+            : ((await lookupByUsername()) ?? (await lookupByEmail()));
 
           // Always return success to avoid leaking user existence
           // But only send email if user exists
@@ -323,15 +328,35 @@ export const authProcedures = {
     .input(
       z.object({
         userId: z.string(),
-        password: z.string().min(6),
+        key: z.string().min(1),
+        password: z.string().min(6).max(1024),
       }),
     )
-    .mutation(async ({ input: { userId, password } }) => {
+    .mutation(async ({ input: { userId, key, password } }) => {
       const _clientIp = getClientIpAddress(getRequest().headers);
 
       moduleLogger.info('Complete password reset attempt');
 
       try {
+        // Validate the emailed reset key server-side before doing any expensive
+        // work or touching the account. Without this, an attacker who knows a
+        // victim's user id (exposed in public author/comment responses) could
+        // signal the reset workflow and take over the account without ever
+        // receiving the reset email. The key is the random AppUserEmail.key
+        // value that is only delivered in the reset email.
+        const emailRecord = await db.query.AppUserEmail.findFirst({
+          where: (t, { and, eq }) =>
+            and(eq(t.appUserId, userId), eq(t.key, key)),
+          columns: { email: true },
+        });
+
+        if (!emailRecord) {
+          moduleLogger.warn('Password reset failed - invalid reset key');
+          return {
+            error: 'Invalid or expired password reset link.',
+          };
+        }
+
         const passwordError = testPassword(password);
         if (passwordError) {
           moduleLogger.warn('Password reset failed - weak password');

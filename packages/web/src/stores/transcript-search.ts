@@ -1,6 +1,7 @@
 import type { Document } from 'flexsearch';
 import { atom } from 'nanostores';
 import PLazy from 'p-lazy';
+import { escapeHtml } from '@/util/html-escape';
 
 export type TranscriptLine = {
   id?: number;
@@ -99,6 +100,12 @@ export async function performSearch(
 }
 
 function highlightText(text: string, query: string): string {
+  // The result is rendered with dangerouslySetInnerHTML in
+  // transcript-search-results.tsx. Transcript cue text comes from untrusted
+  // uploaded/imported media, so escape it before inserting the <mark> tags;
+  // otherwise markup like `<img onerror=...>` in a cue would execute.
+  const escaped = escapeHtml(text);
+
   // Split query into terms and escape special regex characters
   const terms = query
     .toLowerCase()
@@ -107,14 +114,14 @@ function highlightText(text: string, query: string): string {
     .map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 
   if (terms.length === 0) {
-    return text;
+    return escaped;
   }
 
   // Create a regex that matches any of the terms (case insensitive)
   const pattern = new RegExp(`(${terms.join('|')})`, 'gi');
 
   // Replace matches with highlighted version
-  return text.replace(pattern, '<mark>$1</mark>');
+  return escaped.replace(pattern, '<mark>$1</mark>');
 }
 
 export function resetSearch(): void {

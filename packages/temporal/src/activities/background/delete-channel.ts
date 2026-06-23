@@ -36,8 +36,11 @@ export async function markChannelDeleted(channelId: string): Promise<boolean> {
     activityLogger.info(`Channel ${channelId} marked as deleted`);
     return true;
   } catch (e) {
+    // Throw (don't return false): a swallowed failure here lets the delete
+    // workflow continue and cascade-delete the channel, orphaning its media,
+    // S3 objects, and search documents. Throwing makes Temporal retry/fail.
     activityLogger.error(`Error marking channel ${channelId} as deleted: ${e}`);
-    return false;
+    throw e;
   }
 }
 
@@ -61,10 +64,14 @@ export async function getChannelUploadIds(
     );
     return uploadIds;
   } catch (e) {
+    // Throw instead of returning []: returning an empty list on a DB error made
+    // the workflow start zero per-upload deletion workflows and then cascade the
+    // upload rows away, leaving their S3 objects, backups, and search docs
+    // orphaned. A throw forces a retry so the real ids are enumerated.
     activityLogger.error(
       `Error getting upload IDs for channel ${channelId}: ${e}`,
     );
-    return [];
+    throw e;
   }
 }
 
@@ -93,34 +100,24 @@ export async function deleteChannelFiles(channelId: string): Promise<number> {
       return 0;
     }
 
-    // Delete avatar from S3
+    // Delete avatar from S3. S3 deletes are idempotent, so letting a failure
+    // propagate (instead of swallowing it) is safe to retry and avoids leaving
+    // the object behind after the channel row is gone.
     if (channel.avatarPath) {
       Context.current().heartbeat('Deleting channel avatar');
-      try {
-        await publicS3.deleteFile(channel.avatarPath);
-        activityLogger.info(`Deleted avatar: ${channel.avatarPath}`);
-        deletedCount += 1;
-      } catch (error) {
-        activityLogger.error(
-          `Failed to delete avatar ${channel.avatarPath}: ${error}`,
-        );
-      }
+      await publicS3.deleteFile(channel.avatarPath);
+      activityLogger.info(`Deleted avatar: ${channel.avatarPath}`);
+      deletedCount += 1;
     }
 
     // Delete default thumbnail from S3
     if (channel.defaultThumbnailPath) {
       Context.current().heartbeat('Deleting channel default thumbnail');
-      try {
-        await publicS3.deleteFile(channel.defaultThumbnailPath);
-        activityLogger.info(
-          `Deleted default thumbnail: ${channel.defaultThumbnailPath}`,
-        );
-        deletedCount += 1;
-      } catch (error) {
-        activityLogger.error(
-          `Failed to delete default thumbnail ${channel.defaultThumbnailPath}: ${error}`,
-        );
-      }
+      await publicS3.deleteFile(channel.defaultThumbnailPath);
+      activityLogger.info(
+        `Deleted default thumbnail: ${channel.defaultThumbnailPath}`,
+      );
+      deletedCount += 1;
     }
 
     // Find and delete UploadState records for channel files
@@ -148,28 +145,17 @@ export async function deleteChannelFiles(channelId: string): Promise<number> {
         `Deleting UploadState backup ${uploadState.id}`,
       );
 
-      // Delete from backup if backed up
+      // Delete the backup object before the row that records its key, so a
+      // failure can't orphan the object. Propagate failures for retry.
       if (uploadState.backupKey && uploadState.backupStatus === 'BACKED_UP') {
-        try {
-          await backupS3.deleteFile(uploadState.backupKey);
-          activityLogger.info(`Deleted backup: ${uploadState.backupKey}`);
-          deletedCount += 1;
-        } catch (error) {
-          activityLogger.error(
-            `Failed to delete backup ${uploadState.backupKey}: ${error}`,
-          );
-        }
+        await backupS3.deleteFile(uploadState.backupKey);
+        activityLogger.info(`Deleted backup: ${uploadState.backupKey}`);
+        deletedCount += 1;
       }
 
       // Delete the UploadState record
-      try {
-        await db.delete(UploadState).where(eq(UploadState.id, uploadState.id));
-        activityLogger.info(`Deleted UploadState record ${uploadState.id}`);
-      } catch (error) {
-        activityLogger.error(
-          `Failed to delete UploadState record ${uploadState.id}: ${error}`,
-        );
-      }
+      await db.delete(UploadState).where(eq(UploadState.id, uploadState.id));
+      activityLogger.info(`Deleted UploadState record ${uploadState.id}`);
     }
 
     activityLogger.info(
@@ -177,8 +163,9 @@ export async function deleteChannelFiles(channelId: string): Promise<number> {
     );
     return deletedCount;
   } catch (e) {
+    // Throw so the workflow doesn't treat partial cleanup as success.
     activityLogger.error(`Error deleting files for channel ${channelId}: ${e}`);
-    return deletedCount;
+    throw e;
   }
 }
 
@@ -223,10 +210,12 @@ export async function deleteChannelAssociations(
     activityLogger.info(`Deleted associations for channel ${channelId}`);
     return true;
   } catch (e) {
+    // Throw so the workflow doesn't proceed to delete the channel row while
+    // associations remain.
     activityLogger.error(
       `Error deleting associations for channel ${channelId}: ${e}`,
     );
-    return false;
+    throw e;
   }
 }
 
@@ -245,6 +234,6 @@ export async function deleteChannelDb(channelId: string): Promise<boolean> {
     activityLogger.error(
       `Error deleting channel ${channelId} from database: ${e}`,
     );
-    return false;
+    throw e;
   }
 }

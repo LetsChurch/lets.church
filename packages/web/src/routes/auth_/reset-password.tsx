@@ -34,7 +34,7 @@ export const Route = createFileRoute('/auth_/reset-password')({
 });
 
 function ResetPasswordRoute() {
-  const { userId } = Route.useSearch();
+  const { userId, key } = Route.useSearch();
   const [error, setError] = useState<string | false>(false);
   const [success, setSuccess] = useState(false);
   const trpc = useTRPC();
@@ -76,8 +76,10 @@ function ResetPasswordRoute() {
     },
     onSubmit: async ({ value }) => {
       const fullUserId = uuidTranslator.toUUID(userId);
+      const fullKey = uuidTranslator.toUUID(key);
       resetPasswordMutation.mutate({
         userId: fullUserId,
+        key: fullKey,
         password: value.password,
       });
     },

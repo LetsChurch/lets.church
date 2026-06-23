@@ -49,6 +49,17 @@ export function LocalSync({ children }: { children: ReactNode }) {
         if (localStorage.getItem(AUTH_FLAG) === '1') {
           clearLocalData();
           localStorage.removeItem(AUTH_FLAG);
+          // Also drop the service worker's per-user caches (SSR'd pages with
+          // notes/highlights, user-specific tRPC) so they can't be served to the
+          // next user on a shared device. clearLocalData only handles
+          // localStorage/IndexedDB, not Cache Storage.
+          try {
+            navigator.serviceWorker?.controller?.postMessage({
+              type: 'lb-clear-private',
+            });
+          } catch {
+            // service worker not controlling / unavailable — ignore
+          }
         }
         // Next sign-in should re-evaluate whether to prompt.
         localStorage.removeItem(MERGED_KEY);

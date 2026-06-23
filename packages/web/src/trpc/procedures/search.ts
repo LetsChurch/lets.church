@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarSm2x, appAvatarXs2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
+import { isChannelRoutable } from '@/util/media-visibility';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { authProcedure, publicProcedure } from '../trpc';
@@ -50,17 +51,30 @@ export const searchProcedures = {
         columns: {
           overrideThumbnailPath: true,
           defaultThumbnailPath: true,
+          visibility: true,
+          deletedAt: true,
         },
         with: {
           channel: {
             columns: {
               defaultThumbnailPath: true,
+              visibility: true,
+              approvedAt: true,
+              deletedAt: true,
             },
           },
         },
       });
 
-      if (!upload) {
+      // Public endpoint: only resolve thumbnails for publicly-viewable media so
+      // a known private/unapproved upload id can't leak its (or its channel's)
+      // thumbnail URL.
+      if (
+        !upload ||
+        upload.deletedAt ||
+        upload.visibility === 'PRIVATE' ||
+        !isChannelRoutable(upload.channel)
+      ) {
         return null;
       }
 

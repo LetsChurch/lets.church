@@ -21,11 +21,18 @@ export default async function updateUserActivity(
   targetId: string,
   data: AppUserUpdateData,
 ) {
+  // Never log the update payload verbatim: `data.password` carries the Argon2
+  // password hash during the reset-password flow, which would otherwise be
+  // written to durable logs. Log only which fields are being updated.
+  const { password: _password, ...nonSecretData } = data;
   const activityLogger = moduleLogger.child({
     temporalActivity: 'updateUserActivity',
     context: {
       args: { targetId },
-      meta: JSON.stringify({ data }),
+      meta: JSON.stringify({
+        fields: Object.keys(data),
+        data: nonSecretData,
+      }),
     },
   });
 

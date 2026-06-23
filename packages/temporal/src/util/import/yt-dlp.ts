@@ -4,6 +4,7 @@ import { execa } from 'execa';
 import fastGlob from 'fast-glob';
 import * as z from 'zod';
 import { downloadUrl } from './download';
+import { assertPublicUrl } from './safe-url';
 
 const baseYtDlpArgs = [
   '--extractor-args',
@@ -26,7 +27,9 @@ export async function ytdlp(
   log: Logger,
   heartbeat: (s: string) => unknown = noop,
 ) {
-  const url = new URL(input);
+  // Block obviously-internal targets before handing the URL to the yt-dlp
+  // subprocess (which does its own fetching/redirect-following).
+  const url = await assertPublicUrl(input);
 
   log.info(`Running yt-dlp for URL ${url}`);
   const mainYtdlp = execa(

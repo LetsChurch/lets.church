@@ -296,6 +296,18 @@ export function clearLocalData(): void {
 // "discard" drops local and takes the server copy.
 export async function mergeOnSignIn(mode: 'merge' | 'discard'): Promise<void> {
   const c = collections();
+  // The localStorage-backed collections hydrate asynchronously, so at sign-in
+  // they may still be empty in memory while the user's anonymous rows sit in
+  // localStorage (hasLocalData reads localStorage directly, which is why the
+  // prompt fires). Wait for hydration before reading them — otherwise merge
+  // would push nothing (silently losing local highlights/notes) and discard
+  // would delete nothing (leaving them to resurface), yet lb-merged would be set
+  // and the prompt suppressed.
+  await Promise.all([
+    c.highlights.preload(),
+    c.notes.preload(),
+    c.progress.preload(),
+  ]);
   if (mode === 'discard') {
     for (const h of [...c.highlights.values()]) {
       c.highlights.delete(h.ref);

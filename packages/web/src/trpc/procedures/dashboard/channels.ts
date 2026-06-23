@@ -1620,14 +1620,43 @@ export const channelRouter = router({
       ),
     )
     .mutation(
-      async ({ input: { targetId, uploadMimeType, bytes, postProcess } }) => {
+      async ({
+        input: { channelId, targetId, uploadMimeType, bytes, postProcess },
+      }) => {
+        // Bind the workflow target to the authorized channel. The client sends
+        // `targetId` separately from the authorized `channelId`, so without this
+        // a channel admin could point an upload at another channel's id/upload
+        // record and overwrite its assets or finalize attacker media against it.
+        let resolvedTargetId: string;
+        if (postProcess === 'media' || postProcess === 'thumbnail') {
+          // The target must be an upload record owned by this channel.
+          const upload = await db.query.UploadRecord.findFirst({
+            where: (t, { and, eq }) =>
+              and(eq(t.id, targetId.toLowerCase()), eq(t.channelId, channelId)),
+            columns: { id: true },
+          });
+
+          if (!upload) {
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'Upload record not found in this channel',
+            });
+          }
+
+          resolvedTargetId = upload.id;
+        } else {
+          // channelAvatar / channelDefaultThumbnail / channelCover always act on
+          // the authorized channel itself; ignore any client-supplied targetId.
+          resolvedTargetId = channelId;
+        }
+
         const { uploadKey, uploadId } = await ingestS3.createMultipartUpload(
-          targetId,
+          resolvedTargetId,
           uploadMimeType,
         );
 
         await handleMultipartMediaUpload(
-          targetId,
+          resolvedTargetId,
           'INGEST',
           uploadId,
           uploadKey,

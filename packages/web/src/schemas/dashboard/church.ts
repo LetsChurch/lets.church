@@ -121,13 +121,25 @@ const addressSchema = z.object({
 
 export const createChurchSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  slug: z.string().optional(),
+  // Constrain to URL-safe characters: the slug is interpolated into hrefs
+  // (including raw map-popup HTML), so an unconstrained value could break out
+  // of an attribute. Matches the channel slug convention.
+  slug: z
+    .string()
+    .regex(
+      /^[a-zA-Z0-9_-]+$/,
+      'Slug can only contain letters, numbers, underscores, and hyphens',
+    )
+    .optional(),
   description: z.string().optional(),
   websiteUrl: z
     .string()
     .optional()
     .refine(
-      (val) => !val || val === '' || z.string().url().safeParse(val).success,
+      (val) =>
+        !val ||
+        val === '' ||
+        z.url({ protocol: /^https?$/ }).safeParse(val).success,
       'Invalid URL',
     ),
   primaryEmail: z
@@ -151,7 +163,10 @@ export const updateChurchSchema = z.object({
     .string()
     .optional()
     .refine(
-      (val) => !val || val === '' || z.string().url().safeParse(val).success,
+      (val) =>
+        !val ||
+        val === '' ||
+        z.url({ protocol: /^https?$/ }).safeParse(val).success,
       'Invalid URL',
     ),
   primaryEmail: z
@@ -165,14 +180,44 @@ export const updateChurchSchema = z.object({
   tags: z.array(z.string()).optional(),
   associatedOrganizations: z.array(IncomingIdSchema).optional(),
   addresses: z.array(addressSchema).optional(),
-  facebookUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  instagramUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  xUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  youtubeUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  tiktokUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  linkedinUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  threadsUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  applePodcastsUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  spotifyUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  rssUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  facebookUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
+  instagramUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
+  xUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
+  youtubeUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
+  tiktokUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
+  linkedinUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
+  threadsUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
+  applePodcastsUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
+  spotifyUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
+  rssUrl: z
+    .url({ protocol: /^https?$/, message: 'Invalid URL' })
+    .optional()
+    .or(z.literal('')),
 });

@@ -876,16 +876,24 @@ export const churchRouter = router({
           visibility: true,
           description: true,
         },
-        where: (t, { and, notInArray, ilike }) => {
+        where: (t, { and, eq, notInArray, ilike, isNotNull, isNull }) => {
           const escapedQuery = input.query
             .replace(/\\/g, '\\\\')
             .replace(/%/g, '\\%')
             .replace(/_/g, '\\_');
-          const nameCondition = ilike(t.name, `%${escapedQuery}%`);
+          // Only public, approved, non-deleted channels can be linked. A church
+          // admin must not be able to discover or endorse private/unapproved
+          // channels (which would also expose their metadata publicly).
+          const baseCondition = and(
+            ilike(t.name, `%${escapedQuery}%`),
+            eq(t.visibility, 'PUBLIC'),
+            isNotNull(t.approvedAt),
+            isNull(t.deletedAt),
+          );
           if (associatedChannelIds.length > 0) {
-            return and(nameCondition, notInArray(t.id, associatedChannelIds));
+            return and(baseCondition, notInArray(t.id, associatedChannelIds));
           }
-          return nameCondition;
+          return baseCondition;
         },
         limit: 10,
       });
@@ -923,6 +931,27 @@ export const churchRouter = router({
       );
 
       try {
+        // Only allow linking public, approved, non-deleted channels. Without
+        // this, a church admin could associate (and thereby publicly surface) an
+        // arbitrary private/unapproved channel by id.
+        const channel = await db.query.Channel.findFirst({
+          columns: { id: true },
+          where: (t, { and, eq, isNotNull, isNull }) =>
+            and(
+              eq(t.id, input.channelId),
+              eq(t.visibility, 'PUBLIC'),
+              isNotNull(t.approvedAt),
+              isNull(t.deletedAt),
+            ),
+        });
+
+        if (!channel) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Channel not found',
+          });
+        }
+
         await db.insert(OrganizationChannelAssociation).values({
           organizationId: input.churchId,
           channelId: input.channelId,
@@ -1176,8 +1205,12 @@ export const churchRouter = router({
       );
 
       try {
+        // Scope the lookup and delete to the authorized church. The caller only
+        // proved admin rights to input.churchId, so a leader id from another
+        // church must not be deletable here.
         const leader = await db.query.OrganizationLeader.findFirst({
-          where: (t, { eq }) => eq(t.id, input.leaderId),
+          where: (t, { and, eq }) =>
+            and(eq(t.id, input.leaderId), eq(t.organizationId, input.churchId)),
           columns: { id: true },
         });
 
@@ -1199,7 +1232,12 @@ export const churchRouter = router({
 
         await db
           .delete(OrganizationLeader)
-          .where(eq(OrganizationLeader.id, input.leaderId));
+          .where(
+            and(
+              eq(OrganizationLeader.id, input.leaderId),
+              eq(OrganizationLeader.organizationId, input.churchId),
+            ),
+          );
 
         moduleLogger.info(
           {
@@ -1514,7 +1552,12 @@ export const churchRouter = router({
 
   createMultipartUpload: churchAdminProcedure
     .input(multipartUploadSchema)
-    .mutation(async ({ input: { targetId, uploadMimeType, bytes } }) => {
+    .mutation(async ({ input: { churchId, uploadMimeType, bytes } }) => {
+      // The organization avatar always belongs to the authorized church. Ignore
+      // any client-supplied targetId: trusting it would let a church admin
+      // overwrite another organization's avatar by passing its id.
+      const targetId = churchId;
+
       const { uploadKey, uploadId } = await ingestS3.createMultipartUpload(
         targetId,
         uploadMimeType,
