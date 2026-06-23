@@ -265,9 +265,10 @@ test-python:
   cd services/transcribe && uv run --no-project --with pytest --with hypothesis pytest
 
 transcribe file:
-  docker compose run --rm -v $PWD:/host -w /host transcribe-worker /bin/bash -c 'ffmpeg -i {{file}} -ar 16000 -ac 1 {{file}}.wav'
-  docker compose run --rm -v $PWD:/host -w /host transcribe-worker /bin/bash -c 'whisper-ctranslate2 --model large-v2 --vad_filter True {{file}}.wav'
-  rm {{file}}.wav
+  docker compose run --rm -v $PWD:/host -w /app transcribe-worker \
+    uv run --no-sync python scripts/transcribe_file.py \
+      --input /host/{{file}} \
+      --output /host/{{file}}.transcript.json
 
 transcribe-dir dir:
   fd . {{dir}} | xargs -o -n1 just transcribe

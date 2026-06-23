@@ -46,7 +46,6 @@ COPY --chown=nodeapp:nodeapp packages/lets.bible/package.json ./packages/lets.bi
 COPY --chown=nodeapp:nodeapp packages/import-worker/package.json ./packages/import-worker/
 COPY --chown=nodeapp:nodeapp packages/probe-worker/package.json ./packages/probe-worker/
 COPY --chown=nodeapp:nodeapp packages/transcode-worker/package.json ./packages/transcode-worker/
-COPY --chown=nodeapp:nodeapp packages/transcribe-worker/package.json ./packages/transcribe-worker/
 
 FROM package-json AS deps
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile

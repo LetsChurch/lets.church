@@ -39,9 +39,6 @@
       "path": "./packages/transcode-worker"
     },
     {
-      "path": "./packages/transcribe-worker"
-    },
-    {
       "path": "./packages/web"
     }
   ]

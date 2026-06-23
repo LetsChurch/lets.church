@@ -63,10 +63,6 @@
     "packages/transcode-worker": {
       "entry": "src/index.ts",
       "ignoreBinaries": ["audiowaveform", "convert", "ffmpeg", "ffprobe", "oxipng", "jpegoptim"]
-    },
-    "packages/transcribe-worker": {
-      "entry": "src/index.ts",
-      "ignoreBinaries": ["whisper-ctranslate2"]
     }
   }
 }

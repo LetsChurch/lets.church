@@ -766,40 +766,6 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
-  packages/transcribe-worker:
-    dependencies:
-      '@letschurch/temporal':
-        specifier: workspace:*
-        version: link:../temporal
-      '@sentry/node':
-        specifier: 'catalog:'
-        version: 10.25.0
-      '@temporalio/worker':
-        specifier: 'catalog:'
-        version: 1.17.2(@swc/helpers@0.5.17)
-      es-toolkit:
-        specifier: 'catalog:'
-        version: 1.41.0
-      execa:
-        specifier: ^9.6.0
-        version: 9.6.0
-      tsx:
-        specifier: 'catalog:'
-        version: 4.20.6
-      zod:
-        specifier: 'catalog:'
-        version: 4.1.12
-    devDependencies:
-      '@biomejs/biome':
-        specifier: 'catalog:'
-        version: 2.3.4
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.0
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-
   packages/util:
     dependencies:
       pino:
