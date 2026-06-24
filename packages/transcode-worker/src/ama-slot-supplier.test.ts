@@ -1,4 +1,4 @@
-import { AmaEncodeBudget } from '@letschurch/temporal/util/ama-budget';
+import { AmaDeviceBudget } from '@letschurch/temporal/util/ama-budget';
 import type {
   ActivitySlotInfo,
   SlotReleaseContext,
@@ -20,13 +20,16 @@ const reserveCtx: SlotReserveContext = {
 };
 const releaseCtx: SlotReleaseContext<ActivitySlotInfo> = { permit: {} };
 
+const budget = (sessions: number, pixels: number) =>
+  new AmaDeviceBudget({ sessions, pixels });
+
 describe('createAmaActivitySlotSupplier', () => {
   test('issues permits while under the concurrency cap', () => {
-    const budget = new AmaEncodeBudget(6);
     const supplier = createAmaActivitySlotSupplier({
-      budget,
+      budget: budget(100, 100),
       maxConcurrent: 3,
-      minSlotBudget: 0.25,
+      minSessions: 1,
+      minPixels: 0.25,
     });
 
     expect(supplier.tryReserveSlot(reserveCtx)).not.toBeNull();
@@ -37,9 +40,8 @@ describe('createAmaActivitySlotSupplier', () => {
   });
 
   test('releaseSlot frees a slot back under the cap', () => {
-    const budget = new AmaEncodeBudget(6);
     const supplier = createAmaActivitySlotSupplier({
-      budget,
+      budget: budget(100, 100),
       maxConcurrent: 1,
     });
 
@@ -52,9 +54,8 @@ describe('createAmaActivitySlotSupplier', () => {
   });
 
   test('releaseSlot never drives the counter negative', () => {
-    const budget = new AmaEncodeBudget(6);
     const supplier = createAmaActivitySlotSupplier({
-      budget,
+      budget: budget(100, 100),
       maxConcurrent: 2,
     });
 
@@ -66,30 +67,48 @@ describe('createAmaActivitySlotSupplier', () => {
     expect(supplier.tryReserveSlot(reserveCtx)).toBeNull();
   });
 
-  test('stops issuing once free budget drops below minSlotBudget', async () => {
-    const budget = new AmaEncodeBudget(6);
+  test('stops issuing once free SESSIONS drop below minSessions', async () => {
+    const b = budget(2, 100); // session-limited
     const supplier = createAmaActivitySlotSupplier({
-      budget,
+      budget: b,
       maxConcurrent: 10,
-      minSlotBudget: 0.25,
+      minSessions: 1,
+      minPixels: 0.25,
     });
 
-    const release = await budget.acquire(5.9); // free = 0.1 < 0.25
+    const release = await b.acquire({ sessions: 2, pixels: 1 }); // 0 sessions free
     expect(supplier.tryReserveSlot(reserveCtx)).toBeNull();
 
-    release(); // free = 6
+    release(); // sessions free again
+    expect(supplier.tryReserveSlot(reserveCtx)).not.toBeNull();
+  });
+
+  test('stops issuing once free PIXELS drop below minPixels', async () => {
+    const b = budget(100, 6); // pixel-limited
+    const supplier = createAmaActivitySlotSupplier({
+      budget: b,
+      maxConcurrent: 10,
+      minSessions: 1,
+      minPixels: 0.25,
+    });
+
+    const release = await b.acquire({ sessions: 0, pixels: 5.9 }); // 0.1 px free
+    expect(supplier.tryReserveSlot(reserveCtx)).toBeNull();
+
+    release();
     expect(supplier.tryReserveSlot(reserveCtx)).not.toBeNull();
   });
 
   test('reserveSlot parks until budget frees, then issues', async () => {
-    const budget = new AmaEncodeBudget(6);
+    const b = budget(2, 100);
     const supplier = createAmaActivitySlotSupplier({
-      budget,
+      budget: b,
       maxConcurrent: 10,
-      minSlotBudget: 0.25,
+      minSessions: 1,
+      minPixels: 0.25,
     });
 
-    const release = await budget.acquire(6); // free = 0
+    const release = await b.acquire({ sessions: 2, pixels: 1 }); // sessions full
     let issued = false;
     const pending = supplier
       .reserveSlot(reserveCtx, new AbortController().signal)
@@ -107,15 +126,16 @@ describe('createAmaActivitySlotSupplier', () => {
   });
 
   test('reserveSlot rejects with AbortError when aborted and issues no slot', async () => {
-    const budget = new AmaEncodeBudget(6);
+    const b = budget(2, 100);
     // maxConcurrent: 1 so a leaked increment would be observable below.
     const supplier = createAmaActivitySlotSupplier({
-      budget,
+      budget: b,
       maxConcurrent: 1,
-      minSlotBudget: 0.25,
+      minSessions: 1,
+      minPixels: 0.25,
     });
 
-    const release = await budget.acquire(6); // free = 0 -> reserveSlot parks
+    const release = await b.acquire({ sessions: 2, pixels: 1 }); // sessions full
     const controller = new AbortController();
     const pending = supplier.reserveSlot(reserveCtx, controller.signal);
     controller.abort();

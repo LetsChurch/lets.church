@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { AmaEncodeBudget, Notifier } from './ama-budget';
+import { AmaDeviceBudget, Notifier } from './ama-budget';
 
 // Lets a microtask-scheduled acquire settle so we can assert on ordering.
 const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
@@ -73,106 +73,135 @@ describe('Notifier', () => {
   });
 });
 
-describe('AmaEncodeBudget', () => {
-  test('admits jobs while they fit and reports remaining budget', async () => {
-    const budget = new AmaEncodeBudget(6);
-    expect(budget.free()).toBe(6);
+describe('AmaDeviceBudget', () => {
+  const make = (sessions: number, pixels: number) =>
+    new AmaDeviceBudget({ sessions, pixels });
 
-    const releaseA = await budget.acquire(4);
-    expect(budget.free()).toBe(2);
+  test('admits while both dimensions fit; reports free in each', async () => {
+    const b = make(4, 6);
+    expect(b.freeSessions()).toBe(4);
+    expect(b.freePixels()).toBe(6);
 
-    const releaseB = await budget.acquire(1.5);
-    expect(budget.free()).toBeCloseTo(0.5);
+    const release = await b.acquire({ sessions: 2, pixels: 3 });
+    expect(b.freeSessions()).toBe(2);
+    expect(b.freePixels()).toBe(3);
 
-    releaseA();
-    releaseB();
-    expect(budget.free()).toBe(6);
-  });
-
-  test('blocks an over-budget job until enough is released', async () => {
-    const budget = new AmaEncodeBudget(6);
-    const releaseFirst = await budget.acquire(5); // a 4K-ish ladder
-
-    let secondAcquired = false;
-    const second = budget.acquire(1.7).then((release) => {
-      secondAcquired = true;
-      return release;
-    });
-
-    await tick();
-    expect(secondAcquired).toBe(false); // 5 + 1.7 > 6, must wait
-
-    releaseFirst();
-    const releaseSecond = await second;
-    expect(secondAcquired).toBe(true);
-    releaseSecond();
-  });
-
-  test('a single release can admit multiple waiters that now fit', async () => {
-    const budget = new AmaEncodeBudget(6);
-    const releaseFull = await budget.acquire(6); // fully consumed
-
-    let aAcquired = false;
-    let bAcquired = false;
-    const a = budget.acquire(2).then((release) => {
-      aAcquired = true;
-      return release;
-    });
-    const b = budget.acquire(3).then((release) => {
-      bAcquired = true;
-      return release;
-    });
-
-    await tick();
-    expect(aAcquired).toBe(false);
-    expect(bAcquired).toBe(false);
-
-    releaseFull(); // frees 6; both 2 and 3 now fit (5 <= 6)
-    const [releaseA, releaseB] = await Promise.all([a, b]);
-    expect(aAcquired).toBe(true);
-    expect(bAcquired).toBe(true);
-    expect(budget.used()).toBeCloseTo(5);
-
-    releaseA();
-    releaseB();
-    expect(budget.free()).toBe(6);
-  });
-
-  test('runs a job larger than the whole budget alone rather than deadlocking', async () => {
-    const budget = new AmaEncodeBudget(4);
-    // A 4K ladder (~5.7 units) against a 4-unit device: must still run.
-    const release = await budget.acquire(5.7);
-    expect(budget.used()).toBeCloseTo(5.7);
     release();
-    expect(budget.free()).toBe(4);
+    expect(b.freeSessions()).toBe(4);
+    expect(b.freePixels()).toBe(6);
+  });
+
+  test('blocks when the SESSION dimension is full even if pixels fit (the incident)', async () => {
+    // 4 sessions, generous pixels. A 3-session ladder runs; a 2-session job
+    // would need 5 sessions -> blocks, despite ample pixel headroom. This is
+    // exactly the case the pixel-only budget missed.
+    const b = make(4, 100);
+    const first = await b.acquire({ sessions: 3, pixels: 1 });
+
+    let secondGot = false;
+    const second = b.acquire({ sessions: 2, pixels: 1 }).then((r) => {
+      secondGot = true;
+      return r;
+    });
+
+    await tick();
+    expect(secondGot).toBe(false); // 3 + 2 > 4 sessions
+
+    first();
+    const release = await second;
+    expect(secondGot).toBe(true);
+    release();
+  });
+
+  test('blocks when the PIXEL dimension is full even if sessions fit', async () => {
+    const b = make(100, 6);
+    const first = await b.acquire({ sessions: 1, pixels: 5 });
+
+    let secondGot = false;
+    const second = b.acquire({ sessions: 1, pixels: 2 }).then((r) => {
+      secondGot = true;
+      return r;
+    });
+
+    await tick();
+    expect(secondGot).toBe(false); // 5 + 2 > 6 pixels
+
+    first();
+    const release = await second;
+    expect(secondGot).toBe(true);
+    release();
+  });
+
+  test('runs an oversized job alone rather than deadlocking', async () => {
+    const b = make(4, 6);
+    // Exceeds both dimensions; must still run when the device is idle.
+    const release = await b.acquire({ sessions: 6, pixels: 9 });
+    expect(b.usedSessions()).toBe(6);
+    expect(b.usedPixels()).toBe(9);
+    release();
+    expect(b.freeSessions()).toBe(4);
+    expect(b.freePixels()).toBe(6);
   });
 
   test('zero-cost jobs (audio-only) never block', async () => {
-    const budget = new AmaEncodeBudget(6);
-    await budget.acquire(6); // fully consumed
-    const release = await budget.acquire(0); // resolves immediately
-    expect(budget.free()).toBe(0);
+    const b = make(4, 6);
+    await b.acquire({ sessions: 4, pixels: 6 }); // fully consumed
+    const release = await b.acquire({ sessions: 0, pixels: 0 }); // immediate
+    expect(b.freeSessions()).toBe(0);
     release(); // no-op
-    expect(budget.free()).toBe(0);
+    expect(b.freeSessions()).toBe(0);
   });
 
   test('release is idempotent', async () => {
-    const budget = new AmaEncodeBudget(6);
-    const release = await budget.acquire(3);
+    const b = make(4, 6);
+    const release = await b.acquire({ sessions: 2, pixels: 3 });
     release();
     release();
-    expect(budget.free()).toBe(6);
+    expect(b.freeSessions()).toBe(4);
+    expect(b.freePixels()).toBe(6);
+  });
+
+  test('a single release can admit multiple waiters that now fit', async () => {
+    const b = make(4, 6);
+    const full = await b.acquire({ sessions: 4, pixels: 6 });
+
+    let aGot = false;
+    let bGot = false;
+    const a = b.acquire({ sessions: 1, pixels: 2 }).then((r) => {
+      aGot = true;
+      return r;
+    });
+    const second = b.acquire({ sessions: 2, pixels: 3 }).then((r) => {
+      bGot = true;
+      return r;
+    });
+
+    await tick();
+    expect(aGot).toBe(false);
+    expect(bGot).toBe(false);
+
+    full(); // frees 4 sessions / 6 pixels; both (1,2) and (2,3) now fit
+    const [releaseA, releaseB] = await Promise.all([a, second]);
+    expect(aGot).toBe(true);
+    expect(bGot).toBe(true);
+    expect(b.usedSessions()).toBe(3);
+    expect(b.usedPixels()).toBeCloseTo(5);
+
+    releaseA();
+    releaseB();
+    expect(b.freeSessions()).toBe(4);
   });
 
   test('aborting a waiting acquire rejects with AbortError and frees nothing', async () => {
-    const budget = new AmaEncodeBudget(6);
-    await budget.acquire(6);
+    const b = make(4, 6);
+    await b.acquire({ sessions: 4, pixels: 6 });
 
     const controller = new AbortController();
-    const pending = budget.acquire(2, controller.signal);
+    const pending = b.acquire({ sessions: 1, pixels: 1 }, controller.signal);
     controller.abort();
 
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
-    expect(budget.free()).toBe(0);
+    expect(b.freeSessions()).toBe(0);
+    expect(b.freePixels()).toBe(0);
   });
 });

@@ -20,23 +20,33 @@ This worker downloads media from the ingest bucket, transcodes it into various q
 ### Concurrency on the AMA hardware path
 
 When `TRANSCODE_HW_ACCEL=ama:<n>` selects an MA35D device, the worker stops
-counting jobs and instead admits work against a per-device **encoder budget**.
-The MA35D encoder is fixed silicon measured in pixels/second, and a single
-transcode job encodes a whole HLS ladder at once, so each job's cost is the sum
-of its renditions in **1080p60-equivalent units** — weighted by both output area
-(a 4K rung is 4x a 1080p rung) and frame rate (a 60fps stream is ~2x the load of
-the same stream at 30fps; source fps is read from the probe). So a 4K-source
-ladder ≈ 5.7 units at 60fps but ≈ 2.8 at 30fps; audio-only = 0. A pod runs as
-many concurrent jobs as fit the budget — e.g. one 4K ladder, or a few 1080p
-ladders, or many SD ladders — instead of a fixed count.
+counting jobs and instead admits work against a per-device **dual-constraint
+budget**. The MA35D's encoder hard-fails (XRM `Insufficient resources available
+for allocation`) when **either** of two resources is exceeded, so each job is
+charged on both axes and admitted only when **both** fit:
 
-**Why oversubscription is fatal, not slow:** the MA35D **errors out** when a
-device is oversubscribed — XRM (the AMD resource manager) refuses the allocation
-with `Insufficient resources available for allocation`; it does not degrade
-gracefully. So `AMA_ENCODE_BUDGET` must stay at or below the device's true
-encoder capacity, and `acquire` runs a single ladder alone if it exceeds the
-whole budget (identical to today's one-job-per-pod behavior, which the hardware
-is proven to handle).
+- **Sessions** — the count of concurrent on-device `h264_ama` encoder contexts.
+  Each HLS rendition is one session, so a single ladder already opens **3–4**
+  (4K = 4, 1080p = 3, 720p = 2, 480p = 1; audio-only = 0). This is the *primary*
+  binding constraint — a single big ladder fits, but two small jobs (6–8
+  sessions, low pixels) exhaust the encoder. Bounded by `AMA_MAX_SESSIONS`.
+- **Pixels** — aggregate encode throughput in **1080p60-equivalent units**,
+  weighted by output area (4K rung = 4× a 1080p rung) and frame rate (60fps ≈ 2×
+  the load of 30fps; source fps from the probe). A job's pixel cost is the *max*
+  of its encode-ladder and source-decode load (so the decoder is bounded too — a
+  between-tier source like 1440p decodes more than its ladder encodes). Bounded
+  by `AMA_ENCODE_BUDGET`.
+
+> **2026-06-24 incident:** the original budget tracked pixels only. The device's
+> real limit is the **session count** — packing >1 ladder per device exhausted
+> the encoder and ~50% of transcodes hard-failed. The session axis is the fix;
+> `AMA_MAX_CONCURRENT` is pinned to `1` in the manifest until the true per-device
+> session limit is measured on hardware, then it can be raised with the session
+> budget keeping the device safe.
+
+A job that exceeds a whole budget dimension runs **alone** once the device is
+idle (identical to the proven one-job-per-pod behavior), so it can never
+deadlock.
 
 #### Single vs. double density (why the default is 6)
 
@@ -72,22 +82,16 @@ host CPU. It only engages when a hardware decoder exists for the source codec
 (otherwise it falls back to software), and **it's opt-in/off by default** because
 the exact decode→`jpeg_ama` graph still needs validating on real hardware.
 
-Thumbnail jobs hardware-**decode** (no video encode), so they draw on the **same**
-device budget. Every AMA job is charged the **max of its encode-ladder cost and
-its source-decode cost** (thumbnails encode nothing, so they pay pure decode
-cost). Since each charge is ≥ both the job's encode and decode load, bounding the
-shared pool bounds both the encoder and decoder — neither can be oversubscribed.
-(Charging only encode would be unsafe: a between-tier source such as 1440p decodes
-more than its ladder encodes.) Only ≤4K sources take the hardware path — the AMA
-decoder tops out at 4K. Conservative (it doesn't exploit that decode and encode
-are parallel engines) but safe, which is what matters given the hard-fail
-behavior.
+Thumbnail jobs draw on the **same** dual-constraint budget: **1 `jpeg_ama`
+session + the source-decode pixels**. Only ≤4K sources take the hardware path —
+the AMA decoder tops out at 4K.
 
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `TRANSCODE_HW_ACCEL` | `ama:<n>` to use MA35D device `n`; unset/`none` for the libx264 CPU path | No |
-| `AMA_ENCODE_BUDGET` | Per-device budget in 1080p60-equivalent units, shared by encode + AMA-thumbnail decode (default `6`) | No |
-| `AMA_MAX_CONCURRENT` | Hard cap on jobs pulled onto one pod at once (default `8`) | No |
+| `AMA_MAX_SESSIONS` | Per-device encoder-session budget (default `4` = one 4K ladder). The binding constraint — measure the true limit before raising | No |
+| `AMA_ENCODE_BUDGET` | Per-device pixel budget in 1080p60-equivalent units (default `6`) | No |
+| `AMA_MAX_CONCURRENT` | Hard cap on jobs pulled onto one pod at once; the operator master switch (manifest pins `1` pending session validation) | No |
 | `AMA_HW_THUMBNAILS` | `true` to hardware-accelerate thumbnail extraction on AMA pods (default off; needs on-device validation) | No |
 
 ### S3 Configuration

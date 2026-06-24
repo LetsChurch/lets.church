@@ -215,6 +215,18 @@ export function probeToDecodeCost(probe: Probe, frameRate?: number): number {
   );
 }
 
+// Number of on-device h264_ama encoder sessions a transcode opens — one per
+// video rendition (audio doesn't use the video encoder). The MA35D caps
+// concurrent encoder sessions, so this is the count the device budget must
+// bound alongside pixel throughput. See util/ama-budget.ts.
+export function encodeSessionCount(
+  variants: Array<UploadVariantValue>,
+): number {
+  return variants.filter(
+    (v) => v.startsWith('VIDEO') && !v.endsWith('_DOWNLOAD'),
+  ).length;
+}
+
 // Resolve the configured hardware-accel target (e.g. `ama:0`) from the
 // environment. Shared by the transcode and thumbnail activities so they agree
 // on which path they're running.

@@ -10,9 +10,10 @@ import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
 import { updateUploadRecord } from '../../../client';
 import { CURRENT_PIPELINE_VERSION } from '../../../queues';
-import { amaBudgetEnabled, amaEncodeBudget } from '../../../util/ama-budget';
+import { amaBudgetEnabled, amaDeviceBudget } from '../../../util/ama-budget';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import {
+  encodeSessionCount,
   getVariants,
   probeFrameRate,
   probeToDecodeCost,
@@ -159,29 +160,31 @@ export default async function transcode(
     // heartbeating so Temporal doesn't time the activity out while it waits.
     if (amaBudgetEnabled) {
       const frameRate = probeFrameRate(probe);
-      // Charge the larger of this job's encode and decode load. A transcode uses
-      // both engines (decode source -> encode ladder); the ladder cost is NOT
-      // always >= the source decode cost (e.g. a 1440p source decodes ~1.78 but
-      // its ladder tops out at 1080p), so taking the max keeps BOTH the encoder
-      // and decoder pools bounded by the single budget. See util/ama-budget.ts.
-      const cost = Math.max(
-        variantsToEncodeCost(variants, frameRate),
-        probeToDecodeCost(probe, frameRate),
-      );
-      if (cost > 0) {
+      // Two-dimensional cost: one encoder session per video rendition (the
+      // primary device limit), and pixel throughput = max(encode-ladder,
+      // source-decode) load. The pixel max keeps the decoder bounded too (a
+      // between-tier source like 1440p decodes more than its ladder encodes).
+      const cost = {
+        sessions: encodeSessionCount(variants),
+        pixels: Math.max(
+          variantsToEncodeCost(variants, frameRate),
+          probeToDecodeCost(probe, frameRate),
+        ),
+      };
+      if (cost.sessions > 0 || cost.pixels > 0) {
         activityLogger.info(
-          `Acquiring AMA device budget (cost: ${cost.toFixed(
+          `Acquiring AMA device budget (sessions: ${cost.sessions}, pixels: ${cost.pixels.toFixed(
             2,
-          )} units @ ${frameRate.toFixed(2)}fps, free: ${amaEncodeBudget
-            .free()
-            .toFixed(2)}/${amaEncodeBudget.total})`,
+          )} @ ${frameRate.toFixed(2)}fps; free sessions ${amaDeviceBudget.freeSessions()}/${amaDeviceBudget.max.sessions}, pixels ${amaDeviceBudget
+            .freePixels()
+            .toFixed(2)}/${amaDeviceBudget.max.pixels})`,
         );
         const waitHeartbeat = setInterval(
-          () => Context.current().heartbeat('waiting for AMA encode budget'),
+          () => Context.current().heartbeat('waiting for AMA device budget'),
           30_000,
         );
         try {
-          releaseBudget = await amaEncodeBudget.acquire(cost, signal);
+          releaseBudget = await amaDeviceBudget.acquire(cost, signal);
         } finally {
           clearInterval(waitHeartbeat);
         }

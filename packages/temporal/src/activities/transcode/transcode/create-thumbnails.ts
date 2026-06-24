@@ -10,7 +10,7 @@ import pMap from 'p-map';
 import pRetry from 'p-retry';
 import { rimraf } from 'rimraf';
 import { updateUploadRecord } from '../../../client';
-import { amaEncodeBudget } from '../../../util/ama-budget';
+import { amaDeviceBudget } from '../../../util/ama-budget';
 import {
   probeToDecodeCost,
   resolveHwAccel,
@@ -55,37 +55,35 @@ export default async function createThumbnails(
 
   Context.current().heartbeat();
 
-  // On the AMA path, thumbnail extraction hardware-decodes the whole source, so
-  // it claims a share of the device budget (charged as decode cost) before
-  // running ffmpeg — same pool the transcode encoder uses, so the two can't
-  // jointly oversubscribe the device. No-op on the software path.
+  // On the AMA path, thumbnail extraction hardware-decodes the whole source and
+  // JPEG-encodes on-device, so it claims device budget (1 jpeg_ama session + the
+  // source decode pixels) before running ffmpeg — the same dual-constraint pool
+  // the transcode encoder uses, so the two can't jointly oversubscribe the
+  // device. No-op on the software path.
   const hwAccel = resolveHwAccel();
   let releaseBudget: () => void = () => {};
 
   try {
     if (thumbnailsUseAma(probe, hwAccel)) {
-      const cost = probeToDecodeCost(probe);
-      if (cost > 0) {
-        activityLogger.info(
-          `Acquiring AMA decode budget for thumbnails (cost: ${cost.toFixed(
-            2,
-          )} units, free: ${amaEncodeBudget
-            .free()
-            .toFixed(2)}/${amaEncodeBudget.total})`,
-        );
-        const waitHeartbeat = setInterval(
-          () =>
-            Context.current().heartbeat('waiting for AMA budget (thumbnails)'),
-          30_000,
-        );
-        try {
-          releaseBudget = await amaEncodeBudget.acquire(
-            cost,
-            cancellationSignal,
-          );
-        } finally {
-          clearInterval(waitHeartbeat);
-        }
+      // Hardware thumbnail extraction = 1 jpeg_ama session + the source decode
+      // load. Charged against the same device budget as transcode encode work.
+      const cost = { sessions: 1, pixels: probeToDecodeCost(probe) };
+      activityLogger.info(
+        `Acquiring AMA device budget for thumbnails (sessions: ${cost.sessions}, pixels: ${cost.pixels.toFixed(
+          2,
+        )}; free sessions ${amaDeviceBudget.freeSessions()}/${amaDeviceBudget.max.sessions}, pixels ${amaDeviceBudget
+          .freePixels()
+          .toFixed(2)}/${amaDeviceBudget.max.pixels})`,
+      );
+      const waitHeartbeat = setInterval(
+        () =>
+          Context.current().heartbeat('waiting for AMA budget (thumbnails)'),
+        30_000,
+      );
+      try {
+        releaseBudget = await amaDeviceBudget.acquire(cost, cancellationSignal);
+      } finally {
+        clearInterval(waitHeartbeat);
       }
     }
 

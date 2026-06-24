@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from 'vitest';
 import {
+  encodeSessionCount,
   extraDecodeArgs,
   ffmpegEncodeArgs,
   ffmpegEncodingArgs,
@@ -127,6 +128,16 @@ describe('variantsToEncodeCost', () => {
 
   test('audio-only uploads cost nothing at any frame rate', () => {
     expect(variantsToEncodeCost(['AUDIO'], 30)).toBe(0);
+  });
+});
+
+describe('encodeSessionCount', () => {
+  test('counts one encoder session per video rendition (audio is free)', () => {
+    expect(encodeSessionCount(getVariants(mockProbe(3840, 2160)))).toBe(4); // 4K ladder
+    expect(encodeSessionCount(getVariants(mockProbe(1920, 1080)))).toBe(3);
+    expect(encodeSessionCount(getVariants(mockProbe(1280, 720)))).toBe(2);
+    expect(encodeSessionCount(getVariants(mockProbe(960, 540)))).toBe(1);
+    expect(encodeSessionCount(['AUDIO'])).toBe(0);
   });
 });
 

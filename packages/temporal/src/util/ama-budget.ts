@@ -10,38 +10,51 @@ const moduleLogger = logger.child({ module: 'util/ama-budget' });
 export const amaBudgetEnabled =
   process.env.TRANSCODE_HW_ACCEL?.startsWith('ama:') ?? false;
 
-// The cheapest video ladder rung (a 480p-only job). Used as the threshold below
-// which the slot supplier stops polling: once a device has less than this much
-// budget free, there's no point pulling even the smallest video job.
-export const MIN_SLOT_BUDGET = variantEncodeUnits('VIDEO_480P');
+// --- Device capacity model -------------------------------------------------
+//
+// The MA35D's encoder is bound by TWO resources, and XRM hard-fails
+// ("Insufficient resources available for allocation") when EITHER is exceeded:
+//
+//  1. SESSIONS — the count of concurrent on-device h264_ama encoder contexts.
+//     Each HLS rendition is one session, so a single ladder already opens 3-4.
+//     This is the constraint a pixel-only budget missed (2026-06-24 incident):
+//     one big ladder fit, but two small jobs (6-8 sessions, low pixels)
+//     exhausted the encoder and ~50% of transcodes hard-failed. PRIMARY binding
+//     constraint.
+//  2. PIXELS — aggregate encode throughput in 1080p60-equivalent units (the
+//     ~4Kp60-per-engine load limit). Binds for 4K-heavy concurrency.
+//
+// A job is admitted only when BOTH fit. See `AmaDeviceBudget`.
 
-// Total device budget for a single AMA card, in 1080p60-equivalent units (see
-// `variantsToEncodeCost`). We emit H.264 ("single density"), whose per-device
-// encoder ceiling is ~8x1080p60; the default of 6 stays safely under that
-// (~one 4K-source ladder's worth) because the MA35D *errors out* rather than
-// degrading when oversubscribed (see packages/transcode-worker/README.md).
-//
-// Both transcode and AMA thumbnail extraction draw from this single pool, and
-// each job is charged the MAX of its encode-ladder cost and its source-decode
-// cost (thumbnails encode nothing, so they pay pure decode cost). Since every
-// job's charge is >= both its encode load and its decode load, bounding the sum
-// bounds BOTH the encoder and decoder pools — so neither can be oversubscribed.
-// (Charging only encode would be unsafe: a between-tier source like 1440p
-// decodes more than its ladder encodes.) Conservative — it doesn't exploit that
-// decode/encode are parallel engines — but safe, which is what matters given the
-// hard-fail behavior.
-//
-// Floored at MIN_SLOT_BUDGET so a 0 / NaN misconfig can't wedge a pod into
-// never polling (free() < MIN_SLOT_BUDGET would stop the slot supplier forever).
-export const AMA_ENCODE_BUDGET = Math.max(
-  MIN_SLOT_BUDGET,
+// Smallest job the slot supplier keeps polling for: one 480p rendition = 1
+// session and a 480p-ladder's pixels. Below this in either dimension the device
+// is full and the supplier parks (leaving work for idle pods). Also floors the
+// pixel budget so a 0 / NaN misconfig can't wedge a pod into never polling.
+export const MIN_SLOT_SESSIONS = 1;
+export const MIN_SLOT_PIXELS = variantEncodeUnits('VIDEO_480P');
+
+// Per-device encoder SESSION budget. Default 4 == one 4K-source ladder
+// (4K+1080p+720p+480p). Conservative: measure the device's true session limit
+// on-hardware before raising. Concurrency is ALSO hard-capped by
+// AMA_MAX_CONCURRENT, which the manifest pins to 1 until that validation.
+export const AMA_MAX_SESSIONS = Math.max(
+  1,
+  Number(process.env.AMA_MAX_SESSIONS) || 4,
+);
+
+// Per-device PIXEL budget, in 1080p60-equivalent units. We emit H.264 ("single
+// density", ~8x1080p60/device); 6 stays under that. (Env name kept as
+// AMA_ENCODE_BUDGET for manifest compatibility.)
+export const AMA_PIXEL_BUDGET = Math.max(
+  MIN_SLOT_PIXELS,
   Number(process.env.AMA_ENCODE_BUDGET) || 6,
 );
 
-// Hard cap on how many transcode activities this worker will pull off the queue
-// at once, regardless of budget. This bounds how many jobs can sit waiting for
-// budget on a single pod (each holds a Temporal activity slot while it waits),
-// so a busy pod leaves surplus work on the queue for idle pods to pick up.
+// Hard cap on how many activities this worker pulls off the queue at once,
+// regardless of budget. Bounds how many jobs can sit waiting for budget on one
+// pod (each holds a Temporal activity slot while it waits), so a busy pod leaves
+// surplus work on the queue for idle pods. This is the operator's master
+// concurrency switch (pinned to 1 in the manifest pending session validation).
 export const AMA_MAX_CONCURRENT = Math.max(
   1,
   Number(process.env.AMA_MAX_CONCURRENT) || 8,
@@ -105,12 +118,20 @@ export class Notifier {
 // `reserveSlot()` waiters (in the slot supplier) park on it.
 export const budgetChanges = new Notifier();
 
+/** The two device resources a job consumes. See the capacity-model comment. */
+export type AmaCost = {
+  /** On-device h264_ama encoder sessions (1 per video rendition; 0 for audio). */
+  sessions: number;
+  /** Encode throughput in 1080p60-equivalent units. */
+  pixels: number;
+};
+
 /**
- * A weighted async semaphore representing one AMA device's encoder budget.
- * `acquire(cost)` resolves once `cost` units fit, returning an idempotent
- * release function. A job whose cost exceeds the whole budget (e.g. a 4K ladder
- * against a small budget) is admitted alone once the device is otherwise idle,
- * so it can never deadlock.
+ * A dual-constraint async semaphore for one AMA device: a job is admitted only
+ * when it fits in BOTH the session and pixel budgets. `acquire(cost)` resolves
+ * once it fits, returning an idempotent release. A job that exceeds a whole
+ * budget dimension is admitted alone once the device is otherwise idle, so it
+ * can never deadlock.
  *
  * Admission is NOT FIFO: `notify()` wakes all waiters and the first to win the
  * synchronous check-and-commit takes the budget, so a stream of cheap jobs can
@@ -119,39 +140,54 @@ export const budgetChanges = new Notifier();
  * can pile up, and the activity's `startToCloseTimeout` is the ultimate backstop
  * — so we accept it rather than track insertion order.
  */
-export class AmaEncodeBudget {
-  private inUse = 0;
+export class AmaDeviceBudget {
+  private used: AmaCost = { sessions: 0, pixels: 0 };
 
-  constructor(readonly total: number) {}
+  constructor(readonly max: AmaCost) {}
 
-  free(): number {
-    return Math.max(0, this.total - this.inUse);
+  freeSessions(): number {
+    return Math.max(0, this.max.sessions - this.used.sessions);
   }
 
-  used(): number {
-    return this.inUse;
+  freePixels(): number {
+    return Math.max(0, this.max.pixels - this.used.pixels);
   }
 
-  private canAcquire(cost: number): boolean {
-    // Oversized job: run it alone rather than wedge forever.
-    if (this.inUse === 0) {
+  usedSessions(): number {
+    return this.used.sessions;
+  }
+
+  usedPixels(): number {
+    return this.used.pixels;
+  }
+
+  private idle(): boolean {
+    return this.used.sessions === 0 && this.used.pixels === 0;
+  }
+
+  private fits(cost: AmaCost): boolean {
+    // Oversized job (exceeds a whole budget dimension): run it alone once the
+    // device is otherwise idle, rather than wedge forever.
+    if (this.idle()) {
       return true;
     }
-    return this.inUse + cost <= this.total;
+    return (
+      this.used.sessions + cost.sessions <= this.max.sessions &&
+      this.used.pixels + cost.pixels <= this.max.pixels
+    );
   }
 
-  async acquire(cost: number, signal?: AbortSignal): Promise<() => void> {
-    if (cost <= 0) {
+  async acquire(cost: AmaCost, signal?: AbortSignal): Promise<() => void> {
+    if (cost.sessions <= 0 && cost.pixels <= 0) {
       return () => {};
     }
-    while (!this.canAcquire(cost)) {
+    while (!this.fits(cost)) {
       await budgetChanges.wait(signal);
     }
-    this.inUse += cost;
+    this.used.sessions += cost.sessions;
+    this.used.pixels += cost.pixels;
     moduleLogger.debug(
-      `Acquired ${cost.toFixed(2)} AMA encode units (in use: ${this.inUse.toFixed(
-        2,
-      )}/${this.total})`,
+      `Acquired AMA budget (sessions ${this.used.sessions}/${this.max.sessions}, pixels ${this.used.pixels.toFixed(2)}/${this.max.pixels})`,
     );
     let released = false;
     return () => {
@@ -159,15 +195,14 @@ export class AmaEncodeBudget {
         return;
       }
       released = true;
-      this.inUse -= cost;
-      moduleLogger.debug(
-        `Released ${cost.toFixed(2)} AMA encode units (in use: ${this.inUse.toFixed(
-          2,
-        )}/${this.total})`,
-      );
+      this.used.sessions -= cost.sessions;
+      this.used.pixels -= cost.pixels;
       budgetChanges.notify();
     };
   }
 }
 
-export const amaEncodeBudget = new AmaEncodeBudget(AMA_ENCODE_BUDGET);
+export const amaDeviceBudget = new AmaDeviceBudget({
+  sessions: AMA_MAX_SESSIONS,
+  pixels: AMA_PIXEL_BUDGET,
+});

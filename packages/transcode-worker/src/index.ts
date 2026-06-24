@@ -1,8 +1,9 @@
 import * as activities from '@letschurch/temporal/activities/transcode';
 import { TRANSCODE_QUEUE } from '@letschurch/temporal/queues';
 import {
-  AMA_ENCODE_BUDGET,
   AMA_MAX_CONCURRENT,
+  AMA_MAX_SESSIONS,
+  AMA_PIXEL_BUDGET,
   amaBudgetEnabled,
 } from '@letschurch/temporal/util/ama-budget';
 import { waitOnTemporal } from '@letschurch/temporal/util/temporal';
@@ -76,7 +77,7 @@ if (amaBudgetEnabled) {
     },
   });
   console.log(
-    `Transcode worker using AMA encode budget: ${AMA_ENCODE_BUDGET} units, max ${AMA_MAX_CONCURRENT} concurrent jobs`,
+    `Transcode worker using AMA device budget: ${AMA_MAX_SESSIONS} encoder sessions, ${AMA_PIXEL_BUDGET} pixel units, max ${AMA_MAX_CONCURRENT} concurrent jobs`,
   );
 } else {
   if (!MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS) {
