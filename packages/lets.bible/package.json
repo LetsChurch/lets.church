@@ -19,6 +19,7 @@
     "db:studio": "drizzle-kit studio",
     "seed:bible": "tsx src/db/seed-bible.ts",
     "seed:lexicon": "tsx src/db/seed-lexicon.ts",
+    "seed:source": "tsx src/db/seed-source.ts",
     "es:push-mappings": "tsx src/search/push-mappings.ts",
     "es:index-verses": "tsx src/search/index-verses.ts",
     "flex:build": "tsx src/search/build-flex-index.ts",

@@ -117,6 +117,12 @@ lets-bible-seed-msb:
 lets-bible-seed-lexicon:
   docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run seed:lexicon'
 
+# Seed the original-language interlinear (STEPBible TAGNT Greek / TAHOT Hebrew,
+# fetched not committed). books = NT | OT | ALL | a comma list (default John);
+# translation BSB (critical) or MSB (Byzantine).
+lets-bible-seed-source books="JHN" translation="BSB":
+  docker compose exec lets-bible sh -c 'cd /usr/src/app && BOOKS={{books}} TRANSLATION_ID={{translation}} pnpm --filter @letschurch/lets.bible run seed:source'
+
 # Index all verses into the lets.bible search index (after seed + es-push)
 lets-bible-index:
   docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:index-verses'

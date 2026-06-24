@@ -8,6 +8,7 @@ import {
   Interlinear,
   InterlinearControls,
   type InterlinearOptions,
+  SourceInterlinear,
 } from '@/components/passage/interlinear';
 import {
   footnotesForVerse,
@@ -134,6 +135,19 @@ export const Route = createFileRoute('/bible/$book/$chapter')({
             )
             .catch(() => undefined)
         : null,
+      // The original-language source words (true interlinear), so the Greek/
+      // Hebrew order renders on first paint without a client round-trip.
+      deps.view === 'interlinear'
+        ? queryClient
+            .ensureQueryData(
+              trpc.bible.sourceInterlinear.queryOptions({
+                book: params.book,
+                chapter,
+                translation: translationId,
+              }),
+            )
+            .catch(() => undefined)
+        : null,
     ]);
     return { serverMarks: await serverMarksPromise };
   },
@@ -247,6 +261,22 @@ function Reader() {
     }),
     enabled: interlinearView,
   });
+  // Original-language source words (true interlinear) — Greek/Hebrew in original
+  // word order with morphology. Present only for seeded books; when absent the
+  // interlinear falls back to the English reading-order view above.
+  const { data: sourceRows } = useQuery({
+    ...trpc.bible.sourceInterlinear.queryOptions({
+      book: bookSlug,
+      chapter: chapterNum,
+      translation: currentTranslation,
+    }),
+    enabled: interlinearView,
+  });
+  const hasSource = (sourceRows?.length ?? 0) > 0;
+  // The "Original" word-order option shows the true source order; "English
+  // (reverse)" shows the reading-order interlinear. Without source data we keep
+  // the reading-order view regardless.
+  const showSource = hasSource && !interlinearOptions.englishFirst;
   // Highlights + notes: the server is the source of truth (prefetched in the
   // loader → SSR'd, so they render on first paint and stay consistent across
   // devices). The local-first store overlays this for optimistic writes +
@@ -410,6 +440,7 @@ function Reader() {
         <InterlinearControls
           options={interlinearOptions}
           onChange={setInterlinearOptions}
+          parsingAvailable={showSource}
         />
       ) : null}
 
@@ -436,7 +467,22 @@ function Reader() {
             )}
 
             {interlinearView ? (
-              interlinearRows ? (
+              showSource && sourceRows ? (
+                <SourceInterlinear
+                  rows={sourceRows}
+                  selectedWord={
+                    selectedWord
+                      ? {
+                          verse: selectedWord.verse,
+                          position: selectedWord.position,
+                        }
+                      : null
+                  }
+                  onSelectWord={(word) => setSelection({ kind: 'word', word })}
+                  options={interlinearOptions}
+                  verseNumbers={prefs.verseNumbers}
+                />
+              ) : interlinearRows ? (
                 <Interlinear
                   rows={interlinearRows}
                   selectedWord={

@@ -8,6 +8,13 @@
       "when": 1782156367823,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1782309256347,
+      "tag": "0001_add_bible_source_token",
+      "breakpoints": true
     }
   ]
 }

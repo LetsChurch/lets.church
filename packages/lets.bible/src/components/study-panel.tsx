@@ -5,6 +5,7 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { findBook } from '@/lib/canon';
 import { HIGHLIGHT_COLORS, highlightDotStyle } from '@/lib/highlight-colors';
+import { decodeMorph } from '@/lib/morph';
 import { chapterLink } from '@/lib/reference';
 import { useIsDesktop } from '@/lib/use-media-query';
 import {
@@ -707,6 +708,24 @@ function WordView({
       </button>
 
       <div className="flex-1 overflow-y-auto px-5 py-5">
+        {(() => {
+          // Parsing for THIS inflected word — available from the true interlinear
+          // (independent of the lexicon load below).
+          const parsed = decodeMorph(word.morph, word.language);
+          return parsed ? (
+            <div className="mb-5 border-line border-b pb-4">
+              <div className="mb-1 font-semibold text-[11px] text-gold-soft uppercase tracking-[0.12em]">
+                Parsing
+              </div>
+              <p className="text-[14px] text-ink leading-relaxed">
+                {parsed.label}
+              </p>
+              <p className="mt-0.5 font-mono text-[11px] text-muted-2">
+                {parsed.raw}
+              </p>
+            </div>
+          ) : null;
+        })()}
         {isLoading ? (
           <p className="text-[13px] text-faint">Loading…</p>
         ) : (

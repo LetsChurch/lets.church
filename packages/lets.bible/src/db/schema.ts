@@ -221,6 +221,43 @@ export const bibleToken = pgTable(
   ],
 );
 
+// Original-language source words in ORIGINAL (Greek/Hebrew) order — the basis for
+// a true morphological interlinear, as opposed to `bible_token` which is the
+// English reading order. `position` is the 0-based index of the word within its
+// verse in the *original* language's word order. Each row carries the inflected
+// surface form, transliteration, dictionary lemma + gloss, the contextual English
+// gloss, and the parsing/morphology code. Keyed by translation because the
+// textual basis differs (BSB ≈ critical/NA, MSB ≈ Byzantine). Seeded from the
+// STEPBible TAGNT (Greek) / TAHOT (Hebrew) data — CC BY 4.0, fetched not
+// committed — whose English is itself BSB-based, so it aligns with our text.
+export const bibleSourceToken = pgTable(
+  'bible_source_token',
+  {
+    translationId: text('translation_id')
+      .notNull()
+      .references(() => bibleTranslation.id, { onDelete: 'cascade' }),
+    book: text('book').notNull(), // USFM code, e.g. 'JHN'
+    chapter: integer('chapter').notNull(),
+    verse: integer('verse').notNull(),
+    position: integer('position').notNull(), // 0-based, original-language order
+    surface: text('surface').notNull(), // inflected original form, e.g. 'ἀγάπησεν'
+    transliteration: text('transliteration'),
+    strong: text('strong'), // normalized, e.g. 'G0025'
+    lemma: text('lemma'), // dictionary form, e.g. 'ἀγαπάω'
+    gloss: text('gloss'), // brief dictionary gloss, e.g. 'to love'
+    english: text('english'), // contextual English for this word, e.g. 'loved'
+    morph: text('morph'), // parsing code, e.g. 'V-AAI-3S'
+    language: text('language').notNull(), // 'greek' | 'hebrew'
+  },
+  (t) => [
+    primaryKey({
+      columns: [t.translationId, t.book, t.chapter, t.verse, t.position],
+    }),
+    // Word study / concordance over the original-language lemma.
+    index('bible_source_token_strong_idx').on(t.translationId, t.strong),
+  ],
+);
+
 // Strong's lexicon (Greek + Hebrew) — translation-agnostic, keyed by the
 // normalized Strong's number. Seeded from the public-domain Strong's 1890
 // (OpenScriptures digitization). Powers the study panel / word study.

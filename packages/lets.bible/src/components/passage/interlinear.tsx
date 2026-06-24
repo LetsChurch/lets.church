@@ -1,3 +1,4 @@
+import { decodeMorph } from '@/lib/morph';
 import type { WordRef } from './passage';
 
 // One word of the interlinear, as returned by `bible.interlinear` (a token
@@ -24,6 +25,7 @@ export type InterlinearOptions = {
   showTranslit: boolean;
   showGloss: boolean;
   showStrong: boolean;
+  showParsing: boolean; // grammar/morphology line (true interlinear only)
 };
 
 export const DEFAULT_INTERLINEAR_OPTIONS: InterlinearOptions = {
@@ -31,6 +33,7 @@ export const DEFAULT_INTERLINEAR_OPTIONS: InterlinearOptions = {
   showTranslit: true,
   showGloss: true,
   showStrong: true,
+  showParsing: false,
 };
 
 // Function words (articles) render faded, like the design's τῇ / τὸν / τὰ.
@@ -43,17 +46,22 @@ const chipBase =
   'rounded-full border border-[#e0d8c6] bg-[#efe9da] px-[11px] py-[5px] font-semibold text-[12px] outline-none transition focus-visible:ring-2 focus-visible:ring-gold/40';
 
 // The full-width controls bar — a second sticky header under the reader chrome.
-// Word-order segmented toggle on the left; line toggles on the right. "Greek ·
-// locked" (the original line is always shown) and "Parsing" are inert: parsing
-// isn't in our seed data, and the original line can't be hidden.
+// Word-order segmented toggle on the left; line toggles on the right. "Original ·
+// locked" is inert (the original line can't be hidden); "Parsing" is a live
+// toggle when the passage has morphology (`parsingAvailable`), else inert.
 export function InterlinearControls({
   options,
   onChange,
+  parsingAvailable = false,
 }: {
   options: InterlinearOptions;
   onChange: (next: InterlinearOptions) => void;
+  // True once a chapter has original-language source tokens with morphology, so
+  // the "Parsing" line is a real toggle rather than an inert "not in our data".
+  parsingAvailable?: boolean;
 }) {
-  const { englishFirst, showTranslit, showGloss, showStrong } = options;
+  const { englishFirst, showTranslit, showGloss, showStrong, showParsing } =
+    options;
   const set = (patch: Partial<InterlinearOptions>) =>
     onChange({ ...options, ...patch });
 
@@ -112,12 +120,20 @@ export function InterlinearControls({
           on={showStrong}
           onToggle={() => set({ showStrong: !showStrong })}
         />
-        <span
-          title="Parsing isn’t available in this text"
-          className={`${chipBase} cursor-default text-[#9a9384] opacity-70`}
-        >
-          Parsing
-        </span>
+        {parsingAvailable ? (
+          <LineChip
+            label="Parsing"
+            on={showParsing}
+            onToggle={() => set({ showParsing: !showParsing })}
+          />
+        ) : (
+          <span
+            title="Parsing isn’t available for this passage yet"
+            className={`${chipBase} cursor-default text-[#9a9384] opacity-70`}
+          >
+            Parsing
+          </span>
+        )}
       </div>
     </div>
   );
@@ -320,6 +336,175 @@ export function Interlinear({
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// One original-language word, as returned by `bible.sourceInterlinear` (a source
+// token in original Greek/Hebrew order).
+export type SourceInterlinearRow = {
+  verse: number;
+  position: number;
+  surface: string; // inflected original form
+  transliteration: string | null;
+  strong: string | null;
+  lemma: string | null;
+  gloss: string | null;
+  english: string | null; // contextual English for this word
+  morph: string | null; // parsing code, e.g. 'V-AAI-3S'
+  language: string; // 'greek' | 'hebrew'
+};
+
+// One stacked token of the TRUE interlinear: the inflected original word on top,
+// then transliteration, the contextual English, Strong's, and the parsing code
+// (hover for the decoded grammar). Tapping opens the word study panel.
+function SourceToken({
+  w,
+  selected,
+  onSelect,
+  options,
+}: {
+  w: SourceInterlinearRow;
+  selected: boolean;
+  onSelect: () => void;
+  options: InterlinearOptions;
+}) {
+  const { showTranslit, showGloss, showStrong, showParsing } = options;
+  const isHebrew = w.language === 'hebrew';
+  const faded = w.strong === 'G3588' || w.morph === 'Td'; // article, rendered quietly
+  const parsed = showParsing ? decodeMorph(w.morph, w.language) : null;
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      data-strong={w.strong ?? undefined}
+      className={`flex flex-col items-center gap-[3px] rounded-[10px] px-2 py-1.5 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-gold/40 ${
+        selected
+          ? 'bg-[rgba(154,123,63,0.14)] shadow-[inset_0_0_0_1px_rgba(154,123,63,0.42)]'
+          : 'hover:bg-[rgba(154,123,63,0.07)]'
+      }`}
+    >
+      <span
+        dir={isHebrew ? 'rtl' : 'ltr'}
+        lang={isHebrew ? 'he' : 'el'}
+        className={`text-[22px] leading-[1.25] ${
+          isHebrew ? 'font-hebrew' : 'font-greek'
+        } ${faded ? 'text-faint' : 'text-ink-strong'}`}
+      >
+        {w.surface}
+      </span>
+      {showTranslit && w.transliteration ? (
+        <span
+          className={`font-serif text-[12px] italic leading-tight ${
+            faded ? 'text-faint-2' : 'text-muted-2'
+          }`}
+        >
+          {w.transliteration}
+        </span>
+      ) : null}
+      {showGloss && w.english ? (
+        <span
+          className={`whitespace-nowrap text-[13px] leading-tight ${
+            faded ? 'text-faint' : selected ? 'text-ink' : 'text-muted'
+          }`}
+        >
+          {w.english}
+        </span>
+      ) : null}
+      {showStrong && w.strong ? (
+        <span
+          className={`font-mono text-[9.5px] leading-tight ${
+            faded ? 'text-faint-2' : selected ? 'text-gold' : 'text-gold-soft'
+          }`}
+        >
+          {w.strong}
+        </span>
+      ) : null}
+      {parsed ? (
+        <span
+          title={parsed.label}
+          className="font-mono text-[9.5px] text-muted-2 leading-tight"
+        >
+          {parsed.raw}
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
+// The TRUE morphological interlinear: the chapter's words in ORIGINAL
+// (Greek/Hebrew) word order — sourced from STEPBible TAGNT/TAHOT — each stacked
+// with transliteration, contextual English, Strong's, and parsing. Distinct from
+// `Interlinear` above, which renders the English reading order. Tapping a word
+// opens its study panel.
+export function SourceInterlinear({
+  rows,
+  options,
+  selectedWord,
+  onSelectWord,
+  verseNumbers = true,
+}: {
+  rows: SourceInterlinearRow[];
+  options: InterlinearOptions;
+  selectedWord: { verse: number; position: number } | null;
+  onSelectWord: (word: WordRef) => void;
+  verseNumbers?: boolean;
+}) {
+  const verses: { verse: number; words: SourceInterlinearRow[] }[] = [];
+  for (const row of rows) {
+    const last = verses[verses.length - 1];
+    if (last && last.verse === row.verse) {
+      last.words.push(row);
+    } else {
+      verses.push({ verse: row.verse, words: [row] });
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-y-8">
+      {verses.map(({ verse, words }) => {
+        // Hebrew reads right-to-left, so its tokens flow RTL within the content
+        // area (the verse-number gutter stays on the left, as elsewhere).
+        const rtl = words[0]?.language === 'hebrew';
+        return (
+          <div key={verse} className="flex items-start gap-x-2">
+            {verseNumbers ? (
+              <div className="mt-2 w-9 flex-shrink-0">
+                <span className="rounded-[5px] border border-gold-soft/40 bg-gold/10 px-1.5 py-px font-bold font-sans text-[12px] text-gold-soft">
+                  {verse}
+                </span>
+              </div>
+            ) : null}
+            <div
+              dir={rtl ? 'rtl' : 'ltr'}
+              className="flex flex-1 flex-wrap items-start gap-x-[18px] gap-y-[26px]"
+            >
+              {words.map((w) => (
+                <SourceToken
+                  key={w.position}
+                  w={w}
+                  selected={
+                    selectedWord?.verse === verse &&
+                    selectedWord?.position === w.position
+                  }
+                  onSelect={() =>
+                    onSelectWord({
+                      verse,
+                      position: w.position,
+                      strong: w.strong ?? '',
+                      surface: w.surface,
+                      morph: w.morph ?? undefined,
+                      language: w.language,
+                    })
+                  }
+                  options={options}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -51,6 +51,8 @@ export type WordRef = {
   surface: string;
   divineName?: boolean;
   otQuote?: boolean;
+  morph?: string; // parsing code (from the true interlinear), e.g. 'V-AAI-3S'
+  language?: string; // 'greek' | 'hebrew' — how to decode `morph`
 };
 
 // Word-selection wiring, read by the word runs. `selectedVerse` lets a word

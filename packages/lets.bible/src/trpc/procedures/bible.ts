@@ -5,6 +5,7 @@ import {
   bibleBook,
   bibleCrossReference,
   bibleLexeme,
+  bibleSourceToken,
   bibleToken,
   bibleTranslation,
   bibleVerse,
@@ -433,6 +434,60 @@ export const bibleProcedures = {
           ),
         )
         .orderBy(asc(bibleToken.verse), asc(bibleToken.position));
+    }),
+
+  // True interlinear: the chapter's original-language (Greek/Hebrew) words in
+  // ORIGINAL word order, each with its inflected surface, transliteration,
+  // dictionary lemma + gloss, contextual English, and parsing/morphology code.
+  // Empty when this translation/book hasn't been seeded with source tokens, so
+  // the reader can fall back to the English reading-order interlinear.
+  sourceInterlinear: publicProcedure
+    .input(
+      z.object({
+        translation: z.string().optional(),
+        book: z.string(),
+        chapter: z.number().int().positive(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const translationId = await resolveTranslation(ctx, input.translation);
+      const usfm = usfmOf(input.book);
+      const forTranslation = (tid: string) =>
+        db
+          .select({
+            verse: bibleSourceToken.verse,
+            position: bibleSourceToken.position,
+            surface: bibleSourceToken.surface,
+            transliteration: bibleSourceToken.transliteration,
+            strong: bibleSourceToken.strong,
+            lemma: bibleSourceToken.lemma,
+            gloss: bibleSourceToken.gloss,
+            english: bibleSourceToken.english,
+            morph: bibleSourceToken.morph,
+            language: bibleSourceToken.language,
+          })
+          .from(bibleSourceToken)
+          .where(
+            and(
+              eq(bibleSourceToken.translationId, tid),
+              eq(bibleSourceToken.book, usfm),
+              eq(bibleSourceToken.chapter, input.chapter),
+            ),
+          )
+          .orderBy(asc(bibleSourceToken.verse), asc(bibleSourceToken.position));
+
+      const rows = await forTranslation(translationId);
+      // The OT Hebrew is the same Masoretic text for every translation, so it's
+      // seeded once (under the default). Fall back to the default translation
+      // when this one has no source tokens for the passage (only the NT Greek
+      // differs by textual basis, and those translations carry their own rows).
+      if (rows.length === 0) {
+        const fallback = await defaultTranslationId();
+        if (fallback !== translationId) {
+          return forTranslation(fallback);
+        }
+      }
+      return rows;
     }),
 
   // Strong's lexicon entry for a word (the study panel). Returns the Greek/
