@@ -1,5 +1,6 @@
 import { createRouter as createTanStackRouter } from '@tanstack/react-router';
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query';
+import { NotFound } from './components/chrome';
 import { LocalSync } from './components/local-sync';
 import { routeTree } from './routeTree.gen';
 import { getContext, Provider as TrpcProvider } from './trpc/react';
@@ -13,6 +14,7 @@ export function getRouter() {
     routeTree,
     defaultPreload: 'intent',
     defaultPreloadStaleTime: 0,
+    defaultNotFoundComponent: NotFound,
     scrollRestoration: true,
     context,
     Wrap: ({ children }) => (

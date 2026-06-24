@@ -15,6 +15,7 @@ import { useState } from 'react';
 import { useAppMantineForm } from '@/components/mantine';
 import { loginSchema } from '@/schemas/auth';
 import { useTRPC } from '@/trpc/react';
+import { oidcClientNameFromRedirect } from '@/util/oidc/client-names';
 import { safeRedirect } from '@/util/safe-redirect';
 
 export const Route = createFileRoute('/auth_/login')({
@@ -41,6 +42,10 @@ function LoginRoute() {
 
   const router = useRouter();
   const { redirect: redirectTo } = Route.useSearch();
+  // When this login is the start of an OIDC sign-in for a first-party app (e.g.
+  // lets.bible), name it so the cross-site handoff isn't a jarring, contextless
+  // "Let's Church" page.
+  const clientName = oidcClientNameFromRedirect(redirectTo);
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const { data: env } = useSuspenseQuery(
@@ -107,6 +112,11 @@ function LoginRoute() {
       <Text size="lg" fw={500}>
         Sign in to your account
       </Text>
+      {clientName ? (
+        <Text size="sm" c="dimmed" mt={4}>
+          to continue to {clientName}
+        </Text>
+      ) : null}
 
       {error ? (
         <Alert

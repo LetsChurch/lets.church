@@ -21,9 +21,15 @@ type VerseSource = {
   text: string;
 };
 
-// Full-text verse search within a single translation. Combines an exact-phrase
-// match (highest boost), a slop-2 phrase match on the stemmed field, and a plain
-// stemmed match (recall), so exact wording ranks above looser matches.
+// Full-text verse search within a single translation. Layered so wording and
+// term-coverage both count:
+//   • exact-phrase match (highest boost) — "fruit of the Spirit" verbatim;
+//   • slop-2 phrase match on the stemmed field — near-exact wording;
+//   • a coverage match (≥75% of the query terms) — rewards verses that contain
+//     MOST of the query's words, so for a topical query like "fruit of the
+//     Spirit" the verses with both "fruit" and "Spirit" rank above incidental
+//     single-word hits ("…its fruit will be good…");
+//   • a plain stemmed match — recall, so single-term hits still appear (lower).
 export async function searchVerses(params: {
   q: string;
   translationId: string;
@@ -46,6 +52,20 @@ export async function searchVerses(params: {
         should: [
           { match_phrase: { 'text.exact': { query: trimmed, boost: 5 } } },
           { match_phrase: { text: { query: trimmed, slop: 2, boost: 2 } } },
+          {
+            // Coverage bonus: "2<75%" requires ALL terms when the query has ≤2
+            // (so "fruit of the Spirit" → both "fruit" and "spirit" after
+            // stopword removal), and ≥75% beyond that. ES rounds percentages
+            // down, so a plain "75%" would collapse to 1 term for a 2-term query
+            // — hence the combination form.
+            match: {
+              text: {
+                query: trimmed,
+                minimum_should_match: '2<75%',
+                boost: 3,
+              },
+            },
+          },
           { match: { text: { query: trimmed } } },
         ],
       },

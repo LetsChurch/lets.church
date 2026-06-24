@@ -271,6 +271,7 @@ function TranslationRows({
   current: string;
   onAction?: () => void;
 }) {
+  const anyInterlinear = list.some((t) => t.hasInterlinear);
   return (
     <div className="flex flex-col">
       {list.map((t) => {
@@ -331,6 +332,18 @@ function TranslationRows({
           </div>
         );
       })}
+      {/* Legend — the "Aα" row action is icon-only, so name what it does for
+          sighted users (it already carries a title/aria description). */}
+      {anyInterlinear ? (
+        <div className="mt-1 flex items-center gap-2 border-line border-t px-2.5 pt-2.5 pb-1 text-[11.5px] text-muted-2">
+          <span className="font-semibold font-serif text-ink">
+            A<span className="text-gold-soft">α</span>
+          </span>
+          <span>
+            opens the interlinear — each word in its original language.
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }

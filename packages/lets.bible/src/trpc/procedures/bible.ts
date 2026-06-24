@@ -462,8 +462,11 @@ export const bibleProcedures = {
       return { ...entry, occurrences: counts?.count ?? 0 };
     }),
 
-  // Every occurrence of a Strong's number with its verse text — word study /
-  // concordance (uses the bible_token strong index).
+  // Every verse where a Strong's number occurs, with its text — word study /
+  // concordance (uses the bible_token strong index). Grouped by verse, so a
+  // lemma that appears more than once in the same verse is ONE entry with a
+  // `count` (e.g. "love those who love you" → Luke 6:32 ×2), not a run of
+  // identical-looking duplicate rows.
   wordOccurrences: publicProcedure
     .input(
       z.object({
@@ -479,9 +482,9 @@ export const bibleProcedures = {
           book: bibleToken.book,
           chapter: bibleToken.chapter,
           verse: bibleToken.verse,
-          surface: bibleToken.surface,
           ref: bibleVerse.ref,
           text: bibleVerse.text,
+          count: sql<number>`count(*)::int`,
         })
         .from(bibleToken)
         .innerJoin(
@@ -498,6 +501,14 @@ export const bibleProcedures = {
             eq(bibleToken.translationId, translationId),
             eq(bibleToken.strong, input.strong),
           ),
+        )
+        .groupBy(
+          bibleToken.book,
+          bibleToken.chapter,
+          bibleToken.verse,
+          bibleVerse.ref,
+          bibleVerse.text,
+          bibleVerse.ordinal,
         )
         .orderBy(asc(bibleVerse.ordinal))
         .limit(input.limit);

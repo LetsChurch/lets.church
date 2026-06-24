@@ -335,12 +335,11 @@ function AddTranslation({
 }) {
   const navigate = useNavigate();
 
+  // Nothing left to add (every translation is already shown) → render nothing
+  // rather than an inert "+ Add translation" that looks clickable but does
+  // nothing.
   if (addable.length === 0) {
-    return (
-      <span className="font-semibold text-[13.5px] text-faint">
-        + Add translation
-      </span>
-    );
+    return null;
   }
 
   const add = (id: string) => {

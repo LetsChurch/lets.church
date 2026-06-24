@@ -2,6 +2,7 @@ import { Menu } from '@base-ui/react/menu';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { MouseEvent, ReactNode } from 'react';
+import { DEFAULT_BOOK, DEFAULT_CHAPTER } from '@/lib/canon';
 import { clearLocalData } from '@/local/sync';
 import { useTRPC } from '@/trpc/react';
 import { Avatar } from './avatar';
@@ -144,6 +145,44 @@ export function PageShell({ children }: { children: ReactNode }) {
       <main className="flex-1">{children}</main>
       <Footer />
     </div>
+  );
+}
+
+// The site-wide 404 — wired as the router's `defaultNotFoundComponent`, so a
+// mistyped URL, an out-of-range chapter, or any `notFound()` thrown in a loader
+// lands on a branded page (full chrome + a way back) instead of TanStack
+// Router's bare "<p>Not Found</p>" default.
+export function NotFound() {
+  return (
+    <PageShell>
+      <div className="mx-auto flex max-w-[560px] flex-col items-center px-6 py-24 text-center sm:py-32">
+        <div className="font-bold text-[11px] text-gold-soft uppercase tracking-[0.16em]">
+          Not found
+        </div>
+        <h1 className="mt-3 font-serif text-[34px] text-ink-strong leading-[1.15] sm:text-[40px]">
+          We couldn’t find that page
+        </h1>
+        <p className="mt-4 max-w-[440px] text-[15px] text-muted leading-relaxed">
+          The page or passage you’re looking for doesn’t exist. Check the
+          reference, or head back to start reading.
+        </p>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            to="/"
+            className="inline-block rounded-[9px] bg-ink-strong px-4 py-[10px] font-semibold text-[14px] text-white dark:text-paper"
+          >
+            Go home
+          </Link>
+          <Link
+            to="/bible/$book/$chapter"
+            params={{ book: DEFAULT_BOOK, chapter: String(DEFAULT_CHAPTER) }}
+            className="inline-block rounded-[9px] border border-line-strong bg-paper-raised px-4 py-[10px] font-semibold text-[14px] text-ink"
+          >
+            Start reading
+          </Link>
+        </div>
+      </div>
+    </PageShell>
   );
 }
 

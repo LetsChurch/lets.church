@@ -245,6 +245,18 @@
   box-shadow: inset 0 -2px 0 var(--color-gold);
 }
 
+/* Keyboard focus on a tappable verse. The verse spans are `role="button"`
+   tabbables, so when the study drawer closes focus returns to them — without
+   this they'd show the browser's default (blue) focus box, which clashes with
+   the warm palette and reads like a lingering selection. A soft gold ring keys
+   off `:focus-visible` (so mouse/touch taps never show it) and uses `outline`,
+   not `box-shadow`, so it never competes with `.verse-selected`/`.verse-flash`. */
+[data-verse]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-gold) 55%, transparent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
 /* Transient highlight when arriving at a verse via a direct reference (?v=): a
    gold flash that fades out, so the linked verse is briefly emphasized without
    becoming a persistent selection. The gold is a big *inset* box-shadow overlay

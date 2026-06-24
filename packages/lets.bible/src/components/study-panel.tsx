@@ -968,7 +968,12 @@ function Occurrences({
                     </Link>
                   ) : (
                     <span className="font-semibold text-muted">{label}</span>
-                  )}{' '}
+                  )}
+                  {o.count > 1 ? (
+                    <span className="ml-1 font-semibold text-[11px] text-gold-soft">
+                      ×{o.count}
+                    </span>
+                  ) : null}{' '}
                   <span className="text-muted-2">{o.text}</span>
                 </li>
               );
