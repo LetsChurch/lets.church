@@ -52,9 +52,9 @@ function ToggleRow({
       <Switch.Root
         checked={checked}
         onCheckedChange={onChange}
-        className="relative h-[26px] w-11 shrink-0 rounded-full bg-line-strong outline-none transition-colors focus-visible:ring-2 focus-visible:ring-gold/40 data-[checked]:bg-gold"
+        className="relative flex h-6 w-11 shrink-0 items-center rounded-full bg-line-strong p-0.5 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-gold/40 data-[checked]:bg-gold"
       >
-        <Switch.Thumb className="block size-5 translate-x-[3px] rounded-full bg-white transition-transform data-[checked]:translate-x-[21px]" />
+        <Switch.Thumb className="aspect-square h-full rounded-full bg-white shadow-sm transition-transform data-[checked]:translate-x-5" />
       </Switch.Root>
     </div>
   );
