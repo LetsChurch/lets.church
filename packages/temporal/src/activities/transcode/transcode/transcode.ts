@@ -14,8 +14,9 @@ import { amaBudgetEnabled, amaEncodeBudget } from '../../../util/ama-budget';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import {
   getVariants,
-  type HwAccel,
   probeFrameRate,
+  probeToDecodeCost,
+  resolveHwAccel,
   runFfmpegEncode,
   variantsToEncodeCost,
   variantsToMasterVideoPlaylist,
@@ -27,10 +28,7 @@ const moduleLogger = logger.child({
   module: 'temporal/activities/transcode/transcode',
 });
 
-const hwAccelEnv = process.env.TRANSCODE_HW_ACCEL;
-const HW_ACCEL: HwAccel = hwAccelEnv?.startsWith('ama')
-  ? (hwAccelEnv as HwAccel)
-  : 'none';
+const HW_ACCEL = resolveHwAccel();
 
 const WORK_DIR = process.env.TRANSCODE_WORKING_DIRECTORY ?? '/data/transcode';
 
@@ -156,15 +154,23 @@ export default async function transcode(
       `Will encode ${variants.length} variants: ${formatter.format(variants)}`,
     );
 
-    // Claim encoder budget on the AMA path so we don't oversubscribe the
-    // device. This may block until in-flight jobs free up enough units; keep
+    // Claim device budget on the AMA path so we don't oversubscribe the card.
+    // This may block until in-flight jobs free up enough units; keep
     // heartbeating so Temporal doesn't time the activity out while it waits.
     if (amaBudgetEnabled) {
       const frameRate = probeFrameRate(probe);
-      const cost = variantsToEncodeCost(variants, frameRate);
+      // Charge the larger of this job's encode and decode load. A transcode uses
+      // both engines (decode source -> encode ladder); the ladder cost is NOT
+      // always >= the source decode cost (e.g. a 1440p source decodes ~1.78 but
+      // its ladder tops out at 1080p), so taking the max keeps BOTH the encoder
+      // and decoder pools bounded by the single budget. See util/ama-budget.ts.
+      const cost = Math.max(
+        variantsToEncodeCost(variants, frameRate),
+        probeToDecodeCost(probe, frameRate),
+      );
       if (cost > 0) {
         activityLogger.info(
-          `Acquiring AMA encode budget (cost: ${cost.toFixed(
+          `Acquiring AMA device budget (cost: ${cost.toFixed(
             2,
           )} units @ ${frameRate.toFixed(2)}fps, free: ${amaEncodeBudget
             .free()
@@ -179,7 +185,7 @@ export default async function transcode(
         } finally {
           clearInterval(waitHeartbeat);
         }
-        activityLogger.info('Acquired AMA encode budget');
+        activityLogger.info('Acquired AMA device budget');
       }
     }
 

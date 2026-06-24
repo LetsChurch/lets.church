@@ -191,6 +191,38 @@ export function variantsToEncodeCost(
   return area * (fps / REFERENCE_FRAME_RATE);
 }
 
+// Cost of DECODING the source once, in the same 1080p60-equivalent units as
+// `variantsToEncodeCost` — the source's own pixel area x frame rate. Used to
+// budget AMA work that exercises the decoder: thumbnail extraction (decode
+// only) and the decode half of a transcode. Note this can EXCEED a job's
+// encode-ladder cost (a 1440p source decodes ~1.78 units but its ladder tops
+// out at 1080p), which is why callers charge `max(encode, decode)` rather than
+// assuming encode dominates — see util/ama-budget.ts. Audio-only uploads have
+// no video stream and cost nothing.
+export function probeToDecodeCost(probe: Probe, frameRate?: number): number {
+  const video = probe.streams.find(
+    (s): s is Extract<typeof s, { codec_type: 'video' }> =>
+      s.codec_type === 'video',
+  );
+  if (!video) {
+    return 0;
+  }
+  const fps = frameRate ?? probeFrameRate(probe);
+  const safeFps = fps > 0 ? fps : REFERENCE_FRAME_RATE;
+  return (
+    ((video.width * video.height) / ONE_EIGHTY_P_PIXELS) *
+    (safeFps / REFERENCE_FRAME_RATE)
+  );
+}
+
+// Resolve the configured hardware-accel target (e.g. `ama:0`) from the
+// environment. Shared by the transcode and thumbnail activities so they agree
+// on which path they're running.
+export function resolveHwAccel(): HwAccel {
+  const env = process.env.TRANSCODE_HW_ACCEL;
+  return env?.startsWith('ama:') ? (env as HwAccel) : 'none';
+}
+
 function videoVariantToAvcCodec(variant: VideoVariant): string {
   if (variant === 'VIDEO_4K') {
     return 'avc1.640033';
@@ -525,31 +557,99 @@ export function runFfmpegEncode({
   return proc;
 }
 
+const THUMBNAIL_COUNT = 100;
+
+// The AMA decoder/scaler tops out at 4K (3840x2160); larger sources can't run
+// the hardware path.
+const AMA_MAX_WIDTH = 3840;
+const AMA_MAX_HEIGHT = 2160;
+
+export function thumbnailRate(probe: Probe): number {
+  const duration = parseFloat(probe.format.duration);
+  if (!Number.isFinite(duration) || duration <= 0) {
+    // Degenerate/unknown duration: fall back to ~1fps rather than emit a
+    // broken `-r Infinity` / `-r NaN`. Real video probes always carry a
+    // positive duration, so this is just a safety net.
+    return 1;
+  }
+  return THUMBNAIL_COUNT / duration;
+}
+
+// Whether thumbnail extraction should run on AMA hardware. Requires the opt-in
+// `AMA_HW_THUMBNAILS` flag (the exact decode->jpeg_ama graph needs validating on
+// real hardware before it's the default), an AMA target, a hardware decoder for
+// the source codec, and a source within the device's 4K decode limit. We reuse
+// `extraDecodeArgs` so the codec support list lives in exactly one place: if it
+// chose a `-c:v *_ama` decoder, the source is hardware-decodable.
+export function thumbnailsUseAma(probe: Probe, hwAccel: HwAccel): boolean {
+  if (process.env.AMA_HW_THUMBNAILS !== 'true' || !hwAccel.startsWith('ama:')) {
+    return false;
+  }
+  if (!extraDecodeArgs(probe, hwAccel).includes('-c:v')) {
+    return false;
+  }
+  const video = probe.streams.find(
+    (s): s is Extract<typeof s, { codec_type: 'video' }> =>
+      s.codec_type === 'video',
+  );
+  return (
+    !!video && video.width <= AMA_MAX_WIDTH && video.height <= AMA_MAX_HEIGHT
+  );
+}
+
+export function ffmpegThumbnailArgs(
+  inputFilename: string,
+  probe: Probe,
+  hwAccel: HwAccel,
+): Array<string> {
+  const rate = thumbnailRate(probe);
+
+  if (thumbnailsUseAma(probe, hwAccel)) {
+    return [
+      '-hide_banner',
+      '-y',
+      // Hardware-decode the source on the AMA device (the expensive part).
+      ...extraDecodeArgs(probe, hwAccel),
+      '-i',
+      inputFilename,
+      '-progress',
+      '-',
+      '-r',
+      `${rate}`,
+      // Encode the sampled frames with the on-device JPEG encoder so the whole
+      // decode->jpeg pipeline stays on the card and off the host CPU.
+      '-c:v',
+      'jpeg_ama',
+      'screenshot_v1_%03d.jpg',
+    ];
+  }
+
+  return [
+    // Baseline args
+    '-hide_banner',
+    '-y',
+    '-i',
+    inputFilename,
+    // KV output for progress
+    '-progress',
+    '-',
+    // Output
+    '-r',
+    `${rate}`,
+    'screenshot_v1_%03d.jpg',
+  ];
+}
+
 export function runFfmpegThumbnails(
   cwd: string,
   inputFilename: string,
   probe: Probe,
   signal: AbortSignal,
+  hwAccel: HwAccel = 'none',
 ) {
-  const count = 100;
-  const rate = 1 / (parseFloat(probe.format.duration) / count);
-
   const proc = execa(
     'ffmpeg',
-    [
-      // Baseline args
-      '-hide_banner',
-      '-y',
-      '-i',
-      inputFilename,
-      // KV output for progress
-      '-progress',
-      '-',
-      // Output
-      '-r',
-      `${rate}`,
-      'screenshot_v1_%03d.jpg',
-    ],
+    ffmpegThumbnailArgs(inputFilename, probe, hwAccel),
     { cwd, cancelSignal: signal },
   );
 

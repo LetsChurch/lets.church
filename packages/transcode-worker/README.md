@@ -62,11 +62,33 @@ launching ffmpeg, plus a Temporal custom slot supplier that caps how many jobs
 the pod pulls and stops polling when the device is saturated (so a busy pod
 leaves surplus work on the queue for idle pods).
 
+#### Thumbnail extraction on AMA (`AMA_HW_THUMBNAILS`)
+
+`createThumbnails` runs on the same queue and normally software-decodes the whole
+source to sample ~100 JPEG frames — a meaningful CPU cost. With
+`AMA_HW_THUMBNAILS=true`, on an AMA pod it instead hardware-decodes the source and
+JPEG-encodes on the device (`*_ama` decoder → `jpeg_ama`), moving that work off the
+host CPU. It only engages when a hardware decoder exists for the source codec
+(otherwise it falls back to software), and **it's opt-in/off by default** because
+the exact decode→`jpeg_ama` graph still needs validating on real hardware.
+
+Thumbnail jobs hardware-**decode** (no video encode), so they draw on the **same**
+device budget. Every AMA job is charged the **max of its encode-ladder cost and
+its source-decode cost** (thumbnails encode nothing, so they pay pure decode
+cost). Since each charge is ≥ both the job's encode and decode load, bounding the
+shared pool bounds both the encoder and decoder — neither can be oversubscribed.
+(Charging only encode would be unsafe: a between-tier source such as 1440p decodes
+more than its ladder encodes.) Only ≤4K sources take the hardware path — the AMA
+decoder tops out at 4K. Conservative (it doesn't exploit that decode and encode
+are parallel engines) but safe, which is what matters given the hard-fail
+behavior.
+
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `TRANSCODE_HW_ACCEL` | `ama:<n>` to use MA35D device `n`; unset/`none` for the libx264 CPU path | No |
-| `AMA_ENCODE_BUDGET` | Per-device encoder budget in 1080p-equivalent units (default `6`) | No |
-| `AMA_MAX_CONCURRENT` | Hard cap on transcode jobs pulled onto one pod at once (default `8`) | No |
+| `AMA_ENCODE_BUDGET` | Per-device budget in 1080p60-equivalent units, shared by encode + AMA-thumbnail decode (default `6`) | No |
+| `AMA_MAX_CONCURRENT` | Hard cap on jobs pulled onto one pod at once (default `8`) | No |
+| `AMA_HW_THUMBNAILS` | `true` to hardware-accelerate thumbnail extraction on AMA pods (default off; needs on-device validation) | No |
 
 ### S3 Configuration
 

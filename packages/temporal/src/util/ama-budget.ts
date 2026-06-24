@@ -15,11 +15,22 @@ export const amaBudgetEnabled =
 // budget free, there's no point pulling even the smallest video job.
 export const MIN_SLOT_BUDGET = variantEncodeUnits('VIDEO_480P');
 
-// Total encode budget for a single device, in 1080p60-equivalent units (see
+// Total device budget for a single AMA card, in 1080p60-equivalent units (see
 // `variantsToEncodeCost`). We emit H.264 ("single density"), whose per-device
 // encoder ceiling is ~8x1080p60; the default of 6 stays safely under that
 // (~one 4K-source ladder's worth) because the MA35D *errors out* rather than
 // degrading when oversubscribed (see packages/transcode-worker/README.md).
+//
+// Both transcode and AMA thumbnail extraction draw from this single pool, and
+// each job is charged the MAX of its encode-ladder cost and its source-decode
+// cost (thumbnails encode nothing, so they pay pure decode cost). Since every
+// job's charge is >= both its encode load and its decode load, bounding the sum
+// bounds BOTH the encoder and decoder pools — so neither can be oversubscribed.
+// (Charging only encode would be unsafe: a between-tier source like 1440p
+// decodes more than its ladder encodes.) Conservative — it doesn't exploit that
+// decode/encode are parallel engines — but safe, which is what matters given the
+// hard-fail behavior.
+//
 // Floored at MIN_SLOT_BUDGET so a 0 / NaN misconfig can't wedge a pod into
 // never polling (free() < MIN_SLOT_BUDGET would stop the slot supplier forever).
 export const AMA_ENCODE_BUDGET = Math.max(

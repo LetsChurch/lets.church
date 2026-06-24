@@ -1,12 +1,15 @@
-import { describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test } from 'vitest';
 import {
   extraDecodeArgs,
   ffmpegEncodeArgs,
   ffmpegEncodingArgs,
+  ffmpegThumbnailArgs,
   getVariants,
   parseFrameRate,
   parseM3u8,
   probeFrameRate,
+  probeToDecodeCost,
+  thumbnailsUseAma,
   variantEncodeUnits,
   variantsToEncodeCost,
   variantsToMasterVideoPlaylist,
@@ -19,6 +22,7 @@ function mockProbe(
   codec_name = 'h264',
   withAudio = true,
   avg_frame_rate?: string,
+  duration = '00:00:00.000',
 ) {
   return {
     streams: [
@@ -37,7 +41,7 @@ function mockProbe(
     format: {
       format_name: 'mp4',
       filename: 'test.mp4',
-      duration: '00:00:00.000',
+      duration,
       nb_streams: withAudio ? 2 : 1,
     },
   };
@@ -123,6 +127,119 @@ describe('variantsToEncodeCost', () => {
 
   test('audio-only uploads cost nothing at any frame rate', () => {
     expect(variantsToEncodeCost(['AUDIO'], 30)).toBe(0);
+  });
+});
+
+describe('probeToDecodeCost', () => {
+  test('costs the source decode by area x frame rate', () => {
+    expect(
+      probeToDecodeCost(mockProbe(1920, 1080, 'h264', true, '60/1')),
+    ).toBeCloseTo(1, 3);
+    expect(
+      probeToDecodeCost(mockProbe(1920, 1080, 'h264', true, '30/1')),
+    ).toBeCloseTo(0.5, 3);
+    expect(
+      probeToDecodeCost(mockProbe(3840, 2160, 'h264', true, '60/1')),
+    ).toBeCloseTo(4, 3);
+    // Unknown frame rate falls back to the 60fps reference (conservative).
+    expect(probeToDecodeCost(mockProbe(1920, 1080))).toBeCloseTo(1, 3);
+  });
+
+  test('audio-only (no video stream) costs nothing', () => {
+    const audioProbe = ffprobeSchema.parse({
+      streams: [{ index: 0, codec_type: 'audio', codec_name: 'aac' }],
+      format: {
+        filename: 'a.mp3',
+        format_name: 'mp3',
+        duration: '100',
+        nb_streams: 1,
+      },
+    });
+    expect(probeToDecodeCost(audioProbe)).toBe(0);
+  });
+
+  // The decode cost is NOT always <= the encode-ladder cost: between-tier and
+  // above-4K sources decode more than their ladder encodes. This is why callers
+  // charge max(encode, decode) — these cases would break a charge-encode-only
+  // budget. (Guards the AMA device-budget safety invariant.)
+  test('can exceed the encode-ladder cost for between-tier / oversized sources', () => {
+    // 1440p: decodes 1.778 but its ladder (1080p+720p+480p) encodes ~1.694.
+    const p1440 = mockProbe(2560, 1440, 'h264', true, '60/1');
+    expect(probeToDecodeCost(p1440)).toBeGreaterThan(
+      variantsToEncodeCost(getVariants(p1440), 60),
+    );
+    // 8K: decodes 16 vs ~5.694 ladder.
+    const p8k = mockProbe(7680, 4320, 'h264', true, '60/1');
+    expect(probeToDecodeCost(p8k)).toBeCloseTo(16, 3);
+    expect(probeToDecodeCost(p8k)).toBeGreaterThan(
+      variantsToEncodeCost(getVariants(p8k), 60),
+    );
+    // Standard tiers, by contrast, encode >= decode (the common case).
+    const p1080 = mockProbe(1920, 1080, 'h264', true, '60/1');
+    expect(variantsToEncodeCost(getVariants(p1080), 60)).toBeGreaterThanOrEqual(
+      probeToDecodeCost(p1080),
+    );
+  });
+});
+
+describe('thumbnailsUseAma / ffmpegThumbnailArgs', () => {
+  const prev = process.env.AMA_HW_THUMBNAILS;
+  afterEach(() => {
+    if (prev === undefined) {
+      delete process.env.AMA_HW_THUMBNAILS;
+    } else {
+      process.env.AMA_HW_THUMBNAILS = prev;
+    }
+  });
+
+  test('off by default (flag unset) even on an AMA target', () => {
+    delete process.env.AMA_HW_THUMBNAILS;
+    expect(thumbnailsUseAma(mockProbe(1920, 1080, 'h264'), 'ama:0')).toBe(
+      false,
+    );
+  });
+
+  test('enabled only with the flag + AMA target + hardware-decodable codec', () => {
+    process.env.AMA_HW_THUMBNAILS = 'true';
+    expect(thumbnailsUseAma(mockProbe(1920, 1080, 'h264'), 'ama:0')).toBe(true);
+    expect(thumbnailsUseAma(mockProbe(1920, 1080, 'hevc'), 'ama:0')).toBe(true);
+    // Non-AMA target and non-decodable codec both stay on the software path.
+    expect(thumbnailsUseAma(mockProbe(1920, 1080, 'h264'), 'none')).toBe(false);
+    expect(thumbnailsUseAma(mockProbe(1920, 1080, 'mpeg2video'), 'ama:0')).toBe(
+      false,
+    );
+    // Exactly 4K is allowed; above the decoder's 4K limit stays software.
+    expect(thumbnailsUseAma(mockProbe(3840, 2160, 'h264'), 'ama:0')).toBe(true);
+    expect(thumbnailsUseAma(mockProbe(7680, 4320, 'h264'), 'ama:0')).toBe(
+      false,
+    );
+  });
+
+  test('software args carry no AMA flags', () => {
+    const args = ffmpegThumbnailArgs(
+      'in.mp4',
+      mockProbe(1920, 1080, 'h264', true, '30/1', '100'),
+      'none',
+    );
+    expect(args).not.toContain('-hwaccel');
+    expect(args).not.toContain('jpeg_ama');
+    expect(args).toContain('screenshot_v1_%03d.jpg');
+    expect(args.join(' ')).toContain('-r 1'); // 100 frames / 100s duration
+  });
+
+  test('AMA args hardware-decode the source and JPEG-encode on device', () => {
+    process.env.AMA_HW_THUMBNAILS = 'true';
+    const args = ffmpegThumbnailArgs(
+      'in.mp4',
+      mockProbe(1920, 1080, 'h264', true, '30/1', '100'),
+      'ama:0',
+    );
+    const joined = args.join(' ');
+    expect(joined).toContain('-hwaccel ama');
+    expect(joined).toContain('/dev/ama_transcoder0');
+    expect(joined).toContain('-c:v h264_ama');
+    expect(joined).toContain('-c:v jpeg_ama');
+    expect(args).toContain('screenshot_v1_%03d.jpg');
   });
 });
 

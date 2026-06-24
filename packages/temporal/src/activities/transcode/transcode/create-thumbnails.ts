@@ -10,7 +10,13 @@ import pMap from 'p-map';
 import pRetry from 'p-retry';
 import { rimraf } from 'rimraf';
 import { updateUploadRecord } from '../../../client';
-import { runFfmpegThumbnails } from '../../../util/ffmpeg';
+import { amaEncodeBudget } from '../../../util/ama-budget';
+import {
+  probeToDecodeCost,
+  resolveHwAccel,
+  runFfmpegThumbnails,
+  thumbnailsUseAma,
+} from '../../../util/ffmpeg';
 import { concatThumbs, imageToBlurhash } from '../../../util/images';
 import logger from '../../../util/logger';
 import type { Probe } from '../../../util/zod';
@@ -48,17 +54,55 @@ export default async function createThumbnails(
   );
 
   Context.current().heartbeat();
+
+  // On the AMA path, thumbnail extraction hardware-decodes the whole source, so
+  // it claims a share of the device budget (charged as decode cost) before
+  // running ffmpeg — same pool the transcode encoder uses, so the two can't
+  // jointly oversubscribe the device. No-op on the software path.
+  const hwAccel = resolveHwAccel();
+  let releaseBudget: () => void = () => {};
+
   try {
+    if (thumbnailsUseAma(probe, hwAccel)) {
+      const cost = probeToDecodeCost(probe);
+      if (cost > 0) {
+        activityLogger.info(
+          `Acquiring AMA decode budget for thumbnails (cost: ${cost.toFixed(
+            2,
+          )} units, free: ${amaEncodeBudget
+            .free()
+            .toFixed(2)}/${amaEncodeBudget.total})`,
+        );
+        const waitHeartbeat = setInterval(
+          () =>
+            Context.current().heartbeat('waiting for AMA budget (thumbnails)'),
+          30_000,
+        );
+        try {
+          releaseBudget = await amaEncodeBudget.acquire(
+            cost,
+            cancellationSignal,
+          );
+        } finally {
+          clearInterval(waitHeartbeat);
+        }
+      }
+    }
+
     activityLogger.info('Creating thumbnails with ffmpeg');
     const proc = runFfmpegThumbnails(
       workingDir,
       downloadPath,
       probe,
       cancellationSignal,
+      hwAccel,
     );
     proc.stdout?.on('data', () => Context.current().heartbeat('stdout'));
     proc.stderr?.on('data', () => Context.current().heartbeat('stderr'));
     await proc;
+    // The device is done decoding; release before the CPU/IO tail (uploads,
+    // blurhash, hovernail). Idempotent with the finally below.
+    releaseBudget();
     const thumbnailJpgs = (await fastGlob(join(workingDir, '*.jpg'))).sort();
     const thumbnailsWithSizes = await pMap(
       thumbnailJpgs,
@@ -109,9 +153,11 @@ export default async function createThumbnails(
     }
     // Upload the remaining thumbnails
     for (const path of thumbnailJpgs) {
-      // Skip uploading the largest thumbnail here
+      // Skip uploading the largest thumbnail here (already uploaded above).
+      // `continue`, not `return` — a `return` would abandon the rest of the
+      // thumbnails and the hovernail generation below.
       if (path === largestThumbnail) {
-        return;
+        continue;
       }
 
       Context.current().heartbeat();
@@ -154,6 +200,10 @@ export default async function createThumbnails(
     );
     throw e;
   } finally {
+    // Safety net: return any still-held device budget (e.g. ffmpeg threw before
+    // the post-decode release). Idempotent, so the success path's earlier
+    // release makes this a no-op.
+    releaseBudget();
     await rimraf(workingDir);
   }
 }
