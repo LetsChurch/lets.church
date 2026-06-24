@@ -2,7 +2,7 @@ import { Autocomplete } from '@base-ui/react/autocomplete';
 import { Menu } from '@base-ui/react/menu';
 import { useNavigate } from '@tanstack/react-router';
 import { type FormEvent, useRef, useState } from 'react';
-import { BookJump, type BookJumpModel } from './book-jump';
+import { BookJump, type BookJumpModel, BookList } from './book-jump';
 
 // A single autocomplete entry. Entries are grouped into labeled sections by
 // `group` (Jump to / Exact phrase / Verses / Topics & recent / Search), and the
@@ -101,6 +101,7 @@ export function SearchBox({
   bookJump,
   chips,
   size = 'lg',
+  placeholder = 'Search a reference, phrase, topic, or idea…',
   query: controlledQuery,
   onQueryChange,
   scope,
@@ -113,7 +114,10 @@ export function SearchBox({
   // looks like a book/reference (e.g. "john", "john 3:16").
   bookJump?: BookJumpModel | null;
   chips: string[];
-  size?: 'lg' | 'md';
+  // 'sm' is the compact, chrome-friendly variant (e.g. the reader header): a
+  // shorter bar with no scope selector / ⌘K hint.
+  size?: 'lg' | 'md' | 'sm';
+  placeholder?: string;
   // Controlled query (for live, server-driven suggestions). When omitted the
   // box manages its own query and filters the static `suggestions` itself
   // (used by Storybook + any static usage).
@@ -136,10 +140,25 @@ export function SearchBox({
   const query = controlledQuery ?? internalQuery;
   const setQuery = onQueryChange ?? setInternalQuery;
   const lg = size === 'lg';
+  const compact = size === 'sm';
+  const heightCls = size === 'lg' ? 'h-14' : size === 'md' ? 'h-13' : 'h-10';
   const groups = buildGroups(suggestions);
+  // An empty box with no book-jump (e.g. the homepage) offers the standalone book
+  // picker so you can browse the canon without typing — the same widget the
+  // header bar opens to the current book.
+  const showBookPicker = !bookJump && !query.trim();
+  const hasWidget = !!bookJump || showBookPicker;
   // Only "connect" (flatten the bar's bottom + drop the gap) when the popup is
   // actually showing content — otherwise an open-but-empty box looks broken.
-  const connected = open && (groups.length > 0 || !!bookJump);
+  const connected = open && (groups.length > 0 || hasWidget);
+
+  // After navigating, reset the box so it returns to its idle state — important
+  // for the in-chrome (header) placement, which persists across the navigation
+  // and should fall back to its placeholder rather than keep the typed query.
+  function reset() {
+    setQuery('');
+    setOpen(false);
+  }
 
   function searchEverything(value: string) {
     const v = value.trim();
@@ -148,6 +167,7 @@ export function SearchBox({
         to: '/search',
         search: scope ? { q: v, translation: scope.id } : { q: v },
       });
+      reset();
     }
   }
 
@@ -160,6 +180,7 @@ export function SearchBox({
       // router's scroll-to-top reset (matches passageLink/chapterLink).
       resetScroll: verse == null,
     });
+    reset();
   }
 
   // Book-jump widget: clicking a chapter fills the input (keeps drilling in).
@@ -170,14 +191,7 @@ export function SearchBox({
 
   function go(s: Suggestion) {
     if (s.book && s.chapter != null) {
-      navigate({
-        to: '/bible/$book/$chapter',
-        params: { book: s.book, chapter: String(s.chapter) },
-        search: s.verse != null ? { v: s.verse } : {},
-        // A verse target (`?v=`) is scrolled to + flashed in the reader, so opt
-        // out of the router's scroll-to-top reset (matches passageLink/chapterLink).
-        resetScroll: s.verse == null,
-      });
+      openPassage(s.book, s.chapter, s.verse ?? undefined);
       return;
     }
     searchEverything(s.q ?? s.label);
@@ -208,6 +222,10 @@ export function SearchBox({
       onValueChange={setQuery}
       open={open}
       onOpenChange={setOpen}
+      // Reopen the popup when the input is clicked — including a click while it's
+      // already focused (e.g. after Escape closed it), where `onFocus` wouldn't
+      // fire again.
+      openOnInputClick
       // Live mode: items are already filtered by the server, so don't re-filter.
       mode={live ? 'none' : 'list'}
       itemToStringValue={(s: Suggestion) => s.label}
@@ -215,19 +233,29 @@ export function SearchBox({
       <form onSubmit={onSubmit} className="relative z-10 text-left">
         <div
           ref={barRef}
-          className={`flex items-center gap-3 border border-line-strong bg-paper-raised pr-[10px] pl-[18px] shadow-sm transition focus-within:border-line-strong focus-within:shadow-[0_0_0_3px_rgba(154,123,63,0.14)] ${
-            lg ? 'h-14' : 'h-13'
-          } ${connected ? 'rounded-t-2xl rounded-b-none' : 'rounded-2xl'}`}
+          className={`flex items-center border border-line-strong bg-paper-raised shadow-sm transition focus-within:border-line-strong focus-within:shadow-[0_0_0_3px_rgba(154,123,63,0.14)] ${
+            compact ? 'gap-2 pr-2 pl-3.5' : 'gap-3 pr-[10px] pl-[18px]'
+          } ${heightCls} ${connected ? 'rounded-t-2xl rounded-b-none' : 'rounded-2xl'}`}
         >
           <span className="flex flex-shrink-0 text-gold">
-            <SearchIcon size={lg ? 19 : 17} />
+            <SearchIcon size={lg ? 19 : compact ? 16 : 17} />
           </span>
           <Autocomplete.Input
-            placeholder="Search a reference, phrase, topic, or idea…"
-            onFocus={onInputFocus}
-            className="min-w-0 flex-1 border-none bg-transparent text-[16.5px] text-ink outline-none placeholder:text-faint-2"
+            placeholder={placeholder}
+            onFocus={() => {
+              // Open the dropdown on focus so clicking the bar reveals the
+              // picker (the current book's chapter grid) without typing.
+              setOpen(true);
+              onInputFocus?.();
+            }}
+            className={`min-w-0 flex-1 border-none bg-transparent text-ink outline-none placeholder:text-faint-2 ${
+              compact ? 'text-[14.5px]' : 'text-[16.5px]'
+            }`}
           />
-          {scope && scopes && scopes.length > 1 && onScopeChange ? (
+          {compact ? null : scope &&
+            scopes &&
+            scopes.length > 1 &&
+            onScopeChange ? (
             <Menu.Root>
               <Menu.Trigger className="inline-flex flex-shrink-0 items-center gap-1 rounded-md border border-line-strong bg-paper px-2 py-[5px] font-semibold text-[12px] text-muted outline-none hover:bg-paper-soft focus-visible:ring-2 focus-visible:ring-gold/40">
                 {scope.label}
@@ -266,9 +294,14 @@ export function SearchBox({
           // Anchor to the whole bar and sit flush against it (no gap) so the
           // dropdown reads as a continuation of the search field, matching the
           // design's connected input → menu (top corners square, no top border).
+          // z-40 keeps it above sticky page headers (z-30) when the bar lives in
+          // the reader chrome.
           anchor={barRef}
           sideOffset={0}
-          className="z-20 w-(--anchor-width) data-empty:hidden"
+          // Hide an empty popup — UNLESS a picker widget is showing (the
+          // book-jump grid or the standalone book picker), which is content Base
+          // UI's list-emptiness doesn't account for.
+          className={`z-40 w-(--anchor-width) ${hasWidget ? '' : 'data-empty:hidden'}`}
         >
           <Autocomplete.Popup className="max-h-[min(70vh,520px)] overflow-y-auto rounded-t-none rounded-b-2xl border border-line-strong border-t-0 bg-paper-raised shadow-[0_24px_48px_-30px_rgba(40,34,18,0.4)]">
             {bookJump ? (
@@ -279,9 +312,30 @@ export function SearchBox({
                 onNavigate={openPassage}
               />
             ) : null}
-            <Autocomplete.Empty className="px-4 py-3 text-[13px] text-muted-2 empty:m-0 empty:p-0">
-              No matches — press Enter to search anyway.
-            </Autocomplete.Empty>
+            {showBookPicker ? (
+              <section
+                aria-label="Jump to book"
+                className="border-line border-b"
+              >
+                <div className="flex items-center gap-2 px-4 pt-3 pb-2.5">
+                  <span className="font-semibold text-[12.5px] text-gold">
+                    Books
+                  </span>
+                  <span className="flex-1" />
+                  <span className="text-[11.5px] text-faint">
+                    Choose a book
+                  </span>
+                </div>
+                <div className="bg-paper-soft px-4 pt-2.5 pb-3">
+                  <BookList current="" onPick={(b) => fillQuery(b.name)} />
+                </div>
+              </section>
+            ) : null}
+            {hasWidget ? null : (
+              <Autocomplete.Empty className="px-4 py-3 text-[13px] text-muted-2 empty:m-0 empty:p-0">
+                No matches — press Enter to search anyway.
+              </Autocomplete.Empty>
+            )}
             <Autocomplete.List>
               {(group: Group) => (
                 <Autocomplete.Group
@@ -350,18 +404,20 @@ export function SearchBox({
         </Autocomplete.Positioner>
       </Autocomplete.Portal>
 
-      <div className="mt-[18px] flex flex-wrap justify-center gap-2">
-        {chips.map((c) => (
-          <button
-            type="button"
-            key={c}
-            onClick={() => searchEverything(c)}
-            className="rounded-full border border-line bg-paper-soft px-[14px] py-[7px] text-[13px] text-muted"
-          >
-            {c}
-          </button>
-        ))}
-      </div>
+      {chips.length > 0 ? (
+        <div className="mt-[18px] flex flex-wrap justify-center gap-2">
+          {chips.map((c) => (
+            <button
+              type="button"
+              key={c}
+              onClick={() => searchEverything(c)}
+              className="rounded-full border border-line bg-paper-soft px-[14px] py-[7px] text-[13px] text-muted"
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </Autocomplete.Root>
   );
 }

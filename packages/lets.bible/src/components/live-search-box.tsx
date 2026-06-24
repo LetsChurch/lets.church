@@ -131,7 +131,21 @@ function buildSuggestions(
 // are prefetched on focus (and when the scope changes). The results page still
 // uses Elasticsearch (richer cross-refs / related passages); this powers the
 // instant autocomplete only.
-export function LiveSearchBox({ size = 'lg' }: { size?: 'lg' | 'md' }) {
+export function LiveSearchBox({
+  size = 'lg',
+  showChips = true,
+  placeholder,
+  context,
+}: {
+  size?: 'lg' | 'md' | 'sm';
+  // The example chips below the bar — hidden in compact/chrome placements.
+  showChips?: boolean;
+  placeholder?: string;
+  // The reader's current location. When provided, an empty/focused box opens
+  // that book's chapter grid (with the current chapter highlighted) — so the
+  // header search bar doubles as the book/chapter picker.
+  context?: { book: string; chapter: number };
+}) {
   const trpc = useTRPC();
   const [query, setQuery] = useState('');
   const [, bump] = useReducer((x: number) => x + 1, 0);
@@ -169,15 +183,29 @@ export function LiveSearchBox({ size = 'lg' }: { size?: 'lg' | 'md' }) {
   }, [selectedScope]);
 
   const recent = useRecent(2);
-  const bookJump = selectedScope ? deriveBookJump(query, selectedScope) : null;
+  // With a query, the book-jump widget follows what's typed. With an empty box
+  // and a reader `context`, it opens that book's chapter grid (the picker) with
+  // the current chapter marked — so clicking the header bar acts like the old
+  // book/chapter picker.
+  const contextBook = context ? bookBySlug(context.book) : undefined;
+  let bookJump: BookJumpModel | null = null;
+  if (selectedScope) {
+    if (query.trim()) {
+      bookJump = deriveBookJump(query, selectedScope);
+    } else if (contextBook) {
+      const base = deriveBookJump(contextBook.name, selectedScope);
+      bookJump = base ? { ...base, activeChapter: context?.chapter } : null;
+    }
+  }
   const suggestions = buildSuggestions(query, selectedScope, bookJump, recent);
 
   return (
     <SearchBox
       suggestions={suggestions}
       bookJump={bookJump}
-      chips={examples.chips}
+      chips={showChips ? examples.chips : []}
       size={size}
+      placeholder={placeholder}
       query={query}
       onQueryChange={setQuery}
       scope={scope}

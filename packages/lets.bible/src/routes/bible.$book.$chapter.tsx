@@ -3,6 +3,7 @@ import { createFileRoute, Link, notFound } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { AuthActions } from '@/components/chrome';
+import { LiveSearchBox } from '@/components/live-search-box';
 import {
   DEFAULT_INTERLINEAR_OPTIONS,
   Interlinear,
@@ -16,11 +17,7 @@ import {
   type WordRef,
 } from '@/components/passage/passage';
 import type { Block, Run } from '@/components/passage/types';
-import {
-  BookPicker,
-  ChapterPicker,
-  TranslationPicker,
-} from '@/components/reader-nav';
+import { TranslationPicker } from '@/components/reader-nav';
 import { StudyPanel, type StudySelection } from '@/components/study-panel';
 import { bookBySlug } from '@/lib/canon';
 import { adjacentChapter, chapterLink } from '@/lib/reference';
@@ -105,6 +102,9 @@ export const Route = createFileRoute('/bible/$book/$chapter')({
     const [translations, prefs] = await Promise.all([
       queryClient.ensureQueryData(trpc.bible.translations.queryOptions()),
       queryClient.ensureQueryData(trpc.common.preferences.queryOptions()),
+      // Powers the header search bar (example chips/topics); SSR'd so the bar
+      // renders without a client round-trip.
+      queryClient.ensureQueryData(trpc.home.searchSuggestions.queryOptions()),
     ]);
     const translationId = resolveTranslationId(
       deps.translation,
@@ -418,9 +418,18 @@ function Reader() {
           <span className="text-[15px]">←</span>
           <span className="hidden sm:inline">Home</span>
         </Link>
-        <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
-          <BookPicker book={book} />
-          <ChapterPicker book={book} chapter={chapterNum} />
+        {/* The header search bar doubles as the navigator: typing a book/
+            reference opens the same book→chapter→verse quick-pick the homepage
+            search uses, replacing the old book/chapter dropdowns. */}
+        <div className="flex min-w-0 flex-1 justify-center px-1 sm:px-2">
+          <div className="w-full max-w-[460px]">
+            <LiveSearchBox
+              size="sm"
+              showChips={false}
+              placeholder={`${book.name} ${chapterNum} · jump or search…`}
+              context={{ book: bookSlug, chapter: chapterNum }}
+            />
+          </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Compare + interlinear are launched per-translation from the version

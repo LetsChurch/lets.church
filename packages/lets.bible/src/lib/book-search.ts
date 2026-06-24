@@ -58,7 +58,11 @@ export function matchBooks(query: string, limit = 5): CanonBook[] {
     .map((s) => s.b);
 }
 
-// A short, recognizable glyph for a book (title-cased USFM code: JHN → "Jhn").
+// A short, recognizable glyph for a book — the title-cased USFM code, keeping a
+// leading numeral's letter capitalized: JHN → "Jhn", 1CO → "1Co", 3JN → "3Jn".
 export function bookGlyph(b: CanonBook): string {
-  return b.code.charAt(0) + b.code.slice(1).toLowerCase();
+  return b.code.replace(
+    /^(\d?)([A-Z])([A-Z]*)$/,
+    (_, digit, first, rest) => digit + first + rest.toLowerCase(),
+  );
 }
