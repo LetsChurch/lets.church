@@ -4,7 +4,11 @@ import {
   ffmpegEncodeArgs,
   ffmpegEncodingArgs,
   getVariants,
+  parseFrameRate,
   parseM3u8,
+  probeFrameRate,
+  variantEncodeUnits,
+  variantsToEncodeCost,
   variantsToMasterVideoPlaylist,
 } from './ffmpeg';
 import { ffprobeSchema } from './zod';
@@ -14,6 +18,7 @@ function mockProbe(
   height: number,
   codec_name = 'h264',
   withAudio = true,
+  avg_frame_rate?: string,
 ) {
   return {
     streams: [
@@ -23,6 +28,7 @@ function mockProbe(
         width,
         height,
         index: 0,
+        ...(avg_frame_rate ? { avg_frame_rate } : {}),
       },
       ...(withAudio
         ? [{ codec_type: 'audio' as const, codec_name: 'aac', index: 1 }]
@@ -36,6 +42,89 @@ function mockProbe(
     },
   };
 }
+
+describe('variantEncodeUnits', () => {
+  test('weights each rendition by its 1080p-equivalent pixel area', () => {
+    expect(variantEncodeUnits('VIDEO_4K')).toBeCloseTo(4);
+    expect(variantEncodeUnits('VIDEO_1080P')).toBeCloseTo(1);
+    expect(variantEncodeUnits('VIDEO_720P')).toBeCloseTo(0.4444, 3);
+    expect(variantEncodeUnits('VIDEO_480P')).toBeCloseTo(0.25);
+  });
+
+  test('audio and non-video variants cost nothing', () => {
+    expect(variantEncodeUnits('AUDIO')).toBe(0);
+    expect(variantEncodeUnits('AUDIO_DOWNLOAD')).toBe(0);
+    expect(variantEncodeUnits('VIDEO_4K_DOWNLOAD')).toBe(0);
+  });
+});
+
+describe('parseFrameRate', () => {
+  test('parses ffprobe rationals', () => {
+    expect(parseFrameRate('30/1')).toBe(30);
+    expect(parseFrameRate('60/1')).toBe(60);
+    expect(parseFrameRate('30000/1001')).toBeCloseTo(29.97, 2);
+  });
+
+  test('returns null for missing or degenerate values', () => {
+    expect(parseFrameRate(undefined)).toBeNull();
+    expect(parseFrameRate('0/0')).toBeNull();
+    expect(parseFrameRate('25/0')).toBeNull();
+    expect(parseFrameRate('garbage')).toBeNull();
+  });
+});
+
+describe('probeFrameRate', () => {
+  test('reads avg_frame_rate from the video stream', () => {
+    expect(probeFrameRate(mockProbe(1920, 1080, 'h264', true, '30/1'))).toBe(
+      30,
+    );
+    expect(
+      probeFrameRate(mockProbe(1920, 1080, 'h264', true, '30000/1001')),
+    ).toBeCloseTo(29.97, 2);
+  });
+
+  test('falls back to 60fps when the rate is unknown (conservative)', () => {
+    expect(probeFrameRate(mockProbe(1920, 1080))).toBe(60);
+    expect(probeFrameRate(mockProbe(1920, 1080, 'h264', true, '0/0'))).toBe(60);
+  });
+});
+
+describe('variantsToEncodeCost', () => {
+  test('defaults to the 60fps reference (cost == summed area)', () => {
+    // 4K source -> 4K + 1080p + 720p + 480p ladder (+ audio, free)
+    expect(
+      variantsToEncodeCost(getVariants(mockProbe(3840, 2160))),
+    ).toBeCloseTo(5.6944, 3);
+    // 1080p source -> 1080p + 720p + 480p
+    expect(
+      variantsToEncodeCost(getVariants(mockProbe(1920, 1080))),
+    ).toBeCloseTo(1.6944, 3);
+    // 720p source -> 720p + 480p
+    expect(variantsToEncodeCost(getVariants(mockProbe(1280, 720)))).toBeCloseTo(
+      0.6944,
+      3,
+    );
+  });
+
+  test('scales with frame rate (pixels/second)', () => {
+    const variants = getVariants(mockProbe(1920, 1080)); // ~1.6944 area units
+    // 30fps content costs half of the 60fps reference -> packs ~2x denser.
+    expect(variantsToEncodeCost(variants, 30)).toBeCloseTo(0.8472, 3);
+    // 60fps is the reference.
+    expect(variantsToEncodeCost(variants, 60)).toBeCloseTo(1.6944, 3);
+    // High-fps content costs proportionally more.
+    expect(variantsToEncodeCost(variants, 120)).toBeCloseTo(3.3888, 3);
+  });
+
+  test('a non-positive frame rate falls back to the reference', () => {
+    const variants = getVariants(mockProbe(1920, 1080));
+    expect(variantsToEncodeCost(variants, 0)).toBeCloseTo(1.6944, 3);
+  });
+
+  test('audio-only uploads cost nothing at any frame rate', () => {
+    expect(variantsToEncodeCost(['AUDIO'], 30)).toBe(0);
+  });
+});
 
 describe('getVariants', () => {
   test('standard resolutions', () => {

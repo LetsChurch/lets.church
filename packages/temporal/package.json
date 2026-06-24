@@ -16,6 +16,7 @@
     "./client": "./src/client/index.ts",
     "./refs": "./src/refs.ts",
     "./util/temporal": "./src/util/temporal.ts",
+    "./util/ama-budget": "./src/util/ama-budget.ts",
     "./util/zod": "./src/util/zod.ts",
     "./util/email": "./src/util/email.ts",
     "./util/llm": "./src/util/llm.ts",

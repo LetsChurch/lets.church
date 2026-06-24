@@ -13,6 +13,12 @@ const streamUnionSchema = z
       width: z.number(),
       height: z.number(),
       nb_frames: z.string().optional(),
+      // ffprobe rationals like "30000/1001"; used to weight AMA encode cost by
+      // frame rate (a 60fps stream is ~2x the encoder load of the same 30fps
+      // stream). `avg_frame_rate` can be "0/0" on VFR/odd inputs, hence the
+      // fallback chain in `probeFrameRate`.
+      avg_frame_rate: z.string().optional(),
+      r_frame_rate: z.string().optional(),
     }),
     z.looseObject({
       codec_type: z.literal('audio'),

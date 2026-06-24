@@ -10,11 +10,14 @@ import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
 import { updateUploadRecord } from '../../../client';
 import { CURRENT_PIPELINE_VERSION } from '../../../queues';
+import { amaBudgetEnabled, amaEncodeBudget } from '../../../util/ama-budget';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import {
   getVariants,
   type HwAccel,
+  probeFrameRate,
   runFfmpegEncode,
+  variantsToEncodeCost,
   variantsToMasterVideoPlaylist,
 } from '../../../util/ffmpeg';
 import logger from '../../../util/logger';
@@ -124,6 +127,12 @@ export default async function transcode(
   // playable until the new one is fully uploaded.
   const writtenFiles = new Set<string>();
 
+  // On the AMA hardware path, a job must claim a share of the device's encoder
+  // budget before it can start ffmpeg (see util/ama-budget.ts). `releaseBudget`
+  // is the idempotent handle that returns those units; it stays a no-op on the
+  // CPU path and until the budget is actually acquired.
+  let releaseBudget: () => void = () => {};
+
   try {
     activityLogger.info(`Making work directory: ${workingDir}`);
 
@@ -146,6 +155,33 @@ export default async function transcode(
     activityLogger.info(
       `Will encode ${variants.length} variants: ${formatter.format(variants)}`,
     );
+
+    // Claim encoder budget on the AMA path so we don't oversubscribe the
+    // device. This may block until in-flight jobs free up enough units; keep
+    // heartbeating so Temporal doesn't time the activity out while it waits.
+    if (amaBudgetEnabled) {
+      const frameRate = probeFrameRate(probe);
+      const cost = variantsToEncodeCost(variants, frameRate);
+      if (cost > 0) {
+        activityLogger.info(
+          `Acquiring AMA encode budget (cost: ${cost.toFixed(
+            2,
+          )} units @ ${frameRate.toFixed(2)}fps, free: ${amaEncodeBudget
+            .free()
+            .toFixed(2)}/${amaEncodeBudget.total})`,
+        );
+        const waitHeartbeat = setInterval(
+          () => Context.current().heartbeat('waiting for AMA encode budget'),
+          30_000,
+        );
+        try {
+          releaseBudget = await amaEncodeBudget.acquire(cost, signal);
+        } finally {
+          clearInterval(waitHeartbeat);
+        }
+        activityLogger.info('Acquired AMA encode budget');
+      }
+    }
 
     activityLogger.info('Running ffmpeg');
 
@@ -206,6 +242,11 @@ export default async function transcode(
     );
 
     const encodeProcRes = await encodeProc;
+
+    // ffmpeg (and therefore the device encoder) is done — return our budget
+    // immediately so another job can start while we finish uploads, peaks, and
+    // logs, none of which touch the device. Idempotent with the finally below.
+    releaseBudget();
 
     activityLogger.info(`ffmpeg finished with code ${encodeProcRes.exitCode}`);
 
@@ -391,6 +432,10 @@ export default async function transcode(
     }
     throw e;
   } finally {
+    // Safety net: return any still-held encode budget (e.g. ffmpeg threw before
+    // the post-encode release). Idempotent, so the success path's earlier
+    // release makes this a no-op.
+    releaseBudget();
     activityLogger.info(`Removing work directory: ${workingDir}`);
     await rimraf(workingDir);
   }

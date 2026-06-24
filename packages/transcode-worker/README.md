@@ -14,8 +14,59 @@ This worker downloads media from the ingest bucket, transcodes it into various q
 |----------|-------------|----------|
 | `IDENTITY` | Unique identifier for this worker instance | Yes |
 | `TEMPORAL_ADDRESS` | Temporal server address | Yes |
-| `MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS` | Max concurrent activity tasks | Yes |
+| `MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS` | Max concurrent activity tasks (CPU path only; ignored when `TRANSCODE_HW_ACCEL=ama:*`) | Yes |
 | `SENTRY_DSN` | Sentry error tracking DSN | Yes |
+
+### Concurrency on the AMA hardware path
+
+When `TRANSCODE_HW_ACCEL=ama:<n>` selects an MA35D device, the worker stops
+counting jobs and instead admits work against a per-device **encoder budget**.
+The MA35D encoder is fixed silicon measured in pixels/second, and a single
+transcode job encodes a whole HLS ladder at once, so each job's cost is the sum
+of its renditions in **1080p60-equivalent units** — weighted by both output area
+(a 4K rung is 4x a 1080p rung) and frame rate (a 60fps stream is ~2x the load of
+the same stream at 30fps; source fps is read from the probe). So a 4K-source
+ladder ≈ 5.7 units at 60fps but ≈ 2.8 at 30fps; audio-only = 0. A pod runs as
+many concurrent jobs as fit the budget — e.g. one 4K ladder, or a few 1080p
+ladders, or many SD ladders — instead of a fixed count.
+
+**Why oversubscription is fatal, not slow:** the MA35D **errors out** when a
+device is oversubscribed — XRM (the AMD resource manager) refuses the allocation
+with `Insufficient resources available for allocation`; it does not degrade
+gracefully. So `AMA_ENCODE_BUDGET` must stay at or below the device's true
+encoder capacity, and `acquire` runs a single ladder alone if it exceeds the
+whole budget (identical to today's one-job-per-pod behavior, which the hardware
+is proven to handle).
+
+#### Single vs. double density (why the default is 6)
+
+The MA35D's per-device encoder capacity depends on the **codec**, which AMD calls
+encoder *density*:
+
+- **Single density** — any combination of AVC (H.264), HEVC, or AV1 Type-2
+  encoders. ~`8x1080p60` per device.
+- **Double density** — the above **plus** the dedicated AV1 Type-1 encoder
+  block, which roughly doubles per-device stream counts (e.g. ~`16x1080p60`).
+
+Density is selected *implicitly* by which encoder you run — there is no flag.
+**We emit H.264 (`h264_ama` = AVC), so we are always in single density**; the
+double-density numbers require AV1 Type-1 and do not apply to us. The default
+`AMA_ENCODE_BUDGET=6` is therefore measured against the **single-density**
+ceiling (~8 units/device) and stays safely under it — roughly one 4K-source
+ladder's worth, i.e. about today's proven single-job load. If we ever add an
+AV1 output rendition we could move into double density and raise the budget
+accordingly (after validating on-device).
+
+This is enforced by a weighted semaphore the transcode activity acquires before
+launching ffmpeg, plus a Temporal custom slot supplier that caps how many jobs
+the pod pulls and stops polling when the device is saturated (so a busy pod
+leaves surplus work on the queue for idle pods).
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `TRANSCODE_HW_ACCEL` | `ama:<n>` to use MA35D device `n`; unset/`none` for the libx264 CPU path | No |
+| `AMA_ENCODE_BUDGET` | Per-device encoder budget in 1080p-equivalent units (default `6`) | No |
+| `AMA_MAX_CONCURRENT` | Hard cap on transcode jobs pulled onto one pod at once (default `8`) | No |
 
 ### S3 Configuration
 

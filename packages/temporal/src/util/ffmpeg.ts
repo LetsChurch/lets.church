@@ -113,6 +113,84 @@ function videoVariantToDimensions(variant: VideoVariant): [number, number] {
   }
 }
 
+// --- AMA encode-budget cost model -----------------------------------------
+//
+// The MA35D's binding constraint when transcoding (in H.264 / "single density",
+// which is what we emit — AVC, not AV1 Type-1) is the *encoder*, whose per-device
+// aggregate throughput is fixed silicon measured in pixels/second (~1x4Kp60 ==
+// 4x1080p60 per engine). XRM enforces this hard: oversubscribing a device makes
+// jobs fail with "Insufficient resources available for allocation", not slow
+// down — so cost must track real pixels/second and the budget must stay at/below
+// true device capacity.
+//
+// A single transcode job here encodes a whole HLS ladder at once (e.g. a 4K
+// source -> 4K + 1080p + 720p + 480p renditions), so a job's cost is the SUM of
+// its renditions, each weighted by:
+//   - output pixel area, relative to 1080p (a 4K rung is 4x a 1080p rung), and
+//   - frame rate, relative to 60fps (a 60fps stream is ~2x the encoder load of
+//     the same stream at 30fps). The ladder preserves source fps (`-fps_mode
+//     cfr`, no `-r`), so the source frame rate is the multiplier.
+// The result is in "1080p60-equivalent" units == pixels/second / (1080p60).
+//
+// Audio (and any non-video / download variant) doesn't touch the video encoder,
+// so it costs nothing. See `util/ama-budget.ts` for how this is enforced.
+const ONE_EIGHTY_P_PIXELS = 1920 * 1080;
+const REFERENCE_FRAME_RATE = 60;
+
+export function variantEncodeUnits(variant: UploadVariantValue): number {
+  switch (variant) {
+    case 'VIDEO_4K':
+    case 'VIDEO_1080P':
+    case 'VIDEO_720P':
+    case 'VIDEO_480P': {
+      const [width, height] = videoVariantToDimensions(variant);
+      return (width * height) / ONE_EIGHTY_P_PIXELS;
+    }
+    default:
+      return 0;
+  }
+}
+
+// Parses an ffprobe frame-rate rational ("30000/1001", "30/1"). Returns null for
+// missing/zero/degenerate values (e.g. "0/0" on VFR sources).
+export function parseFrameRate(value: string | undefined): number | null {
+  if (!value) {
+    return null;
+  }
+  const [num, den] = value.split('/').map(Number);
+  if (!Number.isFinite(num) || !Number.isFinite(den) || den === 0 || num <= 0) {
+    return null;
+  }
+  return num / den;
+}
+
+// Source frame rate for cost weighting. Prefers avg_frame_rate, falls back to
+// r_frame_rate, then to the 60fps reference — an unknown rate costs the full
+// (worst-case) area so we under-pack rather than risk oversubscribing.
+export function probeFrameRate(probe: Probe): number {
+  const video = probe.streams.find((s) => s.codec_type === 'video');
+  if (!video) {
+    return REFERENCE_FRAME_RATE;
+  }
+  return (
+    parseFrameRate(video.avg_frame_rate) ??
+    parseFrameRate(video.r_frame_rate) ??
+    REFERENCE_FRAME_RATE
+  );
+}
+
+export function variantsToEncodeCost(
+  variants: Array<UploadVariantValue>,
+  frameRate: number = REFERENCE_FRAME_RATE,
+): number {
+  const area = variants.reduce(
+    (sum, variant) => sum + variantEncodeUnits(variant),
+    0,
+  );
+  const fps = frameRate > 0 ? frameRate : REFERENCE_FRAME_RATE;
+  return area * (fps / REFERENCE_FRAME_RATE);
+}
+
 function videoVariantToAvcCodec(variant: VideoVariant): string {
   if (variant === 'VIDEO_4K') {
     return 'avc1.640033';
