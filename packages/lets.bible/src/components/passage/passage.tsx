@@ -416,9 +416,16 @@ function Runs({ runs, verse }: { runs: Run[]; verse?: number }) {
     }
     lpStart.current = null;
   };
+  // Footnote markers immediately following a word are rendered *with* that word
+  // (in a `whitespace-nowrap` wrapper, below) so they never orphan onto the next
+  // line; those run indices are recorded here and skipped when the map reaches them.
+  const consumedNotes = new Set<number>();
   return (
     <>
       {runs.map((r, i) => {
+        if (consumedNotes.has(i)) {
+          return null;
+        }
         if (r.note) {
           return <FootnoteMarker key={`k${i}`} note={r.note} />;
         }
@@ -573,16 +580,36 @@ function Runs({ runs, verse }: { runs: Run[]; verse?: number }) {
           );
         }
 
-        if (overlay) {
+        const el = overlay ? (
+          <OverlayTip
+            key={`k${i}`}
+            body={overlayTooltip(overlay, divineName, verseRefs)}
+            trigger={node}
+          />
+        ) : (
+          node
+        );
+
+        // Pull any footnote marker(s) that immediately follow this word into a
+        // `whitespace-nowrap` wrapper so the marker can't wrap onto the next line
+        // away from its word (a bare/inline/word-joined marker doesn't hold — a
+        // button is treated atomically; only a nowrap context reliably glues it).
+        const notes: Footnote[] = [];
+        for (let j = i + 1; j < runs.length && runs[j].note; j += 1) {
+          notes.push(runs[j].note as Footnote);
+          consumedNotes.add(j);
+        }
+        if (notes.length) {
           return (
-            <OverlayTip
-              key={`k${i}`}
-              body={overlayTooltip(overlay, divineName, verseRefs)}
-              trigger={node}
-            />
+            <span key={`k${i}`} className="whitespace-nowrap">
+              {el}
+              {notes.map((note, k) => (
+                <FootnoteMarker key={`n${i}-${k}`} note={note} />
+              ))}
+            </span>
           );
         }
-        return node;
+        return el;
       })}
     </>
   );
