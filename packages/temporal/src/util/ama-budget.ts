@@ -24,14 +24,14 @@ export const amaBudgetEnabled =
 //  2. PIXELS — aggregate encode throughput in 1080p60-equivalent units (the
 //     ~4Kp60-per-engine load limit). Binds for 4K-heavy concurrency.
 //
-// A job is admitted only when BOTH fit. See `AmaDeviceBudget`.
+// A job is admitted only when BOTH fit. See `AmaDeviceBudget`. The cap on how
+// many jobs a pod pulls is the SDK's plain fixed-size activity slots
+// (`maxConcurrentActivityTaskExecutions` = AMA_MAX_CONCURRENT in the worker);
+// the budget here is purely the activity-side device-safety gate.
 
-// Smallest job the slot supplier keeps polling for: one 480p rendition = 1
-// session and a 480p-ladder's pixels. Below this in either dimension the device
-// is full and the supplier parks (leaving work for idle pods). Also floors the
-// pixel budget so a 0 / NaN misconfig can't wedge a pod into never polling.
-export const MIN_SLOT_SESSIONS = 1;
-export const MIN_SLOT_PIXELS = variantEncodeUnits('VIDEO_480P');
+// One 480p rendition's pixels — used only to floor the pixel budget so a
+// 0 / NaN misconfig can't drive it to zero.
+const MIN_PIXEL_BUDGET = variantEncodeUnits('VIDEO_480P');
 
 // Per-device encoder SESSION budget. Default 4 == one 4K-source ladder
 // (4K+1080p+720p+480p). Conservative: measure the device's true session limit
@@ -46,15 +46,15 @@ export const AMA_MAX_SESSIONS = Math.max(
 // density", ~8x1080p60/device); 6 stays under that. (Env name kept as
 // AMA_ENCODE_BUDGET for manifest compatibility.)
 export const AMA_PIXEL_BUDGET = Math.max(
-  MIN_SLOT_PIXELS,
+  MIN_PIXEL_BUDGET,
   Number(process.env.AMA_ENCODE_BUDGET) || 6,
 );
 
-// Hard cap on how many activities this worker pulls off the queue at once,
-// regardless of budget. Bounds how many jobs can sit waiting for budget on one
-// pod (each holds a Temporal activity slot while it waits), so a busy pod leaves
-// surplus work on the queue for idle pods. This is the operator's master
-// concurrency switch (pinned to 1 in the manifest pending session validation).
+// Max concurrent transcode activities a pod pulls — wired straight into the
+// SDK's `maxConcurrentActivityTaskExecutions` (fixed-size slots). The operator's
+// master concurrency switch (pinned to 1 in the manifest pending session
+// validation). Each pulled job still blocks on the budget below before ffmpeg,
+// so this is an upper bound on pulled tasks, not on device load.
 export const AMA_MAX_CONCURRENT = Math.max(
   1,
   Number(process.env.AMA_MAX_CONCURRENT) || 8,
@@ -62,7 +62,8 @@ export const AMA_MAX_CONCURRENT = Math.max(
 
 function makeAbortError(): Error {
   const error = new Error('AMA budget wait aborted');
-  // Temporal's custom slot supplier contract requires aborted reservations to
+  // Aborted budget waits reject with an error named 'AbortError' so a cancelled
+  // activity propagates cancellation cleanly (matches Temporal's convention).
   // reject with an error named 'AbortError'; any other thrown error is logged
   // and ignored. See CustomSlotSupplier.reserveSlot in @temporalio/worker.
   error.name = 'AbortError';
@@ -181,13 +182,23 @@ export class AmaDeviceBudget {
     if (cost.sessions <= 0 && cost.pixels <= 0) {
       return () => {};
     }
+    // Scheduling visibility: log when a job has to wait for the device (and how
+    // many times it re-checked), so a starved/wedged pod is diagnosable from
+    // logs. Throughput on the AMA pods is sensitive to this admission step.
+    let waits = 0;
     while (!this.fits(cost)) {
+      if (waits === 0) {
+        moduleLogger.info(
+          `AMA budget full, queueing job (need sessions ${cost.sessions}, pixels ${cost.pixels.toFixed(2)}; in use ${this.used.sessions}/${this.max.sessions} sessions, ${this.used.pixels.toFixed(2)}/${this.max.pixels} pixels)`,
+        );
+      }
+      waits += 1;
       await budgetChanges.wait(signal);
     }
     this.used.sessions += cost.sessions;
     this.used.pixels += cost.pixels;
-    moduleLogger.debug(
-      `Acquired AMA budget (sessions ${this.used.sessions}/${this.max.sessions}, pixels ${this.used.pixels.toFixed(2)}/${this.max.pixels})`,
+    moduleLogger.info(
+      `AMA budget acquired (sessions ${this.used.sessions}/${this.max.sessions}, pixels ${this.used.pixels.toFixed(2)}/${this.max.pixels}${waits > 0 ? `; after ${waits} wait(s)` : ''})`,
     );
     let released = false;
     return () => {
@@ -197,6 +208,9 @@ export class AmaDeviceBudget {
       released = true;
       this.used.sessions -= cost.sessions;
       this.used.pixels -= cost.pixels;
+      moduleLogger.info(
+        `AMA budget released (sessions ${this.used.sessions}/${this.max.sessions}, pixels ${this.used.pixels.toFixed(2)}/${this.max.pixels})`,
+      );
       budgetChanges.notify();
     };
   }

@@ -68,9 +68,15 @@ AV1 output rendition we could move into double density and raise the budget
 accordingly (after validating on-device).
 
 This is enforced by a weighted semaphore the transcode activity acquires before
-launching ffmpeg, plus a Temporal custom slot supplier that caps how many jobs
-the pod pulls and stops polling when the device is saturated (so a busy pod
-leaves surplus work on the queue for idle pods).
+launching ffmpeg (it blocks and heartbeats until the device has room). The
+number of jobs a pod pulls is just the SDK's `maxConcurrentActivityTaskExecutions`
+(= `AMA_MAX_CONCURRENT`); the budget semaphore is the actual device-safety gate.
+
+> A custom Temporal `SlotSupplier` was used here originally to also stop polling
+> when the device was saturated, but its hand-rolled slot counter leaked and
+> wedged the AMA workers into not polling at all (2026-06-25 — they sat idle
+> against a large backlog). Plain fixed-size slots can't leak, so we rely on
+> those plus the activity-side semaphore instead.
 
 #### Thumbnail extraction on AMA (`AMA_HW_THUMBNAILS`)
 

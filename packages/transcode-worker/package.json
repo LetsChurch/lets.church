@@ -13,7 +13,7 @@
     "check:ts": "tsc --noEmit",
     "fix": "biome check --write",
     "fix!": "biome check --write --unsafe",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@letschurch/temporal": "workspace:*",
