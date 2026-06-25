@@ -92,6 +92,17 @@ describe('probeFrameRate', () => {
     expect(probeFrameRate(mockProbe(1920, 1080))).toBe(60);
     expect(probeFrameRate(mockProbe(1920, 1080, 'h264', true, '0/0'))).toBe(60);
   });
+
+  test('clamps absurd probe frame rates (malformed probe guard)', () => {
+    // A garbage probe ("100000/1") must not inflate cost; clamp at 240.
+    expect(probeFrameRate(mockProbe(640, 360, 'h264', true, '100000/1'))).toBe(
+      240,
+    );
+    // Legitimate high-frame-rate content is preserved.
+    expect(probeFrameRate(mockProbe(1920, 1080, 'h264', true, '120/1'))).toBe(
+      120,
+    );
+  });
 });
 
 describe('variantsToEncodeCost', () => {

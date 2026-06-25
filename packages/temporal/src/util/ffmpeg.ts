@@ -164,19 +164,27 @@ export function parseFrameRate(value: string | undefined): number | null {
   return num / den;
 }
 
+// Upper bound on a believable source frame rate. Malformed probes can report
+// absurd rates (a tiny-resolution clip claiming thousands of fps), which would
+// inflate the budget cost past the whole device budget and force a job onto the
+// run-alone path — fine when that path works, but not a real load. Clamp so the
+// cost stays sane. Covers all realistic content (240fps high-frame-rate video).
+const MAX_REASONABLE_FRAME_RATE = 240;
+
 // Source frame rate for cost weighting. Prefers avg_frame_rate, falls back to
 // r_frame_rate, then to the 60fps reference — an unknown rate costs the full
-// (worst-case) area so we under-pack rather than risk oversubscribing.
+// (worst-case) area so we under-pack rather than risk oversubscribing. Clamped
+// to MAX_REASONABLE_FRAME_RATE against garbage probe values.
 export function probeFrameRate(probe: Probe): number {
   const video = probe.streams.find((s) => s.codec_type === 'video');
   if (!video) {
     return REFERENCE_FRAME_RATE;
   }
-  return (
+  const fps =
     parseFrameRate(video.avg_frame_rate) ??
     parseFrameRate(video.r_frame_rate) ??
-    REFERENCE_FRAME_RATE
-  );
+    REFERENCE_FRAME_RATE;
+  return Math.min(fps, MAX_REASONABLE_FRAME_RATE);
 }
 
 export function variantsToEncodeCost(

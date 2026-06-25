@@ -143,6 +143,12 @@ export type AmaCost = {
  */
 export class AmaDeviceBudget {
   private used: AmaCost = { sessions: 0, pixels: 0 };
+  // Integer count of admitted-but-not-released jobs. The run-alone check keys
+  // off THIS, never off `used.pixels === 0`: pixels is a float that accrues
+  // IEEE-754 drift across acquire/release cycles and lands at +/-1e-16 (seen in
+  // prod as "in use -0.00 pixels"), which made the float === 0 check false and
+  // wedged pods on oversized jobs that should have run alone (2026-06-25).
+  private inFlight = 0;
 
   constructor(readonly max: AmaCost) {}
 
@@ -162,14 +168,12 @@ export class AmaDeviceBudget {
     return this.used.pixels;
   }
 
-  private idle(): boolean {
-    return this.used.sessions === 0 && this.used.pixels === 0;
-  }
-
   private fits(cost: AmaCost): boolean {
-    // Oversized job (exceeds a whole budget dimension): run it alone once the
-    // device is otherwise idle, rather than wedge forever.
-    if (this.idle()) {
+    // Device empty: run the job regardless of size (an oversized job — e.g. a
+    // malformed-probe source with an absurd pixel cost — must still run alone
+    // rather than wedge forever). Keyed off the integer `inFlight`, not a float
+    // compare, so accumulated rounding drift can't disable this escape hatch.
+    if (this.inFlight === 0) {
       return true;
     }
     return (
@@ -195,6 +199,7 @@ export class AmaDeviceBudget {
       waits += 1;
       await budgetChanges.wait(signal);
     }
+    this.inFlight += 1;
     this.used.sessions += cost.sessions;
     this.used.pixels += cost.pixels;
     moduleLogger.info(
@@ -206,8 +211,14 @@ export class AmaDeviceBudget {
         return;
       }
       released = true;
+      this.inFlight -= 1;
       this.used.sessions -= cost.sessions;
       this.used.pixels -= cost.pixels;
+      // Nothing left running: snap back to exactly zero. Kills float drift and
+      // self-heals any accounting leak, so the device never stays "0.01 busy".
+      if (this.inFlight === 0) {
+        this.used = { sessions: 0, pixels: 0 };
+      }
       moduleLogger.info(
         `AMA budget released (sessions ${this.used.sessions}/${this.max.sessions}, pixels ${this.used.pixels.toFixed(2)}/${this.max.pixels})`,
       );

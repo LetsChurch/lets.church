@@ -143,6 +143,55 @@ describe('AmaDeviceBudget', () => {
     expect(b.freePixels()).toBe(6);
   });
 
+  test('snaps used back to exactly 0 when nothing is in flight (no float drift)', async () => {
+    const b = make(4, 6);
+    // Fractional pixel costs across cycles would otherwise leave used.pixels at
+    // +/-1e-16; the snap keeps it exactly 0 so the run-alone check stays valid.
+    for (const px of [0.1, 0.7, 1.69, 0.4444, 0.85]) {
+      const r = await b.acquire({ sessions: 1, pixels: px });
+      r();
+    }
+    expect(b.usedPixels()).toBe(0); // exactly 0, not -0.00
+    expect(b.usedSessions()).toBe(0);
+    expect(b.freePixels()).toBe(6);
+  });
+
+  test('an oversized job still runs alone AFTER prior acquire/release cycles (drift regression)', async () => {
+    const b = make(4, 6);
+    // Reproduces the 2026-06-25 wedge: cycles leave a near-zero residual, then
+    // an oversized-pixel job (18.52 > 6, the malformed-probe case) must still be
+    // admitted on the now-empty device instead of queueing forever.
+    for (let i = 0; i < 10; i++) {
+      const r = await b.acquire({ sessions: 0, pixels: 0.123 });
+      r();
+    }
+    let admitted = false;
+    const pending = b.acquire({ sessions: 0, pixels: 18.52 }).then((r) => {
+      admitted = true;
+      return r;
+    });
+    await tick();
+    expect(admitted).toBe(true); // ran alone, not wedged
+    (await pending)();
+  });
+
+  test('oversized job waits for a running job, then runs alone', async () => {
+    const b = make(4, 6);
+    const releaseFirst = await b.acquire({ sessions: 2, pixels: 2 });
+
+    let admitted = false;
+    const pending = b.acquire({ sessions: 0, pixels: 18.52 }).then((r) => {
+      admitted = true;
+      return r;
+    });
+    await tick();
+    expect(admitted).toBe(false); // device not empty -> oversized must wait
+
+    releaseFirst(); // now empty -> oversized runs alone
+    (await pending)();
+    expect(admitted).toBe(true);
+  });
+
   test('zero-cost jobs (audio-only) never block', async () => {
     const b = make(4, 6);
     await b.acquire({ sessions: 4, pixels: 6 }); // fully consumed
