@@ -1,4 +1,3 @@
-import { Popover } from '@base-ui/react/popover';
 import { PreviewCard } from '@base-ui/react/preview-card';
 import {
   createContext,
@@ -215,34 +214,91 @@ function VerseNum({ n, tone }: { n: number; tone?: Tone }) {
   );
 }
 
-// A footnote marker that opens a popover with the note body. Rendered as a
-// superscript sequential letter (a, b, c, … per chapter), the conventional
-// print-Bible cue. Cross-references inside the note link into the reader.
-function FootnoteMarker({ note }: { note: Footnote }) {
-  const labels = useContext(FootnoteLabelsContext);
-  const label = labels.get(note) ?? '*';
+// All hover cards in a passage (footnotes + source-text overlays) share ONE Base UI
+// PreviewCard via a `handle`: each marker/overlay is a detached Trigger, so moving
+// the pointer between them REPOSITIONS the single card instead of closing + reopening
+// — no 600ms re-open delay (Base UI's group "instant" mode). It also gives nested
+// hover the right precedence for free: hovering a footnote inside an OT quotation
+// swaps the one card to the footnote's content. The active trigger's `payload` carries
+// the content + a `tone` that selects the card styling.
+type HoverCardPayload = { tone: 'overlay' | 'footnote'; content: ReactNode };
+const HoverCardHandleContext =
+  createContext<PreviewCard.Handle<HoverCardPayload> | null>(null);
+
+// The single shared card, rendered once per Passage. Styling follows the active
+// trigger's tone (light footnote card vs. dark overlay card).
+function SharedHoverCard({
+  handle,
+}: {
+  handle: PreviewCard.Handle<HoverCardPayload>;
+}) {
   return (
-    <Popover.Root>
-      <Popover.Trigger
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
-        className="ml-px cursor-pointer rounded-[2px] align-[0.45em] font-sans text-[11px] text-gold italic outline-none hover:underline focus-visible:ring-2 focus-visible:ring-gold/40"
-      >
-        <span className="select-none">{label}</span>
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Positioner sideOffset={6} className="z-40">
-          <Popover.Popup className="max-w-[320px] rounded-xl border border-line-strong bg-paper-raised px-3.5 py-2.5 text-[13px] text-muted leading-relaxed shadow-[0_26px_50px_-28px_rgba(40,34,18,0.45)]">
-            {note.origin ? (
-              <span className="mr-1 font-semibold text-faint">
-                {note.origin}
-              </span>
-            ) : null}
-            <FootnoteSegments segments={note.segments} />
-          </Popover.Popup>
-        </Popover.Positioner>
-      </Popover.Portal>
-    </Popover.Root>
+    <PreviewCard.Root handle={handle}>
+      {({ payload }) =>
+        payload ? (
+          <PreviewCard.Portal>
+            <PreviewCard.Positioner sideOffset={6} className="z-40">
+              <PreviewCard.Popup
+                className={
+                  payload.tone === 'footnote'
+                    ? 'max-w-[320px] rounded-xl border border-line-strong bg-paper-raised px-3.5 py-2.5 text-[13px] text-muted leading-relaxed shadow-[0_26px_50px_-28px_rgba(40,34,18,0.45)]'
+                    : 'max-w-[260px] rounded-lg bg-[#26251f] px-3 py-1.5 text-[#f3efe6] text-[12.5px] leading-snug shadow-[0_14px_34px_-12px_rgba(20,16,8,0.55)]'
+                }
+              >
+                {payload.content}
+              </PreviewCard.Popup>
+            </PreviewCard.Positioner>
+          </PreviewCard.Portal>
+        ) : null
+      }
+    </PreviewCard.Root>
+  );
+}
+
+// The note body for a hover card / study panel — origin label (if any) + segments.
+function footnoteBody(note: Footnote): ReactNode {
+  return (
+    <>
+      {note.origin ? (
+        <span className="mr-1 font-semibold text-faint">{note.origin}</span>
+      ) : null}
+      <FootnoteSegments segments={note.segments} />
+    </>
+  );
+}
+
+// A footnote marker that reveals its note in the shared hover card. Rendered as a
+// superscript sequential letter (a, b, c, … per chapter), the conventional print-Bible
+// cue. The trigger is a non-focusable `<span>` (Base UI PreviewCard doesn't wire hover
+// to a `<button>`); a click/tap falls through to select the verse — whose footnotes
+// the study panel also lists — the touch/keyboard path. Without a handle (e.g. outside
+// a Passage), or when `interactive` is false (a marker INSIDE an OT-quotation overlay,
+// whose note is merged into that overlay's card instead — a nested hover trigger would
+// fight its parent), it degrades to a plain superscript with no card of its own.
+function FootnoteMarker({
+  note,
+  interactive = true,
+}: {
+  note: Footnote;
+  interactive?: boolean;
+}) {
+  const labels = useContext(FootnoteLabelsContext);
+  const handle = useContext(HoverCardHandleContext);
+  const label = labels.get(note) ?? '*';
+  const marker = (
+    <span className="ml-px cursor-help select-none align-[0.45em] font-sans text-[11px] text-gold italic outline-none hover:underline">
+      {label}
+    </span>
+  );
+  if (!handle || !interactive) {
+    return marker;
+  }
+  return (
+    <PreviewCard.Trigger
+      handle={handle}
+      payload={{ tone: 'footnote', content: footnoteBody(note) }}
+      render={marker}
+    />
   );
 }
 
@@ -320,10 +376,12 @@ function overlayTooltip(
   );
 }
 
-// A dotted-underline span with a hover card, used for source-text overlays.
-// `trigger` is the (already styled / clickable) word span it wraps. Built on
-// Base UI PreviewCard (not Tooltip) so the popup is *hoverable* — the reader can
-// move the pointer into it and click the OT-quotation source link.
+// A dotted-underline span tied to the shared source-text-overlay hover card.
+// `trigger` is the (already styled / clickable) word span it wraps; it becomes a
+// detached PreviewCard.Trigger pointing at the passage's shared card (see
+// SharedHoverCard) so the popup is hoverable (its OT-quotation source link is
+// clickable) and moving between overlays/footnotes has no re-open delay. Without a
+// handle it degrades to the bare trigger.
 function OverlayTip({
   body,
   trigger,
@@ -331,17 +389,16 @@ function OverlayTip({
   body: ReactNode;
   trigger: ReactElement<Record<string, unknown>>;
 }) {
+  const handle = useContext(HoverCardHandleContext);
+  if (!handle) {
+    return trigger;
+  }
   return (
-    <PreviewCard.Root>
-      <PreviewCard.Trigger render={trigger} />
-      <PreviewCard.Portal>
-        <PreviewCard.Positioner sideOffset={6} className="z-40">
-          <PreviewCard.Popup className="max-w-[260px] rounded-lg bg-[#26251f] px-3 py-1.5 text-[#f3efe6] text-[12.5px] leading-snug shadow-[0_14px_34px_-12px_rgba(20,16,8,0.55)]">
-            {body}
-          </PreviewCard.Popup>
-        </PreviewCard.Positioner>
-      </PreviewCard.Portal>
-    </PreviewCard.Root>
+    <PreviewCard.Trigger
+      handle={handle}
+      payload={{ tone: 'overlay', content: body }}
+      render={trigger}
+    />
   );
 }
 
@@ -425,16 +482,33 @@ function Runs({ runs, verse }: { runs: Run[]; verse?: number }) {
   // than restarting per word/space (which reads as a segmented, broken underline).
   const out: ReactNode[] = [];
   let quoteBuf: ReactNode[] = [];
+  let quoteNotes: Footnote[] = []; // footnotes within the current quote → its card
   let quoteKey = 0;
   const flushQuote = () => {
     if (!quoteBuf.length) return;
     const buf = quoteBuf;
     const key = quoteKey;
+    const notes = quoteNotes;
     quoteBuf = [];
+    quoteNotes = [];
     out.push(
       <OverlayTip
         key={`q${key}`}
-        body={overlayTooltip('otquote', divineName, verseRefs)}
+        body={
+          <>
+            {overlayTooltip('otquote', divineName, verseRefs)}
+            {/* A footnote inside the quotation is merged here (its marker isn't a
+                separate hover target — that would fight this overlay's trigger). */}
+            {notes.map((note, k) => (
+              <span
+                key={`qn${k}`}
+                className="mt-1.5 block border-white/15 border-t pt-1.5 text-[#d8d2c4]"
+              >
+                <FootnoteSegments segments={note.segments} />
+              </span>
+            ))}
+          </>
+        }
         trigger={
           <span className="cursor-help underline decoration-muted-2/80 decoration-dotted underline-offset-[3px]">
             {buf}
@@ -629,21 +703,32 @@ function Runs({ runs, verse }: { runs: Run[]; verse?: number }) {
         notes.push(runs[j].note as Footnote);
         consumedNotes.add(j);
       }
+      const inQuote = overlay === 'otquote';
       let composite: ReactNode = el;
       if (notes.length) {
+        // Inside a quotation the marker is NON-interactive (no separate card) and its
+        // note is merged into the quote's card (collected below); elsewhere it's a
+        // normal hover-card footnote.
         composite = (
           <span key={`k${i}`} className="whitespace-nowrap">
             {el}
             {/* `no-underline` keeps the marker out of a quote group's underline */}
             <span className="no-underline">
               {notes.map((note, k) => (
-                <FootnoteMarker key={`n${i}-${k}`} note={note} />
+                <FootnoteMarker
+                  key={`n${i}-${k}`}
+                  note={note}
+                  interactive={!inQuote}
+                />
               ))}
             </span>
           </span>
         );
+        if (inQuote) {
+          quoteNotes.push(...notes);
+        }
       }
-      if (overlay === 'otquote') {
+      if (inQuote) {
         if (!quoteBuf.length) {
           quoteKey = i;
         }
@@ -928,6 +1013,12 @@ export function Passage({
     });
     return map;
   }, [blocks]);
+  // One shared hover card for every footnote + source-text overlay in this passage,
+  // so moving the pointer between them has no re-open delay (see SharedHoverCard).
+  const hoverCardHandle = useMemo(
+    () => PreviewCard.createHandle<HoverCardPayload>(),
+    [],
+  );
   return (
     <ReadingPrefsContext.Provider
       value={{ redLetter, verseNumbers, textSize, divineName, sourceOverlay }}
@@ -937,143 +1028,146 @@ export function Passage({
           <CrossRefsContext.Provider value={crossRefs ?? EMPTY_CROSSREFS}>
             <FlashVerseContext.Provider value={flashVerse}>
               <FootnoteLabelsContext.Provider value={footnoteLabels}>
-                <div>
-                  {blocks.map((b, i) => {
-                    switch (b.kind) {
-                      case 'heading':
-                        return (
-                          <h3
-                            key={`k${i}`}
-                            className="mt-1 mb-[14px] font-normal font-serif text-[21px] text-gold italic"
-                          >
-                            {b.text}
-                          </h3>
-                        );
-                      case 'acrostic':
-                        return (
-                          <div
-                            key={`k${i}`}
-                            className="mb-[10px] flex items-center gap-3"
-                          >
-                            <span className="font-hebrew text-[30px] text-gold leading-none">
-                              {b.letter}
-                            </span>
-                            <span className="font-mono text-[11px] text-faint uppercase tracking-[0.08em]">
-                              {b.name}
-                            </span>
-                            <span className="h-px flex-1 bg-line" />
-                          </div>
-                        );
-                      case 'chip':
-                        return (
-                          <div key={`k${i}`} className="mb-[14px]">
-                            <span
-                              className={`inline-flex items-center gap-[6px] rounded-full border bg-paper-soft px-[10px] py-[3px] font-semibold text-[11.5px] ${CHIP_VARIANT[b.variant ?? 'neutral']}`}
+                <HoverCardHandleContext.Provider value={hoverCardHandle}>
+                  <SharedHoverCard handle={hoverCardHandle} />
+                  <div>
+                    {blocks.map((b, i) => {
+                      switch (b.kind) {
+                        case 'heading':
+                          return (
+                            <h3
+                              key={`k${i}`}
+                              className="mt-1 mb-[14px] font-normal font-serif text-[21px] text-gold italic"
                             >
-                              {b.dot ? (
-                                <span className="size-[5px] rounded-full bg-gold" />
-                              ) : null}
                               {b.text}
-                            </span>
-                          </div>
-                        );
-                      case 'crossref':
-                        return (
-                          <div
-                            key={`k${i}`}
-                            className="mb-[14px] text-[13px] text-muted-2"
-                          >
-                            {b.runs.map((r, j) =>
-                              r.ref ? (
-                                <a
-                                  key={`k${j}`}
-                                  href={passageHref(r.ref)}
-                                  className="text-gold hover:underline"
-                                >
-                                  {r.text}
-                                </a>
-                              ) : (
-                                <span key={`k${j}`}>{r.text}</span>
-                              ),
-                            )}
-                          </div>
-                        );
-                      case 'descriptive':
-                        return (
-                          <p
-                            key={`k${i}`}
-                            className={`mb-[14px] font-serif italic ${size === 'reading' ? 'text-[16px]' : 'text-[14px]'} text-muted-2 leading-relaxed`}
-                          >
-                            {b.verses.map((v, j) => (
-                              <span key={`d${j}`}>
-                                {v.num != null ? (
-                                  <VerseNum n={v.num} tone={v.tone} />
+                            </h3>
+                          );
+                        case 'acrostic':
+                          return (
+                            <div
+                              key={`k${i}`}
+                              className="mb-[10px] flex items-center gap-3"
+                            >
+                              <span className="font-hebrew text-[30px] text-gold leading-none">
+                                {b.letter}
+                              </span>
+                              <span className="font-mono text-[11px] text-faint uppercase tracking-[0.08em]">
+                                {b.name}
+                              </span>
+                              <span className="h-px flex-1 bg-line" />
+                            </div>
+                          );
+                        case 'chip':
+                          return (
+                            <div key={`k${i}`} className="mb-[14px]">
+                              <span
+                                className={`inline-flex items-center gap-[6px] rounded-full border bg-paper-soft px-[10px] py-[3px] font-semibold text-[11.5px] ${CHIP_VARIANT[b.variant ?? 'neutral']}`}
+                              >
+                                {b.dot ? (
+                                  <span className="size-[5px] rounded-full bg-gold" />
+                                ) : null}
+                                {b.text}
+                              </span>
+                            </div>
+                          );
+                        case 'crossref':
+                          return (
+                            <div
+                              key={`k${i}`}
+                              className="mb-[14px] text-[13px] text-muted-2"
+                            >
+                              {b.runs.map((r, j) =>
+                                r.ref ? (
+                                  <a
+                                    key={`k${j}`}
+                                    href={passageHref(r.ref)}
+                                    className="text-gold hover:underline"
+                                  >
+                                    {r.text}
+                                  </a>
+                                ) : (
+                                  <span key={`k${j}`}>{r.text}</span>
+                                ),
+                              )}
+                            </div>
+                          );
+                        case 'descriptive':
+                          return (
+                            <p
+                              key={`k${i}`}
+                              className={`mb-[14px] font-serif italic ${size === 'reading' ? 'text-[16px]' : 'text-[14px]'} text-muted-2 leading-relaxed`}
+                            >
+                              {b.verses.map((v, j) => (
+                                <span key={`d${j}`}>
+                                  {v.num != null ? (
+                                    <VerseNum n={v.num} tone={v.tone} />
+                                  ) : null}
+                                  <Runs
+                                    runs={v.runs}
+                                    verse={v.verse ?? v.num}
+                                  />{' '}
+                                </span>
+                              ))}
+                            </p>
+                          );
+                        case 'prose':
+                          return (
+                            <ProseParagraph
+                              key={`k${i}`}
+                              verses={b.verses}
+                              size={size}
+                              selectedVerse={selectedVerse}
+                              onSelectVerse={onSelectVerse}
+                            />
+                          );
+                        case 'poetry':
+                          return (
+                            <PoetryStanza
+                              key={`k${i}`}
+                              lines={b.lines}
+                              hymn={b.hymn}
+                              size={size}
+                              selectedVerse={selectedVerse}
+                              onSelectVerse={onSelectVerse}
+                            />
+                          );
+                        case 'focusVerse': {
+                          const fv = b.verse.verse ?? b.verse.num;
+                          return (
+                            <div
+                              key={`k${i}`}
+                              data-verse={fv}
+                              className={`-ml-5 border-scripture-edge border-l-2 pl-[18px] ${fv != null && flashVerse === fv ? 'verse-flash' : ''}`}
+                            >
+                              <p
+                                className={`font-serif ${size === 'reading' ? 'text-[21px]' : 'text-[19px]'} leading-[1.7] ${b.verse.redletter ? 'text-redletter' : 'text-ink'}`}
+                              >
+                                {b.verse.num != null ? (
+                                  <VerseNum n={b.verse.num} tone="focus" />
                                 ) : null}
                                 <Runs
-                                  runs={v.runs}
-                                  verse={v.verse ?? v.num}
-                                />{' '}
-                              </span>
-                            ))}
-                          </p>
-                        );
-                      case 'prose':
-                        return (
-                          <ProseParagraph
-                            key={`k${i}`}
-                            verses={b.verses}
-                            size={size}
-                            selectedVerse={selectedVerse}
-                            onSelectVerse={onSelectVerse}
-                          />
-                        );
-                      case 'poetry':
-                        return (
-                          <PoetryStanza
-                            key={`k${i}`}
-                            lines={b.lines}
-                            hymn={b.hymn}
-                            size={size}
-                            selectedVerse={selectedVerse}
-                            onSelectVerse={onSelectVerse}
-                          />
-                        );
-                      case 'focusVerse': {
-                        const fv = b.verse.verse ?? b.verse.num;
-                        return (
-                          <div
-                            key={`k${i}`}
-                            data-verse={fv}
-                            className={`-ml-5 border-scripture-edge border-l-2 pl-[18px] ${fv != null && flashVerse === fv ? 'verse-flash' : ''}`}
-                          >
-                            <p
-                              className={`font-serif ${size === 'reading' ? 'text-[21px]' : 'text-[19px]'} leading-[1.7] ${b.verse.redletter ? 'text-redletter' : 'text-ink'}`}
+                                  runs={b.verse.runs}
+                                  verse={b.verse.verse ?? b.verse.num}
+                                />
+                              </p>
+                            </div>
+                          );
+                        }
+                        case 'selah':
+                          return (
+                            <div
+                              key={`k${i}`}
+                              className="mt-1 text-right font-serif text-gold italic"
                             >
-                              {b.verse.num != null ? (
-                                <VerseNum n={b.verse.num} tone="focus" />
-                              ) : null}
-                              <Runs
-                                runs={b.verse.runs}
-                                verse={b.verse.verse ?? b.verse.num}
-                              />
-                            </p>
-                          </div>
-                        );
+                              {b.text ?? 'Selah'}
+                            </div>
+                          );
+                        default:
+                          return null;
                       }
-                      case 'selah':
-                        return (
-                          <div
-                            key={`k${i}`}
-                            className="mt-1 text-right font-serif text-gold italic"
-                          >
-                            {b.text ?? 'Selah'}
-                          </div>
-                        );
-                      default:
-                        return null;
-                    }
-                  })}
-                </div>
+                    })}
+                  </div>
+                </HoverCardHandleContext.Provider>
               </FootnoteLabelsContext.Provider>
             </FlashVerseContext.Provider>
           </CrossRefsContext.Provider>
