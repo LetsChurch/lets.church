@@ -31,6 +31,7 @@ const { auditShard } = proxyActivities<typeof activities>({
 
 const {
   assembleStorageAuditReport,
+  deleteStorageAuditReportObjects,
   finalizeStorageAuditRecord,
   getStorageAuditRecipient,
   sendStorageAuditEmail,
@@ -54,6 +55,21 @@ export async function auditBucketShardWorkflow(
   params: StorageAuditShardParams,
 ): Promise<ShardSummary> {
   return auditShard(params.auditId, params.bucket, params.shardPrefix);
+}
+
+export type DeleteStorageAuditReportParams = {
+  auditId: string;
+};
+
+/**
+ * Purge a deleted audit's report objects from S3. The DB row is removed
+ * synchronously by the web mutation; this offloads the (credentialed) S3
+ * cleanup to the background worker so the web app never imports the S3 clients.
+ */
+export async function deleteStorageAuditReportWorkflow(
+  params: DeleteStorageAuditReportParams,
+): Promise<void> {
+  await deleteStorageAuditReportObjects(params.auditId);
 }
 
 export type StorageAuditWorkflowParams = {

@@ -779,6 +779,20 @@ export async function finalizeStorageAuditRecord(
 }
 
 /**
+ * Delete an audit's report artifacts (combined report + per-shard detail)
+ * under `_audits/{auditId}/` in the ingest bucket. Runs on the background
+ * worker (which has the S3 credentials) so the web app never needs to import
+ * the S3 clients. The DB row is removed separately by the caller; this only
+ * purges storage and is safe to retry (deleting an already-empty prefix is a
+ * no-op).
+ */
+export async function deleteStorageAuditReportObjects(
+  auditId: string,
+): Promise<void> {
+  await ingestS3.deletePrefix(`${AUDIT_REPORT_PREFIX}/${auditId}/`);
+}
+
+/**
  * The verified email address of the admin who triggered the audit, if any.
  */
 export async function getStorageAuditRecipient(

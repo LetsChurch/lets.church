@@ -25,6 +25,7 @@ import {
   makeAnnotateTranscriptWorkflowId,
   makeBackupToGlacierWorkflowId,
   makeCreateUploadRecordWorkflowId,
+  makeDeleteStorageAuditReportWorkflowId,
   makeDeleteUploadWorkflowId,
   makeGeocodeOrganizationWorkflowId,
   makeImportMediaWorkflowId,
@@ -205,6 +206,22 @@ export async function startStorageAudit(params: {
     priority: { priorityKey: PRIORITY_REPROCESS },
     ...staticMeta({ summary: 'Storage audit' }),
     workflowId: makeStorageAuditWorkflowId(params.auditId),
+    args: [params],
+  });
+}
+
+// Fire-and-forget S3 cleanup for a deleted audit. The DB row is removed
+// synchronously by the caller; this offloads the credentialed S3 purge to the
+// background worker so web never imports the S3 clients (or their env).
+export async function startDeleteStorageAuditReport(params: {
+  auditId: string;
+}) {
+  return startBackground('deleteStorageAuditReportWorkflow', {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_REPROCESS },
+    ...staticMeta({ summary: 'Delete storage audit report' }),
+    workflowId: makeDeleteStorageAuditReportWorkflowId(params.auditId),
     args: [params],
   });
 }

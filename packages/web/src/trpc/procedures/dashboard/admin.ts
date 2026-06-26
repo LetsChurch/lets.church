@@ -19,10 +19,7 @@ import {
 import { ingestConfig, ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { runAnnotation } from '@letschurch/temporal/activities/background/annotate-transcript';
-import {
-  AUDIT_REPORT_PREFIX,
-  type StorageAuditSummary,
-} from '@letschurch/temporal/activities/background/storage-audit';
+import type { StorageAuditSummary } from '@letschurch/temporal/activities/background/storage-audit';
 import { runSummary } from '@letschurch/temporal/activities/background/summarize-upload';
 import {
   BACKGROUND_QUEUE,
@@ -98,6 +95,7 @@ import {
   startBackground,
   startBulkBackupToGlacier,
   startCleanupStaleUploadStates,
+  startDeleteStorageAuditReport,
   startReindex,
   startReprocess,
   startStorageAudit,
@@ -4812,12 +4810,16 @@ export const adminRouter = router({
         });
       }
 
-      // Remove the report artifacts (combined report + per-shard detail) under
-      // `_audits/{auditId}/` in the ingest bucket. Best-effort: if the objects
-      // are already gone (or S3 errors), still delete the DB row so the run can
-      // be cleared from the admin list — log the failure for follow-up.
+      // Drop the DB row now so it disappears from the admin list immediately,
+      // then offload the (credentialed) S3 report cleanup to the background
+      // worker. Web never touches the S3 clients, so it needs no S3 env. The
+      // report objects live under the audit-reserved `_audits/` prefix, so even
+      // if the cleanup workflow can't be started they're harmless dead weight,
+      // never misclassified as orphans — log and move on rather than failing.
+      await db.delete(StorageAudit).where(eq(StorageAudit.id, input.auditId));
+
       try {
-        await ingestS3.deletePrefix(`${AUDIT_REPORT_PREFIX}/${input.auditId}/`);
+        await startDeleteStorageAuditReport({ auditId: input.auditId });
       } catch (error) {
         moduleLogger.warn(
           {
@@ -4827,11 +4829,9 @@ export const adminRouter = router({
               error: error instanceof Error ? error.message : String(error),
             },
           },
-          'Failed to delete storage audit report objects from S3',
+          'Failed to start storage audit report cleanup workflow',
         );
       }
-
-      await db.delete(StorageAudit).where(eq(StorageAudit.id, input.auditId));
 
       moduleLogger.info(
         {

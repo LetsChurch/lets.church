@@ -145,6 +145,10 @@ export function makeStorageAuditShardWorkflowId(
   return `storageAuditShard:${auditId}:${bucket}:${shardPrefix}`;
 }
 
+export function makeDeleteStorageAuditReportWorkflowId(auditId: string) {
+  return `deleteStorageAuditReport:${auditId}`;
+}
+
 // Import workflows
 export function makeImportMediaWorkflowId(url: string) {
   return `importMedia:${xxh32(url)}:${Date.now()}`;

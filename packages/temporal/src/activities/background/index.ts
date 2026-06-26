@@ -130,6 +130,7 @@ export {
   type AuditFindingType,
   assembleStorageAuditReport,
   auditShard,
+  deleteStorageAuditReportObjects,
   finalizeStorageAuditRecord,
   getStorageAuditRecipient,
   type ShardSummary,

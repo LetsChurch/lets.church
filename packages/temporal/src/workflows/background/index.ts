@@ -67,6 +67,8 @@ export {
 } from './send-verification-email';
 export {
   auditBucketShardWorkflow,
+  type DeleteStorageAuditReportParams,
+  deleteStorageAuditReportWorkflow,
   getStorageAuditProgressQuery,
   type StorageAuditShardParams,
   type StorageAuditWorkflowParams,
