@@ -14,6 +14,10 @@ import {
 import { bookBySlug } from '@/lib/canon';
 import { parseReference } from '@/lib/reference';
 import { relatedVerses, searchVerses } from '@/search/search';
+import {
+  applyOverlaysToTokens,
+  loadOverlayIndex,
+} from '@/server/overlays/apply-tokens';
 import { resolvePreferences } from '@/server/preferences';
 import type { Context } from '../context';
 import { publicProcedure } from '../trpc';
@@ -374,27 +378,38 @@ export const bibleProcedures = {
     )
     .query(async ({ ctx, input }) => {
       const translationId = await resolveTranslation(ctx, input.translation);
-      return db
-        .select({
-          verse: bibleToken.verse,
-          position: bibleToken.position,
-          surface: bibleToken.surface,
-          strong: bibleToken.strong,
-          lemma: bibleToken.lemma,
-          morph: bibleToken.morph,
-          divineName: bibleToken.divineName,
-          otQuote: bibleToken.otQuote,
-          wordsOfJesus: bibleToken.wordsOfJesus,
-        })
-        .from(bibleToken)
-        .where(
-          and(
-            eq(bibleToken.translationId, translationId),
-            eq(bibleToken.book, usfmOf(input.book)),
-            eq(bibleToken.chapter, input.chapter),
-          ),
-        )
-        .orderBy(asc(bibleToken.verse), asc(bibleToken.position));
+      const [rows, index] = await Promise.all([
+        db
+          .select({
+            verse: bibleToken.verse,
+            position: bibleToken.position,
+            surface: bibleToken.surface,
+            strong: bibleToken.strong,
+            lemma: bibleToken.lemma,
+            morph: bibleToken.morph,
+            divineName: bibleToken.divineName,
+            otQuote: bibleToken.otQuote,
+            wordsOfJesus: bibleToken.wordsOfJesus,
+          })
+          .from(bibleToken)
+          .where(
+            and(
+              eq(bibleToken.translationId, translationId),
+              eq(bibleToken.book, usfmOf(input.book)),
+              eq(bibleToken.chapter, input.chapter),
+            ),
+          )
+          .orderBy(asc(bibleToken.verse), asc(bibleToken.position)),
+        loadOverlayIndex(),
+      ]);
+      // bible_token is overlay-pure; resolve divine name / OT quotation from the
+      // render-time index so the study panel gets them here too.
+      return applyOverlaysToTokens(
+        usfmOf(input.book),
+        input.chapter,
+        rows,
+        index,
+      );
     }),
 
   // Interlinear view: every word of a chapter (in reading order) joined to its
@@ -410,30 +425,41 @@ export const bibleProcedures = {
     )
     .query(async ({ ctx, input }) => {
       const translationId = await resolveTranslation(ctx, input.translation);
-      return db
-        .select({
-          verse: bibleToken.verse,
-          position: bibleToken.position,
-          surface: bibleToken.surface,
-          strong: bibleToken.strong,
-          divineName: bibleToken.divineName,
-          otQuote: bibleToken.otQuote,
-          wordsOfJesus: bibleToken.wordsOfJesus,
-          lemma: bibleLexeme.lemma,
-          transliteration: bibleLexeme.transliteration,
-          language: bibleLexeme.language,
-          gloss: bibleLexeme.gloss,
-        })
-        .from(bibleToken)
-        .leftJoin(bibleLexeme, eq(bibleLexeme.strong, bibleToken.strong))
-        .where(
-          and(
-            eq(bibleToken.translationId, translationId),
-            eq(bibleToken.book, usfmOf(input.book)),
-            eq(bibleToken.chapter, input.chapter),
-          ),
-        )
-        .orderBy(asc(bibleToken.verse), asc(bibleToken.position));
+      const [rows, index] = await Promise.all([
+        db
+          .select({
+            verse: bibleToken.verse,
+            position: bibleToken.position,
+            surface: bibleToken.surface,
+            strong: bibleToken.strong,
+            divineName: bibleToken.divineName,
+            otQuote: bibleToken.otQuote,
+            wordsOfJesus: bibleToken.wordsOfJesus,
+            lemma: bibleLexeme.lemma,
+            transliteration: bibleLexeme.transliteration,
+            language: bibleLexeme.language,
+            gloss: bibleLexeme.gloss,
+          })
+          .from(bibleToken)
+          .leftJoin(bibleLexeme, eq(bibleLexeme.strong, bibleToken.strong))
+          .where(
+            and(
+              eq(bibleToken.translationId, translationId),
+              eq(bibleToken.book, usfmOf(input.book)),
+              eq(bibleToken.chapter, input.chapter),
+            ),
+          )
+          .orderBy(asc(bibleToken.verse), asc(bibleToken.position)),
+        loadOverlayIndex(),
+      ]);
+      // bible_token is overlay-pure; resolve divine name / OT quotation from the
+      // render-time index so the interlinear's study panel gets them too.
+      return applyOverlaysToTokens(
+        usfmOf(input.book),
+        input.chapter,
+        rows,
+        index,
+      );
     }),
 
   // True interlinear: the chapter's original-language (Greek/Hebrew) words in

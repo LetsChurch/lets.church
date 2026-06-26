@@ -113,9 +113,20 @@ lets-bible-seed-bsb:
 lets-bible-seed-msb:
   docker compose exec lets-bible sh -c 'cd /usr/src/app && TRANSLATION_ID=MSB TRANSLATION_NAME="Majority Standard Bible" TRANSLATION_IS_DEFAULT=false USX_DIR="$(pwd)/packages/lets.bible/seed/msb/USX_1" pnpm --filter @letschurch/lets.bible run seed:bible'
 
+# Ingest the King James Version (1769, with Strong's + morphology). Source JSON
+# committed under packages/lets.bible/seed/kjv (override the path with KJV_SOURCE).
+lets-bible-seed-kjv:
+  docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run seed:kjv'
+
 # Seed the Strong's lexicon (translation-agnostic)
 lets-bible-seed-lexicon:
   docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run seed:lexicon'
+
+# Backfill bible_cross_reference for all translations from the committed artifact
+# (seed/overlays/cross-references.json) — the seed USX is overlay-pure (no cross-ref
+# notes), so this restores OT-quotation source links + study-panel cross-references.
+lets-bible-seed-crossrefs:
+  docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run seed:crossrefs'
 
 # Seed the original-language interlinear (STEPBible TAGNT Greek / TAHOT Hebrew,
 # fetched not committed). books = NT | OT | ALL | a comma list (default John);
@@ -131,8 +142,8 @@ lets-bible-index:
 lets-bible-flex:
   docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run flex:build'
 
-# Full lets.bible setup: migrate, push ES mappings, seed (BSB/MSB/lexicon), index
-lets-bible-up: lets-bible-migrate lets-bible-es-push lets-bible-seed-bsb lets-bible-seed-msb lets-bible-seed-lexicon lets-bible-index lets-bible-flex
+# Full lets.bible setup: migrate, push ES mappings, seed (BSB/MSB/KJV/lexicon), index
+lets-bible-up: lets-bible-migrate lets-bible-es-push lets-bible-seed-bsb lets-bible-seed-msb lets-bible-seed-kjv lets-bible-seed-lexicon lets-bible-index lets-bible-flex
 
 es-push-mappings:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/elasticsearch run push-mappings'

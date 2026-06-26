@@ -1,4 +1,10 @@
 import type { BookChapter } from '@/db';
+import { applyOverlays, type OverlayIndex } from '@/lib/apply-overlays';
+import { bookBySlug } from '@/lib/canon';
+
+// Reading asset keys use the url slug ("john"); the overlay index is keyed by USFM
+// code ("JHN").
+const usfmOf = (slug: string) => bookBySlug(slug)?.code ?? slug.toUpperCase();
 
 // Reading source: the reader fetches a book's chapters from the static asset
 // /reading/<id>/<slug>.json (built at image time from USX by build-flex-index.ts,
@@ -41,6 +47,20 @@ async function loadBook(
   return chapters;
 }
 
+// The translation-independent source-text-overlay index (the committed
+// seed/overlays/index.json, served at /overlays/index.json). Fetched once and
+// applied to a chapter's runs at load time so divine name / OT quotation /
+// divine-name notes render without being baked into any translation.
+let overlayIndex: Promise<OverlayIndex> | null = null;
+function loadOverlayIndex(): Promise<OverlayIndex> {
+  if (!overlayIndex) {
+    overlayIndex = fetch(`${assetBase()}/overlays/index.json`)
+      .then((r) => (r.ok ? (r.json() as Promise<OverlayIndex>) : {}))
+      .catch(() => ({}) as OverlayIndex);
+  }
+  return overlayIndex;
+}
+
 // A chapter query backed by the static reading asset. The service worker serves
 // it offline (cache-first in prod), so there's no separate IndexedDB fallback.
 // Shared by the route loader (SSR/prefetch) and the component so they hit one
@@ -54,8 +74,18 @@ export function chapterQueryOptions(params: {
   return {
     queryKey: ['bible.chapter', translationId, book, chapter] as const,
     queryFn: async (): Promise<BookChapter | null> => {
-      const chapters = await loadBook(translationId, book);
-      return chapters[String(chapter)] ?? null;
+      const [chapters, index] = await Promise.all([
+        loadBook(translationId, book),
+        loadOverlayIndex(),
+      ]);
+      const data = chapters[String(chapter)];
+      if (!data) {
+        return null;
+      }
+      // Apply the source-text overlays at render time (the reading asset is
+      // overlay-pure); the book code here is the USFM code (the asset key's slug
+      // maps 1:1, but the index is keyed by USFM, so resolve it).
+      return applyOverlays(usfmOf(book), chapter, data, index);
     },
   };
 }

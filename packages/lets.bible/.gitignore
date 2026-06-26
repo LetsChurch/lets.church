@@ -11,6 +11,11 @@ storybook-static
 # they ship in the image); regenerate for dev with `just lets-bible-flex`.
 /public/search/
 /public/reading/
+/public/overlays/
+
+# Note: seed/overlays/{index,cross-references}.json are the committed, authoritative
+# source-text-overlay + cross-reference data (NOT ignored). public/overlays/ above is
+# just the build-time copy build-flex-index.ts publishes for the client to fetch.
 
 # Playwright e2e
 /test-results/

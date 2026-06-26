@@ -19,6 +19,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { eq } from 'drizzle-orm';
 import { CANON } from '../lib/canon';
+import { loadCrossRefs } from '../server/overlays';
 import { parseUsxBook } from '../server/usx/parse';
 import {
   bibleBook,
@@ -84,6 +85,15 @@ async function main() {
   let tokenCount = 0;
   let xrefCount = 0;
 
+  // Cross-references come from the committed artifact (the seed USX is overlay-pure
+  // — no `<note style="x">` — after the source-text-overlay strip), grouped by book.
+  const xrefsByBook = new Map<string, ReturnType<typeof loadCrossRefs>>();
+  for (const x of loadCrossRefs(translation.id)) {
+    const list = xrefsByBook.get(x.fromBook);
+    if (list) list.push(x);
+    else xrefsByBook.set(x.fromBook, [x]);
+  }
+
   for (const book of CANON) {
     const xml = readFileSync(join(usxDir, `${book.code}.usx`), 'utf8');
     const parsed = parseUsxBook(xml);
@@ -140,8 +150,8 @@ async function main() {
     await insertChunked(bibleToken, tokenRows, 1000);
     tokenCount += tokenRows.length;
 
-    // Cross-references.
-    const xrefRows = parsed.crossRefs.map((x) => ({
+    // Cross-references (from the committed artifact, not the overlay-pure USX).
+    const xrefRows = (xrefsByBook.get(book.code) ?? []).map((x) => ({
       translationId: translation.id,
       fromBook: book.code,
       fromChapter: x.fromChapter,

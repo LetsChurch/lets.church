@@ -420,167 +420,197 @@ function Runs({ runs, verse }: { runs: Run[]; verse?: number }) {
   // (in a `whitespace-nowrap` wrapper, below) so they never orphan onto the next
   // line; those run indices are recorded here and skipped when the map reaches them.
   const consumedNotes = new Set<number>();
-  return (
-    <>
-      {runs.map((r, i) => {
-        if (consumedNotes.has(i)) {
-          return null;
+  // Render runs into `out`, grouping consecutive OT-quotation runs under ONE
+  // dotted-underline wrapper so the decoration is drawn once (continuous) rather
+  // than restarting per word/space (which reads as a segmented, broken underline).
+  const out: ReactNode[] = [];
+  let quoteBuf: ReactNode[] = [];
+  let quoteKey = 0;
+  const flushQuote = () => {
+    if (!quoteBuf.length) return;
+    const buf = quoteBuf;
+    const key = quoteKey;
+    quoteBuf = [];
+    out.push(
+      <OverlayTip
+        key={`q${key}`}
+        body={overlayTooltip('otquote', divineName, verseRefs)}
+        trigger={
+          <span className="cursor-help underline decoration-muted-2/80 decoration-dotted underline-offset-[3px]">
+            {buf}
+          </span>
         }
-        if (r.note) {
-          return <FootnoteMarker key={`k${i}`} note={r.note} />;
-        }
-        if (omit.has(i)) {
-          return null;
-        }
-        const showRed = !!r.redletter && redLetter;
-        const isWord =
-          !!ws && verse != null && !!r.strong && r.position != null;
-        // Only show the word-hover affordance when a click would actually open
-        // word study — i.e. the verse is already selected or the study panel is
-        // open. Otherwise a click just selects the verse, so the word shouldn't
-        // look individually clickable. (Touch long-press still works regardless.)
-        const wordStudyable =
-          isWord && !!ws && (ws.studyOpen || ws.selectedVerse === verse);
-        const isSelectedWord =
-          isWord &&
-          ws?.selected?.verse === verse &&
-          ws?.selected?.position === r.position;
+      />,
+    );
+  };
+  runs.forEach((r, i) => {
+    {
+      if (consumedNotes.has(i)) {
+        return;
+      }
+      if (r.note) {
+        flushQuote();
+        out.push(<FootnoteMarker key={`k${i}`} note={r.note} />);
+        return;
+      }
+      if (omit.has(i)) {
+        return;
+      }
+      const showRed = !!r.redletter && redLetter;
+      const isWord = !!ws && verse != null && !!r.strong && r.position != null;
+      // Only show the word-hover affordance when a click would actually open
+      // word study — i.e. the verse is already selected or the study panel is
+      // open. Otherwise a click just selects the verse, so the word shouldn't
+      // look individually clickable. (Touch long-press still works regardless.)
+      const wordStudyable =
+        isWord && !!ws && (ws.studyOpen || ws.selectedVerse === verse);
+      const isSelectedWord =
+        isWord &&
+        ws?.selected?.verse === verse &&
+        ws?.selected?.position === r.position;
 
-        const overlay: Overlay | null = !sourceOverlay
-          ? null
-          : r.divineName
-            ? 'divine'
-            : r.otQuote
-              ? 'otquote'
-              : HALLELUJAH_RE.test(r.text.trim())
-                ? 'hallelujah'
-                : null;
+      const overlay: Overlay | null = !sourceOverlay
+        ? null
+        : r.divineName
+          ? 'divine'
+          : r.otQuote
+            ? 'otquote'
+            : HALLELUJAH_RE.test(r.text.trim())
+              ? 'hallelujah'
+              : null;
+      // Divine name / Hallelujah are POINT overlays (one word) → underline +
+      // hover per run. OT quotations are SPAN overlays → the underline + hover go
+      // on a wrapper around the whole contiguous quote (below), so the dotted
+      // decoration is drawn once instead of restarting per word.
+      const pointOverlay = overlay === 'divine' || overlay === 'hallelujah';
 
-        // Divine name renders per the user's preference; in YHWH/Yahweh mode it
-        // is no longer small-capped, and a neighboring article may be trimmed.
-        const renderedAsName = r.divineName && divineName !== 'lord';
-        const text = renderedAsName
-          ? divineName === 'yhwh'
-            ? 'YHWH'
-            : 'Yahweh'
-          : (override.get(i) ?? r.text);
+      // Divine name renders per the user's preference; in YHWH/Yahweh mode it
+      // is no longer small-capped, and a neighboring article may be trimmed.
+      const renderedAsName = r.divineName && divineName !== 'lord';
+      const text = renderedAsName
+        ? divineName === 'yhwh'
+          ? 'YHWH'
+          : 'Yahweh'
+        : (override.get(i) ?? r.text);
 
-        const cls = [
-          // Small caps for the divine name only (rendered as "LORD"). OT
-          // quotations keep just the dotted-underline overlay, not small caps.
-          r.divineName && !renderedAsName
-            ? '[font-variant:small-caps] tracking-[0.03em]'
+      const cls = [
+        // Small caps for the divine name only (rendered as "LORD"). OT
+        // quotations keep just the dotted-underline overlay, not small caps.
+        r.divineName && !renderedAsName
+          ? '[font-variant:small-caps] tracking-[0.03em]'
+          : '',
+        r.mark ? 'scripture-mark' : '',
+        showRed ? 'text-redletter' : '',
+        pointOverlay
+          ? // Longhand decoration utilities (NOT the `[text-decoration:…]`
+            // shorthand, which resets text-decoration-color to currentColor —
+            // that made the underline follow the text color and vanish on
+            // faded/low-contrast text in dark mode). `muted-2` is a deliberate,
+            // theme-aware gray that stays visible in both light and dark.
+            // (OT quotations underline via their group wrapper, not per word.)
+            'underline decoration-muted-2/80 decoration-dotted underline-offset-[3px]'
+          : '',
+        wordStudyable
+          ? 'cursor-pointer rounded-[2px] transition-colors hover:bg-[rgba(154,123,63,0.1)]'
+          : pointOverlay
+            ? 'cursor-help'
             : '',
-          r.mark ? 'scripture-mark' : '',
-          showRed ? 'text-redletter' : '',
-          overlay
-            ? // Longhand decoration utilities (NOT the `[text-decoration:…]`
-              // shorthand, which resets text-decoration-color to currentColor —
-              // that made the underline follow the text color and vanish on
-              // faded/low-contrast text in dark mode). `muted-2` is a deliberate,
-              // theme-aware gray that stays visible in both light and dark.
-              'underline decoration-muted-2/80 decoration-dotted underline-offset-[3px]'
-            : '',
-          wordStudyable
-            ? 'cursor-pointer rounded-[2px] transition-colors hover:bg-[rgba(154,123,63,0.1)]'
-            : overlay
-              ? 'cursor-help'
-              : '',
-          isSelectedWord
-            ? 'bg-[rgba(154,123,63,0.24)] shadow-[0_0_0_2px_rgba(154,123,63,0.24)]'
-            : '',
-        ]
-          .filter(Boolean)
-          .join(' ');
+        isSelectedWord
+          ? 'bg-[rgba(154,123,63,0.24)] shadow-[0_0_0_2px_rgba(154,123,63,0.24)]'
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' ');
 
-        let node: ReactElement<Record<string, unknown>>;
-        if (isWord && ws && verse != null) {
-          const wordVerse = verse;
-          const select = () =>
-            ws.onSelectWord({
-              verse: wordVerse,
-              position: r.position as number,
-              strong: r.strong as string,
-              surface: text,
-              divineName: r.divineName,
-              otQuote: r.otQuote,
-            });
-          node = (
-            // biome-ignore lint/a11y/useKeyWithClickEvents: words are a pointer-only enhancement; keyboard users select the verse and open Study
-            // biome-ignore lint/a11y/noStaticElementInteractions: same — the verse span is the keyboard target
-            <span
-              key={`k${i}`}
-              data-strong={r.strong}
-              className={cls || undefined}
-              // Touch: press-and-hold opens word study directly (the desktop
-              // double-click isn't reachable once the modal sheet covers the
-              // text). A short tap still bubbles to select the verse.
-              onPointerDown={(e) => {
-                if (e.pointerType !== 'touch') {
-                  return;
-                }
-                lpFired.current = false;
-                lpStart.current = { x: e.clientX, y: e.clientY };
+      let node: ReactElement<Record<string, unknown>>;
+      if (isWord && ws && verse != null) {
+        const wordVerse = verse;
+        const select = () =>
+          ws.onSelectWord({
+            verse: wordVerse,
+            position: r.position as number,
+            strong: r.strong as string,
+            surface: text,
+            divineName: r.divineName,
+            otQuote: r.otQuote,
+          });
+        node = (
+          // biome-ignore lint/a11y/useKeyWithClickEvents: words are a pointer-only enhancement; keyboard users select the verse and open Study
+          // biome-ignore lint/a11y/noStaticElementInteractions: same — the verse span is the keyboard target
+          <span
+            key={`k${i}`}
+            data-strong={r.strong}
+            className={cls || undefined}
+            // Touch: press-and-hold opens word study directly (the desktop
+            // double-click isn't reachable once the modal sheet covers the
+            // text). A short tap still bubbles to select the verse.
+            onPointerDown={(e) => {
+              if (e.pointerType !== 'touch') {
+                return;
+              }
+              lpFired.current = false;
+              lpStart.current = { x: e.clientX, y: e.clientY };
+              cancelLongPress();
+              lpTimer.current = setTimeout(() => {
+                lpFired.current = true;
+                select();
+              }, LONG_PRESS_MS);
+            }}
+            onPointerMove={(e) => {
+              if (e.pointerType !== 'touch' || !lpStart.current) {
+                return;
+              }
+              const moved = Math.hypot(
+                e.clientX - lpStart.current.x,
+                e.clientY - lpStart.current.y,
+              );
+              if (moved > LONG_PRESS_MOVE_TOLERANCE) {
                 cancelLongPress();
-                lpTimer.current = setTimeout(() => {
-                  lpFired.current = true;
-                  select();
-                }, LONG_PRESS_MS);
-              }}
-              onPointerMove={(e) => {
-                if (e.pointerType !== 'touch' || !lpStart.current) {
-                  return;
-                }
-                const moved = Math.hypot(
-                  e.clientX - lpStart.current.x,
-                  e.clientY - lpStart.current.y,
-                );
-                if (moved > LONG_PRESS_MOVE_TOLERANCE) {
-                  cancelLongPress();
-                }
-              }}
-              onPointerUp={(e) => {
-                if (e.pointerType === 'touch') {
-                  cancelLongPress();
-                }
-              }}
-              onPointerCancel={cancelLongPress}
-              onContextMenu={(e) => {
-                if (lpFired.current) {
-                  e.preventDefault();
-                }
-              }}
-              onClick={(e) => {
-                // Swallow the click that follows a long-press so it doesn't also
-                // select the verse.
-                if (lpFired.current) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  lpFired.current = false;
-                  return;
-                }
-                // First click selects the verse (let it bubble); a second click
-                // (verse already selected, or the panel already open) selects the
-                // word. Two deliberate clicks — no double-click gesture, which
-                // would double-fire and double-highlight.
-                if (ws.studyOpen || ws.selectedVerse === wordVerse) {
-                  e.stopPropagation();
-                  select();
-                }
-              }}
-            >
-              {text}
-            </span>
-          );
-        } else {
-          node = (
-            <span key={`k${i}`} className={cls || undefined}>
-              {text}
-            </span>
-          );
-        }
+              }
+            }}
+            onPointerUp={(e) => {
+              if (e.pointerType === 'touch') {
+                cancelLongPress();
+              }
+            }}
+            onPointerCancel={cancelLongPress}
+            onContextMenu={(e) => {
+              if (lpFired.current) {
+                e.preventDefault();
+              }
+            }}
+            onClick={(e) => {
+              // Swallow the click that follows a long-press so it doesn't also
+              // select the verse.
+              if (lpFired.current) {
+                e.preventDefault();
+                e.stopPropagation();
+                lpFired.current = false;
+                return;
+              }
+              // First click selects the verse (let it bubble); a second click
+              // (verse already selected, or the panel already open) selects the
+              // word. Two deliberate clicks — no double-click gesture, which
+              // would double-fire and double-highlight.
+              if (ws.studyOpen || ws.selectedVerse === wordVerse) {
+                e.stopPropagation();
+                select();
+              }
+            }}
+          >
+            {text}
+          </span>
+        );
+      } else {
+        node = (
+          <span key={`k${i}`} className={cls || undefined}>
+            {text}
+          </span>
+        );
+      }
 
-        const el = overlay ? (
+      const el =
+        pointOverlay && overlay ? (
           <OverlayTip
             key={`k${i}`}
             body={overlayTooltip(overlay, divineName, verseRefs)}
@@ -590,29 +620,42 @@ function Runs({ runs, verse }: { runs: Run[]; verse?: number }) {
           node
         );
 
-        // Pull any footnote marker(s) that immediately follow this word into a
-        // `whitespace-nowrap` wrapper so the marker can't wrap onto the next line
-        // away from its word (a bare/inline/word-joined marker doesn't hold — a
-        // button is treated atomically; only a nowrap context reliably glues it).
-        const notes: Footnote[] = [];
-        for (let j = i + 1; j < runs.length && runs[j].note; j += 1) {
-          notes.push(runs[j].note as Footnote);
-          consumedNotes.add(j);
-        }
-        if (notes.length) {
-          return (
-            <span key={`k${i}`} className="whitespace-nowrap">
-              {el}
+      // Pull any footnote marker(s) that immediately follow this word into a
+      // `whitespace-nowrap` wrapper so the marker can't wrap onto the next line
+      // away from its word (a bare/inline/word-joined marker doesn't hold — a
+      // button is treated atomically; only a nowrap context reliably glues it).
+      const notes: Footnote[] = [];
+      for (let j = i + 1; j < runs.length && runs[j].note; j += 1) {
+        notes.push(runs[j].note as Footnote);
+        consumedNotes.add(j);
+      }
+      let composite: ReactNode = el;
+      if (notes.length) {
+        composite = (
+          <span key={`k${i}`} className="whitespace-nowrap">
+            {el}
+            {/* `no-underline` keeps the marker out of a quote group's underline */}
+            <span className="no-underline">
               {notes.map((note, k) => (
                 <FootnoteMarker key={`n${i}-${k}`} note={note} />
               ))}
             </span>
-          );
+          </span>
+        );
+      }
+      if (overlay === 'otquote') {
+        if (!quoteBuf.length) {
+          quoteKey = i;
         }
-        return el;
-      })}
-    </>
-  );
+        quoteBuf.push(composite);
+      } else {
+        flushQuote();
+        out.push(composite);
+      }
+    }
+  });
+  flushQuote();
+  return <>{out}</>;
 }
 
 function ProseParagraph({
