@@ -108,7 +108,7 @@ export function uploadDashboardLinks(
       webUrl,
     );
     if (uploadHref) {
-      out.push({ href: uploadHref, text: "Let's Church dashboard" });
+      out.push({ href: uploadHref, text: 'Media dashboard' });
     }
     const channelHref = absoluteWebUrl(
       dashboardPaths.channel(channelId),

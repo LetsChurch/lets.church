@@ -3462,14 +3462,20 @@ export const adminRouter = router({
         }
 
         // Start the workflow
+        const links = uploadDashboardLinks(
+          upload.channelId,
+          input.uploadRecordId,
+        );
         await startBackground('processMediaWorkflow', {
           taskQueue: BACKGROUND_QUEUE,
           workflowId,
           ...staticMeta({
             summary: `Retry processing (${scope})`,
-            links: uploadDashboardLinks(upload.channelId, input.uploadRecordId),
+            links,
           }),
-          args: [input.uploadRecordId, scope],
+          // Forward the links so the index/annotate/summarize children
+          // inherit them too (default skipProbe = false for a retry).
+          args: [input.uploadRecordId, scope, false, links],
           priority: { priorityKey: PRIORITY_RETRY },
           retry: { maximumAttempts: 5 },
         });
@@ -3582,14 +3588,25 @@ export const adminRouter = router({
           }
         }
 
+        const links = uploadDashboardLinks(
+          upload.channelId,
+          input.uploadRecordId,
+        );
         await startBackground('processMediaWorkflow', {
           taskQueue: BACKGROUND_QUEUE,
           workflowId,
           ...staticMeta({
             summary: `Reprocess (${input.processingScope})`,
-            links: uploadDashboardLinks(upload.channelId, input.uploadRecordId),
+            links,
           }),
-          args: [input.uploadRecordId, input.processingScope, input.skipProbe],
+          // Forward the links so the index/annotate/summarize children
+          // inherit them too.
+          args: [
+            input.uploadRecordId,
+            input.processingScope,
+            input.skipProbe,
+            links,
+          ],
           priority: { priorityKey: PRIORITY_REPROCESS },
           retry: { maximumAttempts: 2 },
         });
@@ -4212,14 +4229,17 @@ export const adminRouter = router({
           const workflowId = makeProcessMediaWorkflowId(
             upload.finalizedUploadKey,
           );
+          const links = uploadDashboardLinks(upload.channelId, upload.id);
           await startBackground('processMediaWorkflow', {
             taskQueue: BACKGROUND_QUEUE,
             workflowId,
             ...staticMeta({
               summary: `Bulk retry (${scope})`,
-              links: uploadDashboardLinks(upload.channelId, upload.id),
+              links,
             }),
-            args: [upload.id, scope],
+            // Forward the links so the index/annotate/summarize children
+            // inherit them too (default skipProbe = false for a retry).
+            args: [upload.id, scope, false, links],
             priority: { priorityKey: PRIORITY_RETRY },
             retry: { maximumAttempts: 5 },
           });

@@ -55,6 +55,10 @@ export async function scrapeAndImportWorkflow(
     description?: string;
     url?: string | null;
   }>,
+  // Web origin captured by the starter (where WEB_URL is readable), threaded
+  // down to each importMediaWorkflow so its processing children can carry
+  // dashboard deep-links. Absent → children carry no links.
+  webUrl?: string,
 ) {
   const runId = await createImportRun(importSourceId);
 
@@ -142,6 +146,8 @@ export async function scrapeAndImportWorkflow(
               trimSilence: false,
               taskQueue: BACKGROUND_QUEUE,
               importSourceId,
+              channelId: source.channel?.id ?? null,
+              webUrl,
             },
           ],
           typedSearchAttributes: [

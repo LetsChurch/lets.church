@@ -15,6 +15,7 @@ import {
   UPLOAD_ID_KEY,
   USERNAME_KEY,
 } from '../../search-attributes';
+import { staticMeta, uploadDashboardLinks } from '../../util/dashboard-links';
 import { processImageWorkflow } from './process-image';
 import { processMediaWorkflow } from './process-media';
 
@@ -60,6 +61,8 @@ export async function importMediaWorkflow({
   trimSilence = false,
   taskQueue,
   importSourceId,
+  channelId,
+  webUrl,
 }: Partial<
   Pick<
     UploadRecordCreateData,
@@ -77,6 +80,12 @@ export async function importMediaWorkflow({
   taskQueue: string;
   trimSilence: boolean;
   importSourceId?: string;
+  // Channel id + web origin, supplied by the starter (the web client, or
+  // `scrapeAndImportWorkflow` which has both). Used to deep-link the
+  // processing children to the upload's dashboard page once the upload
+  // record id is known. Both must be present to build a link.
+  channelId?: string | null;
+  webUrl?: string;
 }): Promise<string> {
   // Hoisted so the failure path can deep-link to the upload's dashboard
   // page when the failure happens after the upload record was created.
@@ -101,11 +110,20 @@ export async function importMediaWorkflow({
       });
     uploadRecordId = importIds.uploadRecordId;
 
+    // Now that the upload record id exists, resolve its dashboard deep-links
+    // and forward them onto the processing children's User Metadata. Built
+    // from the explicitly-threaded webUrl (never the process.env default —
+    // not replay-safe in the sandbox); empty when channelId/webUrl absent.
+    const links =
+      channelId && webUrl
+        ? uploadDashboardLinks(channelId, uploadRecordId, webUrl)
+        : [];
+
     setCurrentDetails('Launching media processing');
     await startChild(processMediaWorkflow, {
       taskQueue,
       workflowId: `processMedia:${mediaUploadKey}`,
-      args: [uploadRecordId],
+      args: [uploadRecordId, 'everything', false, links],
       priority: { priorityKey: PRIORITY_IMPORT },
       parentClosePolicy: ParentClosePolicy.ABANDON,
       typedSearchAttributes: [
@@ -116,6 +134,7 @@ export async function importMediaWorkflow({
           ? [{ key: IMPORT_SOURCE_ID_KEY, value: importSourceId }]
           : []),
       ],
+      ...staticMeta({ summary: 'Process media', links }),
       retry: { maximumAttempts: 5 },
     });
 
@@ -133,6 +152,7 @@ export async function importMediaWorkflow({
             ? [{ key: IMPORT_SOURCE_ID_KEY, value: importSourceId }]
             : []),
         ],
+        ...staticMeta({ summary: 'Process image (thumbnail)', links }),
         retry: { maximumAttempts: 5 },
       });
     }

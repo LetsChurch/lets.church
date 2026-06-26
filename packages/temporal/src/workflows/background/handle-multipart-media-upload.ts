@@ -17,6 +17,7 @@ import {
   USER_ID_KEY,
   USERNAME_KEY,
 } from '../../search-attributes';
+import { type LcLink, staticMeta } from '../../util/dashboard-links';
 import type { UploadPostProcessValue } from '../../util/types';
 import { backupToGlacierWorkflow } from './backup-to-glacier';
 import { processImageWorkflow } from './process-image';
@@ -58,6 +59,11 @@ export async function handleMultipartMediaUploadWorkflow(
   s3UploadKey: string,
   postProcess: UploadPostProcessValue,
   uploadMeta?: UploadMeta | null,
+  // Resolved dashboard deep-links (upload + channel pages) built by the web
+  // client where WEB_URL is available, then forwarded onto the processing
+  // children's User Metadata. Empty/absent for non-media uploads or when the
+  // upload isn't attached to a channel.
+  dashboardLinks?: Array<LcLink> | null,
 ) {
   let eTags: Array<string> | null = null;
   let finalizingUserId: string | null = null;
@@ -127,15 +133,18 @@ export async function handleMultipartMediaUploadWorkflow(
       retry: { maximumAttempts: 3 },
     });
 
+    const links = dashboardLinks ?? [];
+
     setCurrentDetails('Launching processing');
     if (postProcess === 'media') {
       await startChild(processMediaWorkflow, {
-        args: [targetId, 'everything'],
+        args: [targetId, 'everything', false, links],
         workflowId: `processMedia:${s3UploadKey}`,
         taskQueue: BACKGROUND_QUEUE,
         priority: { priorityKey: PRIORITY_USER },
         parentClosePolicy: ParentClosePolicy.ABANDON,
         typedSearchAttributes: childSearchAttrs,
+        ...staticMeta({ summary: 'Process media', links }),
         retry: {
           maximumAttempts: 5,
         },
@@ -148,6 +157,7 @@ export async function handleMultipartMediaUploadWorkflow(
         priority: { priorityKey: PRIORITY_USER },
         parentClosePolicy: ParentClosePolicy.ABANDON,
         typedSearchAttributes: childSearchAttrs,
+        ...staticMeta({ summary: `Process image (${postProcess})`, links }),
         retry: {
           maximumAttempts: 5,
         },

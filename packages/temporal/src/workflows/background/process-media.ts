@@ -17,6 +17,7 @@ import {
   TRANSCRIBE_QUEUE,
 } from '../../queues';
 import { UPLOAD_ID_KEY } from '../../search-attributes';
+import { type LcLink, staticMeta } from '../../util/dashboard-links';
 import { probeIsVideoFile } from '../../util/zod';
 import { annotateTranscriptWorkflow } from './annotate-transcript';
 import { indexDocumentWorkflow } from './index-document';
@@ -69,6 +70,12 @@ export async function processMediaWorkflow(
   // ffprobe. Defaults to false so fresh uploads, imports, and retries
   // always probe live; reprocess flows opt in (and default it to true).
   skipProbe = false,
+  // Resolved dashboard deep-links (upload + channel pages) forwarded by
+  // the starter so every child workflow's User Metadata tab carries the
+  // same links. Empty when the starter couldn't resolve them (e.g. no
+  // channel, or WEB_URL unset). Built outside the workflow sandbox — never
+  // call `uploadDashboardLinks`/`absoluteWebUrl` here (they read process.env).
+  links: Array<LcLink> = [],
 ) {
   // Propagate UploadId to every child / grandchild so the whole tree is
   // searchable in the Temporal UI by upload. Temporal does NOT inherit
@@ -127,6 +134,7 @@ export async function processMediaWorkflow(
         taskQueue: BACKGROUND_QUEUE,
         priority: { priorityKey: PRIORITY_USER },
         typedSearchAttributes: childSearchAttrs,
+        ...staticMeta({ summary: 'Index transcript', links }),
         retry: { maximumAttempts: 2 },
       });
 
@@ -173,6 +181,7 @@ export async function processMediaWorkflow(
           taskQueue: BACKGROUND_QUEUE,
           priority: { priorityKey: PRIORITY_USER },
           typedSearchAttributes: childSearchAttrs,
+          ...staticMeta({ summary: 'Annotate transcript', links }),
           retry: { maximumAttempts: 2 },
         });
       } catch (err) {
@@ -186,6 +195,7 @@ export async function processMediaWorkflow(
         taskQueue: BACKGROUND_QUEUE,
         priority: { priorityKey: PRIORITY_USER },
         typedSearchAttributes: childSearchAttrs,
+        ...staticMeta({ summary: 'Summarize', links }),
         retry: { maximumAttempts: 2 },
       });
 
@@ -203,6 +213,7 @@ export async function processMediaWorkflow(
       taskQueue: BACKGROUND_QUEUE,
       priority: { priorityKey: PRIORITY_USER },
       typedSearchAttributes: childSearchAttrs,
+      ...staticMeta({ summary: 'Index upload', links }),
       retry: { maximumAttempts: 2 },
     });
   } catch (err) {

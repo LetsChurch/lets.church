@@ -131,7 +131,7 @@ describe('uploadDashboardLinks', () => {
     expect(uploadDashboardLinks('chan-1', 'up-1', BASE)).toEqual([
       {
         href: 'https://lets.church/dashboard/channels/chan-1/uploads/up-1',
-        text: "Let's Church dashboard",
+        text: 'Media dashboard',
       },
       {
         href: 'https://lets.church/dashboard/channels/chan-1',

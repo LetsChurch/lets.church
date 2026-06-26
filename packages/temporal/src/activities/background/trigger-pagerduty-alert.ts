@@ -88,7 +88,7 @@ async function buildLinks({
         ? absoluteWebUrl(dashboardPaths.upload(channelId, uploadId))
         : null;
       if (href) {
-        out.push({ href, text: "Let's Church dashboard" });
+        out.push({ href, text: 'Media dashboard' });
       }
     } catch (err) {
       moduleLogger.warn(

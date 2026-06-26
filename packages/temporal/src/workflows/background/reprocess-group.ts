@@ -18,6 +18,7 @@ import {
   TRANSCRIBE_QUEUE,
 } from '../../queues';
 import { UPLOAD_ID_KEY } from '../../search-attributes';
+import { type LcLink, staticMeta } from '../../util/dashboard-links';
 import type { BatchStatus } from '../../util/openai-batch';
 import { probeIsVideoFile } from '../../util/zod';
 import { indexDocumentWorkflow } from './index-document';
@@ -195,6 +196,12 @@ export async function reprocessGroupWorkflow(
   // of a fresh download + ffprobe, falling back to a live probe per
   // upload when none is stored. Defaults false; reprocess flows opt in.
   skipProbe = false,
+  // Resolved dashboard deep-links keyed by upload id, built by the caller
+  // (`reprocessAllWorkflow`, where WEB_URL + each upload's channel are
+  // available) so the per-upload reindex children can carry them. Missing
+  // entries simply yield no links. Built outside the sandbox — this
+  // workflow never calls `uploadDashboardLinks` itself.
+  linksByUpload: Record<string, Array<LcLink>> = {},
 ): Promise<void> {
   if (uploadIds.length === 0) return;
 
@@ -467,6 +474,10 @@ export async function reprocessGroupWorkflow(
         taskQueue: BACKGROUND_QUEUE,
         priority: { priorityKey: PRIORITY_REPROCESS },
         typedSearchAttributes: [{ key: UPLOAD_ID_KEY, value: uploadId }],
+        ...staticMeta({
+          summary: 'Reindex media',
+          links: linksByUpload[uploadId] ?? [],
+        }),
         retry: { maximumAttempts: 2 },
       }),
     ),

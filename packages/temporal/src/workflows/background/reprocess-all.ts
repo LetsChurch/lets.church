@@ -14,6 +14,7 @@ import {
   USER_ID_KEY,
   USERNAME_KEY,
 } from '../../search-attributes';
+import { staticMeta, uploadDashboardLinks } from '../../util/dashboard-links';
 import { processMediaWorkflow } from './process-media';
 import { reprocessGroupWorkflow } from './reprocess-group';
 
@@ -56,6 +57,14 @@ export type ReprocessAllOptions = {
    * already have a video variant.
    */
   videoOnly?: boolean;
+  /**
+   * Web origin (WEB_URL) captured by the client at start time, threaded
+   * in so each per-upload `processMediaWorkflow` child can be tagged with
+   * dashboard deep-links in its User Metadata. The workflow sandbox can't
+   * read `process.env`, so this must be passed explicitly; when absent the
+   * children simply carry no links.
+   */
+  webUrl?: string;
 };
 
 export async function reprocessAllWorkflow(
@@ -65,6 +74,11 @@ export async function reprocessAllWorkflow(
   options: ReprocessAllOptions = {},
 ): Promise<void> {
   const skipProbe = options.skipProbe ?? true;
+  // Captured once so the narrowing (string vs. undefined) survives into the
+  // `.map` closure below. Only ever passed explicitly to
+  // `uploadDashboardLinks` — the process.env default it would otherwise read
+  // isn't replay-safe inside the workflow sandbox.
+  const webUrl = options.webUrl;
 
   const { items, nextCursor } = await getReprocessBatch(
     scope,
@@ -114,13 +128,35 @@ export async function reprocessAllWorkflow(
     // unbatched path.
     if (items.length > 0) {
       try {
+        // Resolve each upload's deep-links here (webUrl threaded in, channel
+        // known per item) so the group's reindex children can carry them.
+        // Keyed by upload id; empty map when webUrl wasn't provided.
+        const linksByUpload: Record<
+          string,
+          ReturnType<typeof uploadDashboardLinks>
+        > = webUrl
+          ? Object.fromEntries(
+              items.map((i) => [
+                i.id,
+                uploadDashboardLinks(i.channelId, i.id, webUrl),
+              ]),
+            )
+          : {};
         await startChild(reprocessGroupWorkflow, {
           workflowId: `reprocessGroup:${items[0]?.id ?? 'empty'}:${items.length}`,
-          args: [items.map((i) => i.id), processingScope, skipProbe],
+          args: [
+            items.map((i) => i.id),
+            processingScope,
+            skipProbe,
+            linksByUpload,
+          ],
           taskQueue: BACKGROUND_QUEUE,
           parentClosePolicy: ParentClosePolicy.ABANDON,
           priority: { priorityKey: PRIORITY_REPROCESS },
           retry: { maximumAttempts: 1 },
+          ...staticMeta({
+            summary: `Reprocess group (${processingScope}, ${items.length} uploads)`,
+          }),
           // No `typedSearchAttributes` on the group workflow itself —
           // a group spans up to 100 uploads (and many channels in the
           // `no_paragraphs` / `all` scopes), so cherry-picking
@@ -145,13 +181,20 @@ export async function reprocessAllWorkflow(
   } else {
     for (const item of items) {
       try {
+        // Build the deep-links from the explicitly-threaded webUrl (never
+        // the process.env default — that read isn't replay-safe in the
+        // sandbox). Empty when webUrl wasn't provided.
+        const links = webUrl
+          ? uploadDashboardLinks(item.channelId, item.id, webUrl)
+          : [];
         await startChild(processMediaWorkflow, {
           workflowId: `reprocessUpload:${item.id}`,
-          args: [item.id, processingScope, skipProbe],
+          args: [item.id, processingScope, skipProbe, links],
           taskQueue: BACKGROUND_QUEUE,
           parentClosePolicy: ParentClosePolicy.ABANDON,
           priority: { priorityKey: PRIORITY_REPROCESS },
           retry: { maximumAttempts: 2 },
+          ...staticMeta({ summary: `Reprocess (${processingScope})`, links }),
           typedSearchAttributes: [
             { key: UPLOAD_ID_KEY, value: item.id },
             { key: CHANNEL_ID_KEY, value: item.channelId },

@@ -276,13 +276,19 @@ export async function handleMultipartMediaUpload(
           .then((r) => r[0] ?? null)
       : null;
 
+  // Resolve the dashboard deep-links once and forward them down the
+  // processing tree (handleMultipart → processMedia → index/annotate/
+  // summarize) so every child's User Metadata carries the same links. The
+  // children run in the workflow sandbox and can't read WEB_URL themselves.
+  const dashboardLinks = uploadDashboardLinks(meta?.channelId, uploadRecordId);
+
   return startBackground('handleMultipartMediaUploadWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     workflowId: makeMultipartMediaUploadWorkflowId(s3UploadId, s3UploadKey),
     ...staticMeta({
       summary: `Upload (${postProcess})${meta ? ` — @${meta.username}` : ''}`,
-      links: uploadDashboardLinks(meta?.channelId, uploadRecordId),
+      links: dashboardLinks,
       detailLines: [
         `Upload \`${uploadRecordId}\``,
         ...(meta ? [`Channel \`${meta.channelSlug}\``] : []),
@@ -295,6 +301,7 @@ export async function handleMultipartMediaUpload(
       s3UploadKey,
       postProcess,
       meta,
+      dashboardLinks,
     ],
     typedSearchAttributes: [
       { key: UPLOAD_ID_KEY, value: uploadRecordId },
@@ -532,6 +539,19 @@ export async function importMedia(
   ...args: Parameters<typeof bg.importMediaWorkflow>
 ) {
   const { url, username, channelSlug, importSourceId } = args[0];
+
+  // Resolve the channel id from its slug and capture WEB_URL here (the
+  // workflow sandbox can read neither) so importMediaWorkflow can deep-link
+  // its processing children to the upload's dashboard page once the upload
+  // record is created.
+  const channelId = await db.query.Channel.findFirst({
+    columns: { id: true },
+    where: (t, { eq }) => eq(t.slug, channelSlug),
+  }).then((c) => c?.id ?? null);
+  const enrichedArgs: typeof args = [
+    { ...args[0], channelId, webUrl: process.env.WEB_URL },
+  ];
+
   return startBackground('importMediaWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
@@ -540,7 +560,7 @@ export async function importMedia(
       summary: `Import media — @${username}/${channelSlug}`,
       links: [{ href: url, text: 'Source media' }],
     }),
-    args,
+    args: enrichedArgs,
     workflowId: makeImportMediaWorkflowId(url),
     typedSearchAttributes: [
       { key: USERNAME_KEY, value: username },
@@ -904,7 +924,9 @@ export async function startImportSourceScheduler(importSourceId: string) {
     action: {
       type: 'startWorkflow',
       workflowType: 'scrapeAndImportWorkflow' satisfies BackgroundWorkflowName,
-      args: [importSourceId],
+      // 2nd arg (importHistory) omitted for a live scrape; 3rd is WEB_URL so
+      // imported uploads' processing children get dashboard deep-links.
+      args: [importSourceId, undefined, process.env.WEB_URL],
       taskQueue: BACKGROUND_QUEUE,
       workflowId: makeScrapeAndImportWorkflowId(
         importSource.channel.slug,
@@ -1049,7 +1071,9 @@ export async function triggerManualImport(importSourceId: string) {
       importSourceId,
       'manual',
     ),
-    args: [importSourceId],
+    // 2nd arg (importHistory) omitted for a live scrape; 3rd is WEB_URL so
+    // imported uploads' processing children get dashboard deep-links.
+    args: [importSourceId, undefined, process.env.WEB_URL],
     typedSearchAttributes: [
       { key: IMPORT_SOURCE_ID_KEY, value: importSourceId },
       { key: CHANNEL_ID_KEY, value: importSource.channel.id },
@@ -1105,7 +1129,9 @@ export async function triggerHistoricalImport(
       importSourceId,
       'historical',
     ),
-    args: [importSourceId, importHistory],
+    // 3rd arg (WEB_URL) is unused on the history-only path but kept uniform
+    // with the live-scrape starters.
+    args: [importSourceId, importHistory, process.env.WEB_URL],
     typedSearchAttributes: [
       { key: IMPORT_SOURCE_ID_KEY, value: importSourceId },
       { key: CHANNEL_ID_KEY, value: importSource.channel.id },
@@ -1224,6 +1250,10 @@ export async function startReprocess(
         dateStart: options.dateStart,
         dateEnd: options.dateEnd,
         videoOnly: options.videoOnly ?? false,
+        // Captured here (where WEB_URL is readable) so each per-upload
+        // processMedia child can carry dashboard deep-links — the workflow
+        // sandbox can't read process.env itself.
+        webUrl: process.env.WEB_URL,
       },
     ],
     typedSearchAttributes:
