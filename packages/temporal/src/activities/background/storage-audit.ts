@@ -126,6 +126,12 @@ type EntityInfo = {
   // upload-only:
   finalized?: boolean;
   transcoded?: boolean;
+  // Whether the transcode produced any video / audio rendition. Drives which
+  // HLS root playlist to expect: video uploads get `{id}/master.m3u8`,
+  // audio-only uploads get `{id}/AUDIO.m3u8` (no master is ever written for
+  // them — see the transcode activity's master-playlist guard).
+  hasVideo?: boolean;
+  hasAudio?: boolean;
 };
 
 type ExpectedKey = { key: string; subtype: string };
@@ -157,6 +163,7 @@ async function loadEntities(
       deletedAt: UploadRecord.deletedAt,
       finalized: UploadRecord.uploadFinalized,
       transcodingFinishedAt: UploadRecord.transcodingFinishedAt,
+      variants: UploadRecord.variants,
     })
     .from(UploadRecord)
     .where(sql`left(${UploadRecord.id}::text, ${len}) = ${shardPrefix}`);
@@ -166,6 +173,8 @@ async function loadEntities(
       deleted: u.deletedAt !== null,
       finalized: u.finalized,
       transcoded: u.transcodingFinishedAt !== null,
+      hasVideo: u.variants.some((v) => v.startsWith('VIDEO')),
+      hasAudio: u.variants.includes('AUDIO'),
     });
   }
 
@@ -321,9 +330,13 @@ async function loadPublicExpectations(
     addImage(u.overrideThumbnailPath);
   }
 
-  // HLS master playlist for each finalized, transcoded, live upload. Keyed
-  // `{id}/master.m3u8`, so its prefix is the upload id — already this shard
-  // (entities are id-sharded).
+  // HLS root playlist for each finalized, transcoded, live upload. Keyed under
+  // `{id}/`, so its prefix is the upload id — already this shard (entities are
+  // id-sharded). Video uploads get `master.m3u8`; audio-only uploads never get
+  // a master (the transcode activity only writes one when a VIDEO variant
+  // exists) and instead serve `AUDIO.m3u8` as the root. Uploads that finished
+  // transcoding with no variants at all (a broken transcode) have no playlist
+  // to expect here — they surface as a missing ingest prefix instead.
   for (const [id, info] of entities) {
     if (
       info.kind === 'upload' &&
@@ -331,7 +344,11 @@ async function loadPublicExpectations(
       info.finalized &&
       info.transcoded
     ) {
-      addExpectedKey(expectedKeysByPrefix, `${id}/master.m3u8`, 'master');
+      if (info.hasVideo) {
+        addExpectedKey(expectedKeysByPrefix, `${id}/master.m3u8`, 'master');
+      } else if (info.hasAudio) {
+        addExpectedKey(expectedKeysByPrefix, `${id}/AUDIO.m3u8`, 'audio');
+      }
     }
   }
 
@@ -422,15 +439,20 @@ async function auditPrefixBucket(
       }
 
       // Recursive HLS integrity for transcoded uploads (public bucket only).
+      // The root playlist is `master.m3u8` for video uploads and `AUDIO.m3u8`
+      // for audio-only ones (matching the expected-key logic above).
+      const hlsRootKey = info?.hasVideo
+        ? `${prefix}/master.m3u8`
+        : `${prefix}/AUDIO.m3u8`;
       if (
         bucket === 'PUBLIC' &&
         info?.kind === 'upload' &&
         info.transcoded &&
-        currentKeys.has(`${prefix}/master.m3u8`)
+        currentKeys.has(hlsRootKey)
       ) {
         const present = new Set(currentKeys.keys());
         const { referenced, broken } = await collectReferencedHlsKeys(
-          `${prefix}/master.m3u8`,
+          hlsRootKey,
           present,
           (key) => client.getObjectText(key),
         );

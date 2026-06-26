@@ -14,17 +14,59 @@ const xssOptions = {
 };
 
 /**
- * Sanitizes user input for safe HTML insertion
+ * Sanitizes user input for safe HTML insertion. Strips ALL markup — use this
+ * for untrusted values (usernames, free text) that are interpolated into an
+ * email body.
  */
 export function sanitizeForHtml(unsafe: string): string {
   return xss(unsafe, xssOptions);
 }
 
+// Email bodies are assembled by trusted server code and intentionally contain
+// formatting and links; only the values callers interpolate are untrusted, and
+// those are escaped with sanitizeForHtml() at the call site. So the body
+// sanitizer allows a safe subset of formatting/link tags rather than stripping
+// everything (the old `whiteList: {}` silently deleted every <a>, <br>, <b>,
+// turning links into plain text and collapsing newlines). xss still removes
+// scripts/event handlers and allow-lists href URL schemes (no javascript:).
+const emailBodyXssOptions = {
+  whiteList: {
+    a: ['href', 'target', 'rel', 'style'],
+    p: ['style'],
+    span: ['style'],
+    div: ['style'],
+    b: [],
+    strong: [],
+    i: [],
+    em: [],
+    u: [],
+    br: [],
+    h1: [],
+    h2: [],
+    h3: [],
+    ul: [],
+    ol: [],
+    li: [],
+  },
+  stripIgnoreTag: true,
+  stripIgnoreTagBody: ['script', 'style'],
+};
+
+/**
+ * Sanitizes a trusted-but-rich email body, preserving a safe subset of
+ * formatting and link tags. Do NOT pass raw untrusted input here — escape it
+ * with sanitizeForHtml() first.
+ */
+export function sanitizeEmailBody(unsafe: string): string {
+  return xss(unsafe, emailBodyXssOptions);
+}
+
 // biome-ignore lint/suspicious/noExplicitAny: mjml types are not well defined
 export function emailHtml(title: string, body: string, minifyOp = true): any {
-  // Sanitize inputs to prevent XSS
+  // Sanitize inputs to prevent XSS. The title is plain text (strip all markup);
+  // the body may contain trusted formatting/links (allow a safe tag subset).
   const safeTitle = sanitizeForHtml(title);
-  const safeBody = sanitizeForHtml(body);
+  const safeBody = sanitizeEmailBody(body);
 
   const res = mjml2html(
     {
@@ -49,8 +91,10 @@ export function emailHtml(title: string, body: string, minifyOp = true): any {
             },
             {
               tagName: 'mj-preview',
+              // Inbox snippet: strip any markup from the first block so tags
+              // don't leak into the preview text.
               attributes: {},
-              content: safeBody.split('\n\n').at(0) ?? '',
+              content: sanitizeForHtml(safeBody.split('\n\n').at(0) ?? ''),
             },
             {
               tagName: 'mj-style',

@@ -120,7 +120,7 @@ Every entry in `findings` and in `sampleFindings[type]` has this shape:
 | `ORPHAN_PREFIX`      | A top-level prefix in INGEST/PUBLIC maps to no **live** entity          | `unknown` (no DB row), `deleted-upload`, `deleted-user`, `deleted-channel`, `deleted-organization` | no (use `prefix`) | Extra files. Cleanup candidate. `deleted-*` = entity soft-deleted but objects not purged; `unknown` = no DB row at all. |
 | `ORPHAN_BACKUP_KEY`  | A BACKUP object not referenced by any `BACKED_UP` upload_state row       | (none)           | yes        | Extra files in Glacier. Cleanup candidate. |
 | `MISSING_PREFIX`     | A finalized upload has **no** objects at all in this bucket               | `upload` (always) | no (use `prefix`) | Data loss or never-uploaded. Investigate. |
-| `MISSING_KEY`        | A specific expected object key is absent                                | `original` (ingest source), `image` (avatar/cover/thumbnail — incl. slug-keyed paths), `master` (HLS master playlist), `backup` (Glacier copy) | yes | Missing file. Severity depends on subtype. |
+| `MISSING_KEY`        | A specific expected object key is absent                                | `original` (ingest source), `image` (avatar/cover/thumbnail — incl. slug-keyed paths), `master` (HLS master playlist — video uploads only), `audio` (`AUDIO.m3u8` HLS root for audio-only uploads), `backup` (Glacier copy) | yes | Missing file. Severity depends on subtype. |
 | `MISSING_HLS_SEGMENT`| An HLS playlist references a key (segment, init, or nested playlist) that isn't in the bucket | (none) | yes | **Broken playback.** High severity. |
 | `BROKEN_HLS`         | A present playlist could not be read/parsed during the recursive walk    | (none)           | yes        | Likely corrupt playlist. High severity. |
 
@@ -131,6 +131,12 @@ Notes for interpretation:
 - `MISSING_KEY:master` plus zero `MISSING_HLS_SEGMENT` for the same prefix means
   the whole HLS tree is gone (no master to walk). When a master **is** present
   but segments are not, you get `MISSING_HLS_SEGMENT` entries instead.
+- A `master.m3u8` is only ever written for uploads with a **video** variant.
+  Audio-only uploads (no `VIDEO*` variant) never have a master — they serve
+  `AUDIO.m3u8` as the HLS root, so the audit expects that key (`MISSING_KEY:audio`)
+  and walks it for segment integrity. An upload that finished transcoding with
+  **no** variants at all (a broken transcode) has no expected playlist; it only
+  shows up via its missing ingest prefix.
 - `prefix` is usually the entity id (an upload id, or a user/channel/org id),
   but for a `MISSING_KEY:image` it may be a **slug** when the image path is
   slug-keyed (e.g. `dorean-principle/avatar.png`). Use the `key` to locate the

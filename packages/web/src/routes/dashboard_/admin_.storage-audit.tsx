@@ -1,4 +1,5 @@
 import {
+  ActionIcon,
   Anchor,
   Badge,
   Button,
@@ -9,7 +10,10 @@ import {
   Stack,
   Text,
   Title,
+  Tooltip,
 } from '@mantine/core';
+import { modals } from '@mantine/modals';
+import { IconTrash } from '@tabler/icons-react';
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useTRPC } from '@/trpc/react';
@@ -89,6 +93,39 @@ function StorageAuditPage() {
     }),
   );
 
+  const deleteMutation = useMutation(
+    trpc.dashboard.admin.deleteStorageAudit.mutationOptions({
+      onSuccess: () => {
+        showSuccess({ message: 'Storage audit deleted' });
+        refetch();
+      },
+      onError: (err) => {
+        showFailure({
+          message:
+            err instanceof Error
+              ? err.message
+              : 'Failed to delete storage audit',
+        });
+      },
+    }),
+  );
+
+  const confirmDelete = (auditId: string, startedAt: Date | string) => {
+    modals.openConfirmModal({
+      title: 'Delete storage audit',
+      children: (
+        <Text size="sm">
+          Delete the audit from{' '}
+          <strong>{new Date(startedAt).toLocaleString()}</strong>? This removes
+          the run and its report files from storage. This cannot be undone.
+        </Text>
+      ),
+      labels: { confirm: 'Delete', cancel: 'Cancel' },
+      confirmProps: { color: 'red' },
+      onConfirm: () => deleteMutation.mutate({ auditId }),
+    });
+  };
+
   return (
     <Stack gap="lg">
       <div>
@@ -137,11 +174,34 @@ function StorageAuditPage() {
                       {new Date(run.startedAt).toLocaleString()}
                     </Text>
                   </Group>
-                  {run.reportUrl ? (
-                    <Anchor href={run.reportUrl} size="sm">
-                      Download full report
-                    </Anchor>
-                  ) : null}
+                  <Group gap="xs">
+                    {run.reportUrl ? (
+                      <Anchor href={run.reportUrl} size="sm">
+                        Download full report
+                      </Anchor>
+                    ) : null}
+                    <Tooltip
+                      label={
+                        run.status === 'RUNNING'
+                          ? 'Cannot delete a running audit'
+                          : 'Delete audit'
+                      }
+                    >
+                      <ActionIcon
+                        variant="subtle"
+                        color="red"
+                        aria-label="Delete audit"
+                        disabled={run.status === 'RUNNING'}
+                        loading={
+                          deleteMutation.isPending &&
+                          deleteMutation.variables?.auditId === run.id
+                        }
+                        onClick={() => confirmDelete(run.id, run.startedAt)}
+                      >
+                        <IconTrash size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                  </Group>
                 </Group>
 
                 {run.liveProgress ? (

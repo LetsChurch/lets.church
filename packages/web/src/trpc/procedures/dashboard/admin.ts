@@ -20,7 +20,10 @@ import { ingestConfig, ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { runAnnotation } from '@letschurch/temporal/activities/background/annotate-transcript';
 import { getNoSplitAudioUploadCount } from '@letschurch/temporal/activities/background/get-reprocess-batch';
-import type { StorageAuditSummary } from '@letschurch/temporal/activities/background/storage-audit';
+import {
+  AUDIT_REPORT_PREFIX,
+  type StorageAuditSummary,
+} from '@letschurch/temporal/activities/background/storage-audit';
 import { runSummary } from '@letschurch/temporal/activities/background/summarize-upload';
 import {
   BACKGROUND_QUEUE,
@@ -4787,6 +4790,58 @@ export const adminRouter = router({
         'Started storage audit',
       );
       return { success: true, auditId: row.id };
+    }),
+
+  deleteStorageAudit: adminProcedure
+    .input(z.object({ auditId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const [row] = await db
+        .select({ id: StorageAudit.id, status: StorageAudit.status })
+        .from(StorageAudit)
+        .where(eq(StorageAudit.id, input.auditId))
+        .limit(1);
+      if (!row) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Storage audit not found',
+        });
+      }
+      if (row.status === 'RUNNING') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Cannot delete a storage audit while it is running',
+        });
+      }
+
+      // Remove the report artifacts (combined report + per-shard detail) under
+      // `_audits/{auditId}/` in the ingest bucket. Best-effort: if the objects
+      // are already gone (or S3 errors), still delete the DB row so the run can
+      // be cleared from the admin list — log the failure for follow-up.
+      try {
+        await ingestS3.deletePrefix(`${AUDIT_REPORT_PREFIX}/${input.auditId}/`);
+      } catch (error) {
+        moduleLogger.warn(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              auditId: input.auditId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to delete storage audit report objects from S3',
+        );
+      }
+
+      await db.delete(StorageAudit).where(eq(StorageAudit.id, input.auditId));
+
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: { auditId: input.auditId },
+        },
+        'Deleted storage audit',
+      );
+      return { success: true };
     }),
 
   // Reprocess procedures
