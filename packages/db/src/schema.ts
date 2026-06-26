@@ -897,12 +897,7 @@ export const UploadRecord = pgTable(
     //   transcodeEncoder — 'libx264' (software) or 'h264_ama' (MA35
     //     hardware); null for uploads transcoded before this was tracked
     //     (their encoder is genuinely unknown).
-    //   splitAudio — true when audio is a separate fMP4 rendition
-    //     referenced by the master playlist (#EXT-X-MEDIA); false when
-    //     muxed into the video segments. Defaults false: every upload
-    //     predating the split-audio pipeline was muxed.
     transcodeEncoder: TranscodeEncoder('transcode_encoder'),
-    splitAudio: boolean('split_audio').notNull().default(false),
     // Display summary (frontend Summary tab). Populated by the summarize-upload
     // activity after transcript paragraphs land.
     summary: text('summary'),
@@ -949,31 +944,6 @@ export const UploadRecord = pgTable(
     })
       .onDelete('set null')
       .onUpdate('cascade'),
-  }),
-);
-
-export const UploadRecordDownloadSize = pgTable(
-  'upload_record_download_size',
-  {
-    uploadRecordId: uuid('upload_record_id').notNull(),
-    variant: UploadVariant('variant').notNull(),
-    bytes: bigint('size_bytes', { mode: 'bigint' }).notNull(),
-  },
-  (UploadRecordDownloadSize) => ({
-    upload_record_download_size_uploadRecord_fkey: foreignKey({
-      name: 'upload_record_download_size_uploadRecord_fkey',
-      columns: [UploadRecordDownloadSize.uploadRecordId],
-      foreignColumns: [UploadRecord.id],
-    })
-      .onDelete('cascade')
-      .onUpdate('cascade'),
-    UploadRecordDownloadSize_cpk: primaryKey({
-      name: 'UploadRecordDownloadSize_cpk',
-      columns: [
-        UploadRecordDownloadSize.uploadRecordId,
-        UploadRecordDownloadSize.variant,
-      ],
-    }),
   }),
 );
 
@@ -1912,9 +1882,6 @@ export const UploadRecordRelations = relations(
     userComments: many(UploadUserComment, {
       relationName: 'UploadRecordToUploadUserComment',
     }),
-    downloadSizes: many(UploadRecordDownloadSize, {
-      relationName: 'UploadRecordToUploadRecordDownloadSize',
-    }),
     uploadViews: many(UploadView, {
       relationName: 'UploadRecordToUploadView',
     }),
@@ -1932,17 +1899,6 @@ export const UploadRecordRelations = relations(
     }),
     importHistory: many(ImportHistory, {
       relationName: 'ImportHistoryToUploadRecord',
-    }),
-  }),
-);
-
-export const UploadRecordDownloadSizeRelations = relations(
-  UploadRecordDownloadSize,
-  ({ one }) => ({
-    uploadRecord: one(UploadRecord, {
-      relationName: 'UploadRecordToUploadRecordDownloadSize',
-      fields: [UploadRecordDownloadSize.uploadRecordId],
-      references: [UploadRecord.id],
     }),
   }),
 );

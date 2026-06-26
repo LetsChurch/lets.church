@@ -1,4 +1,3 @@
-import type { UploadVariant } from '@letschurch/db';
 import { Client, Connection, type WorkflowOptions } from '@temporalio/client';
 import PLazy from 'p-lazy';
 import waitOn from 'wait-on';
@@ -11,13 +10,11 @@ import logger from '../util/logger';
 import {
   makeCreateUploadRecordWorkflowId,
   makeIndexDocumentWorkflowId,
-  makeRecordDownloadSizeWorkflowId,
   makeUpdateUploadRecordWorkflowId,
 } from '../workflow-ids';
 import {
   createUploadRecordWorkflow,
   indexDocumentWorkflow,
-  recordDownloadSizeWorkflow,
   updateUploadRecordSignal,
   updateUploadRecordWorkflow,
 } from '../workflows/background';
@@ -127,23 +124,6 @@ export async function updateUploadRecord(
     typedSearchAttributes: [{ key: UPLOAD_ID_KEY, value: uploadRecordId }],
     retry: {
       maximumAttempts: 8,
-    },
-  });
-}
-
-export async function recordDownloadSize(
-  uploadRecordId: string,
-  variant: (typeof UploadVariant.enumValues)[number],
-  bytes: number,
-) {
-  return (await client).workflow.start(recordDownloadSizeWorkflow, {
-    taskQueue: BACKGROUND_QUEUE,
-    ...staticMeta({ summary: `Record download size (${variant})` }),
-    workflowId: makeRecordDownloadSizeWorkflowId(uploadRecordId, variant),
-    args: [uploadRecordId, variant, bytes],
-    typedSearchAttributes: [{ key: UPLOAD_ID_KEY, value: uploadRecordId }],
-    retry: {
-      maximumAttempts: 5,
     },
   });
 }

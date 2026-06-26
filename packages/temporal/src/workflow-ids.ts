@@ -61,15 +61,6 @@ export function makeAnnotateTranscriptWorkflowId(uploadRecordId: string) {
   return `annotateTranscript:${uploadRecordId}`;
 }
 
-export function makeRecordDownloadSizeWorkflowId(
-  uploadRecordId: string,
-  variant?: string,
-) {
-  return variant
-    ? `recordDownloadSize:${uploadRecordId}:${variant}`
-    : `recordDownloadSize:${uploadRecordId}`;
-}
-
 export function makeUploadWorkflowId(s3UploadKey: string) {
   return `upload:${s3UploadKey}`;
 }

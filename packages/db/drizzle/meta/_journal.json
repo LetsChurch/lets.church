@@ -113,6 +113,20 @@
       "when": 1781747761259,
       "tag": "0015_oidc",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1782489721158,
+      "tag": "0016_drop_upload_record_download_size",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1782491361877,
+      "tag": "0017_drop_split_audio",
+      "breakpoints": true
     }
   ]
 }

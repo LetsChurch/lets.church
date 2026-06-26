@@ -147,19 +147,6 @@ function buildWhere(
       ...extra,
     );
   }
-  if (scope.kind === 'no_split_audio') {
-    // Video uploads still serving muxed audio. `splitAudio` defaults
-    // false for everything predating the split-audio pipeline, so gate
-    // on a video variant to exclude audio-only uploads (which can never
-    // gain split audio).
-    return and(
-      finished,
-      eq(UploadRecord.splitAudio, false),
-      arrayOverlaps(UploadRecord.variants, VIDEO_VARIANTS),
-      afterCursor,
-      ...extra,
-    );
-  }
   if (scope.kind === 'channel') {
     return and(
       eq(UploadRecord.channelId, scope.channelId),
@@ -225,13 +212,5 @@ export async function getNoParagraphsUploadCount(): Promise<number> {
     .select({ count: count() })
     .from(UploadRecord)
     .where(buildWhere({ kind: 'no_paragraphs' }));
-  return result?.count ?? 0;
-}
-
-export async function getNoSplitAudioUploadCount(): Promise<number> {
-  const [result] = await db
-    .select({ count: count() })
-    .from(UploadRecord)
-    .where(buildWhere({ kind: 'no_split_audio' }));
   return result?.count ?? 0;
 }

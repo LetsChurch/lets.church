@@ -1386,7 +1386,6 @@ export const channelRouter = router({
           transcribingStartedAt: true,
           pipelineVersion: true,
           transcodeEncoder: true,
-          splitAudio: true,
         },
         with: {
           featuredUpload: {
@@ -1466,7 +1465,6 @@ export const channelRouter = router({
         transcribingStartedAt,
         pipelineVersion,
         transcodeEncoder,
-        splitAudio,
         ...uploadRest
       } = upload;
       const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
@@ -1527,7 +1525,6 @@ export const channelRouter = router({
             lengthSeconds,
             pipelineVersion,
             transcodeEncoder,
-            splitAudio,
             variants,
             finalizedUploadKey: upload.finalizedUploadKey,
             transcodingStartedAt,

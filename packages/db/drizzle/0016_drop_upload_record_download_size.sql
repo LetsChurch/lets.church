@@ -1,0 +1,1 @@
+DROP TABLE "upload_record_download_size" CASCADE;

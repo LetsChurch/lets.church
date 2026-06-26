@@ -98,7 +98,6 @@ export {
   type ProcessLlmBatchOutputArgs,
   type ProcessLlmBatchOutputResult,
 } from './process-llm-batch-output';
-export { default as recordDownloadSize } from './record-download-size';
 export {
   getReindexCount,
   type ReindexBatchResult,

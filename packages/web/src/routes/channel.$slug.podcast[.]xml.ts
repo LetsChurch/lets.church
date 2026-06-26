@@ -1,17 +1,11 @@
-import { db, UploadRecordDownloadSize } from '@letschurch/db';
+import { db } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
-import { CURRENT_PIPELINE_VERSION } from '@letschurch/temporal/queues';
 import { createFileRoute } from '@tanstack/react-router';
-import { and, eq, inArray } from 'drizzle-orm';
 import { Podcast } from 'podcast';
 import { idTranslator } from '@/schemas/common';
 import { podcastImage } from '@/util/image-sizes';
 import logger from '@/util/logger';
-import {
-  getPublicImageUrl,
-  getPublicMediaUrl,
-  makeDownloadServiceUrl,
-} from '@/util/server-env';
+import { getPublicImageUrl, makeDownloadServiceUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { escapeHtml } from '@/util/xss';
 
@@ -131,51 +125,20 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
               defaultThumbnailPath: true,
               overrideThumbnailPath: true,
               variants: true,
-              pipelineVersion: true,
               lengthSeconds: true,
             },
             orderBy: (t, { desc }) => desc(t.publishedAt),
             limit: 500,
           });
 
-          // Include uploads with either AUDIO_DOWNLOAD (legacy) or AUDIO (current) variant
-          const audioUploads = uploads.filter(
-            (u) =>
-              u.variants.includes('AUDIO_DOWNLOAD') ||
-              u.variants.includes('AUDIO'),
-          );
-
-          // Fetch download sizes for legacy uploads that have them
-          const oldFormatIds = audioUploads
-            .filter((u) => u.pipelineVersion < CURRENT_PIPELINE_VERSION)
-            .map((u) => u.id);
-          const downloadSizes =
-            oldFormatIds.length > 0
-              ? await db
-                  .select({
-                    uploadRecordId: UploadRecordDownloadSize.uploadRecordId,
-                    bytes: UploadRecordDownloadSize.bytes,
-                  })
-                  .from(UploadRecordDownloadSize)
-                  .where(
-                    and(
-                      inArray(
-                        UploadRecordDownloadSize.uploadRecordId,
-                        oldFormatIds,
-                      ),
-                      eq(UploadRecordDownloadSize.variant, 'AUDIO_DOWNLOAD'),
-                    ),
-                  )
-              : [];
-
-          const downloadSizeMap = new Map(
-            downloadSizes.map((d) => [d.uploadRecordId, d.bytes]),
+          // Only uploads with an AUDIO HLS variant can be served by the
+          // download service.
+          const audioUploads = uploads.filter((u) =>
+            u.variants.includes('AUDIO'),
           );
 
           // Add items to feed
           for (const upload of audioUploads) {
-            const isLegacyPipeline =
-              upload.pipelineVersion < CURRENT_PIPELINE_VERSION;
             const thumbnailUrl = resolveThumbnailUrl({
               overrideThumbnailPath: upload.overrideThumbnailPath,
               defaultThumbnailPath: upload.defaultThumbnailPath,
@@ -192,19 +155,15 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
               /[^\w\s.-]/g,
               '_',
             );
-            const audioDownloadUrl = isLegacyPipeline
-              ? getPublicMediaUrl(`${upload.id}/AUDIO_DOWNLOAD.m4a`)
-              : await makeDownloadServiceUrl(
-                  upload.id,
-                  'AUDIO',
-                  `${baseFilename}.m4a`,
-                );
+            const audioDownloadUrl = await makeDownloadServiceUrl(
+              upload.id,
+              'AUDIO',
+              `${baseFilename}.m4a`,
+            );
 
-            const sizeBytes = isLegacyPipeline
-              ? downloadSizeMap.has(upload.id)
-                ? Number(downloadSizeMap.get(upload.id)?.valueOf())
-                : 0
-              : Math.ceil((upload.lengthSeconds ?? 0) * 24000);
+            // The download service transcodes on the fly, so we don't know the
+            // exact byte size up front — estimate from duration at ~192kbps.
+            const sizeBytes = Math.ceil((upload.lengthSeconds ?? 0) * 24000);
 
             const content = [
               thumbnailUrl

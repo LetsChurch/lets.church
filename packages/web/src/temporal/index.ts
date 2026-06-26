@@ -4,7 +4,6 @@ import {
   ChannelImportSource,
   db,
   UploadRecord,
-  type UploadVariant,
 } from '@letschurch/db';
 import type { S3ClientId } from '@letschurch/s3';
 import type {
@@ -32,7 +31,6 @@ import {
   makeInvitationEmailWorkflowId,
   makePostUserRegistrationWorkflowId,
   makeProcessMediaWorkflowId,
-  makeRecordDownloadSizeWorkflowId,
   makeReprocessAllWorkflowId,
   makeResetPasswordWorkflowId,
   makeScrapeAndImportWorkflowId,
@@ -188,7 +186,6 @@ export {
   makePostUserRegistrationWorkflowId,
   makeAnnotateTranscriptWorkflowId,
   makeProcessMediaWorkflowId,
-  makeRecordDownloadSizeWorkflowId,
   makeResetPasswordWorkflowId,
   makeScrapeAndImportWorkflowId,
   makeSummarizeUploadWorkflowId,
@@ -342,23 +339,6 @@ export async function updateUploadRecord(
     args: [uploadRecordId],
     signal: updateUploadRecordSignal,
     signalArgs: [data],
-    typedSearchAttributes: [{ key: UPLOAD_ID_KEY, value: uploadRecordId }],
-    retry: {
-      maximumAttempts: 8,
-    },
-  });
-}
-
-export async function recordDownloadSize(
-  uploadRecordId: string,
-  variant: (typeof UploadVariant)['enumValues'][number],
-  bytes: number,
-) {
-  return startBackground('recordDownloadSizeWorkflow', {
-    taskQueue: BACKGROUND_QUEUE,
-    ...staticMeta({ summary: `Record download size (${variant})` }),
-    workflowId: makeRecordDownloadSizeWorkflowId(uploadRecordId, variant),
-    args: [uploadRecordId, variant, bytes],
     typedSearchAttributes: [{ key: UPLOAD_ID_KEY, value: uploadRecordId }],
     retry: {
       maximumAttempts: 8,

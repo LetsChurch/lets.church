@@ -403,12 +403,6 @@ export default async function transcode(
       transcodingFinishedAt: new Date(),
       // Record how this transcode encoded the upload (see schema).
       transcodeEncoder: HW_ACCEL.startsWith('ama:') ? 'h264_ama' : 'libx264',
-      // Current pipeline emits a separate audio rendition whenever the
-      // upload has both video and audio; audio-only / video-only have
-      // nothing to split.
-      splitAudio:
-        variants.some((v) => v.startsWith('VIDEO')) &&
-        variants.includes('AUDIO'),
     });
   } catch (e) {
     activityLogger

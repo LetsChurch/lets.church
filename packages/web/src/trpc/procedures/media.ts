@@ -16,7 +16,6 @@ import {
 import { client } from '@letschurch/elasticsearch';
 import { getPublicUrlWithFilename } from '@letschurch/s3';
 import { publicS3 } from '@letschurch/s3/public';
-import { CURRENT_PIPELINE_VERSION } from '@letschurch/temporal/queues';
 import { xxh64 } from '@node-rs/xxhash';
 import { getRequest } from '@tanstack/react-start/server';
 import { TRPCError } from '@trpc/server';
@@ -203,7 +202,6 @@ export const mediaProcedures = {
           defaultThumbnailPath: true,
           overrideThumbnailPath: true,
           variants: true,
-          pipelineVersion: true,
           probe: true,
           userCommentsEnabled: true,
           downloadsEnabled: true,
@@ -283,7 +281,6 @@ export const mediaProcedures = {
         overrideThumbnailPath,
         channel,
         variants,
-        pipelineVersion,
         downloadsEnabled,
         transcribingFinishedAt,
         ...mediaRest
@@ -476,163 +473,88 @@ export const mediaProcedures = {
 
       if (downloadsEnabled) {
         const baseFilename = mediaRest.title ?? `media_${media.id}`;
-        const isLegacyPipeline = pipelineVersion < CURRENT_PIPELINE_VERSION;
-
         const downloadPromises: Array<Promise<void>> = [];
 
-        if (isLegacyPipeline) {
-          // Old format: serve presigned S3 URLs for pre-generated files
-          const legacyVideoVariantOrder = [
-            'VIDEO_4K_DOWNLOAD',
-            'VIDEO_1080P_DOWNLOAD',
-            'VIDEO_720P_DOWNLOAD',
-            'VIDEO_480P_DOWNLOAD',
-          ];
-          const availableLegacyVideoVariants = variants.filter((v) =>
-            legacyVideoVariantOrder.includes(v),
+        // Signed download service URLs (HLS transcoded to MP4/m4a on the fly)
+        type VideoEntry = {
+          kind: MediaDownloadKind;
+          label: string;
+          variant: string;
+          ext: string;
+          quality: string;
+        };
+
+        const allVideoResolutionEntries: Array<VideoEntry> = [
+          {
+            kind: 'VIDEO_4K',
+            label: '4k Video',
+            variant: 'VIDEO_4K',
+            ext: 'mp4',
+            quality: '4k',
+          },
+          {
+            kind: 'VIDEO_1080P',
+            label: '1080p Video',
+            variant: 'VIDEO_1080P',
+            ext: 'mp4',
+            quality: '1080p',
+          },
+          {
+            kind: 'VIDEO_720P',
+            label: '720p Video',
+            variant: 'VIDEO_720P',
+            ext: 'mp4',
+            quality: '720p',
+          },
+          {
+            kind: 'VIDEO_480P',
+            label: '480p Video',
+            variant: 'VIDEO_480P',
+            ext: 'mp4',
+            quality: '480p',
+          },
+        ];
+
+        // Only offer 4K/1080p for download; if neither is available, fall back to the highest available resolution
+        const availableVideoResolutionEntries =
+          allVideoResolutionEntries.filter((e) =>
+            variants.includes(e.variant as (typeof variants)[number]),
           );
-          const highQualityLegacyVariants = availableLegacyVideoVariants.filter(
-            (v) => v === 'VIDEO_4K_DOWNLOAD' || v === 'VIDEO_1080P_DOWNLOAD',
-          );
-          const allowedLegacyVideoVariants = new Set(
-            highQualityLegacyVariants.length > 0
-              ? highQualityLegacyVariants
-              : availableLegacyVideoVariants.slice(0, 1),
-          );
+        const highQualityVideoEntries = availableVideoResolutionEntries.filter(
+          (e) => e.kind === 'VIDEO_4K' || e.kind === 'VIDEO_1080P',
+        );
+        const filteredVideoResolutionEntries =
+          highQualityVideoEntries.length > 0
+            ? highQualityVideoEntries
+            : availableVideoResolutionEntries.slice(0, 1);
 
-          for (const variant of variants) {
-            if (
-              variant.endsWith('_DOWNLOAD') &&
-              !variant.includes('360P') // TODO: remove 360P, see ffmpeg.ts
-            ) {
-              if (
-                legacyVideoVariantOrder.includes(variant) &&
-                !allowedLegacyVideoVariants.has(variant)
-              ) {
-                continue;
-              }
-              const ext = variant.startsWith('VIDEO') ? 'mp4' : 'm4a';
-              let kind: MediaDownloadKind = 'AUDIO';
-              let label = 'Audio';
-              let quality = '';
+        const videoEntries: Array<VideoEntry> = [
+          ...filteredVideoResolutionEntries,
+          {
+            kind: 'AUDIO',
+            label: 'Audio',
+            variant: 'AUDIO',
+            ext: 'm4a',
+            quality: '',
+          },
+        ];
 
-              if (variant === 'VIDEO_4K_DOWNLOAD') {
-                kind = 'VIDEO_4K';
-                label = '4k Video';
-                quality = '4k';
-              } else if (variant === 'VIDEO_1080P_DOWNLOAD') {
-                kind = 'VIDEO_1080P';
-                label = '1080p Video';
-                quality = '1080p';
-              } else if (variant === 'VIDEO_720P_DOWNLOAD') {
-                kind = 'VIDEO_720P';
-                label = '720p Video';
-                quality = '720p';
-              } else if (variant === 'VIDEO_480P_DOWNLOAD') {
-                kind = 'VIDEO_480P';
-                label = '480p Video';
-                quality = '480p';
-              }
-
-              const filename = quality
-                ? `${baseFilename} ${quality}.${ext}`
-                : `${baseFilename}.${ext}`;
-              const key = `${media.id}/${variant}.${ext}`;
-
-              downloadPromises.push(
-                getPublicUrlWithFilename(publicS3, key, filename).then(
-                  (url) => {
-                    downloadUrls.push({ kind, label, url });
-                  },
-                ),
-              );
-            }
+        for (const entry of videoEntries) {
+          if (!variants.includes(entry.variant as (typeof variants)[number])) {
+            continue;
           }
-        } else {
-          // New format: signed download service URLs
-          type VideoEntry = {
-            kind: MediaDownloadKind;
-            label: string;
-            variant: string;
-            ext: string;
-            quality: string;
-          };
-
-          const allVideoResolutionEntries: Array<VideoEntry> = [
-            {
-              kind: 'VIDEO_4K',
-              label: '4k Video',
-              variant: 'VIDEO_4K',
-              ext: 'mp4',
-              quality: '4k',
-            },
-            {
-              kind: 'VIDEO_1080P',
-              label: '1080p Video',
-              variant: 'VIDEO_1080P',
-              ext: 'mp4',
-              quality: '1080p',
-            },
-            {
-              kind: 'VIDEO_720P',
-              label: '720p Video',
-              variant: 'VIDEO_720P',
-              ext: 'mp4',
-              quality: '720p',
-            },
-            {
-              kind: 'VIDEO_480P',
-              label: '480p Video',
-              variant: 'VIDEO_480P',
-              ext: 'mp4',
-              quality: '480p',
-            },
-          ];
-
-          // Only offer 4K/1080p for download; if neither is available, fall back to the highest available resolution
-          const availableVideoResolutionEntries =
-            allVideoResolutionEntries.filter((e) =>
-              variants.includes(e.variant as (typeof variants)[number]),
-            );
-          const highQualityVideoEntries =
-            availableVideoResolutionEntries.filter(
-              (e) => e.kind === 'VIDEO_4K' || e.kind === 'VIDEO_1080P',
-            );
-          const filteredVideoResolutionEntries =
-            highQualityVideoEntries.length > 0
-              ? highQualityVideoEntries
-              : availableVideoResolutionEntries.slice(0, 1);
-
-          const videoEntries: Array<VideoEntry> = [
-            ...filteredVideoResolutionEntries,
-            {
-              kind: 'AUDIO',
-              label: 'Audio',
-              variant: 'AUDIO',
-              ext: 'm4a',
-              quality: '',
-            },
-          ];
-
-          for (const entry of videoEntries) {
-            if (
-              !variants.includes(entry.variant as (typeof variants)[number])
-            ) {
-              continue;
-            }
-            const filename = entry.quality
-              ? `${baseFilename} ${entry.quality}.${entry.ext}`
-              : `${baseFilename}.${entry.ext}`;
-            downloadUrls.push({
-              kind: entry.kind,
-              label: entry.label,
-              url: await makeDownloadServiceUrl(
-                media.id,
-                entry.variant,
-                filename,
-              ),
-            });
-          }
+          const filename = entry.quality
+            ? `${baseFilename} ${entry.quality}.${entry.ext}`
+            : `${baseFilename}.${entry.ext}`;
+          downloadUrls.push({
+            kind: entry.kind,
+            label: entry.label,
+            url: await makeDownloadServiceUrl(
+              media.id,
+              entry.variant,
+              filename,
+            ),
+          });
         }
 
         // Add transcript downloads only if transcription completed

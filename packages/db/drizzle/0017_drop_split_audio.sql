@@ -1,0 +1,1 @@
+ALTER TABLE "upload_record" DROP COLUMN "split_audio";

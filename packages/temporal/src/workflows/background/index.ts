@@ -49,7 +49,6 @@ export { indexDocumentWorkflow } from './index-document';
 export { postUserRegistrationWorkflow } from './post-user-registration';
 export { processImageWorkflow } from './process-image';
 export { processMediaWorkflow } from './process-media';
-export { recordDownloadSizeWorkflow } from './record-download-size';
 export {
   getReindexProgressQuery,
   type ReindexWorkflowParams,

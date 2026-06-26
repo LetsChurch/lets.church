@@ -19,7 +19,6 @@ import {
 import { ingestConfig, ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { runAnnotation } from '@letschurch/temporal/activities/background/annotate-transcript';
-import { getNoSplitAudioUploadCount } from '@letschurch/temporal/activities/background/get-reprocess-batch';
 import {
   AUDIT_REPORT_PREFIX,
   type StorageAuditSummary,
@@ -4847,45 +4846,35 @@ export const adminRouter = router({
   // Reprocess procedures
 
   getReprocessStatus: adminProcedure.query(async () => {
-    const [
-      noParagraphsCount,
-      noSplitAudioCount,
-      noParagraphsStatus,
-      noSplitAudioStatus,
-      allStatus,
-    ] = await Promise.all([
-      // Uploads with no rows in `transcript_paragraph`. Matches the
-      // get-reprocess-batch helper's filter — counted here directly
-      // (rather than calling the helper) so we don't have to spin up
-      // the temporal activity client for a count-only read.
-      db
-        .select({ cnt: count() })
-        .from(UploadRecord)
-        .where(
-          and(
-            isNotNull(UploadRecord.transcodingFinishedAt),
-            notExists(
-              db
-                .select({ one: sql<number>`1` })
-                .from(TranscriptParagraph)
-                .where(eq(TranscriptParagraph.uploadRecordId, UploadRecord.id)),
+    const [noParagraphsCount, noParagraphsStatus, allStatus] =
+      await Promise.all([
+        // Uploads with no rows in `transcript_paragraph`. Matches the
+        // get-reprocess-batch helper's filter — counted here directly
+        // (rather than calling the helper) so we don't have to spin up
+        // the temporal activity client for a count-only read.
+        db
+          .select({ cnt: count() })
+          .from(UploadRecord)
+          .where(
+            and(
+              isNotNull(UploadRecord.transcodingFinishedAt),
+              notExists(
+                db
+                  .select({ one: sql<number>`1` })
+                  .from(TranscriptParagraph)
+                  .where(
+                    eq(TranscriptParagraph.uploadRecordId, UploadRecord.id),
+                  ),
+              ),
             ),
-          ),
-        )
-        .then((r) => r[0]?.cnt ?? 0),
-      // Video uploads still serving muxed audio (no split-audio
-      // rendition). Counted via the get-reprocess-batch helper so the
-      // video-variant filter stays in lock-step with the batch query.
-      getNoSplitAudioUploadCount(),
-      getReprocessWorkflowStatus({ kind: 'no_paragraphs' }),
-      getReprocessWorkflowStatus({ kind: 'no_split_audio' }),
-      getReprocessWorkflowStatus({ kind: 'all' }),
-    ]);
+          )
+          .then((r) => r[0]?.cnt ?? 0),
+        getReprocessWorkflowStatus({ kind: 'no_paragraphs' }),
+        getReprocessWorkflowStatus({ kind: 'all' }),
+      ]);
     return {
       noParagraphsCount,
-      noSplitAudioCount,
       noParagraphsStatus,
-      noSplitAudioStatus,
       allStatus,
     };
   }),
@@ -4895,7 +4884,6 @@ export const adminRouter = router({
       z.object({
         scope: z.discriminatedUnion('kind', [
           z.object({ kind: z.literal('no_paragraphs') }),
-          z.object({ kind: z.literal('no_split_audio') }),
           z.object({ kind: z.literal('all') }),
           z.object({ kind: z.literal('channel'), channelSlug: z.string() }),
         ]),
@@ -5020,7 +5008,6 @@ export const adminRouter = router({
       z.object({
         scope: z.discriminatedUnion('kind', [
           z.object({ kind: z.literal('no_paragraphs') }),
-          z.object({ kind: z.literal('no_split_audio') }),
           z.object({ kind: z.literal('all') }),
           z.object({ kind: z.literal('channel'), channelSlug: z.string() }),
         ]),

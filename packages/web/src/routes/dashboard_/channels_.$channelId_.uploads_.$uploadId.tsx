@@ -1501,7 +1501,6 @@ function ChannelUploadPage() {
                 [
                   ['Upload ID', uploadId],
                   ['Encoder', upload.debug.transcodeEncoder ?? 'unknown'],
-                  ['Split audio', upload.debug.splitAudio ? 'Yes' : 'No'],
                   ['Pipeline version', String(upload.debug.pipelineVersion)],
                   ['Variants', upload.debug.variants.join(', ') || '—'],
                   [

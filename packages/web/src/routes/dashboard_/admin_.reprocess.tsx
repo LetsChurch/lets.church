@@ -82,10 +82,6 @@ function ReprocessPage() {
   // change.
   const [noParagraphsProcessingScope, setNoParagraphsProcessingScope] =
     useState<ProcessingScope>('transcribe');
-  // Split audio is produced during transcode, so this block defaults to
-  // `transcode`.
-  const [noSplitAudioProcessingScope, setNoSplitAudioProcessingScope] =
-    useState<ProcessingScope>('transcode');
   const [channelProcessingScope, setChannelProcessingScope] =
     useState<ProcessingScope>('transcode');
   const [allProcessingScope, setAllProcessingScope] =
@@ -100,8 +96,6 @@ function ReprocessPage() {
   // all-uploads) where the 50% cost saving matters most; the targeted
   // by-channel flow defaults OFF.
   const [noParagraphsViaBatch, setNoParagraphsViaBatch] = useState(true);
-  // Transcode-driven flow; batch only matters for transcribe scopes.
-  const [noSplitAudioViaBatch, setNoSplitAudioViaBatch] = useState(false);
   const [channelViaBatch, setChannelViaBatch] = useState(false);
   const [allViaBatch, setAllViaBatch] = useState(true);
 
@@ -109,7 +103,6 @@ function ReprocessPage() {
   // the probe captured on the first run instead of re-downloading +
   // re-probing. Falls back to a live probe per-upload when none stored.
   const [noParagraphsSkipProbe, setNoParagraphsSkipProbe] = useState(true);
-  const [noSplitAudioSkipProbe, setNoSplitAudioSkipProbe] = useState(true);
   const [channelSkipProbe, setChannelSkipProbe] = useState(true);
   const [allSkipProbe, setAllSkipProbe] = useState(true);
 
@@ -131,9 +124,7 @@ function ReprocessPage() {
     refetchInterval: (query) => {
       const d = query.state.data;
       if (!d) return false;
-      return d.noParagraphsStatus === 'running' ||
-        d.noSplitAudioStatus === 'running' ||
-        d.allStatus === 'running'
+      return d.noParagraphsStatus === 'running' || d.allStatus === 'running'
         ? 3000
         : false;
     },
@@ -275,100 +266,6 @@ function ReprocessPage() {
             >
               {status.noParagraphsCount === 0
                 ? 'All uploads have paragraphs'
-                : 'Start migration'}
-            </Button>
-          )}
-        </Stack>
-      </Card>
-
-      {/* Split audio migration */}
-      <Card withBorder>
-        <Stack gap="sm">
-          <Group justify="space-between">
-            <div>
-              <Text fw={600}>Split Audio</Text>
-              <Text size="sm" c="dimmed">
-                Video uploads whose audio is still muxed into the video segments
-                — they predate the split-audio transcode pipeline (which serves
-                audio as a separate fMP4 rendition). Run a transcode to give
-                them a split-audio rendition. Audio-only uploads are excluded.
-              </Text>
-            </div>
-            {statusBadge(status.noSplitAudioStatus)}
-          </Group>
-
-          <Group>
-            <Text size="sm" c="dimmed">
-              Remaining:
-            </Text>
-            <Text size="sm" fw={500}>
-              {status.noSplitAudioCount.toLocaleString()} uploads
-            </Text>
-          </Group>
-
-          <SegmentedControl
-            size="xs"
-            value={noSplitAudioProcessingScope}
-            onChange={(v) =>
-              setNoSplitAudioProcessingScope(v as ProcessingScope)
-            }
-            data={processingScopeData}
-            disabled={status.noSplitAudioStatus === 'running'}
-          />
-
-          <Checkbox
-            size="xs"
-            label="Use OpenAI Batch API (50% cost, ~24h SLA per group of 100)"
-            checked={noSplitAudioViaBatch}
-            onChange={(e) => setNoSplitAudioViaBatch(e.currentTarget.checked)}
-            disabled={
-              status.noSplitAudioStatus === 'running' ||
-              noSplitAudioProcessingScope === 'transcode'
-            }
-          />
-
-          <Checkbox
-            size="xs"
-            label="Skip probe (reuse stored metadata)"
-            checked={noSplitAudioSkipProbe}
-            onChange={(e) => setNoSplitAudioSkipProbe(e.currentTarget.checked)}
-            disabled={status.noSplitAudioStatus === 'running'}
-          />
-
-          {status.noSplitAudioStatus === 'running' ? (
-            <Button
-              size="xs"
-              color="red"
-              variant="light"
-              loading={
-                cancelMutation.isPending &&
-                cancelMutation.variables?.scope.kind === 'no_split_audio'
-              }
-              onClick={() =>
-                cancelMutation.mutate({ scope: { kind: 'no_split_audio' } })
-              }
-            >
-              Cancel
-            </Button>
-          ) : (
-            <Button
-              size="xs"
-              disabled={status.noSplitAudioCount === 0}
-              loading={
-                startMutation.isPending &&
-                startMutation.variables?.scope.kind === 'no_split_audio'
-              }
-              onClick={() =>
-                startMutation.mutate({
-                  scope: { kind: 'no_split_audio' },
-                  processingScope: noSplitAudioProcessingScope,
-                  viaBatch: noSplitAudioViaBatch,
-                  skipProbe: noSplitAudioSkipProbe,
-                })
-              }
-            >
-              {status.noSplitAudioCount === 0
-                ? 'All video uploads have split audio'
                 : 'Start migration'}
             </Button>
           )}
