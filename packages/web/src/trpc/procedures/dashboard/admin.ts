@@ -29,6 +29,10 @@ import {
 } from '@letschurch/temporal/queues';
 import { UPLOAD_ID_KEY } from '@letschurch/temporal/search-attributes';
 import {
+  staticMeta,
+  uploadDashboardLinks,
+} from '@letschurch/temporal/util/dashboard-links';
+import {
   ANNOTATE_MODEL,
   EMBED_MODEL,
   SUMMARY_MODEL,
@@ -928,6 +932,7 @@ export const adminRouter = router({
       try {
         const workflowHandle = await startBackground('deleteChannelWorkflow', {
           taskQueue: BACKGROUND_QUEUE,
+          ...staticMeta({ summary: `Delete channel — ${input.channelName}` }),
           workflowId: `deleteChannel:${input.channelId}:${Date.now()}`,
           args: [input.channelId, input.channelName],
           retry: { maximumAttempts: 5 },
@@ -1520,6 +1525,9 @@ export const adminRouter = router({
         await Promise.all(
           unverifiedEmails.map((emailRecord) =>
             startBackground('postUserRegistrationWorkflow', {
+              ...staticMeta({
+                summary: `Resend verification — @${user.username}`,
+              }),
               args: [
                 {
                   userId: user.id,
@@ -3389,6 +3397,7 @@ export const adminRouter = router({
           where: (t, { eq }) => eq(t.id, input.uploadRecordId),
           columns: {
             id: true,
+            channelId: true,
             uploadFinalized: true,
             finalizedUploadKey: true,
             transcodingFinishedAt: true,
@@ -3456,6 +3465,10 @@ export const adminRouter = router({
         await startBackground('processMediaWorkflow', {
           taskQueue: BACKGROUND_QUEUE,
           workflowId,
+          ...staticMeta({
+            summary: `Retry processing (${scope})`,
+            links: uploadDashboardLinks(upload.channelId, input.uploadRecordId),
+          }),
           args: [input.uploadRecordId, scope],
           priority: { priorityKey: PRIORITY_RETRY },
           retry: { maximumAttempts: 5 },
@@ -3528,6 +3541,7 @@ export const adminRouter = router({
           where: (t, { eq }) => eq(t.id, input.uploadRecordId),
           columns: {
             id: true,
+            channelId: true,
             uploadFinalized: true,
             finalizedUploadKey: true,
           },
@@ -3571,6 +3585,10 @@ export const adminRouter = router({
         await startBackground('processMediaWorkflow', {
           taskQueue: BACKGROUND_QUEUE,
           workflowId,
+          ...staticMeta({
+            summary: `Reprocess (${input.processingScope})`,
+            links: uploadDashboardLinks(upload.channelId, input.uploadRecordId),
+          }),
           args: [input.uploadRecordId, input.processingScope, input.skipProbe],
           priority: { priorityKey: PRIORITY_REPROCESS },
           retry: { maximumAttempts: 2 },
@@ -3631,6 +3649,7 @@ export const adminRouter = router({
           where: (t, { eq }) => eq(t.id, input.uploadRecordId),
           columns: {
             id: true,
+            channelId: true,
             transcribingFinishedAt: true,
           },
         });
@@ -3705,6 +3724,10 @@ export const adminRouter = router({
         await startBackground('summarizeUploadWorkflow', {
           taskQueue: BACKGROUND_QUEUE,
           workflowId,
+          ...staticMeta({
+            summary: 'Regenerate summary',
+            links: uploadDashboardLinks(upload.channelId, input.uploadRecordId),
+          }),
           // `force: true` — admin explicitly asked to regenerate, so the
           // activity's "skip if summary present" idempotency check must
           // be bypassed. Without this the existing summary is treated as
@@ -3779,6 +3802,7 @@ export const adminRouter = router({
           where: (t, { eq }) => eq(t.id, input.uploadRecordId),
           columns: {
             id: true,
+            channelId: true,
             transcribingFinishedAt: true,
           },
         });
@@ -3844,6 +3868,10 @@ export const adminRouter = router({
         await startBackground('annotateTranscriptWorkflow', {
           taskQueue: BACKGROUND_QUEUE,
           workflowId,
+          ...staticMeta({
+            summary: 'Regenerate annotations',
+            links: uploadDashboardLinks(upload.channelId, input.uploadRecordId),
+          }),
           // `force: true` — admin explicitly asked to regenerate, so the
           // activity's "skip if annotations present" idempotency check
           // must be bypassed. Without this any existing annotation rows
@@ -4064,6 +4092,7 @@ export const adminRouter = router({
           ),
         columns: {
           id: true,
+          channelId: true,
           finalizedUploadKey: true,
           transcodingFinishedAt: true,
           transcribingFinishedAt: true,
@@ -4186,6 +4215,10 @@ export const adminRouter = router({
           await startBackground('processMediaWorkflow', {
             taskQueue: BACKGROUND_QUEUE,
             workflowId,
+            ...staticMeta({
+              summary: `Bulk retry (${scope})`,
+              links: uploadDashboardLinks(upload.channelId, upload.id),
+            }),
             args: [upload.id, scope],
             priority: { priorityKey: PRIORITY_RETRY },
             retry: { maximumAttempts: 5 },

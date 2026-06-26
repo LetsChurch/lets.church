@@ -1,6 +1,7 @@
 import {
   ParentClosePolicy,
   proxyActivities,
+  setCurrentDetails,
   startChild,
   workflowInfo,
 } from '@temporalio/workflow';
@@ -81,6 +82,7 @@ export async function importMediaWorkflow({
   // page when the failure happens after the upload record was created.
   let uploadRecordId: string | undefined;
   try {
+    setCurrentDetails('Downloading & importing source media');
     const { mediaUploadKey, thumbnailUploadKey, ...importIds } =
       await importMedia(url, {
         title,
@@ -99,6 +101,7 @@ export async function importMediaWorkflow({
       });
     uploadRecordId = importIds.uploadRecordId;
 
+    setCurrentDetails('Launching media processing');
     await startChild(processMediaWorkflow, {
       taskQueue,
       workflowId: `processMedia:${mediaUploadKey}`,
@@ -154,6 +157,7 @@ export async function importMediaWorkflow({
     const { attempt, retryPolicy } = workflowInfo();
     const maxAttempts = retryPolicy?.maximumAttempts ?? 1;
     if (attempt >= maxAttempts) {
+      setCurrentDetails('Failed');
       try {
         await triggerPagerDutyAlert({
           dedupKey: `import-media:${url}`,

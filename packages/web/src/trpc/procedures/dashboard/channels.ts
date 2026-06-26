@@ -16,6 +16,7 @@ import { PART_SIZE } from '@letschurch/s3';
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
+import { staticMeta } from '@letschurch/temporal/util/dashboard-links';
 import { emailHtml, sanitizeForHtml } from '@letschurch/temporal/util/email';
 import { TRPCError } from '@trpc/server';
 import {
@@ -281,6 +282,7 @@ export const channelRouter = router({
           ).html;
 
           await startBackground('sendEmailWorkflow', {
+            ...staticMeta({ summary: 'Channel approval request email' }),
             args: [
               {
                 from: 'hello@lets.church',

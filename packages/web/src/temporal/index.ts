@@ -92,6 +92,14 @@ import {
   USER_ID_KEY,
   USERNAME_KEY,
 } from '@letschurch/temporal/search-attributes';
+// Pure (no @temporalio runtime value) — safe for the SSR bundle.
+import {
+  absoluteWebUrl,
+  dashboardPaths,
+  type LcLink,
+  staticMeta,
+  uploadDashboardLinks,
+} from '@letschurch/temporal/util/dashboard-links';
 import { xxh32 } from '@node-rs/xxhash';
 import type {
   WithWorkflowArgs,
@@ -198,6 +206,7 @@ export async function startStorageAudit(params: {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_REPROCESS },
+    ...staticMeta({ summary: 'Storage audit' }),
     workflowId: makeStorageAuditWorkflowId(params.auditId),
     args: [params],
   });
@@ -257,6 +266,14 @@ export async function handleMultipartMediaUpload(
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     workflowId: makeMultipartMediaUploadWorkflowId(s3UploadId, s3UploadKey),
+    ...staticMeta({
+      summary: `Upload (${postProcess})${meta ? ` — @${meta.username}` : ''}`,
+      links: uploadDashboardLinks(meta?.channelId, uploadRecordId),
+      detailLines: [
+        `Upload \`${uploadRecordId}\``,
+        ...(meta ? [`Channel \`${meta.channelSlug}\``] : []),
+      ],
+    }),
     args: [
       uploadRecordId,
       clientId,
@@ -297,6 +314,9 @@ export async function createUploadRecord(
   const res = await startBackground('createUploadRecordWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
+    ...staticMeta({
+      summary: `Create upload record${data.title ? `: ${data.title}` : ''}`,
+    }),
     workflowId: makeCreateUploadRecordWorkflowId(
       importId,
       data.publishedAt as Date,
@@ -317,6 +337,7 @@ export async function updateUploadRecord(
     [UploadRecordUpdateData, boolean?]
   >('updateUploadRecordWorkflow', {
     taskQueue: BACKGROUND_QUEUE,
+    ...staticMeta({ summary: 'Update upload record' }),
     workflowId: makeUpdateUploadRecordWorkflowId(uploadRecordId),
     args: [uploadRecordId],
     signal: updateUploadRecordSignal,
@@ -335,6 +356,7 @@ export async function recordDownloadSize(
 ) {
   return startBackground('recordDownloadSizeWorkflow', {
     taskQueue: BACKGROUND_QUEUE,
+    ...staticMeta({ summary: `Record download size (${variant})` }),
     workflowId: makeRecordDownloadSizeWorkflowId(uploadRecordId, variant),
     args: [uploadRecordId, variant, bytes],
     typedSearchAttributes: [{ key: UPLOAD_ID_KEY, value: uploadRecordId }],
@@ -352,6 +374,7 @@ export async function sendEmail(
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_USER },
+    ...staticMeta({ summary: 'Send email' }),
     args,
     workflowId: id,
   });
@@ -362,6 +385,7 @@ export async function sendInvitationEmail(args: InvitationEmailArgs) {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_USER },
+    ...staticMeta({ summary: `Invitation email (${args.type})` }),
     args: [args],
     workflowId: makeInvitationEmailWorkflowId(args.type, args.invitationId),
   });
@@ -372,6 +396,7 @@ export async function sendVerificationEmail(args: SendVerificationEmailArgs) {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_USER },
+    ...staticMeta({ summary: 'Verification email' }),
     args: [args],
     workflowId: makeVerificationEmailWorkflowId(args.userId),
   });
@@ -386,6 +411,7 @@ export async function resetPassword(
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_USER },
+    ...staticMeta({ summary: 'Password reset' }),
     args,
     workflowId: makeResetPasswordWorkflowId(id),
     typedSearchAttributes: [{ key: USER_ID_KEY, value: userId }],
@@ -402,6 +428,7 @@ export async function geocodeOrganization(id: string) {
   return startBackground('geocodeOrganizationWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
+    ...staticMeta({ summary: 'Geocode organization' }),
     args: [id],
     workflowId: makeGeocodeOrganizationWorkflowId(id),
   });
@@ -415,6 +442,7 @@ export async function postUserRegistration(
   return startBackground('postUserRegistrationWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
+    ...staticMeta({ summary: `Post-registration — @${username}` }),
     args,
     workflowId: makePostUserRegistrationWorkflowId(userId),
     typedSearchAttributes: [
@@ -484,6 +512,10 @@ export async function deleteUpload(uploadRecordId: string) {
   return startBackground('deleteUploadWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
+    ...staticMeta({
+      summary: `Delete upload${meta ? ` — ${meta.channelSlug}` : ''}`,
+      links: uploadDashboardLinks(meta?.channelId, uploadRecordId),
+    }),
     args: [uploadRecordId],
     workflowId: makeDeleteUploadWorkflowId(uploadRecordId),
     typedSearchAttributes: [
@@ -507,6 +539,10 @@ export async function importMedia(
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_IMPORT },
+    ...staticMeta({
+      summary: `Import media — @${username}/${channelSlug}`,
+      links: [{ href: url, text: 'Source media' }],
+    }),
     args,
     workflowId: makeImportMediaWorkflowId(url),
     typedSearchAttributes: [
@@ -548,6 +584,7 @@ export async function startBackfillUploadStates(
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_REPROCESS },
+    ...staticMeta({ summary: 'Backfill upload states' }),
     workflowId: BACKFILL_UPLOAD_STATES_WORKFLOW_ID,
     args: [params],
   });
@@ -610,6 +647,7 @@ export async function startCleanupStaleUploadStates(
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_REPROCESS },
+    ...staticMeta({ summary: 'Cleanup stale upload states' }),
     workflowId: CLEANUP_STALE_UPLOAD_STATES_WORKFLOW_ID,
     args: [params],
   });
@@ -670,6 +708,7 @@ export async function startBulkBackupToGlacier(
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_REPROCESS },
+    ...staticMeta({ summary: 'Bulk backup to Glacier' }),
     workflowId: BULK_BACKUP_WORKFLOW_ID,
     args: [params],
   });
@@ -728,6 +767,7 @@ export async function startBackfillUploadStateSizes(
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_REPROCESS },
+    ...staticMeta({ summary: 'Backfill upload-state sizes' }),
     workflowId: BACKFILL_SIZES_WORKFLOW_ID,
     args: [params],
   });
@@ -789,6 +829,7 @@ export async function startBackfillFilenames(
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_REPROCESS },
+    ...staticMeta({ summary: 'Backfill original filenames' }),
     workflowId: BACKFILL_FILENAMES_WORKFLOW_ID,
     args: [params],
   });
@@ -963,6 +1004,22 @@ export async function deleteImportSourceScheduler(importSourceId: string) {
   await handle.delete();
 }
 
+// Responder-facing links for an import-source-scoped workflow: the channel's
+// dashboard and the admin import-sources page (mirrors the scrape-and-import
+// PagerDuty alert links).
+function importSourceLinks(channelId: string): LcLink[] {
+  const links: LcLink[] = [];
+  const channelHref = absoluteWebUrl(dashboardPaths.channel(channelId));
+  if (channelHref) {
+    links.push({ href: channelHref, text: 'Channel dashboard' });
+  }
+  const adminHref = absoluteWebUrl(dashboardPaths.adminImportSources());
+  if (adminHref) {
+    links.push({ href: adminHref, text: 'Import sources (admin)' });
+  }
+  return links;
+}
+
 /**
  * Trigger a manual scrape and import for an import source.
  * This is a one-time operation, separate from the scheduled workflow.
@@ -986,6 +1043,10 @@ export async function triggerManualImport(importSourceId: string) {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_IMPORT },
+    ...staticMeta({
+      summary: `Manual scrape & import — ${importSource.channel.slug}`,
+      links: importSourceLinks(importSource.channel.id),
+    }),
     workflowId: makeScrapeAndImportWorkflowId(
       importSource.channel.slug,
       importSourceId,
@@ -1038,6 +1099,10 @@ export async function triggerHistoricalImport(
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_IMPORT },
+    ...staticMeta({
+      summary: `Historical import — ${importSource.channel.slug}`,
+      links: importSourceLinks(importSource.channel.id),
+    }),
     workflowId: makeScrapeAndImportWorkflowId(
       importSource.channel.slug,
       importSourceId,
@@ -1069,6 +1134,7 @@ export async function startReindex(params: ReindexWorkflowParams) {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_REPROCESS },
+    ...staticMeta({ summary: `Reindex (${params.kind})` }),
     workflowId: makeReindexWorkflowId(params.kind),
     args: [params],
   });
@@ -1147,6 +1213,9 @@ export async function startReprocess(
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_REPROCESS },
+    ...staticMeta({
+      summary: `Reprocess all (${processingScope})${channelSlug ? ` — ${channelSlug}` : ''}`,
+    }),
     workflowId: makeReprocessAllWorkflowId(scope),
     args: [
       scope,

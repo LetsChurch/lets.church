@@ -1,6 +1,11 @@
 import { db, UploadRecord } from '@letschurch/db';
 import { Context } from '@temporalio/activity';
 import { eq } from 'drizzle-orm';
+import {
+  absoluteWebUrl,
+  dashboardPaths,
+  trimTrailingSlash,
+} from '../../util/dashboard-links';
 import logger from '../../util/logger';
 
 const moduleLogger = logger.child({
@@ -33,10 +38,6 @@ export type TriggerPagerDutyAlertArgs = {
   links?: PagerDutyLink[];
 };
 
-function trimTrailingSlash(url: string) {
-  return url.replace(/\/+$/, '');
-}
-
 /**
  * Assemble the responder-facing links for an alert: the failing Temporal
  * workflow execution (from the calling workflow's activity context) plus any
@@ -50,9 +51,6 @@ async function buildLinks({
   PagerDutyLink[]
 > {
   const out: PagerDutyLink[] = [];
-  const webUrl = process.env.WEB_URL
-    ? trimTrailingSlash(process.env.WEB_URL)
-    : null;
 
   // Temporal UI deep-link to the workflow execution that fired this alert.
   const temporalUiUrl = process.env.TEMPORAL_UI_PUBLIC_URL;
@@ -79,18 +77,18 @@ async function buildLinks({
   }
 
   // Upload dashboard page (channel id resolved from the upload record).
-  if (uploadId && webUrl) {
+  if (uploadId) {
     try {
       const channelId = await db
         .select({ channelId: UploadRecord.channelId })
         .from(UploadRecord)
         .where(eq(UploadRecord.id, uploadId))
         .then((r) => r[0]?.channelId ?? null);
-      if (channelId) {
-        out.push({
-          href: `${webUrl}/dashboard/channels/${channelId}/uploads/${uploadId}`,
-          text: "Let's Church dashboard",
-        });
+      const href = channelId
+        ? absoluteWebUrl(dashboardPaths.upload(channelId, uploadId))
+        : null;
+      if (href) {
+        out.push({ href, text: "Let's Church dashboard" });
       }
     } catch (err) {
       moduleLogger.warn(
@@ -101,14 +99,12 @@ async function buildLinks({
   }
 
   for (const link of links ?? []) {
-    // Relative dashboard paths need WEB_URL to become absolute; skip them
-    // (rather than emit a broken link) when it is unset.
-    if (link.href.startsWith('/')) {
-      if (webUrl) {
-        out.push({ href: `${webUrl}${link.href}`, text: link.text });
-      }
-    } else {
-      out.push(link);
+    // Relative dashboard paths need WEB_URL to become absolute; drop them
+    // (rather than emit a broken link) when it is unset. Absolute hrefs
+    // (e.g. a source media URL) pass through unchanged.
+    const href = absoluteWebUrl(link.href);
+    if (href) {
+      out.push({ href, text: link.text });
     }
   }
 

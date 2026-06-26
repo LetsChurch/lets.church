@@ -1,4 +1,8 @@
-import { executeChild, proxyActivities } from '@temporalio/workflow';
+import {
+  executeChild,
+  proxyActivities,
+  setCurrentDetails,
+} from '@temporalio/workflow';
 import type * as backgroundActivities from '../../activities/background';
 import { BACKGROUND_QUEUE, PRIORITY_USER } from '../../queues';
 import { UPLOAD_ID_KEY } from '../../search-attributes';
@@ -68,6 +72,7 @@ export async function summarizeUploadWorkflow(
   // transcribe path runs with force=false so retries reuse durable
   // landings instead of re-billing tokens — see each activity's
   // idempotency comment.
+  setCurrentDetails('Summarizing & embedding');
   await Promise.all([
     (async () => {
       await summarizeUpload(uploadRecordId, { force });
@@ -78,6 +83,7 @@ export async function summarizeUploadWorkflow(
       : undefined,
   ]);
 
+  setCurrentDetails('Indexing media');
   // Unique child workflow id per invocation. `Date.now()` is deterministic
   // inside a workflow execution (Temporal records it in history and replays
   // the same value), but differs across executions — so retries get fresh

@@ -1,6 +1,7 @@
 import {
   executeChild,
   proxyActivities,
+  setCurrentDetails,
   workflowInfo,
 } from '@temporalio/workflow';
 import { invariant } from 'es-toolkit';
@@ -78,6 +79,10 @@ export async function processMediaWorkflow(
   const childSearchAttrs = [{ key: UPLOAD_ID_KEY, value: targetId }];
 
   try {
+    // Reflect the live stage in the Temporal UI's User Metadata tab so an
+    // operator can see where a long media run is without reading the event
+    // history. `setCurrentDetails` is overwrite-only single-line markdown.
+    setCurrentDetails('Probing media');
     const s3UploadKey = await getFinalizedUploadKey(targetId);
 
     // Skip-probe reuses the stored probe.json; a null result (missing or
@@ -87,6 +92,14 @@ export async function processMediaWorkflow(
       (skipProbe ? await getStoredProbe(targetId) : null) ??
       (await probe(targetId, s3UploadKey));
     invariant(probeRes !== null, 'Probe is null!');
+
+    setCurrentDetails(
+      scope === 'transcode'
+        ? 'Transcoding'
+        : scope === 'transcribe'
+          ? 'Transcribing'
+          : 'Transcoding & transcribing',
+    );
 
     const transcribePromise =
       scope === 'everything' || scope === 'transcribe'
@@ -107,6 +120,7 @@ export async function processMediaWorkflow(
     if (transcribePromise) {
       const res = await transcribePromise;
 
+      setCurrentDetails('Indexing transcript');
       await executeChild(indexDocumentWorkflow, {
         workflowId: `transcript:${s3UploadKey}`,
         args: ['transcript', targetId, res.transcriptKey],
@@ -152,6 +166,7 @@ export async function processMediaWorkflow(
       // single-flake annotate failure.
       let annotateError: unknown = null;
       try {
+        setCurrentDetails('Annotating transcript');
         await executeChild(annotateTranscriptWorkflow, {
           workflowId: `annotateTranscript:on-transcribe:${s3UploadKey}`,
           args: [targetId],
@@ -164,6 +179,7 @@ export async function processMediaWorkflow(
         annotateError = err;
       }
 
+      setCurrentDetails('Summarizing');
       await executeChild(summarizeUploadWorkflow, {
         workflowId: `summarizeUpload:on-transcribe:${s3UploadKey}`,
         args: [targetId, { embedParagraphs: true }],
@@ -180,6 +196,7 @@ export async function processMediaWorkflow(
       }
     }
 
+    setCurrentDetails('Indexing upload');
     await executeChild(indexDocumentWorkflow, {
       workflowId: `upload:${s3UploadKey}`,
       args: ['upload', targetId],
@@ -193,6 +210,7 @@ export async function processMediaWorkflow(
     const maxAttempts = retryPolicy?.maximumAttempts ?? 1;
     if (attempt >= maxAttempts) {
       const message = err instanceof Error ? err.message : String(err);
+      setCurrentDetails('Failed');
       await sendUploadErrorNotification(targetId, message);
       // Best-effort ops alert on final failure; never mask the original
       // error if PagerDuty itself is unavailable.

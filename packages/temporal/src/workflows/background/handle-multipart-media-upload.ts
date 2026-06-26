@@ -3,6 +3,7 @@ import {
   condition,
   ParentClosePolicy,
   proxyActivities,
+  setCurrentDetails,
   setHandler,
   startChild,
 } from '@temporalio/workflow';
@@ -66,9 +67,12 @@ export async function handleMultipartMediaUploadWorkflow(
     finalizingUserId = userId;
   });
 
+  // Surface the live stage in the Temporal UI User Metadata tab.
+  setCurrentDetails('Waiting for upload to finish');
   await condition(() => !!eTags, '1d');
 
   if (eTags && finalizingUserId) {
+    setCurrentDetails('Finalizing upload');
     if (postProcess === 'media') {
       await finalizeUploadRecord(targetId, finalizingUserId, s3UploadKey);
     }
@@ -123,6 +127,7 @@ export async function handleMultipartMediaUploadWorkflow(
       retry: { maximumAttempts: 3 },
     });
 
+    setCurrentDetails('Launching processing');
     if (postProcess === 'media') {
       await startChild(processMediaWorkflow, {
         args: [targetId, 'everything'],
@@ -149,6 +154,7 @@ export async function handleMultipartMediaUploadWorkflow(
       });
     }
   } else {
+    setCurrentDetails('Upload timed out — aborting');
     await abortMultipartUpload(s3UploadId, s3UploadKey);
   }
 }

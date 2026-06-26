@@ -6,6 +6,7 @@ import { z } from 'zod';
 import type { DocumentKind } from '../activities/background/index-document';
 import { emptySignal } from '../refs';
 import { UPLOAD_ID_KEY } from '../search-attributes';
+import { staticMeta } from '../util/dashboard-links';
 import logger from '../util/logger';
 import {
   makeCreateUploadRecordWorkflowId,
@@ -95,6 +96,9 @@ export async function createUploadRecord(
   const res = await (await client).workflow.start(createUploadRecordWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
+    ...staticMeta({
+      summary: `Create upload record${data.title ? `: ${data.title}` : ''}`,
+    }),
     workflowId: makeCreateUploadRecordWorkflowId(
       importId,
       data.publishedAt as Date,
@@ -115,6 +119,7 @@ export async function updateUploadRecord(
 ) {
   return (await client).workflow.signalWithStart(updateUploadRecordWorkflow, {
     taskQueue: BACKGROUND_QUEUE,
+    ...staticMeta({ summary: 'Update upload record' }),
     workflowId: makeUpdateUploadRecordWorkflowId(uploadRecordId),
     args: [uploadRecordId],
     signal: updateUploadRecordSignal,
@@ -133,6 +138,7 @@ export async function recordDownloadSize(
 ) {
   return (await client).workflow.start(recordDownloadSizeWorkflow, {
     taskQueue: BACKGROUND_QUEUE,
+    ...staticMeta({ summary: `Record download size (${variant})` }),
     workflowId: makeRecordDownloadSizeWorkflowId(uploadRecordId, variant),
     args: [uploadRecordId, variant, bytes],
     typedSearchAttributes: [{ key: UPLOAD_ID_KEY, value: uploadRecordId }],
@@ -149,6 +155,7 @@ export async function indexDocument(
 ) {
   return (await client).workflow.signalWithStart(indexDocumentWorkflow, {
     taskQueue: BACKGROUND_QUEUE,
+    ...staticMeta({ summary: `Index document (${kind})` }),
     workflowId: makeIndexDocumentWorkflowId(kind, uploadId),
     args: [kind, uploadId, uploadKey],
     signal: emptySignal,

@@ -1,4 +1,8 @@
-import { executeChild, proxyActivities } from '@temporalio/workflow';
+import {
+  executeChild,
+  proxyActivities,
+  setCurrentDetails,
+} from '@temporalio/workflow';
 import type * as backgroundActivities from '../../activities/background';
 import { BACKGROUND_QUEUE, PRIORITY_USER } from '../../queues';
 import { UPLOAD_ID_KEY } from '../../search-attributes';
@@ -49,8 +53,10 @@ export async function annotateTranscriptWorkflow(
   uploadRecordId: string,
   { force = false }: AnnotateTranscriptOptions = {},
 ) {
+  setCurrentDetails('Annotating transcript');
   await annotateTranscript(uploadRecordId, { force });
 
+  setCurrentDetails('Indexing media');
   await executeChild(indexDocumentWorkflow, {
     workflowId: `media:${uploadRecordId}:${Date.now()}`,
     args: ['media', uploadRecordId],
