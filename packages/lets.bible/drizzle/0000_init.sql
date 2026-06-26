@@ -33,6 +33,23 @@ CREATE TABLE "bible_lexeme" (
 	"derivation" text
 );
 --> statement-breakpoint
+CREATE TABLE "bible_source_token" (
+	"translation_id" text NOT NULL,
+	"book" text NOT NULL,
+	"chapter" integer NOT NULL,
+	"verse" integer NOT NULL,
+	"position" integer NOT NULL,
+	"surface" text NOT NULL,
+	"transliteration" text,
+	"strong" text,
+	"lemma" text,
+	"gloss" text,
+	"english" text,
+	"morph" text,
+	"language" text NOT NULL,
+	CONSTRAINT "bible_source_token_translation_id_book_chapter_verse_position_pk" PRIMARY KEY("translation_id","book","chapter","verse","position")
+);
+--> statement-breakpoint
 CREATE TABLE "bible_token" (
 	"translation_id" text NOT NULL,
 	"book" text NOT NULL,
@@ -132,11 +149,13 @@ CREATE TABLE "user_preference" (
 --> statement-breakpoint
 ALTER TABLE "bible_book" ADD CONSTRAINT "bible_book_translation_id_bible_translation_id_fk" FOREIGN KEY ("translation_id") REFERENCES "public"."bible_translation"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "bible_cross_reference" ADD CONSTRAINT "bible_cross_reference_translation_id_bible_translation_id_fk" FOREIGN KEY ("translation_id") REFERENCES "public"."bible_translation"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "bible_source_token" ADD CONSTRAINT "bible_source_token_translation_id_bible_translation_id_fk" FOREIGN KEY ("translation_id") REFERENCES "public"."bible_translation"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "bible_token" ADD CONSTRAINT "bible_token_translation_id_bible_translation_id_fk" FOREIGN KEY ("translation_id") REFERENCES "public"."bible_translation"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "bible_verse" ADD CONSTRAINT "bible_verse_translation_id_bible_translation_id_fk" FOREIGN KEY ("translation_id") REFERENCES "public"."bible_translation"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "bible_book_translation_slug_idx" ON "bible_book" USING btree ("translation_id","slug");--> statement-breakpoint
 CREATE INDEX "bible_xref_from_idx" ON "bible_cross_reference" USING btree ("translation_id","from_book","from_chapter","from_verse");--> statement-breakpoint
 CREATE INDEX "bible_xref_to_idx" ON "bible_cross_reference" USING btree ("translation_id","to_book","to_chapter");--> statement-breakpoint
+CREATE INDEX "bible_source_token_strong_idx" ON "bible_source_token" USING btree ("translation_id","strong");--> statement-breakpoint
 CREATE INDEX "bible_token_strong_idx" ON "bible_token" USING btree ("translation_id","strong");--> statement-breakpoint
 CREATE UNIQUE INDEX "bible_translation_single_default_idx" ON "bible_translation" USING btree ("is_default") WHERE "bible_translation"."is_default";--> statement-breakpoint
 CREATE INDEX "bible_verse_ordinal_idx" ON "bible_verse" USING btree ("translation_id","ordinal");--> statement-breakpoint
