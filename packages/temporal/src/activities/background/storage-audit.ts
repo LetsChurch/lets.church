@@ -173,8 +173,8 @@ async function loadEntities(
       deleted: u.deletedAt !== null,
       finalized: u.finalized,
       transcoded: u.transcodingFinishedAt !== null,
-      hasVideo: u.variants.some((v) => v.startsWith('VIDEO')),
-      hasAudio: u.variants.includes('AUDIO'),
+      hasVideo: u.variants?.some((v) => v.startsWith('VIDEO')) ?? false,
+      hasAudio: u.variants?.includes('AUDIO') ?? false,
     });
   }
 
