@@ -1,6 +1,11 @@
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute, Link, notFound } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import {
+  createFileRoute,
+  Link,
+  notFound,
+  useNavigate,
+} from '@tanstack/react-router';
+import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import { AuthActions } from '@/components/chrome';
 import { LiveSearchBox } from '@/components/live-search-box';
@@ -19,7 +24,7 @@ import {
 import type { Block, Run } from '@/components/passage/types';
 import { TranslationPicker } from '@/components/reader-nav';
 import { StudyPanel, type StudySelection } from '@/components/study-panel';
-import { bookBySlug } from '@/lib/canon';
+import { bookBySlug, type CanonBook } from '@/lib/canon';
 import { adjacentChapter, chapterLink } from '@/lib/reference';
 import {
   chapterQueryOptions,
@@ -223,10 +228,27 @@ function verseRunsFor(blocks: Block[], verse: number): Run[] {
   return out;
 }
 
+// Link/navigate target for an adjacent chapter, preserving the interlinear view so
+// the reading↔interlinear mode carries across chapters. Shared by the fixed side
+// chevrons, the bottom nav, and the mobile swipe gesture. chapterLink already
+// resetScrolls to the top of the new chapter.
+function chapterNavLink(
+  target: { book: CanonBook; chapter: number },
+  interlinear: boolean,
+) {
+  return {
+    ...chapterLink(target.book, target.chapter),
+    ...(interlinear ? { search: { view: 'interlinear' as const } } : {}),
+  };
+}
+
 function Reader() {
   const { book: bookSlug, chapter: chapterStr } = Route.useParams();
   const { v, translation, view } = Route.useSearch();
   const trpc = useTRPC();
+  const navigate = useNavigate();
+  // Start point of an in-progress touch, for the mobile swipe-to-page gesture.
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const chapterNum = Number(chapterStr);
   const interlinearView = view === 'interlinear';
   const [interlinearOptions, setInterlinearOptions] =
@@ -365,6 +387,38 @@ function Reader() {
     return null;
   }
 
+  const prevChapter = adjacentChapter(bookSlug, chapterNum, -1);
+  const nextChapter = adjacentChapter(bookSlug, chapterNum, 1);
+
+  // Mobile swipe-to-page: a clear horizontal swipe over the reading body pages to
+  // the adjacent chapter (swipe left → next, right → prev). Gated on distance +
+  // horizontal dominance so it never fires on a vertical scroll, a tap (verse
+  // select), or a long-press (word study, which cancels itself on move). The fixed
+  // side chevrons are hidden on mobile (this replaces them); desktop keeps them.
+  const onTouchStart = (e: React.TouchEvent) => {
+    swipeStart.current =
+      e.touches.length === 1
+        ? { x: e.touches[0].clientX, y: e.touches[0].clientY }
+        : null;
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const start = swipeStart.current;
+    swipeStart.current = null;
+    if (!start) {
+      return;
+    }
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.abs(dx) < 64 || Math.abs(dx) < Math.abs(dy) * 1.6) {
+      return;
+    }
+    const target = dx < 0 ? nextChapter : prevChapter;
+    if (target) {
+      navigate(chapterNavLink(target, interlinearView));
+    }
+  };
+
   // Shared study-panel props — rendered as a side rail (desktop) or a bottom
   // drawer (mobile) from the same state.
   const studyPanelProps = {
@@ -455,8 +509,13 @@ function Reader() {
 
       {/* reading body — the study panel overlays the page as a Base UI drawer
           (a right rail on desktop, a bottom sheet on mobile), so the reading
-          column never shifts when it opens. */}
-      <div className="flex flex-1">
+          column never shifts when it opens. Touch handlers drive the mobile
+          swipe-to-page-chapter gesture. */}
+      <div
+        className="flex flex-1"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
         <div className="min-w-0 flex-1 px-6 pt-[46px] pb-16">
           <div
             className={`mx-auto ${interlinearView ? 'max-w-[880px]' : 'max-w-[660px]'}`}
@@ -544,26 +603,38 @@ function Reader() {
               </p>
             )}
 
-            <div className="mt-[34px] flex items-center justify-between border-line border-t pt-[18px]">
-              {selection?.kind === 'verse' ? (
-                <span className="text-[12.5px] text-faint">
-                  Verse {selection.verse} selected
-                </span>
-              ) : selection?.kind === 'word' ? (
-                <span className="text-[12.5px] text-faint">
-                  Studying “{selection.word.surface}” ({book.name} {chapterNum}:
-                  {selection.word.verse})
-                </span>
-              ) : (
-                <span className="text-[12.5px] text-faint">
-                  Tap a verse to copy, compare, or open it in Study.
-                </span>
-              )}
-              <ChapterNavLinks slug={bookSlug} chapter={chapterNum} />
+            <div className="mt-[34px] flex items-center justify-between gap-3 border-line border-t pt-[18px]">
+              <BottomChapterLink
+                target={prevChapter}
+                dir="left"
+                interlinear={interlinearView}
+              />
+              <span className="min-w-0 flex-1 text-center text-[12.5px] text-faint">
+                {selection?.kind === 'verse'
+                  ? `Verse ${selection.verse} selected`
+                  : selection?.kind === 'word'
+                    ? `Studying “${selection.word.surface}” (${book.name} ${chapterNum}:${selection.word.verse})`
+                    : 'Tap a verse to copy, compare, or open it in Study.'}
+              </span>
+              <BottomChapterLink
+                target={nextChapter}
+                dir="right"
+                interlinear={interlinearView}
+              />
             </div>
           </div>
         </div>
       </div>
+
+      {/* Large prev/next chapter buttons, fixed to the viewport and vertically
+          centered, flanking the centered reading/interlinear column (they hug the
+          screen edges on narrow viewports). Below the header (z-30) and the study
+          panel (z-40/50), so those cover them when open. */}
+      <ChapterNavButtons
+        slug={bookSlug}
+        chapter={chapterNum}
+        interlinear={interlinearView}
+      />
 
       {/* The study panel is a Base UI drawer that overlays the page (a non-modal
           rail under the header on desktop; a bottom sheet on mobile), so the
@@ -574,27 +645,107 @@ function Reader() {
   );
 }
 
-function ChapterNavLinks({ slug, chapter }: { slug: string; chapter: number }) {
+function ChevronIcon({
+  dir,
+  className,
+}: {
+  dir: 'left' | 'right';
+  className?: string;
+}) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <title>{dir === 'left' ? 'Previous' : 'Next'}</title>
+      <path d={dir === 'left' ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'} />
+    </svg>
+  );
+}
+
+// One end of the bottom prev/next chapter nav: a chevron + the target's name (next
+// is gold-emphasized). Renders an empty spacer at canon edges (no prev on Genesis 1,
+// no next on the last chapter) so the centered status text stays balanced.
+function BottomChapterLink({
+  target,
+  dir,
+  interlinear,
+}: {
+  target: { book: CanonBook; chapter: number } | null;
+  dir: 'left' | 'right';
+  interlinear: boolean;
+}) {
+  if (!target) {
+    return <span className="w-16 shrink-0" aria-hidden="true" />;
+  }
+  const label = `${target.book.name} ${target.chapter}`;
+  return (
+    <Link
+      {...chapterNavLink(target, interlinear)}
+      aria-label={`${dir === 'left' ? 'Previous' : 'Next'} chapter — ${label}`}
+      className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-2 text-[13px] transition-colors hover:text-gold ${
+        dir === 'right' ? 'font-semibold text-gold' : 'text-muted-2'
+      }`}
+    >
+      {dir === 'left' ? <ChevronIcon dir="left" className="size-4" /> : null}
+      <span>{label}</span>
+      {dir === 'right' ? <ChevronIcon dir="right" className="size-4" /> : null}
+    </Link>
+  );
+}
+
+// Large plain prev/next chevrons fixed at the vertical center of the viewport,
+// flanking the column. A pointer-events-none, centered max-width track positions
+// them just outside the reading/interlinear column; only the chevrons take pointer
+// events. Hidden on mobile (`hidden sm:block`) — there the swipe gesture + the
+// bottom nav handle paging. `interlinear` widens the track to the interlinear column.
+function ChapterNavButtons({
+  slug,
+  chapter,
+  interlinear,
+}: {
+  slug: string;
+  chapter: number;
+  interlinear: boolean;
+}) {
   const prev = adjacentChapter(slug, chapter, -1);
   const next = adjacentChapter(slug, chapter, 1);
+  // Plain chevrons (no button chrome): a padded, transparent hit area with a faint
+  // arrow that warms to gold and nudges toward the page on hover.
+  const btn =
+    'pointer-events-auto absolute top-1/2 flex -translate-y-1/2 items-center justify-center rounded-md p-2 text-muted-2/70 transition-[color,translate] duration-200 hover:text-gold focus-visible:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/40 sm:p-3';
   return (
-    <span className="flex items-center gap-4 text-[12.5px]">
-      {prev ? (
-        <Link
-          {...chapterLink(prev.book, prev.chapter)}
-          className="text-muted-2 hover:text-gold"
-        >
-          ‹ {prev.book.name} {prev.chapter}
-        </Link>
-      ) : null}
-      {next ? (
-        <Link
-          {...chapterLink(next.book, next.chapter)}
-          className="font-semibold text-gold"
-        >
-          {next.book.name} {next.chapter} ›
-        </Link>
-      ) : null}
-    </span>
+    <div className="pointer-events-none fixed inset-0 z-20 hidden sm:block">
+      <div
+        className={`relative mx-auto h-full w-full ${interlinear ? 'max-w-[1040px]' : 'max-w-[820px]'}`}
+      >
+        {prev ? (
+          <Link
+            {...chapterNavLink(prev, interlinear)}
+            aria-label={`Previous chapter — ${prev.book.name} ${prev.chapter}`}
+            title={`${prev.book.name} ${prev.chapter}`}
+            className={`${btn} hover:-translate-x-0.5 left-1 sm:left-2`}
+          >
+            <ChevronIcon dir="left" className="size-8 sm:size-10" />
+          </Link>
+        ) : null}
+        {next ? (
+          <Link
+            {...chapterNavLink(next, interlinear)}
+            aria-label={`Next chapter — ${next.book.name} ${next.chapter}`}
+            title={`${next.book.name} ${next.chapter}`}
+            className={`${btn} right-1 hover:translate-x-0.5 sm:right-2`}
+          >
+            <ChevronIcon dir="right" className="size-8 sm:size-10" />
+          </Link>
+        ) : null}
+      </div>
+    </div>
   );
 }
