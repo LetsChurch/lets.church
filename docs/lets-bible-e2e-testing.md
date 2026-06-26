@@ -501,7 +501,9 @@ the stage and clicking fills the input or navigates.
 | --- | --- | --- | --- |
 | LB-HOME-01 | Anonymous | Open `/` | Signed-out hero: wordmark **directly above** the search box (no subtitle paragraph between them), chips, "Verse of the day", **only a "Sign in"** action in the header (no About link — About is in the footer), footer "lets.church" → web host. |
 | LB-HOME-02 | Signed in | Open `/` | Returning view: "Good morning/afternoon/evening, admin." greeting; avatar menu; search; cards. |
-| LB-HOME-03 | — | Verse-of-the-day reference link | Links into the reader at that passage. |
+| LB-HOME-03 | — | Verse of the day | Shows a **real verse** from a curated list (`src/lib/votd.ts`), text pulled from the DB (`bible_verse`) — not a hardcoded string. The reference (e.g. "Psalm 19:14") is a link into the reader at that passage (`/bible/psalm/19?v=14`), and the translation tag matches the resolved translation. |
+| LB-HOME-03a | — | Same day, reload | The verse is **stable across the day** (keyed by UTC day) and identical in SSR + client (no hydration mismatch). |
+| LB-HOME-03b | Signed in with a non-default translation preference (e.g. KJV) | Open `/` | The verse of the day renders in the **preferred translation** (same passage, KJV wording). |
 | LB-HOME-04 | — | Greeting time-of-day | Greeting matches local time (client-hint based — verify no hydration mismatch). |
 | LB-HOME-05 | — | Header nav (Bible/Library/Listen) | Links route correctly (Bible → `/bible/john/1`). |
 | LB-HOME-06 | — | Open `/about` (reached via the **footer** "About" link — there's no header link) | A **real** About page (not a "coming soon" placeholder): eyebrow "About", heading "A focused place to read Scripture", intro blurb, a 4-item feature grid (Read / Search / Study / Keep), a lets.church sync note, and a single "Start reading" (→ John 1) CTA. No "Back home" link, no "still being built" panel. |
@@ -652,7 +654,6 @@ verse view.
 - Toolbar "Listen" action is not built; only Copy/Share/Compare/Highlight/
   Note/Study are functional.
 - Homepage "Today's plan" card = static mock; `/listen` = placeholder.
-- Verse-of-the-day = rotation of placeholder verses.
 - Word pronunciation audio = not implemented (see `docs/word-pronunciation-audio.md`).
 - "Related passages" = lexical similarity (`more_like_this`), not vector-embedding
   semantic search.
@@ -883,6 +884,7 @@ A fast pass to run after any change:
 8b. Matthew 1:23 (OT quotation): clicking "Behold" selects verse 23 (all quote lines highlight); a second click opens the study panel (G2400); hovering shows a "Quoting Isaiah 7:14" hover card whose link is clickable → `/bible/isaiah/7?v=14`.
 8c. Overlays are render-time (not baked), so John 1:23's OT-quote underline appears on **BSB, MSB, and KJV** alike, and is **one continuous span** per line (not a dotted line per word; the in-between unanchored words are underlined too). `bible_token` is overlay-pure — divine/otQuote come from `seed/overlays/index.json` (reader: `apply-overlays.ts`; interlinear: `apply-tokens.ts`).
 9. Sign in (`admin`/`password`) → returning home → sign out.
+9b. Homepage **verse of the day** shows a real DB-backed verse (curated list, `src/lib/votd.ts`); reference links into the reader (e.g. Psalm 19:14 → `/bible/psalm/19?v=14`); stable across a same-day reload, no hydration mismatch.
 10. Highlight John 3:16 (as guest) → tint persists across reload (localStorage) + appears in `/library`; "Continue reading" shows John 3; verse view "Study a word" opens the word view; translation dropdown renders above the header.
 11. Sign in with local highlights present → "Sync your library" merge dialog → Merge → server `user_highlight` rows created; no SSR/console errors.
 12. Reader renders chapters from `/reading/<id>/<slug>.json` (no DB); after the idle precache, block network + navigate to any chapter → still renders (SW `lb-content` cache). Settings → Offline shows the "works offline automatically" note (no download button).

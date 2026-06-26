@@ -1,33 +1,50 @@
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { bibleVerse, db } from '@/db';
+import { findBook } from '@/lib/canon';
+import { epochDay, VOTD_REFS, votdRefForDay } from '@/lib/votd';
 import { parseCookies } from '@/server/oidc';
+import { resolveTranslation } from '@/server/translation';
 import { publicProcedure } from '../trpc';
 
-// Placeholder content for the demo (BSB text). In the real app these come from
-// the content service (verse data, search index). For now they prove the
-// tRPC/Query stack end-to-end from the homepage.
-const VERSES = [
-  { text: '“Be still and know that I am God.”', reference: 'Psalm 46:10' },
-  {
-    text: '“The LORD is my shepherd; I shall not want.”',
-    reference: 'Psalm 23:1',
-  },
-  {
-    text: '“In the beginning was the Word, and the Word was with God, and the Word was God.”',
-    reference: 'John 1:1',
-  },
-  {
-    text: '“I can do all things through Christ who gives me strength.”',
-    reference: 'Philippians 4:13',
-  },
-  {
-    text: '“Trust in the LORD with all your heart and lean not on your own understanding.”',
-    reference: 'Proverbs 3:5',
-  },
-  {
-    text: '“Your word is a lamp to my feet and a light to my path.”',
-    reference: 'Psalm 119:105',
-  },
-];
+// Turn a canonical ref ('JHN.3.16') into a human reference label ('John 3:16')
+// that `passageLink` can parse back into a reader link.
+function refLabel(ref: string): string {
+  const [code, chapter, verse] = ref.split('.');
+  const book = findBook(code ?? '');
+  return `${book?.name ?? code} ${chapter}:${verse}`;
+}
+
+// The verse of the day: a curated ref (see lib/votd.ts) resolved to the visitor's
+// translation. We walk the curated list with a coprime stride so every verse is
+// shown once per full cycle before repeating (fair coverage), keyed by UTC day so
+// it's stable for the whole day and identical in SSR + client. If the chosen ref
+// is missing in the active translation (rare versification gap), we step forward
+// to the next ref that exists rather than failing.
+async function pickVerseOfTheDay(translationId: string, now: number) {
+  const day = epochDay(now);
+  for (let i = 0; i < VOTD_REFS.length; i++) {
+    const ref = votdRefForDay(day + i);
+    const [row] = await db
+      .select({ text: bibleVerse.text })
+      .from(bibleVerse)
+      .where(
+        and(
+          eq(bibleVerse.translationId, translationId),
+          eq(bibleVerse.ref, ref),
+        ),
+      )
+      .limit(1);
+    if (row) {
+      return {
+        text: row.text,
+        reference: refLabel(ref),
+        translation: translationId,
+      };
+    }
+  }
+  return null;
+}
 
 // Time-of-day greeting computed in the visitor's timezone. The browser can't be
 // asked for its zone via a header (no Client Hint for it), so the client stores
@@ -80,13 +97,18 @@ const CHIPS = [
 ];
 
 export const homeProcedures = {
-  verseOfTheDay: publicProcedure.query(() => {
-    const now = new Date();
-    const dayOfYear = Math.floor(
-      (Date.now() - Date.UTC(now.getUTCFullYear(), 0, 0)) / 86_400_000,
+  verseOfTheDay: publicProcedure.query(async ({ ctx }) => {
+    const translationId = await resolveTranslation(ctx, undefined);
+    const verse = await pickVerseOfTheDay(translationId, Date.now());
+    // Fallback to the default translation if the visitor's preference has a gap.
+    return (
+      verse ??
+      (await pickVerseOfTheDay('BSB', Date.now())) ?? {
+        text: 'For God so loved the world…',
+        reference: 'John 3:16',
+        translation: 'BSB',
+      }
     );
-    const verse = VERSES[dayOfYear % VERSES.length] ?? VERSES[0];
-    return { ...verse, translation: 'BSB' };
   }),
 
   // Greeting in the visitor's local time (via the `tz` cookie) so SSR matches.
