@@ -171,3 +171,12 @@ debugging a single shard.
 - `upload_state` tracks only **original** files (one row per source upload/image),
   not every derived object. That's why derived media is reconciled by prefix
   presence + HLS-tree walk rather than per-object DB rows.
+- **Top-level sidecars are attributed to their base object.** A few artifacts are
+  keyed `{baseKey}.<suffix>` instead of under `{baseKey}/` — notably an image's
+  ImageMagick probe, `{uuid}.imagemagick.json`. The scan strips the suffix so the
+  sidecar groups with its base `{uuid}` rather than appearing as its own unknown
+  prefix. Effect: a live image's sidecar is not a false `ORPHAN_PREFIX`, and a
+  stray sidecar (base image already deleted) is reported as an orphan against the
+  base `{uuid}` (deduped with the base object if it too is still present), not as a
+  distinct `{uuid}.imagemagick.json` "entity" that inflates `prefixCount`. (Media
+  probes/logs use `{id}/probe.json` and already group under the entity prefix.)

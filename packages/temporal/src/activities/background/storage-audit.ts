@@ -104,9 +104,28 @@ function bucketClient(bucket: StorageAuditBucket): LcS3Client {
   }
 }
 
+// Sidecar artifacts written *next to* a base object as `{baseKey}.<suffix>`
+// rather than under a `{baseKey}/` prefix. The image pipeline writes an image's
+// ImageMagick probe as `${imageKey}.imagemagick.json` (process-image activity);
+// for a bare-uuid image (`{uuid}`) that lands at the top level with no `/`.
+// Media probes/logs use `{id}/probe.json` etc. and already group under the
+// entity prefix, so only this top-level form needs special handling.
+const TOP_LEVEL_SIDECAR_SUFFIXES = ['.imagemagick.json'];
+
 function topLevelPrefix(key: string): string {
   const idx = key.indexOf('/');
-  return idx === -1 ? key : key.slice(0, idx);
+  if (idx !== -1) return key.slice(0, idx);
+  // No `/`: a bare object or a top-level sidecar. Attribute a sidecar to its
+  // base object key so `{uuid}.imagemagick.json` groups with the image `{uuid}`
+  // instead of looking like its own unknown entity — a live image's sidecar is
+  // then not a false orphan, and a stray sidecar (base deleted) is reported
+  // against the base id and deduped with the base object if it's still present.
+  for (const suffix of TOP_LEVEL_SIDECAR_SUFFIXES) {
+    if (key.length > suffix.length && key.endsWith(suffix)) {
+      return key.slice(0, -suffix.length);
+    }
+  }
+  return key;
 }
 
 function bump(counts: Record<string, number>, key: string) {
