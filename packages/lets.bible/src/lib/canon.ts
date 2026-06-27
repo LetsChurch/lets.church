@@ -1,4 +1,4 @@
-// AUTO-GENERATED from the BSB USX seed (scripts/gen-canon.mjs). The 66-book
+// AUTO-GENERATED from the BSB USX seed (scripts/gen-canon.ts). The 66-book
 // canon registry: USFM codes, url slugs, display names, chapter counts, and
 // reference-lookup aliases. Used by the reference parser (client) and the reader
 // navigation. Regenerate if the seed translation changes.

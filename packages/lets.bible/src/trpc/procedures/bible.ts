@@ -1,8 +1,10 @@
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import {
   type BookChapter,
   bibleBook,
+  bibleCommentary,
+  bibleCommentaryWork,
   bibleCrossReference,
   bibleLexeme,
   bibleSourceToken,
@@ -18,38 +20,8 @@ import {
   applyOverlaysToTokens,
   loadOverlayIndex,
 } from '@/server/overlays/apply-tokens';
-import { resolvePreferences } from '@/server/preferences';
-import type { Context } from '../context';
+import { defaultTranslationId, resolveTranslation } from '@/server/translation';
 import { publicProcedure } from '../trpc';
-
-// The translation used when a request doesn't specify one: the row flagged
-// `isDefault`, falling back to 'BSB'. Resolved per call (translations rarely
-// change and the query is tiny).
-async function defaultTranslationId(): Promise<string> {
-  const rows = await db
-    .select({ id: bibleTranslation.id })
-    .from(bibleTranslation)
-    .where(eq(bibleTranslation.isDefault, true))
-    .limit(1);
-  return rows[0]?.id ?? 'BSB';
-}
-
-// The translation to use when a request doesn't specify one: the visitor's
-// preference, else the default-flagged translation.
-async function resolveTranslation(
-  ctx: Context,
-  explicit: string | undefined,
-): Promise<string> {
-  if (explicit) {
-    return explicit;
-  }
-  const sub =
-    typeof ctx.session?.claims?.sub === 'string'
-      ? ctx.session.claims.sub
-      : undefined;
-  const prefs = await resolvePreferences(sub, ctx.req);
-  return prefs.translation ?? (await defaultTranslationId());
-}
 
 // Tables address books by USFM code; the reader uses slugs. Resolve either.
 function usfmOf(book: string): string {
@@ -656,6 +628,72 @@ export const bibleProcedures = {
         }
       }
       return byVerse;
+    }),
+
+  // Every commentary work, ordered for display. Tiny + verse-independent, so the
+  // study panel fetches it once and keeps it for the session — it backs the
+  // commentary navigator's work list and the header of a followed work even on
+  // verses that work doesn't comment on.
+  commentaryWorks: publicProcedure.query(async () => {
+    return db
+      .select({
+        id: bibleCommentaryWork.id,
+        name: bibleCommentaryWork.name,
+        author: bibleCommentaryWork.author,
+        year: bibleCommentaryWork.year,
+        tradition: bibleCommentaryWork.tradition,
+        sourceUrl: bibleCommentaryWork.sourceUrl,
+      })
+      .from(bibleCommentaryWork)
+      .orderBy(asc(bibleCommentaryWork.ordinal));
+  }),
+
+  // Public-domain commentaries for a single verse, across every work, ordered by
+  // the work's display ordinal. Commentaries are translation-agnostic (anchored
+  // to the canonical book/chapter/verse), so no translation is resolved. Fetched
+  // on demand when a verse is selected in the study panel — bodies are large, so
+  // unlike cross-references they are NOT prefetched per chapter. Matches both
+  // single-verse entries and passage-level entries (verse..verseEnd) that span it.
+  verseCommentaries: publicProcedure
+    .input(
+      z.object({
+        book: z.string(),
+        chapter: z.number().int().positive(),
+        verse: z.number().int().positive(),
+      }),
+    )
+    .query(async ({ input }) => {
+      return db
+        .select({
+          workId: bibleCommentaryWork.id,
+          workName: bibleCommentaryWork.name,
+          author: bibleCommentaryWork.author,
+          year: bibleCommentaryWork.year,
+          tradition: bibleCommentaryWork.tradition,
+          sourceUrl: bibleCommentaryWork.sourceUrl,
+          verse: bibleCommentary.verse,
+          verseEnd: bibleCommentary.verseEnd,
+          body: bibleCommentary.body,
+        })
+        .from(bibleCommentary)
+        .innerJoin(
+          bibleCommentaryWork,
+          eq(bibleCommentary.workId, bibleCommentaryWork.id),
+        )
+        .where(
+          and(
+            eq(bibleCommentary.book, usfmOf(input.book)),
+            eq(bibleCommentary.chapter, input.chapter),
+            or(
+              eq(bibleCommentary.verse, input.verse),
+              and(
+                lte(bibleCommentary.verse, input.verse),
+                gte(bibleCommentary.verseEnd, input.verse),
+              ),
+            ),
+          ),
+        )
+        .orderBy(asc(bibleCommentaryWork.ordinal), asc(bibleCommentary.verse));
     }),
 
   crossReferences: publicProcedure

@@ -9,6 +9,28 @@ CREATE TABLE "bible_book" (
 	CONSTRAINT "bible_book_translation_id_usfm_pk" PRIMARY KEY("translation_id","usfm")
 );
 --> statement-breakpoint
+CREATE TABLE "bible_commentary" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"work_id" text NOT NULL,
+	"book" text NOT NULL,
+	"chapter" integer NOT NULL,
+	"verse" integer NOT NULL,
+	"verse_end" integer,
+	"body" text NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "bible_commentary_work" (
+	"id" text PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"author" text NOT NULL,
+	"year" text,
+	"tradition" text,
+	"license" text NOT NULL,
+	"source_module" text NOT NULL,
+	"source_url" text,
+	"ordinal" integer DEFAULT 0 NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "bible_cross_reference" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"translation_id" text NOT NULL,
@@ -148,11 +170,14 @@ CREATE TABLE "user_preference" (
 );
 --> statement-breakpoint
 ALTER TABLE "bible_book" ADD CONSTRAINT "bible_book_translation_id_bible_translation_id_fk" FOREIGN KEY ("translation_id") REFERENCES "public"."bible_translation"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "bible_commentary" ADD CONSTRAINT "bible_commentary_work_id_bible_commentary_work_id_fk" FOREIGN KEY ("work_id") REFERENCES "public"."bible_commentary_work"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "bible_cross_reference" ADD CONSTRAINT "bible_cross_reference_translation_id_bible_translation_id_fk" FOREIGN KEY ("translation_id") REFERENCES "public"."bible_translation"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "bible_source_token" ADD CONSTRAINT "bible_source_token_translation_id_bible_translation_id_fk" FOREIGN KEY ("translation_id") REFERENCES "public"."bible_translation"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "bible_token" ADD CONSTRAINT "bible_token_translation_id_bible_translation_id_fk" FOREIGN KEY ("translation_id") REFERENCES "public"."bible_translation"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "bible_verse" ADD CONSTRAINT "bible_verse_translation_id_bible_translation_id_fk" FOREIGN KEY ("translation_id") REFERENCES "public"."bible_translation"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "bible_book_translation_slug_idx" ON "bible_book" USING btree ("translation_id","slug");--> statement-breakpoint
+CREATE INDEX "bible_commentary_ref_idx" ON "bible_commentary" USING btree ("book","chapter","verse");--> statement-breakpoint
+CREATE INDEX "bible_commentary_work_ref_idx" ON "bible_commentary" USING btree ("work_id","book","chapter","verse");--> statement-breakpoint
 CREATE INDEX "bible_xref_from_idx" ON "bible_cross_reference" USING btree ("translation_id","from_book","from_chapter","from_verse");--> statement-breakpoint
 CREATE INDEX "bible_xref_to_idx" ON "bible_cross_reference" USING btree ("translation_id","to_book","to_chapter");--> statement-breakpoint
 CREATE INDEX "bible_source_token_strong_idx" ON "bible_source_token" USING btree ("translation_id","strong");--> statement-breakpoint

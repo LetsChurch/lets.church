@@ -21,6 +21,7 @@
     "seed:kjv": "tsx src/db/seed-kjv.ts",
     "seed:lexicon": "tsx src/db/seed-lexicon.ts",
     "seed:crossrefs": "tsx src/db/seed-cross-references.ts",
+    "seed:commentaries": "tsx src/db/seed-commentaries.ts",
     "seed:source": "tsx src/db/seed-source.ts",
     "es:push-mappings": "tsx src/search/push-mappings.ts",
     "es:index-verses": "tsx src/search/index-verses.ts",

@@ -17,6 +17,11 @@ storybook-static
 # source-text-overlay + cross-reference data (NOT ignored). public/overlays/ above is
 # just the build-time copy build-flex-index.ts publishes for the client to fetch.
 
+# Downloaded SWORD modules for commentary extraction (scripts/sword/). The
+# extracted artifacts under seed/commentaries/*.json are the committed source;
+# the raw modules are a regenerable local cache.
+/seed/.sword/
+
 # Playwright e2e
 /test-results/
 /playwright-report/

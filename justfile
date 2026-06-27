@@ -97,6 +97,11 @@ db-reset:
 # from web's. `just up` runs `lets-bible-up` to push/seed/index it end to end;
 # the individual recipes below are for re-running a single step.
 
+# Generate a lets.bible migration from schema.ts changes (diffs against the last
+# snapshot; produces the SQL + snapshot + _journal.json entry). Never hand-write.
+lets-bible-generate name:
+  docker compose exec lets-bible sh -c 'cd /usr/src/app/packages/lets.bible && pnpm exec drizzle-kit generate --name {{name}}'
+
 # Apply lets.bible migrations
 lets-bible-migrate:
   docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run db:migrate'
@@ -118,6 +123,9 @@ lets-bible-seed-msb:
 lets-bible-seed-kjv:
   docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run seed:kjv'
 
+# Seed all Bible translations (BSB + MSB + KJV) in one step
+lets-bible-seed-bible: lets-bible-seed-bsb lets-bible-seed-msb lets-bible-seed-kjv
+
 # Seed the Strong's lexicon (translation-agnostic)
 lets-bible-seed-lexicon:
   docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run seed:lexicon'
@@ -127,6 +135,17 @@ lets-bible-seed-lexicon:
 # notes), so this restores OT-quotation source links + study-panel cross-references.
 lets-bible-seed-crossrefs:
   docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run seed:crossrefs'
+
+# Regenerate the committed commentary artifacts from CrossWire SWORD modules.
+# HOST-only (needs `brew install sword`); downloads modules to seed/.sword
+# (gitignored) and writes seed/commentaries/*.json. Run before committing updates.
+lets-bible-extract-commentaries:
+  cd packages/lets.bible && ./scripts/sword/download-modules.sh && pnpm exec tsx scripts/sword/extract-commentaries.ts
+
+# Load the committed commentary artifacts (seed/commentaries/*.json) into
+# bible_commentary[_work]. Idempotent. Run after lets-bible-migrate.
+lets-bible-seed-commentaries:
+  docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run seed:commentaries'
 
 # Seed the original-language interlinear (STEPBible TAGNT Greek / TAHOT Hebrew,
 # fetched not committed). books = NT | OT | ALL | a comma list (default John);
@@ -142,8 +161,9 @@ lets-bible-index:
 lets-bible-flex:
   docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run flex:build'
 
-# Full lets.bible setup: migrate, push ES mappings, seed (BSB/MSB/KJV/lexicon), index
-lets-bible-up: lets-bible-migrate lets-bible-es-push lets-bible-seed-bsb lets-bible-seed-msb lets-bible-seed-kjv lets-bible-seed-lexicon lets-bible-index lets-bible-flex
+# Full lets.bible setup: migrate, push ES mappings, seed (bible/lexicon/cross-refs/commentaries), index, flex
+# (cross-refs + commentaries are separate tables — included here so they aren't empty after a DB reset).
+lets-bible-up: lets-bible-migrate lets-bible-es-push lets-bible-seed-bible lets-bible-seed-lexicon lets-bible-seed-crossrefs lets-bible-seed-commentaries lets-bible-index lets-bible-flex
 
 es-push-mappings:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/elasticsearch run push-mappings'

@@ -301,3 +301,46 @@ export const bibleCrossReference = pgTable(
     index('bible_xref_to_idx').on(t.translationId, t.toBook, t.toChapter),
   ],
 );
+
+// --- Verse-keyed commentaries (public-domain works) -------------------------
+// A `bible_commentary_work` is one author/edition (Calvin, Matthew Henry, …);
+// `bible_commentary` holds its per-verse entries. Like highlights/notes, these
+// are translation-agnostic: anchored to the canonical (book, chapter, verse) —
+// USFM `book`, KJV versification from the SWORD source — so the same comment
+// shows under BSB/MSB/KJV. Sourced from CrossWire SWORD modules and extracted to
+// committed artifacts (seed/commentaries/*.json) by scripts/sword/.
+export const bibleCommentaryWork = pgTable('bible_commentary_work', {
+  id: text('id').primaryKey(), // stable work id, e.g. 'calvin', 'mhc'
+  name: text('name').notNull(),
+  author: text('author').notNull(),
+  year: text('year'), // display string, e.g. '1540–1564'
+  tradition: text('tradition'), // 'Reformed' | 'Puritan' | 'Methodist' | …
+  license: text('license').notNull(),
+  sourceModule: text('source_module').notNull(), // SWORD module name
+  sourceUrl: text('source_url'),
+  ordinal: integer('ordinal').notNull().default(0), // display order
+});
+
+export const bibleCommentary = pgTable(
+  'bible_commentary',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workId: text('work_id')
+      .notNull()
+      .references(() => bibleCommentaryWork.id, { onDelete: 'cascade' }),
+    book: text('book').notNull(), // USFM code
+    chapter: integer('chapter').notNull(),
+    verse: integer('verse').notNull(),
+    verseEnd: integer('verse_end'), // for passage-level entries (same chapter)
+    body: text('body').notNull(), // plain text, blank-line paragraph breaks
+  },
+  (t) => [
+    index('bible_commentary_ref_idx').on(t.book, t.chapter, t.verse),
+    index('bible_commentary_work_ref_idx').on(
+      t.workId,
+      t.book,
+      t.chapter,
+      t.verse,
+    ),
+  ],
+);

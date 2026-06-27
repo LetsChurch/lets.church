@@ -60,18 +60,43 @@ In scope (everything implemented to date):
   sheet on mobile. It overlays the page, so the reading column never shifts when
   it opens/closes (the column stays centered in the viewport). Verse and word
   selection are mutually exclusive; the panel renders the matching view:
-  - verse view: verse text (each Strong's-tagged word is clickable into its word
-    study, like the reading text) + actions (highlight, note, copy, share,
-    compare, "study a word") + the verse's **annotations** (footnotes with their
-    reading letters, cross-references, and source-text overlay entries). The
-    highlight palette has 6 colors (gold, sage, slate, rose, sky, plum). A
-    highlighted verse that is also selected shows both — the color fill plus a
-    gold underline for the selection.
+  - verse view: a **Base UI tabbed interface** with two tabs — **Verse** and
+    **Commentaries** (see below). The **Verse** tab holds the verse text (each
+    Strong's-tagged word is clickable into its word study, like the reading text)
+    + actions (highlight, note, copy, share, compare, "study a word") + the
+    verse's **annotations** (footnotes with their reading letters,
+    cross-references, source-text overlay entries). The highlight palette has 6
+    colors (gold, sage, slate, rose, sky, plum). A highlighted verse that is also
+    selected shows both — the color fill plus a gold underline for the selection.
+    The active tab persists for the session (clicking another verse keeps the tab).
   - word view: Greek/Hebrew lexicon + concordance + source-text sections, with
     the verse it came from shown as context (click to return to the verse view).
   A word is studied with two clicks (desktop) or a press-and-hold (touch) — there
   is no double-click gesture; the word-hover affordance shows only when a click
   would actually study the word (verse already selected / panel open).
+- **Verse commentaries** (study panel, **Commentaries** tab). Public-domain
+  Reformer/Puritan commentaries — **Calvin, Matthew Henry (Complete + Concise),
+  Geneva Bible Notes, Wesley** — extracted from CrossWire SWORD modules
+  (`scripts/sword/`) into committed artifacts (`seed/commentaries/*.json`), seeded
+  into `bible_commentary[_work]`. The tab is a **master/detail navigator**: a list
+  of the works that comment on the current verse (name + author · year + a 1-line
+  preview, ordered by work ordinal); picking one opens its note (**detail**) with a
+  **‹ All commentaries** back link, **prev/next** to flip between works, the work's
+  Source link, and the paragraphed body. **Following a work persists for the
+  session** (`src/lib/study-session.ts`): clicking from one verse to the next keeps
+  you on the Commentaries tab reading the same commentator, showing its note for the
+  new verse — or **"{author} has no note on {ref}"** when that work doesn't cover it.
+  Fetched **on demand per selected verse** (`bible.verseCommentaries`; the work list
+  comes from `bible.commentaryWorks`), not prefetched per chapter (bodies are large).
+  Commentaries are **translation-agnostic** (anchored to the canonical
+  book/chapter/verse, KJV versification), so the same notes show under BSB/MSB/KJV.
+  Each entry covers from its verse **until the next entry** (`verse_end`): per-verse
+  works (Calvin/Geneva/Wesley) usually key the exact verse; section works (Matthew
+  Henry) key the opening verse of a passage and show on every verse it spans, with an
+  **"on vv. X–Y"** range label. Bodies are plain text with blank-line paragraphs;
+  **scripture references inside a commentary render as reader links** (OSIS `osisRef`
+  for Calvin/MHC/MHCC, parsed inner text for Geneva/Wesley; unresolvable refs stay
+  plain text).
 - Source-text overlays: dotted underline + tooltip on the divine name,
   Hallelujah, and OT quotations (the OT-quotation tooltip links to the source
   passage); divine-name rendering (LORD/YHWH/Yahweh). Quotation poetry blocks are
@@ -180,7 +205,7 @@ is lexical (`more_like_this`), not vector embeddings.
 
 `just up` starts the stack and sets up **both** web and lets.bible — it runs
 `lets-bible-up`, which migrates + pushes ES mappings + seeds (BSB, MSB, KJV,
-lexicon) + indexes. (Requires the enhanced USX seed under
+lexicon, cross-references, commentaries) + indexes. (Requires the enhanced USX seed under
 `packages/lets.bible/seed/{bsb,msb}/USX_1` and the committed KJV source under
 `packages/lets.bible/seed/kjv/kjv_strongs.json`.)
 
@@ -197,6 +222,7 @@ just lets-bible-seed-bsb       # BSB (default) — 66 books / 31,086 verses
 just lets-bible-seed-msb       # MSB (second translation) — 31,100 verses
 just lets-bible-seed-kjv       # KJV (1769, Strong's + morphology) — 31,102 verses / 790,868 tokens
 just lets-bible-seed-crossrefs # backfill bible_cross_reference from the committed artifact (BSB 514 / MSB 516 / KJV 516)
+just lets-bible-seed-commentaries # load bible_commentary[_work] from committed seed/commentaries/*.json (Calvin/MHC/MHCC/Geneva/Wesley — ~52k entries)
 just lets-bible-seed-lexicon   # 14,197 Greek+Hebrew Strong's entries
 just lets-bible-seed-source NT BSB   # true interlinear: BSB NT Greek (STEPBible TAGNT, critical/NA)
 just lets-bible-seed-source OT BSB   # BSB OT Hebrew (STEPBible TAHOT, Masoretic) — MSB OT falls back to this
@@ -225,6 +251,8 @@ just lets-bible-up             # all of the above, in order
 | KJV red-letter | `select count(distinct (chapter,verse)) from bible_token where translation_id='KJV' and words_of_jesus` | 2,050 verses (~41,412 tokens; projected from MSB's 2,056) |
 | Lexemes | `select count(*) from bible_lexeme` | 14,197 |
 | Cross-refs | `select count(*) from bible_cross_reference` | ~1,546 (BSB + MSB + 516 KJV projected from MSB) |
+| Commentary works | `select count(*) from bible_commentary_work` | 5 (calvin, mhc, mhcc, geneva, wesley) |
+| Commentary entries | `select count(*) from bible_commentary` | ~52,125 (calvin 11,063 / mhc 5,360 / mhcc 4,059 / geneva 14,713 / wesley 16,930) |
 | ES docs | `GET lets_bible_verses_v1/_count` | 93,288 |
 
 ### 2.4 Test accounts & inputs
@@ -369,6 +397,27 @@ cookie) > default. Defaults: red letter ON, verse numbers ON, text size 21px.
 | LB-VS-06 | Select a verse, then click a word in it | Selection switches to the word (mutually exclusive) — the panel becomes the word view; no verse stays selected. |
 | LB-VS-07 [E2E: study] | In the verse view, click a word **in the panel's verse text** | The verse text in the panel renders each Strong's-tagged word as a clickable control (`role="button"`, like the reading text); clicking one opens that word's study (word view, `aria-label="Word study"`) — the panel's hierarchical navigation (verse → word, with the `‹ Ref` back link returning to the verse view). |
 | LB-VS-08 [E2E: study] | Select a verse that has annotations | The verse view lists the verse's annotations in dedicated sections (each shown only when non-empty): **Footnotes** — each with its reading letter (a, b, c…) + the note body (e.g. John 1:5 → "a — Or comprehended"); **Cross-references** — links to the cited passages (e.g. Matthew 1:23 → "Isaiah 7:14" → `/bible/isaiah/7?v=14`); **Source text** — overlay explanations present in the verse (Divine name / Old Testament quotation / Hallelujah; e.g. Genesis 2:4 → "Divine name — the LORD renders the Tetragrammaton YHWH"). |
+
+### Commentaries tab (verse view)
+
+Data: `bible_commentary[_work]`, seeded from `seed/commentaries/*.json` (see §2.2).
+The verse view is a Base UI `tablist` (**Verse** | **Commentaries**); the
+Commentaries tab is a master/detail navigator. Following a work + the active tab
+persist in a session store (`src/lib/study-session.ts`).
+
+| ID | Preconditions | Steps | Expected |
+| --- | --- | --- | --- |
+| LB-CM-01 | `/bible/john/3` | Select v.16 | The verse view shows two tabs — **Verse** (selected) and **Commentaries** (`role=tablist`/`tab`/`tabpanel`). The Verse tab holds the verse words, highlight, actions, and footnotes/cross-refs/source-text. |
+| LB-CM-02 | LB-CM-01 | Click the **Commentaries** tab | Tab panel shows the **list** of works that comment on v.16, ordered by work ordinal (Calvin, Matthew Henry Complete, Matthew Henry Concise, Geneva, Wesley), each as a button with name + author · year + a 1-line preview. |
+| LB-CM-03 | LB-CM-02 | Click a work (e.g. Calvin) | **Detail** view: a **‹ All commentaries** back link, prev/next controls (`aria-label` "Previous/Next commentary"), the work name + author · year · tradition, the body as multiple paragraphs, and a **Source** link (new tab). |
+| LB-CM-04 | LB-CM-03 (following Calvin) | Click a **different verse** (e.g. v.17) | The panel re-targets to John 3:17, **stays on the Commentaries tab**, and **still follows Calvin** — now showing Calvin's note on v.17. (Active tab + followed work persist across verses.) |
+| LB-CM-05 | LB-CM-03 | Click **Next commentary** | Advances to the next work that covers this verse (e.g. Calvin → Matthew Henry Complete) and follows it. Matthew Henry shows an **"on vv. 1–21"** range label (Henry keys the whole passage at the opening verse); per-verse works (Calvin/Geneva/Wesley) show no label. |
+| LB-CM-06 | Following a work | Navigate to a verse that work doesn't cover | Detail shows **"{author} has no note on {Book C:V}"** (the follow persists; back link still available). |
+| LB-CM-07 | LB-CM-03 | Click **‹ All commentaries** | Returns to the list view for the current verse; nothing is followed. |
+| LB-CM-08 | — | On the Commentaries tab, select a verse no work comments on | List view shows **"No commentaries on this verse."** (no error). |
+| LB-CM-09 | Any translation (BSB/MSB/KJV) | Follow a work, then switch translation and select the same verse | The same commentaries appear (translation-agnostic, anchored to book/chapter/verse). |
+| LB-CM-10 | Offline / API failure | Open the Commentaries tab | The reader and Verse tab still work; the Commentaries tab shows its loading/empty state without crashing (the query is not in the SSR/loader path). |
+| LB-CM-11 | `/bible/john/1`, follow Matthew Henry Complete | Inspect the body | Scripture references render as **reader links** (e.g. "Prov. xxv. 1" → `/bible/proverbs/25?v=1`, relative "ver. 15" → `/bible/john/1?v=15`); ranges link to the first verse. Unresolvable refs stay plain text. The list preview shows no raw `{{ref:…}}` markers. |
 
 ---
 
@@ -877,6 +926,7 @@ A fast pass to run after any change:
 2. Translation switch to MSB works; the version picker also lists **KJV** (King James Version). `/bible/john/3?translation=KJV` renders KJV prose (v16 "For God so loved the world…"); two-clicking "God" → θεός / G2316. KJV **red-letter** works (John 14 mostly red; Matthew 4:4 intro black + speech red), projected from BSB. (KJV is prose-only — no poetry/cross-refs; see §18.)
 3. Double-click "God" in John 1 → study panel shows θεός / G2316.
 4. One study panel: reading column is centered while idle; select a verse → verse view (highlight/copy/share/compare/note); click a word twice (or press-and-hold on touch) → word view with the verse as context, single highlight. Selecting a word clears the verse and vice-versa (mutually exclusive).
+4b. Commentaries tab: select John 3:16 → verse view has **Verse**/**Commentaries** tabs; Commentaries tab lists Calvin, Matthew Henry (×2, "on vv. 1–21"), Geneva, Wesley; click Calvin → detail (body + Source + prev/next + back). Click verse 17 → still on Commentaries tab, still following Calvin (his note on v.17) — tab + work persist. (Requires `just lets-bible-seed-commentaries`.)
 5. Autocomplete (client-side FlexSearch, no debounce): `john` → book-jump widget (21-chapter grid); `john 3` → 36-verse grid; `john 3:16` → verse 16 + preview; click chapter fills bar, click verse navigates. `for God so loved the world` → JHN.3.16 ranked first in **Verses**; `in the beginning` → **Exact phrase** pill + **Creation** topic; scope dropdown switches BSB↔MSB. (Requires `public/search/*` from `just lets-bible-flex`.)
 6. `/search?q=fruit of the Spirit` → Galatians 5:22 first, highlighted.
 7. `/search?q=Matthew 1:23` → cross-reference Isaiah 7:14 + related passages.

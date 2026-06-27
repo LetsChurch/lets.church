@@ -1,4 +1,5 @@
 import { Drawer } from '@base-ui/react/drawer';
+import { Tabs } from '@base-ui/react/tabs';
 import { useForm } from '@tanstack/react-form';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
@@ -6,7 +7,14 @@ import { useState } from 'react';
 import { findBook } from '@/lib/canon';
 import { HIGHLIGHT_COLORS, highlightDotStyle } from '@/lib/highlight-colors';
 import { decodeMorph } from '@/lib/morph';
-import { chapterLink } from '@/lib/reference';
+import { chapterLink, parseReference } from '@/lib/reference';
+import {
+  type StudyTab,
+  setCommentaryWork,
+  setStudyTab,
+  useCommentaryWork,
+  useStudyTab,
+} from '@/lib/study-session';
 import { useIsDesktop } from '@/lib/use-media-query';
 import {
   noteOf,
@@ -275,102 +283,151 @@ function VerseView({
   const action =
     'rounded-lg border border-line-strong px-3 py-[7px] font-semibold text-[12.5px] text-muted-2 hover:bg-paper-soft hover:text-gold';
 
+  const tab = useStudyTab();
+  const tabClass =
+    'relative cursor-pointer pt-1 pb-2.5 font-semibold text-[11px] text-muted-2 uppercase tracking-[0.12em] outline-none hover:text-ink data-selected:text-gold';
+
   return (
     <>
       <PanelHeader eyebrow="Verse" title={reference} onClose={onClose} />
-      <div className="flex-1 overflow-y-auto px-5 py-5">
-        <VerseWords
-          runs={verseRuns}
-          verse={verse}
-          verseText={verseText}
-          onSelectWord={onSelectWord}
-        />
+      <Tabs.Root
+        value={tab}
+        onValueChange={(value) => setStudyTab(value as StudyTab)}
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <Tabs.List className="relative flex gap-5 border-line border-b px-5">
+          <Tabs.Tab value="verse" className={tabClass}>
+            Verse
+          </Tabs.Tab>
+          <Tabs.Tab value="commentaries" className={tabClass}>
+            Commentaries
+          </Tabs.Tab>
+          <Tabs.Indicator
+            className="absolute bottom-0 h-0.5 rounded-t-sm bg-gold transition-all duration-200"
+            style={{
+              left: 'var(--active-tab-left)',
+              width: 'var(--active-tab-width)',
+            }}
+          />
+        </Tabs.List>
 
-        <div className="mt-5 border-line border-t pt-4">
-          <div className="mb-2 font-semibold text-[11px] text-gold-soft uppercase tracking-[0.12em]">
-            Highlight
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {HIGHLIGHT_COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                aria-label={`Highlight ${c}`}
-                onClick={() => setHighlight(book, chapter, verse, c)}
-                style={highlightDotStyle(c)}
-                className={`size-[22px] rounded-full ${
-                  color === c
-                    ? 'ring-2 ring-gold ring-offset-2 ring-offset-paper-raised'
-                    : 'ring-1 ring-line-strong hover:ring-gold-soft'
-                }`}
-              />
-            ))}
-            {color ? (
-              <button
-                type="button"
-                onClick={() => removeHighlight(book, chapter, verse)}
-                className="ml-1 font-semibold text-[12px] text-muted-2 hover:text-gold"
-              >
-                Clear
-              </button>
-            ) : null}
-          </div>
-        </div>
+        <Tabs.Panel
+          value="verse"
+          className="min-h-0 flex-1 overflow-y-auto px-5 py-5"
+        >
+          <VerseWords
+            runs={verseRuns}
+            verse={verse}
+            verseText={verseText}
+            onSelectWord={onSelectWord}
+          />
 
-        <div className="mt-5 flex flex-wrap gap-1.5 border-line border-t pt-4">
-          <button type="button" className={action} onClick={() => copy('text')}>
-            {copied === 'text' ? 'Copied' : 'Copy'}
-          </button>
-          <button type="button" className={action} onClick={() => copy('link')}>
-            {copied === 'link' ? 'Link copied' : 'Share'}
-          </button>
+          <div className="mt-5 border-line border-t pt-4">
+            <div className="mb-2 font-semibold text-[11px] text-gold-soft uppercase tracking-[0.12em]">
+              Highlight
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {HIGHLIGHT_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  aria-label={`Highlight ${c}`}
+                  onClick={() => setHighlight(book, chapter, verse, c)}
+                  style={highlightDotStyle(c)}
+                  className={`size-[22px] rounded-full ${
+                    color === c
+                      ? 'ring-2 ring-gold ring-offset-2 ring-offset-paper-raised'
+                      : 'ring-1 ring-line-strong hover:ring-gold-soft'
+                  }`}
+                />
+              ))}
+              {color ? (
+                <button
+                  type="button"
+                  onClick={() => removeHighlight(book, chapter, verse)}
+                  className="ml-1 font-semibold text-[12px] text-muted-2 hover:text-gold"
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-wrap gap-1.5 border-line border-t pt-4">
+            <button
+              type="button"
+              className={action}
+              onClick={() => copy('text')}
+            >
+              {copied === 'text' ? 'Copied' : 'Copy'}
+            </button>
+            <button
+              type="button"
+              className={action}
+              onClick={() => copy('link')}
+            >
+              {copied === 'link' ? 'Link copied' : 'Share'}
+            </button>
+            <button
+              type="button"
+              className={action}
+              onClick={() =>
+                navigate({
+                  to: '/compare/$book/$chapter',
+                  params: { book, chapter: String(chapter) },
+                  search: { v: verse },
+                })
+              }
+            >
+              Compare
+            </button>
+            <button
+              type="button"
+              className={`${action} ${hasNote || editingNote ? 'text-gold' : ''}`}
+              onClick={() => setEditingNote((open) => !open)}
+            >
+              {hasNote ? 'Edit note' : 'Add note'}
+            </button>
+          </div>
+
+          {editingNote ? (
+            <NoteEditor
+              book={book}
+              chapter={chapter}
+              verse={verse}
+              label={reference}
+              hasNote={hasNote}
+              onClose={() => setEditingNote(false)}
+            />
+          ) : null}
+
+          <VerseAnnotations
+            verseRuns={verseRuns}
+            verseFootnotes={verseFootnotes}
+            verseCrossRefs={verseCrossRefs}
+          />
+
           <button
             type="button"
-            className={action}
-            onClick={() =>
-              navigate({
-                to: '/compare/$book/$chapter',
-                params: { book, chapter: String(chapter) },
-                search: { v: verse },
-              })
-            }
+            onClick={onStudyFirstWord}
+            className="mt-6 w-full rounded-lg border border-gold-soft/50 px-3 py-2 font-semibold text-[12.5px] text-gold hover:bg-gold/5"
           >
-            Compare
+            Study a word — or tap any word in the verse
           </button>
-          <button
-            type="button"
-            className={`${action} ${hasNote || editingNote ? 'text-gold' : ''}`}
-            onClick={() => setEditingNote((open) => !open)}
-          >
-            {hasNote ? 'Edit note' : 'Add note'}
-          </button>
-        </div>
+        </Tabs.Panel>
 
-        {editingNote ? (
-          <NoteEditor
+        <Tabs.Panel
+          value="commentaries"
+          className="min-h-0 flex-1 overflow-y-auto px-5 py-5"
+        >
+          <CommentariesTab
             book={book}
             chapter={chapter}
             verse={verse}
-            label={reference}
-            hasNote={hasNote}
-            onClose={() => setEditingNote(false)}
+            reference={reference}
           />
-        ) : null}
-
-        <VerseAnnotations
-          verseRuns={verseRuns}
-          verseFootnotes={verseFootnotes}
-          verseCrossRefs={verseCrossRefs}
-        />
-
-        <button
-          type="button"
-          onClick={onStudyFirstWord}
-          className="mt-6 w-full rounded-lg border border-gold-soft/50 px-3 py-2 font-semibold text-[12.5px] text-gold hover:bg-gold/5"
-        >
-          Study a word — or tap any word in the verse
-        </button>
-      </div>
+        </Tabs.Panel>
+      </Tabs.Root>
     </>
   );
 }
@@ -394,8 +451,214 @@ function AnnotationSection({
   );
 }
 
-// The verse's footnotes (with their reading letters), cross-references, and
-// source-text overlays — surfaced together so the verse view is a study view.
+// Renders a plain-text commentary body (blank-line paragraph breaks). Text is
+// rendered as JSX children, so React escapes it — the body is plain text with no
+// markup. `whitespace-pre-line` keeps intra-paragraph newlines (e.g. quoted
+// verse lines in Matthew Henry).
+// Resolve a commentary ref-marker target to a reader link. Targets are either an
+// OSIS ref (Book.Ch.Vs, from OSIS modules) or a human ref (from GBF <scripRef>).
+// Returns null when the book/chapter can't be resolved (rendered as plain text).
+function refLink(target: string) {
+  // Ranges ("John.3.1-John.3.21", "Ge 1:1-10") link to the first verse.
+  const base = target.split(/[-–]/)[0].trim();
+  const osis = /^([1-3]?[A-Za-z]+)\.(\d+)(?:\.(\d+))?$/.exec(base);
+  if (osis) {
+    const book = findBook(osis[1]);
+    const chapter = Number(osis[2]);
+    if (book && chapter >= 1 && chapter <= book.chapterCount) {
+      return chapterLink(
+        book.slug,
+        chapter,
+        osis[3] ? Number(osis[3]) : undefined,
+      );
+    }
+  }
+  const parsed = parseReference(base);
+  return parsed ? chapterLink(parsed.book, parsed.chapter, parsed.verse) : null;
+}
+
+// Plain-text preview for the list (strip ref-markers down to their display text).
+function stripRefMarkers(body: string): string {
+  return body.replace(/\{\{ref:[^|]*\|([^}]*)\}\}/g, '$1');
+}
+
+const REF_MARKER = /\{\{ref:([^|]*)\|([^}]*)\}\}/g;
+
+// Render a commentary paragraph, turning {{ref:target|display}} markers into
+// reader links (unresolvable targets fall back to plain text). React escapes
+// every text/link child, so this is safe for the untrusted commentary text.
+function renderParagraph(text: string): React.ReactNode[] {
+  const out: React.ReactNode[] = [];
+  let last = 0;
+  let key = 0;
+  REF_MARKER.lastIndex = 0;
+  let m = REF_MARKER.exec(text);
+  while (m !== null) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    const link = refLink(m[1]);
+    out.push(
+      link ? (
+        <Link key={`r${key++}`} {...link} className="text-gold hover:underline">
+          {m[2]}
+        </Link>
+      ) : (
+        m[2]
+      ),
+    );
+    last = REF_MARKER.lastIndex;
+    m = REF_MARKER.exec(text);
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
+
+function CommentaryBody({ body }: { body: string }) {
+  return (
+    <div className="space-y-2 text-[13px] text-ink leading-relaxed">
+      {body.split('\n\n').map((p, i) => (
+        <p key={`p${i}`} className="whitespace-pre-line">
+          {renderParagraph(p)}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+// The Commentaries tab: a master/detail navigator over the public-domain works.
+// The list shows the works that comment on the current verse; picking one opens
+// its note and **follows that work** — the choice persists in the session store,
+// so moving to the next verse keeps showing the same commentator (with a back
+// link to the list). Fetched on demand per verse (bodies are large, so unlike
+// cross-references they're not prefetched).
+function CommentariesTab({
+  book,
+  chapter,
+  verse,
+  reference,
+}: {
+  book: string;
+  chapter: number;
+  verse: number;
+  reference: string;
+}) {
+  const trpc = useTRPC();
+  const { data: works } = useQuery(trpc.bible.commentaryWorks.queryOptions());
+  const { data: entries, isLoading } = useQuery(
+    trpc.bible.verseCommentaries.queryOptions({ book, chapter, verse }),
+  );
+  const followingId = useCommentaryWork();
+
+  if (isLoading || !works || !entries) {
+    return <p className="text-[13px] text-muted-2">Loading commentaries…</p>;
+  }
+
+  const entryByWork = new Map(entries.map((e) => [e.workId, e]));
+  // Works that comment on this verse, in display order — drives the list and the
+  // prev/next cycle so navigation never lands on a dead end for this verse.
+  const here = works.filter((w) => entryByWork.has(w.id));
+  const following = followingId
+    ? works.find((w) => w.id === followingId)
+    : undefined;
+
+  // Detail view — a work is being followed.
+  if (following) {
+    const entry = entryByWork.get(following.id);
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={() => setCommentaryWork(null)}
+          className="font-semibold text-[12px] text-gold hover:underline"
+        >
+          ‹ All commentaries
+        </button>
+
+        <div className="mt-3">
+          <div className="font-serif text-[18px] text-ink-strong leading-tight">
+            {following.name}
+          </div>
+          <div className="mt-0.5 text-[12px] text-muted-2">
+            {following.author}
+            {following.year ? ` · ${following.year}` : ''}
+            {following.tradition ? ` · ${following.tradition}` : ''}
+          </div>
+          {entry?.verseEnd ? (
+            <div className="mt-0.5 text-[11px] text-gold-soft">
+              on vv. {entry.verse}–{entry.verseEnd}
+            </div>
+          ) : null}
+        </div>
+
+        {entry ? (
+          <>
+            <div className="mt-4">
+              <CommentaryBody body={entry.body} />
+            </div>
+            {following.sourceUrl ? (
+              <a
+                href={following.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-block font-semibold text-[12px] text-gold hover:underline"
+              >
+                Source
+              </a>
+            ) : null}
+          </>
+        ) : (
+          <p className="mt-4 text-[13px] text-muted italic">
+            {following.author} has no note on {reference}.
+            {here.length > 0
+              ? ' Use ‹ All commentaries to see what’s available here.'
+              : ''}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // List view — choose a commentary for this verse.
+  if (here.length === 0) {
+    return (
+      <p className="text-[13px] text-muted-2">No commentaries on this verse.</p>
+    );
+  }
+  return (
+    // Flush, full-bleed list (the panel supplies the px-5 gutter): rows are
+    // separated by hairline dividers rather than boxed in padded cards.
+    <div className="-mx-5 flex flex-col divide-y divide-line">
+      {here.map((w) => {
+        const entry = entryByWork.get(w.id);
+        return (
+          <button
+            key={w.id}
+            type="button"
+            onClick={() => setCommentaryWork(w.id)}
+            className="px-5 py-3 text-left hover:bg-paper-soft"
+          >
+            <div className="font-semibold text-[13px] text-ink">{w.name}</div>
+            <div className="text-[11.5px] text-muted-2">
+              {w.author}
+              {w.year ? ` · ${w.year}` : ''}
+              {entry?.verseEnd
+                ? ` · on vv. ${entry.verse}–${entry.verseEnd}`
+                : ''}
+            </div>
+            {entry ? (
+              <div className="mt-1 line-clamp-2 text-[12px] text-muted leading-snug">
+                {stripRefMarkers(entry.body)}
+              </div>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// The verse's footnotes (with their reading letters), cross-references,
+// source-text overlays — surfaced together in the Verse tab. (Commentaries are
+// their own tab; see CommentariesTab.)
 function VerseAnnotations({
   verseRuns,
   verseFootnotes,
