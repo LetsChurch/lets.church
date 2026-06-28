@@ -98,15 +98,25 @@ export function AuthActions() {
     );
   }
 
-  // /login is a server route (302), so it's a plain anchor. (About lives in the
-  // footer only — no header link.)
+  // Anonymous: the library is still theirs (saved on-device — highlights, notes,
+  // offline commentary downloads), so it needs a header entry point of its own —
+  // signed-in users reach it via the account menu above. /login is a server
+  // route (302), so it's a plain anchor. (About lives in the footer only.)
   return (
-    <a
-      href="/login"
-      className="rounded-[9px] border border-line-strong bg-paper-raised px-[15px] py-2 font-semibold text-ink text-sm"
-    >
-      Sign in
-    </a>
+    <div className="flex items-center gap-2 sm:gap-3">
+      <Link
+        to="/library"
+        className="font-semibold text-muted text-sm hover:text-ink"
+      >
+        Library
+      </Link>
+      <a
+        href="/login"
+        className="rounded-[9px] border border-line-strong bg-paper-raised px-[15px] py-2 font-semibold text-ink text-sm"
+      >
+        Sign in
+      </a>
+    </div>
   );
 }
 

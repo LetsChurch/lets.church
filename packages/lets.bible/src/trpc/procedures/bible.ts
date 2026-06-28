@@ -648,6 +648,68 @@ export const bibleProcedures = {
       .orderBy(asc(bibleCommentaryWork.ordinal));
   }),
 
+  // Works with their offline download size (entry count + total body bytes).
+  // Separate from the hot `commentaryWorks` so the panel's online path stays
+  // untouched; the Library uses this to show per-work sizes before download.
+  commentaryWorksWithSize: publicProcedure.query(async () => {
+    return db
+      .select({
+        id: bibleCommentaryWork.id,
+        name: bibleCommentaryWork.name,
+        author: bibleCommentaryWork.author,
+        year: bibleCommentaryWork.year,
+        tradition: bibleCommentaryWork.tradition,
+        sourceUrl: bibleCommentaryWork.sourceUrl,
+        entryCount: sql<number>`count(${bibleCommentary.id})::int`,
+        bytes: sql<number>`coalesce(sum(octet_length(${bibleCommentary.body})), 0)::int`,
+      })
+      .from(bibleCommentaryWork)
+      .leftJoin(
+        bibleCommentary,
+        eq(bibleCommentary.workId, bibleCommentaryWork.id),
+      )
+      .groupBy(bibleCommentaryWork.id)
+      .orderBy(asc(bibleCommentaryWork.ordinal));
+  }),
+
+  // The USFM books a work comments on (+ per-book entry counts) — the manifest
+  // an offline download loops over.
+  commentaryWorkBooks: publicProcedure
+    .input(z.object({ workId: z.string() }))
+    .query(async ({ input }) => {
+      return db
+        .select({
+          book: bibleCommentary.book,
+          entryCount: sql<number>`count(*)::int`,
+        })
+        .from(bibleCommentary)
+        .where(eq(bibleCommentary.workId, input.workId))
+        .groupBy(bibleCommentary.book)
+        .orderBy(asc(bibleCommentary.book));
+    }),
+
+  // All of a work's entries for one book — the per-book unit an offline download
+  // stores. `book` is already a USFM code (from commentaryWorkBooks), not a slug.
+  commentaryWorkBook: publicProcedure
+    .input(z.object({ workId: z.string(), book: z.string() }))
+    .query(async ({ input }) => {
+      return db
+        .select({
+          chapter: bibleCommentary.chapter,
+          verse: bibleCommentary.verse,
+          verseEnd: bibleCommentary.verseEnd,
+          body: bibleCommentary.body,
+        })
+        .from(bibleCommentary)
+        .where(
+          and(
+            eq(bibleCommentary.workId, input.workId),
+            eq(bibleCommentary.book, input.book),
+          ),
+        )
+        .orderBy(asc(bibleCommentary.chapter), asc(bibleCommentary.verse));
+    }),
+
   // Public-domain commentaries for a single verse, across every work, ordered by
   // the work's display ordinal. Commentaries are translation-agnostic (anchored
   // to the canonical book/chapter/verse), so no translation is resolved. Fetched

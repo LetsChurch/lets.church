@@ -17,6 +17,13 @@ import {
 } from '@/lib/study-session';
 import { useIsDesktop } from '@/lib/use-media-query';
 import {
+  commentaryWorksQueryOptions,
+  downloadWork,
+  removeWork,
+  useOfflineCommentaries,
+  verseCommentariesQueryOptions,
+} from '@/local/offline-commentaries';
+import {
   noteOf,
   removeHighlight,
   removeNote,
@@ -524,6 +531,71 @@ function CommentaryBody({ body }: { body: string }) {
   );
 }
 
+// A compact per-commentary offline control (download / progress / downloaded),
+// the panel-side counterpart to the Library's Download/Remove buttons. Reuses the
+// offline-commentaries store, so its state stays in sync with the Library.
+function CommentaryDownloadButton({
+  workId,
+  className = '',
+}: {
+  workId: string;
+  className?: string;
+}) {
+  const status = useOfflineCommentaries()[workId] ?? { state: 'idle' as const };
+  if (status.state === 'downloading') {
+    return (
+      <span
+        className={`flex-shrink-0 px-1 font-semibold text-[11px] text-muted-2 tabular-nums ${className}`}
+        title="Downloading for offline…"
+      >
+        {Math.round((status.progress ?? 0) * 100)}%
+      </span>
+    );
+  }
+  const downloaded = status.state === 'downloaded';
+  return (
+    <button
+      type="button"
+      aria-label={
+        downloaded ? 'Remove offline download' : 'Download for offline reading'
+      }
+      title={
+        downloaded
+          ? 'Saved for offline — tap to remove'
+          : 'Download for offline reading'
+      }
+      onClick={() => (downloaded ? removeWork(workId) : downloadWork(workId))}
+      className={`flex size-7 flex-shrink-0 items-center justify-center rounded-md ${
+        downloaded
+          ? 'text-gold'
+          : 'text-muted-2 hover:bg-paper-soft hover:text-gold'
+      } ${className}`}
+    >
+      <svg viewBox="0 0 14 14" aria-hidden="true" className="size-3.5">
+        {downloaded ? (
+          <path
+            d="M2.5 7.5 6 11l5.5-7"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ) : (
+          <path
+            d="M7 1.5v7m0 0 2.5-2.5M7 8.5 4.5 6M2 11.5h10"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        )}
+      </svg>
+    </button>
+  );
+}
+
 // The Commentaries tab: a master/detail navigator over the public-domain works.
 // The list shows the works that comment on the current verse; picking one opens
 // its note and **follows that work** — the choice persists in the session store,
@@ -542,9 +614,11 @@ function CommentariesTab({
   reference: string;
 }) {
   const trpc = useTRPC();
-  const { data: works } = useQuery(trpc.bible.commentaryWorks.queryOptions());
+  // Offline-aware: online hits the server; when offline these fall back to the
+  // downloaded copy (downloaded works only). See local/offline-commentaries.
+  const { data: works } = useQuery(commentaryWorksQueryOptions(trpc));
   const { data: entries, isLoading } = useQuery(
-    trpc.bible.verseCommentaries.queryOptions({ book, chapter, verse }),
+    verseCommentariesQueryOptions(trpc, { book, chapter, verse }),
   );
   const followingId = useCommentaryWork();
 
@@ -565,13 +639,16 @@ function CommentariesTab({
     const entry = entryByWork.get(following.id);
     return (
       <div>
-        <button
-          type="button"
-          onClick={() => setCommentaryWork(null)}
-          className="font-semibold text-[12px] text-gold hover:underline"
-        >
-          ‹ All commentaries
-        </button>
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setCommentaryWork(null)}
+            className="font-semibold text-[12px] text-gold hover:underline"
+          >
+            ‹ All commentaries
+          </button>
+          <CommentaryDownloadButton workId={following.id} />
+        </div>
 
         <div className="mt-3">
           <div className="font-serif text-[18px] text-ink-strong leading-tight">
@@ -630,26 +707,35 @@ function CommentariesTab({
       {here.map((w) => {
         const entry = entryByWork.get(w.id);
         return (
-          <button
+          // Row = a main "open this work" button + a sibling download control
+          // (not nested — mirrors the translation picker's row actions).
+          <div
             key={w.id}
-            type="button"
-            onClick={() => setCommentaryWork(w.id)}
-            className="px-5 py-3 text-left hover:bg-paper-soft"
+            className="flex items-start gap-2 px-5 py-3 hover:bg-paper-soft"
           >
-            <div className="font-semibold text-[13px] text-ink">{w.name}</div>
-            <div className="text-[11.5px] text-muted-2">
-              {w.author}
-              {w.year ? ` · ${w.year}` : ''}
-              {entry?.verseEnd
-                ? ` · on vv. ${entry.verse}–${entry.verseEnd}`
-                : ''}
-            </div>
-            {entry ? (
-              <div className="mt-1 line-clamp-2 text-[12px] text-muted leading-snug">
-                {stripRefMarkers(entry.body)}
+            <button
+              type="button"
+              onClick={() => setCommentaryWork(w.id)}
+              className="min-w-0 flex-1 text-left"
+            >
+              <div className="font-semibold text-[13px] text-ink">{w.name}</div>
+              <div className="text-[11.5px] text-muted-2">
+                {w.author}
+                {w.year ? ` · ${w.year}` : ''}
+                {entry?.verseEnd
+                  ? ` · on vv. ${entry.verse}–${entry.verseEnd}`
+                  : ''}
               </div>
-            ) : null}
-          </button>
+              {entry ? (
+                <div className="mt-1 line-clamp-2 text-[12px] text-muted leading-snug">
+                  {stripRefMarkers(entry.body)}
+                </div>
+              ) : null}
+            </button>
+            {/* Nudge up so the icon shares a baseline with the work heading
+                (the row is items-start to top-align with the multi-line text). */}
+            <CommentaryDownloadButton workId={w.id} className="-mt-1" />
+          </div>
         );
       })}
     </div>
