@@ -22,6 +22,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Charset, Index } from 'flexsearch';
 import { CANON } from '../lib/canon';
+import { deriveVerses } from '../lib/derive-verses';
 import {
   KJV_SOURCE_PATH,
   loadKjvSource,
@@ -112,11 +113,25 @@ for (const { id, load } of TRANSLATIONS) {
       throw new Error(`[${id}] missing book ${book.code}`);
     }
 
-    // Reading asset: the chapters map the reader renders (matches the
-    // bibleBook.content JSONB that bible.book/bible.chapter used to slice).
+    // Reading asset: the chapters map the reader renders. We drop each chapter's
+    // `verses` map (verseNum → plain text) — it duplicates the entire text, which
+    // the client rebuilds from the block runs (chapter-cache.ts via deriveVerses).
+    // A handful of verses don't reconstruct exactly (boundary run-attribution), so
+    // ship ONLY those as `verses` exceptions for the client to merge over. Keep
+    // `chapters` intact: the search index + structure below read `[..].verses`.
+    const readingChapters = Object.fromEntries(
+      Object.entries(chapters).map(([k, c]) => {
+        const derived = deriveVerses(c.blocks);
+        const exceptions: Record<string, string> = {};
+        for (const [v, text] of Object.entries(c.verses)) {
+          if (derived[v] !== text) exceptions[v] = text;
+        }
+        return [k, { number: c.number, blocks: c.blocks, verses: exceptions }];
+      }),
+    );
     writeFileSync(
       join(readingDir, `${book.slug}.json`),
-      JSON.stringify(chapters),
+      JSON.stringify(readingChapters),
     );
 
     const chapterKeys = Object.keys(chapters)

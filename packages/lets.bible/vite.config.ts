@@ -12,7 +12,13 @@ export default defineConfig(() => ({
   plugins: [
     tsConfigPaths(),
     tanstackStart(),
-    nitroV2Plugin({ preset: 'node-server' }),
+    // Precompress public assets (the large /reading/ + /search/ JSON) to .br/.gz
+    // at build time; Nitro's static handler serves them with Content-Encoding when
+    // the client allows it — e.g. BSB reading ~28.8MB raw → ~2.5MB brotli.
+    nitroV2Plugin({
+      preset: 'node-server',
+      compressPublicAssets: { gzip: true, brotli: true },
+    }),
     viteReact(),
     tailwindcss(),
   ],

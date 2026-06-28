@@ -1,6 +1,7 @@
 import type { BookChapter } from '@/db';
 import { applyOverlays, type OverlayIndex } from '@/lib/apply-overlays';
 import { bookBySlug } from '@/lib/canon';
+import { deriveVerses } from '@/lib/derive-verses';
 
 // Reading asset keys use the url slug ("john"); the overlay index is keyed by USFM
 // code ("JHN").
@@ -84,8 +85,17 @@ export function chapterQueryOptions(params: {
       }
       // Apply the source-text overlays at render time (the reading asset is
       // overlay-pure); the book code here is the USFM code (the asset key's slug
-      // maps 1:1, but the index is keyed by USFM, so resolve it).
-      return applyOverlays(usfmOf(book), chapter, data, index);
+      // maps 1:1, but the index is keyed by USFM, so resolve it). The asset omits
+      // the per-verse text map (all but a few boundary exceptions), so rebuild it
+      // from the runs and let the shipped exceptions override.
+      const withOverlays = applyOverlays(usfmOf(book), chapter, data, index);
+      return {
+        ...withOverlays,
+        verses: {
+          ...deriveVerses(withOverlays.blocks),
+          ...withOverlays.verses,
+        },
+      };
     },
   };
 }
