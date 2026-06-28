@@ -81,8 +81,8 @@ In scope (everything implemented to date):
   into `bible_commentary[_work]`. The tab is a **master/detail navigator**: a list
   of the works that comment on the current verse (name + author · year + a 1-line
   preview, ordered by work ordinal); picking one opens its note (**detail**) with a
-  **‹ All commentaries** back link, **prev/next** to flip between works, the work's
-  Source link, and the paragraphed body. **Following a work persists for the
+  **‹ All commentaries** back link, the work's Source link, and the paragraphed
+  body. **Following a work persists for the
   session** (`src/lib/study-session.ts`): clicking from one verse to the next keeps
   you on the Commentaries tab reading the same commentator, showing its note for the
   new verse — or **"{author} has no note on {ref}"** when that work doesn't cover it.
@@ -96,7 +96,10 @@ In scope (everything implemented to date):
   **"on vv. X–Y"** range label. Bodies are plain text with blank-line paragraphs;
   **scripture references inside a commentary render as reader links** (OSIS `osisRef`
   for Calvin/MHC/MHCC, parsed inner text for Geneva/Wesley; unresolvable refs stay
-  plain text).
+  plain text). **Commentaries can be downloaded per commentator for offline use**
+  — from the Library page **or** the study panel's Commentaries tab (a per-work
+  download icon, in sync with the Library) — stored in IndexedDB; the study panel
+  falls back to the downloaded copy when offline. Online is unchanged (server-fetched).
 - Source-text overlays: dotted underline + tooltip on the divine name,
   Hallelujah, and OT quotations (the OT-quotation tooltip links to the source
   passage); divine-name rendering (LORD/YHWH/Yahweh). Quotation poetry blocks are
@@ -307,7 +310,7 @@ Currently automated: LB-SMOKE-01/02/03/05 (`smoke`), LB-READ-01/07/08/11/12
 (`reading`), LB-SR-01/02 + LB-AC (`search`), LB-VS-07 + LB-WS-01/02/12/13
 + LB-VS-08 (`study`), LB-OV-01 + LB-OV-13/14 + divine-name-Yahweh (`overlays`),
 LB-LIB-05/06/10/11/12/13/14/15 + LB-FORM (`library-local`), LB-CMP-01..04 (`compare`), LB-MOB-01..12 (`mobile`),
-LB-IL-01..05/09/10 (`interlinear`).
+LB-IL-01..05/09/10 (`interlinear`), LB-CM-01..05/07/11 + LB-OFF-CM-01 (`commentaries`), LB-HOME-03 (`home`).
 
 ---
 
@@ -407,17 +410,17 @@ persist in a session store (`src/lib/study-session.ts`).
 
 | ID | Preconditions | Steps | Expected |
 | --- | --- | --- | --- |
-| LB-CM-01 | `/bible/john/3` | Select v.16 | The verse view shows two tabs — **Verse** (selected) and **Commentaries** (`role=tablist`/`tab`/`tabpanel`). The Verse tab holds the verse words, highlight, actions, and footnotes/cross-refs/source-text. |
-| LB-CM-02 | LB-CM-01 | Click the **Commentaries** tab | Tab panel shows the **list** of works that comment on v.16, ordered by work ordinal (Calvin, Matthew Henry Complete, Matthew Henry Concise, Geneva, Wesley), each as a button with name + author · year + a 1-line preview. |
-| LB-CM-03 | LB-CM-02 | Click a work (e.g. Calvin) | **Detail** view: a **‹ All commentaries** back link, prev/next controls (`aria-label` "Previous/Next commentary"), the work name + author · year · tradition, the body as multiple paragraphs, and a **Source** link (new tab). |
-| LB-CM-04 | LB-CM-03 (following Calvin) | Click a **different verse** (e.g. v.17) | The panel re-targets to John 3:17, **stays on the Commentaries tab**, and **still follows Calvin** — now showing Calvin's note on v.17. (Active tab + followed work persist across verses.) |
-| LB-CM-05 | LB-CM-03 | Click **Next commentary** | Advances to the next work that covers this verse (e.g. Calvin → Matthew Henry Complete) and follows it. Matthew Henry shows an **"on vv. 1–21"** range label (Henry keys the whole passage at the opening verse); per-verse works (Calvin/Geneva/Wesley) show no label. |
+| LB-CM-01 [E2E: commentaries] | `/bible/john/3` | Select v.16 | The verse view shows two tabs — **Verse** (selected) and **Commentaries** (`role=tablist`/`tab`/`tabpanel`). The Verse tab holds the verse words, highlight, actions, and footnotes/cross-refs/source-text. |
+| LB-CM-02 [E2E: commentaries] | LB-CM-01 | Click the **Commentaries** tab | Tab panel shows the **list** of works that comment on v.16, ordered by work ordinal (Calvin, Matthew Henry Complete, Matthew Henry Concise, Geneva, Wesley), each as a button with name + author · year + a 1-line preview. |
+| LB-CM-03 [E2E: commentaries] | LB-CM-02 | Click a work (e.g. Calvin) | **Detail** view: a **‹ All commentaries** back link, the work name + author · year · tradition, the body as multiple paragraphs, and a **Source** link (new tab). |
+| LB-CM-04 [E2E: commentaries] | LB-CM-03 (following Calvin) | Click a **different verse** (e.g. v.17) | The panel re-targets to John 3:17, **stays on the Commentaries tab**, and **still follows Calvin** — now showing Calvin's note on v.17. (Active tab + followed work persist across verses.) |
+| LB-CM-05 [E2E: commentaries] | LB-CM-02 | Open Matthew Henry Complete (a section work) on v.16 | The detail header shows an **"on vv. 1–21"** range label (Henry keys the whole passage at the opening verse); per-verse works (Calvin/Geneva/Wesley) show no label. |
 | LB-CM-06 | Following a work | Navigate to a verse that work doesn't cover | Detail shows **"{author} has no note on {Book C:V}"** (the follow persists; back link still available). |
-| LB-CM-07 | LB-CM-03 | Click **‹ All commentaries** | Returns to the list view for the current verse; nothing is followed. |
+| LB-CM-07 [E2E: commentaries] | LB-CM-03 | Click **‹ All commentaries** | Returns to the list view for the current verse; nothing is followed. |
 | LB-CM-08 | — | On the Commentaries tab, select a verse no work comments on | List view shows **"No commentaries on this verse."** (no error). |
 | LB-CM-09 | Any translation (BSB/MSB/KJV) | Follow a work, then switch translation and select the same verse | The same commentaries appear (translation-agnostic, anchored to book/chapter/verse). |
 | LB-CM-10 | Offline / API failure | Open the Commentaries tab | The reader and Verse tab still work; the Commentaries tab shows its loading/empty state without crashing (the query is not in the SSR/loader path). |
-| LB-CM-11 | `/bible/john/1`, follow Matthew Henry Complete | Inspect the body | Scripture references render as **reader links** (e.g. "Prov. xxv. 1" → `/bible/proverbs/25?v=1`, relative "ver. 15" → `/bible/john/1?v=15`); ranges link to the first verse. Unresolvable refs stay plain text. The list preview shows no raw `{{ref:…}}` markers. |
+| LB-CM-11 [E2E: commentaries] | `/bible/john/1`, follow Matthew Henry Complete | Inspect the body | Scripture references render as **reader links** (e.g. "Prov. xxv. 1" → `/bible/proverbs/25?v=1`, relative "ver. 15" → `/bible/john/1?v=15`); ranges link to the first verse. Unresolvable refs stay plain text. The list preview shows no raw `{{ref:…}}` markers. |
 
 ---
 
@@ -550,7 +553,7 @@ the stage and clicking fills the input or navigates.
 | --- | --- | --- | --- |
 | LB-HOME-01 | Anonymous | Open `/` | Signed-out hero: wordmark **directly above** the search box (no subtitle paragraph between them), chips, "Verse of the day", **only a "Sign in"** action in the header (no About link — About is in the footer), footer "lets.church" → web host. |
 | LB-HOME-02 | Signed in | Open `/` | Returning view: "Good morning/afternoon/evening, admin." greeting; avatar menu; search; cards. |
-| LB-HOME-03 | — | Verse of the day | Shows a **real verse** from a curated list (`src/lib/votd.ts`), text pulled from the DB (`bible_verse`) — not a hardcoded string. The reference (e.g. "Psalm 19:14") is a link into the reader at that passage (`/bible/psalm/19?v=14`), and the translation tag matches the resolved translation. |
+| LB-HOME-03 [E2E: home] | — | Verse of the day | Shows a **real verse** from a curated list (`src/lib/votd.ts`), text pulled from the DB (`bible_verse`) — not a hardcoded string. The reference (e.g. "Psalm 19:14") is a link into the reader at that passage (`/bible/psalm/19?v=14`), and the translation tag matches the resolved translation. |
 | LB-HOME-03a | — | Same day, reload | The verse is **stable across the day** (keyed by UTC day) and identical in SSR + client (no hydration mismatch). |
 | LB-HOME-03b | Signed in with a non-default translation preference (e.g. KJV) | Open `/` | The verse of the day renders in the **preferred translation** (same passage, KJV wording). |
 | LB-HOME-04 | — | Greeting time-of-day | Greeting matches local time (client-hint based — verify no hydration mismatch). |
@@ -809,9 +812,23 @@ precache-on-install is a possible later upgrade.)
 | LB-OFF-08 (manual; prod build) | Prod build, offline, a chapter whose asset isn't cached yet (precache incomplete) | Degrades gracefully — the app shell loads (SW) and the reader shows a not-available/error state; no white screen. Cross-refs + interlinear are skipped offline (`crossRefsQueryOptions` resolves `{}`; interlinear shows its loading state). |
 | LB-OFF-09 (manual; prod build) | Prod build | Inspect the page | A linked `manifest.webmanifest` (name "lets.bible", `display: standalone`, theme `#f4f1e9`, icon) makes the app installable; the SW (`/sw.js`) is registered and controlling; `/reading/` + `/search/` responses are in the `lb-content-<VERSION>` cache. |
 
-> Note: reading + search are now offline-capable (static assets, SW-cached);
-> the homepage's tRPC-driven cards (verse of the day, plan) still need a
-> connection. Library/prefs are local-first.
+### Offline commentaries (download + manage)
+
+Unlike reading/search (auto-cached), commentaries are **opt-in downloads** managed per commentator on the Library page, stored in IndexedDB (`lets-bible-cache`/`kv`, keys `commentary:*`). Online is unchanged; the study panel falls back to the downloaded copy only when the server call fails. See `src/local/offline-commentaries.ts`.
+
+| ID | Steps | Expected |
+| --- | --- | --- |
+| LB-OFF-CM-01 [E2E: commentaries] | As a guest (signed out), click **Library** in the header (shown for anonymous users alongside Sign in; signed-in users reach it via the account menu) | Lands on `/library` (no redirect). An **Offline commentaries** section lists all 5 works (Calvin, Matthew Henry ×2, Geneva, Wesley) with author + size in MB (from `bible.commentaryWorksWithSize`), each with a **Download** button. |
+| LB-OFF-CM-02 | Click **Download** on a work (e.g. Geneva ~4.4 MB) | Button shows **%** progress (per-book loop), then flips to **Remove**. IndexedDB `lets-bible-cache`/`kv` gains `commentary:works`, `commentary:meta` (with the workId), and one `commentary:<workId>:<USFM>` key per covered book (Geneva = 63). |
+| LB-OFF-CM-03 | Reload `/library` | The downloaded work still shows **Remove** (status hydrated from `commentary:meta`); others show **Download**. No hydration mismatch (server + first client paint render Download). |
+| LB-OFF-CM-04 | With a work downloaded, simulate offline (DevTools offline, or fail `/trpc/`), open a verse it covers (e.g. Geneva on John 3:16), Commentaries tab | The panel lists **only downloaded works** (Geneva), assembled from IndexedDB, with the body rendered. Non-downloaded works do **not** appear offline. Online (no failure) is unchanged — all works show. |
+| LB-OFF-CM-05 | Library → **Remove** the work | Its `commentary:<workId>:*` keys are deleted and it's pruned from `commentary:meta`; button returns to **Download**. Offline, that work no longer appears in the panel. Removing mid-download aborts the loop and cleans up. |
+| LB-OFF-CM-06 | Study panel → Commentaries tab | Each work (list row, and the detail header when a work is open) has a compact **download icon** on the right (mirrors the translation picker's row actions): a down-arrow when idle, **%** while downloading, a **✓** when saved (tap to remove). It shares the offline store, so downloading/removing here stays in sync with the Library (and vice-versa). |
+
+> Note: reading + search are auto-cached (static assets, SW-cached); commentaries
+> are opt-in per-work downloads (IndexedDB, managed on Library). The homepage's
+> tRPC-driven cards (verse of the day, plan) still need a connection.
+> Library/prefs are local-first.
 
 ## 20. Suite O — Forms (TanStack Form)
 
@@ -926,7 +943,7 @@ A fast pass to run after any change:
 2. Translation switch to MSB works; the version picker also lists **KJV** (King James Version). `/bible/john/3?translation=KJV` renders KJV prose (v16 "For God so loved the world…"); two-clicking "God" → θεός / G2316. KJV **red-letter** works (John 14 mostly red; Matthew 4:4 intro black + speech red), projected from BSB. (KJV is prose-only — no poetry/cross-refs; see §18.)
 3. Double-click "God" in John 1 → study panel shows θεός / G2316.
 4. One study panel: reading column is centered while idle; select a verse → verse view (highlight/copy/share/compare/note); click a word twice (or press-and-hold on touch) → word view with the verse as context, single highlight. Selecting a word clears the verse and vice-versa (mutually exclusive).
-4b. Commentaries tab: select John 3:16 → verse view has **Verse**/**Commentaries** tabs; Commentaries tab lists Calvin, Matthew Henry (×2, "on vv. 1–21"), Geneva, Wesley; click Calvin → detail (body + Source + prev/next + back). Click verse 17 → still on Commentaries tab, still following Calvin (his note on v.17) — tab + work persist. (Requires `just lets-bible-seed-commentaries`.)
+4b. Commentaries tab: select John 3:16 → verse view has **Verse**/**Commentaries** tabs; Commentaries tab lists Calvin, Matthew Henry (×2, "on vv. 1–21"), Geneva, Wesley; click Calvin → detail (body + Source + back). Click verse 17 → still on Commentaries tab, still following Calvin (his note on v.17) — tab + work persist. (Requires `just lets-bible-seed-commentaries`.)
 5. Autocomplete (client-side FlexSearch, no debounce): `john` → book-jump widget (21-chapter grid); `john 3` → 36-verse grid; `john 3:16` → verse 16 + preview; click chapter fills bar, click verse navigates. `for God so loved the world` → JHN.3.16 ranked first in **Verses**; `in the beginning` → **Exact phrase** pill + **Creation** topic; scope dropdown switches BSB↔MSB. (Requires `public/search/*` from `just lets-bible-flex`.)
 6. `/search?q=fruit of the Spirit` → Galatians 5:22 first, highlighted.
 7. `/search?q=Matthew 1:23` → cross-reference Isaiah 7:14 + related passages.
@@ -938,6 +955,7 @@ A fast pass to run after any change:
 10. Highlight John 3:16 (as guest) → tint persists across reload (localStorage) + appears in `/library`; "Continue reading" shows John 3; verse view "Study a word" opens the word view; translation dropdown renders above the header.
 11. Sign in with local highlights present → "Sync your library" merge dialog → Merge → server `user_highlight` rows created; no SSR/console errors.
 12. Reader renders chapters from `/reading/<id>/<slug>.json` (no DB); after the idle precache, block network + navigate to any chapter → still renders (SW `lb-content` cache). Settings → Offline shows the "works offline automatically" note (no download button).
+12b. `/library` → Offline commentaries: Download a work (e.g. Geneva) → % then Remove; IndexedDB `commentary:*` keys appear. Simulate offline → that verse's Commentaries tab shows only the downloaded work (from IDB); online still shows all. Remove → keys gone, back to Download.
 13. Select verse → Add note (TanStack Form): Save disabled while empty; type + Save → ✎ marker + persists.
 14. `/callback?state=x&code=y` (no cookie) → `/?error=state`.
 14b. Phone viewport (≈390px): select a verse → study panel is a bottom-sheet drawer; press-and-hold a word → word-study drawer; tap the version trigger → picker drawer with Compare + interlinear (Aα) buttons per row; compare + homepage fit without horizontal scroll. Desktop (≥1024px): study panel is a non-modal overlay rail that doesn't shift the reading; two-click word study; reading centered while idle.
