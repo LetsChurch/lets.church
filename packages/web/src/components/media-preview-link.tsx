@@ -255,8 +255,6 @@ export function MediaPreviewScope({
             setOpen(false);
           }
         }}
-        delay={0}
-        closeDelay={0}
       >
         <PreviewCard.Portal>
           <PreviewCard.Positioner
