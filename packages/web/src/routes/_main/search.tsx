@@ -1,4 +1,4 @@
-import { Collapsible } from '@base-ui-components/react/collapsible';
+import { Collapsible } from '@base-ui/react/collapsible';
 import { IconX } from '@tabler/icons-react';
 import {
   keepPreviousData,

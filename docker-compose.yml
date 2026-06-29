@@ -121,7 +121,7 @@ services:
         condition: service_started
       postgres:
         condition: service_healthy
-      elasticsearch:
+      opensearch:
         condition: service_healthy
     ports:
       - 127.0.0.1:${HOST_LETS_BIBLE_PORT}:3000
@@ -129,7 +129,7 @@ services:
       NODE_ENV: development
       PORT: 3000
       LETS_BIBLE_DATABASE_URL: postgres://letsbible:password@postgres:5432/letsbible
-      ELASTICSEARCH_URL: http://elasticsearch:9200
+      OPENSEARCH_URL: http://opensearch:9200
       OIDC_ISSUER: ${OIDC_ISSUER:-${HOST_WEB_URL}}
       OIDC_INTERNAL_URL: http://web:3000
       OIDC_CLIENT_ID: lets.bible

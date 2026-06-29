@@ -129,10 +129,10 @@
       "breakpoints": true
     },
     {
-      "idx": 16,
+      "idx": 18,
       "version": "7",
-      "when": 1781710768332,
-      "tag": "0016_add_speaker_tag_request",
+      "when": 1782725878512,
+      "tag": "0018_add_speaker_tables",
       "breakpoints": true
     }
   ]
