@@ -1,0 +1,965 @@
+<?xml version="1.0" encoding="utf-8"?>
+<usx version="3.0">
+  <book code="JHN" style="id">World English Bible</book>
+  <chapter number="1" style="c" sid="JHN 1" />
+  <para style="p"><verse number="1" style="v" sid="JHN 1:1" />In the beginning was the Word, and the Word was with God, and the Word was God.  
+<verse number="2" style="v" sid="JHN 1:2" />The same was in the beginning with God.  
+<verse number="3" style="v" sid="JHN 1:3" />All things were made through him. Without him, nothing was made that has been made.  
+<verse number="4" style="v" sid="JHN 1:4" />In him was life, and the life was the light of men.  
+<verse number="5" style="v" sid="JHN 1:5" />The light shines in the darkness, and the darkness hasn’t overcome<note style="f" caller="+"><char style="fr">1:5</char><char style="ft">The word translated “overcome” (κατέλαβεν) can also be translated “comprehended.” It refers to getting a grip on an enemy to defeat him.</char></note> it.</para>
+  <para style="p"><verse number="6" style="v" sid="JHN 1:6" />There came a man sent from God, whose name was John.  
+<verse number="7" style="v" sid="JHN 1:7" />The same came as a witness, that he might testify about the light, that all might believe through him.  
+<verse number="8" style="v" sid="JHN 1:8" />He was not the light, but was sent that he might testify about the light.  
+<verse number="9" style="v" sid="JHN 1:9" />The true light that enlightens everyone was coming into the world.</para>
+  <para style="p"><verse number="10" style="v" sid="JHN 1:10" />He was in the world, and the world was made through him, and the world didn’t recognize him.  
+<verse number="11" style="v" sid="JHN 1:11" />He came to his own, and those who were his own didn’t receive him.  
+<verse number="12" style="v" sid="JHN 1:12" />But as many as received him, to them he gave the right to become God’s children, to those who believe in his name:  
+<verse number="13" style="v" sid="JHN 1:13" />who were born, not of blood, nor of the will of the flesh, nor of the will of man, but of God.</para>
+  <para style="p"><verse number="14" style="v" sid="JHN 1:14" />The Word became flesh and lived among us. We saw his glory, such glory as of the only born<note style="f" caller="+"><char style="fr">1:14</char><char style="ft">The phrase “only born” is from the Greek word “μονογενους”, which is sometimes translated “only begotten” or “one and only”.</char></note> Son of the Father, full of grace and truth.  
+<verse number="15" style="v" sid="JHN 1:15" />John testified about him. He cried out, saying, “This was he of whom I said, ‘He who comes after me has surpassed me, for he was before me.’”  
+<verse number="16" style="v" sid="JHN 1:16" />From his fullness we all received grace upon grace.  
+<verse number="17" style="v" sid="JHN 1:17" />For the law was given through Moses. Grace and truth were realized through Jesus Christ.<note style="f" caller="+"><char style="fr">1:17</char><char style="ft">“Christ” means “Anointed One”.</char></note>  
+<verse number="18" style="v" sid="JHN 1:18" />No one has seen God at any time. The only born<note style="f" caller="+"><char style="fr">1:18</char><char style="ft">The phrase “only born” is from the Greek word “μονογενη”, which is sometimes translated “only begotten” or “one and only”.</char></note> Son,<note style="f" caller="+"><char style="fr">1:18</char><char style="ft">NU reads “God”</char></note> who is in the bosom of the Father, has declared him.</para>
+  <para style="p"><verse number="19" style="v" sid="JHN 1:19" />This is John’s testimony, when the Jews sent priests and Levites from Jerusalem to ask him, “Who are you?”</para>
+  <para style="p"><verse number="20" style="v" sid="JHN 1:20" />He declared, and didn’t deny, but he declared, “I am not the Christ.”</para>
+  <para style="p"><verse number="21" style="v" sid="JHN 1:21" />They asked him, “What then? Are you Elijah?”</para>
+  <para style="p">He said, “I am not.”</para>
+  <para style="p">“Are you the prophet?”</para>
+  <para style="p">He answered, “No.”</para>
+  <para style="p"><verse number="22" style="v" sid="JHN 1:22" />They said therefore to him, “Who are you? Give us an answer to take back to those who sent us. What do you say about yourself?”</para>
+  <para style="p"><verse number="23" style="v" sid="JHN 1:23" />He said, “I am the voice of one crying in the wilderness, ‘Make straight the way of the Lord,’ as Isaiah the prophet said.”</para>
+  <para style="p"><verse number="24" style="v" sid="JHN 1:24" />The ones who had been sent were from the Pharisees.  
+<verse number="25" style="v" sid="JHN 1:25" />They asked him, “Why then do you baptize if you are not the Christ, nor Elijah, nor the prophet?”</para>
+  <para style="p"><verse number="26" style="v" sid="JHN 1:26" />John answered them, “I baptize in water, but among you stands one whom you don’t know.  
+<verse number="27" style="v" sid="JHN 1:27" />He is the one who comes after me, who is preferred before me, whose sandal strap I’m not worthy to loosen.”  
+<verse number="28" style="v" sid="JHN 1:28" />These things were done in Bethany beyond the Jordan, where John was baptizing.</para>
+  <para style="p"><verse number="29" style="v" sid="JHN 1:29" />The next day, he saw Jesus coming to him, and said, “Behold,<note style="f" caller="+"><char style="fr">1:29</char><char style="ft">“Behold”, from “ἰδοὺ”, means look at, take notice, observe, see, or gaze at. It is often used as an interjection.</char></note> the Lamb of God, who takes away the sin of the world!  
+<verse number="30" style="v" sid="JHN 1:30" />This is he of whom I said, ‘After me comes a man who is preferred before me, for he was before me.’  
+<verse number="31" style="v" sid="JHN 1:31" />I didn’t know him, but for this reason I came baptizing in water, that he would be revealed to Israel.”  
+<verse number="32" style="v" sid="JHN 1:32" />John testified, saying, “I have seen the Spirit descending like a dove out of heaven, and it remained on him.  
+<verse number="33" style="v" sid="JHN 1:33" />I didn’t recognize him, but he who sent me to baptize in water said to me, ‘On whomever you will see the Spirit descending and remaining on him is he who baptizes in the Holy Spirit.’  
+<verse number="34" style="v" sid="JHN 1:34" />I have seen and have testified that this is the Son of God.”</para>
+  <para style="p"><verse number="35" style="v" sid="JHN 1:35" />Again, the next day, John was standing with two of his disciples,  
+<verse number="36" style="v" sid="JHN 1:36" />and he looked at Jesus as he walked, and said, “Behold, the Lamb of God!”  
+<verse number="37" style="v" sid="JHN 1:37" />The two disciples heard him speak, and they followed Jesus.  
+<verse number="38" style="v" sid="JHN 1:38" />Jesus turned and saw them following, and said to them, <char style="wj"> “What are you looking for?”</char></para>
+  <para style="p">They said to him, “Rabbi” (which is to say, being interpreted, Teacher), “where are you staying?”</para>
+  <para style="p"><verse number="39" style="v" sid="JHN 1:39" />He said to them, <char style="wj"> “Come and see.”</char></para>
+  <para style="p">They came and saw where he was staying, and they stayed with him that day. It was about the tenth hour.<note style="f" caller="+"><char style="fr">1:39</char><char style="ft">4:00 p.m.</char></note>  
+<verse number="40" style="v" sid="JHN 1:40" />One of the two who heard John and followed him was Andrew, Simon Peter’s brother.  
+<verse number="41" style="v" sid="JHN 1:41" />He first found his own brother, Simon, and said to him, “We have found the Messiah!” (which is, being interpreted, Christ<note style="f" caller="+"><char style="fr">1:41</char><char style="ft">“Messiah” (Hebrew) and “Christ” (Greek) both mean “Anointed One”.</char></note>).  
+<verse number="42" style="v" sid="JHN 1:42" />He brought him to Jesus. Jesus looked at him and said, <char style="wj"> “You are Simon the son of Jonah. You shall be called Cephas”</char> (which is by interpretation, Peter).<note style="f" caller="+"><char style="fr">1:42</char><char style="ft">“Cephas” (Aramaic) and “Peter” (Greek) both mean “Rock”.</char></note></para>
+  <para style="p"><verse number="43" style="v" sid="JHN 1:43" />On the next day, he was determined to go out into Galilee, and he found Philip. Jesus said to him, <char style="wj"> “Follow me.”</char>  
+<verse number="44" style="v" sid="JHN 1:44" />Now Philip was from Bethsaida, the city of Andrew and Peter.  
+<verse number="45" style="v" sid="JHN 1:45" />Philip found Nathanael, and said to him, “We have found him of whom Moses in the law and also the prophets, wrote: Jesus of Nazareth, the son of Joseph.”</para>
+  <para style="p"><verse number="46" style="v" sid="JHN 1:46" />Nathanael said to him, “Can any good thing come out of Nazareth?”</para>
+  <para style="p">Philip said to him, “Come and see.”</para>
+  <para style="p"><verse number="47" style="v" sid="JHN 1:47" />Jesus saw Nathanael coming to him, and said about him, <char style="wj"> “Behold, an Israelite indeed, in whom is no deceit!”</char></para>
+  <para style="p"><verse number="48" style="v" sid="JHN 1:48" />Nathanael said to him, “How do you know me?”</para>
+  <para style="p">Jesus answered him, <char style="wj"> “Before Philip called you, when you were under the fig tree, I saw you.”</char></para>
+  <para style="p"><verse number="49" style="v" sid="JHN 1:49" />Nathanael answered him, “Rabbi, you are the Son of God! You are King of Israel!”</para>
+  <para style="p"><verse number="50" style="v" sid="JHN 1:50" />Jesus answered him, <char style="wj"> “Because I told you, ‘I saw you underneath the fig tree,’ do you believe? You will see greater things than these!”</char>  
+<verse number="51" style="v" sid="JHN 1:51" />He said to him, <char style="wj"> “Most certainly, I tell you all, hereafter you will see heaven opened, and the angels of God ascending and descending on the Son of Man.”</char></para>
+  <chapter number="2" style="c" sid="JHN 2" />
+  <para style="p"><verse number="1" style="v" sid="JHN 2:1" />The third day, there was a wedding in Cana of Galilee. Jesus’ mother was there.  
+<verse number="2" style="v" sid="JHN 2:2" />Jesus also was invited, with his disciples, to the wedding.  
+<verse number="3" style="v" sid="JHN 2:3" />When the wine ran out, Jesus’ mother said to him, “They have no wine.”</para>
+  <para style="p"><verse number="4" style="v" sid="JHN 2:4" />Jesus said to her, <char style="wj"> “Woman, what does that have to do with you and me? My hour has not yet come.”</char></para>
+  <para style="p"><verse number="5" style="v" sid="JHN 2:5" />His mother said to the servants, “Whatever he says to you, do it.”</para>
+  <para style="p"><verse number="6" style="v" sid="JHN 2:6" />Now there were six water pots of stone set there after the Jews’ way of purifying, containing two or three metretes<note style="f" caller="+"><char style="fr">2:6</char><char style="ft">2 to 3 metretes is about 20 to 30 U. S. Gallons, or 75 to 115 liters.</char></note> apiece.  
+<verse number="7" style="v" sid="JHN 2:7" />Jesus said to them, <char style="wj"> “Fill the water pots with water.”</char> So they filled them up to the brim.  
+<verse number="8" style="v" sid="JHN 2:8" />He said to them, <char style="wj"> “Now draw some out, and take it to the ruler of the feast.”</char> So they took it.  
+<verse number="9" style="v" sid="JHN 2:9" />When the ruler of the feast tasted the water now become wine, and didn’t know where it came from (but the servants who had drawn the water knew), the ruler of the feast called the bridegroom  
+<verse number="10" style="v" sid="JHN 2:10" />and said to him, “Everyone serves the good wine first, and when the guests have drunk freely, then that which is worse. You have kept the good wine until now!”  
+<verse number="11" style="v" sid="JHN 2:11" />This beginning of his signs Jesus did in Cana of Galilee, and revealed his glory; and his disciples believed in him.</para>
+  <para style="p"><verse number="12" style="v" sid="JHN 2:12" />After this, he went down to Capernaum, he, and his mother, his brothers, and his disciples; and they stayed there a few days.</para>
+  <para style="p"><verse number="13" style="v" sid="JHN 2:13" />The Passover of the Jews was at hand, and Jesus went up to Jerusalem.  
+<verse number="14" style="v" sid="JHN 2:14" />He found in the temple those who sold oxen, sheep, and doves, and the changers of money sitting.  
+<verse number="15" style="v" sid="JHN 2:15" />He made a whip of cords and drove all out of the temple, both the sheep and the oxen; and he poured out the changers’ money and overthrew their tables.  
+<verse number="16" style="v" sid="JHN 2:16" />To those who sold the doves, he said, <char style="wj"> “Take these things out of here! Don’t make my Father’s house a marketplace!”</char>  
+<verse number="17" style="v" sid="JHN 2:17" />His disciples remembered that it was written, “Zeal for your house will eat me up.”</para>
+  <para style="p"><verse number="18" style="v" sid="JHN 2:18" />The Jews therefore answered him, “What sign do you show us, seeing that you do these things?”</para>
+  <para style="p"><verse number="19" style="v" sid="JHN 2:19" />Jesus answered them, <char style="wj"> “Destroy this temple, and in three days I will raise it up.”</char></para>
+  <para style="p"><verse number="20" style="v" sid="JHN 2:20" />The Jews therefore said, “It took forty-six years to build this temple! Will you raise it up in three days?”  
+<verse number="21" style="v" sid="JHN 2:21" />But he spoke of the temple of his body.  
+<verse number="22" style="v" sid="JHN 2:22" />When therefore he was raised from the dead, his disciples remembered that he said this, and they believed the Scripture and the word which Jesus had said.</para>
+  <para style="p"><verse number="23" style="v" sid="JHN 2:23" />Now when he was in Jerusalem at the Passover, during the feast, many believed in his name, observing his signs which he did.  
+<verse number="24" style="v" sid="JHN 2:24" />But Jesus didn’t entrust himself to them, because he knew everyone,  
+<verse number="25" style="v" sid="JHN 2:25" />and because he didn’t need for anyone to testify concerning man; for he himself knew what was in man.</para>
+  <chapter number="3" style="c" sid="JHN 3" />
+  <para style="p"><verse number="1" style="v" sid="JHN 3:1" />Now there was a man of the Pharisees named Nicodemus, a ruler of the Jews.  
+<verse number="2" style="v" sid="JHN 3:2" />He came to Jesus by night and said to him, “Rabbi, we know that you are a teacher come from God, for no one can do these signs that you do, unless God is with him.”</para>
+  <para style="p"><verse number="3" style="v" sid="JHN 3:3" />Jesus answered him, <char style="wj"> “Most certainly I tell you, unless one is born anew, </char><note style="f" caller="+"><char style="fr">3:3</char><char style="ft">The word translated “anew” here and in John 3:7 (ἄνωθεν) also means “again” and “from above”.</char></note> <char style="wj"> he can’t see God’s Kingdom.”</char></para>
+  <para style="p"><verse number="4" style="v" sid="JHN 3:4" />Nicodemus said to him, “How can a man be born when he is old? Can he enter a second time into his mother’s womb and be born?”</para>
+  <para style="p"><verse number="5" style="v" sid="JHN 3:5" />Jesus answered, <char style="wj"> “Most certainly I tell you, unless one is born of water and Spirit, he can’t enter into God’s Kingdom.</char>  
+<verse number="6" style="v" sid="JHN 3:6" /><char style="wj"> That which is born of the flesh is flesh. That which is born of the Spirit is spirit. </char>  
+<verse number="7" style="v" sid="JHN 3:7" /><char style="wj"> Don’t marvel that I said to you, ‘You must all be born anew.’ </char>  
+<verse number="8" style="v" sid="JHN 3:8" /><char style="wj"> The wind</char><note style="f" caller="+"><char style="fr">3:8</char><char style="ft">The same Greek word (πνεῦμα) means wind, breath, and spirit.</char></note> <char style="wj"> blows where it wants to, and you hear its sound, but don’t know where it comes from and where it is going. So is everyone who is born of the Spirit.”</char></para>
+  <para style="p"><verse number="9" style="v" sid="JHN 3:9" />Nicodemus answered him, “How can these things be?”</para>
+  <para style="p"><verse number="10" style="v" sid="JHN 3:10" />Jesus answered him, <char style="wj"> “Are you the teacher of Israel, and don’t understand these things? </char>  
+<verse number="11" style="v" sid="JHN 3:11" /><char style="wj"> Most certainly I tell you, we speak that which we know and testify of that which we have seen, and you don’t receive our witness. </char>  
+<verse number="12" style="v" sid="JHN 3:12" /><char style="wj"> If I told you earthly things and you don’t believe, how will you believe if I tell you heavenly things? </char>  
+<verse number="13" style="v" sid="JHN 3:13" /><char style="wj"> No one has ascended into heaven but he who descended out of heaven, the Son of Man, who is in heaven. </char>  
+<verse number="14" style="v" sid="JHN 3:14" /><char style="wj"> As Moses lifted up the serpent in the wilderness, even so must the Son of Man be lifted up, </char>  
+<verse number="15" style="v" sid="JHN 3:15" /><char style="wj"> that whoever believes in him should not perish, but have eternal life. </char>  
+<verse number="16" style="v" sid="JHN 3:16" /><char style="wj"> For God so loved the world, that he gave his only born</char><note style="f" caller="+"><char style="fr">3:16</char><char style="ft">The phrase “only born” is from the Greek word “μονογενη”, which is sometimes translated “only begotten” or “one and only”.</char></note> <char style="wj"> Son, that whoever believes in him should not perish, but have eternal life. </char>  
+<verse number="17" style="v" sid="JHN 3:17" /><char style="wj"> For God didn’t send his Son into the world to judge the world, but that the world should be saved through him. </char>  
+<verse number="18" style="v" sid="JHN 3:18" /><char style="wj"> He who believes in him is not judged. He who doesn’t believe has been judged already, because he has not believed in the name of the only born Son of God. </char>  
+<verse number="19" style="v" sid="JHN 3:19" /><char style="wj"> This is the judgment, that the light has come into the world, and men loved the darkness rather than the light, for their works were evil. </char>  
+<verse number="20" style="v" sid="JHN 3:20" /><char style="wj"> For everyone who does evil hates the light and doesn’t come to the light, lest his works would be exposed. </char>  
+<verse number="21" style="v" sid="JHN 3:21" /><char style="wj"> But he who does the truth comes to the light, that his works may be revealed, that they have been done in God.”</char></para>
+  <para style="p"><verse number="22" style="v" sid="JHN 3:22" />After these things, Jesus came with his disciples into the land of Judea. He stayed there with them and baptized.  
+<verse number="23" style="v" sid="JHN 3:23" />John also was baptizing in Enon near Salim, because there was much water there. They came and were baptized;  
+<verse number="24" style="v" sid="JHN 3:24" />for John was not yet thrown into prison.  
+<verse number="25" style="v" sid="JHN 3:25" />Therefore a dispute arose on the part of John’s disciples with some Jews about purification.  
+<verse number="26" style="v" sid="JHN 3:26" />They came to John and said to him, “Rabbi, he who was with you beyond the Jordan, to whom you have testified, behold, he baptizes, and everyone is coming to him.”</para>
+  <para style="p"><verse number="27" style="v" sid="JHN 3:27" />John answered, “A man can receive nothing unless it has been given him from heaven.  
+<verse number="28" style="v" sid="JHN 3:28" />You yourselves testify that I said, ‘I am not the Christ,’ but, ‘I have been sent before him.’  
+<verse number="29" style="v" sid="JHN 3:29" />He who has the bride is the bridegroom; but the friend of the bridegroom, who stands and hears him, rejoices greatly because of the bridegroom’s voice. Therefore my joy is made full.  
+<verse number="30" style="v" sid="JHN 3:30" />He must increase, but I must decrease.</para>
+  <para style="p"><verse number="31" style="v" sid="JHN 3:31" />“He who comes from above is above all. He who is from the earth belongs to the earth and speaks of the earth. He who comes from heaven is above all.  
+<verse number="32" style="v" sid="JHN 3:32" />What he has seen and heard, of that he testifies; and no one receives his witness.  
+<verse number="33" style="v" sid="JHN 3:33" />He who has received his witness has set his seal to this, that God is true.  
+<verse number="34" style="v" sid="JHN 3:34" />For he whom God has sent speaks the words of God; for God gives the Spirit without measure.  
+<verse number="35" style="v" sid="JHN 3:35" />The Father loves the Son, and has given all things into his hand.  
+<verse number="36" style="v" sid="JHN 3:36" />One who believes in the Son has eternal life, but one who disobeys<note style="f" caller="+"><char style="fr">3:36</char><char style="ft">The same word can be translated “disobeys” or “disbelieves” in this context.</char></note> the Son won’t see life, but the wrath of God remains on him.”</para>
+  <chapter number="4" style="c" sid="JHN 4" />
+  <para style="p"><verse number="1" style="v" sid="JHN 4:1" />Therefore when the Lord knew that the Pharisees had heard that Jesus was making and baptizing more disciples than John  
+<verse number="2" style="v" sid="JHN 4:2" />(although Jesus himself didn’t baptize, but his disciples),  
+<verse number="3" style="v" sid="JHN 4:3" />he left Judea and departed into Galilee.  
+<verse number="4" style="v" sid="JHN 4:4" />He needed to pass through Samaria.  
+<verse number="5" style="v" sid="JHN 4:5" />So he came to a city of Samaria called Sychar, near the parcel of ground that Jacob gave to his son Joseph.  
+<verse number="6" style="v" sid="JHN 4:6" />Jacob’s well was there. Jesus therefore, being tired from his journey, sat down by the well. It was about the sixth hour.<note style="f" caller="+"><char style="fr">4:6</char><char style="ft">noon</char></note></para>
+  <para style="p"><verse number="7" style="v" sid="JHN 4:7" />A woman of Samaria came to draw water. Jesus said to her, <char style="wj"> “Give me a drink.”</char>  
+<verse number="8" style="v" sid="JHN 4:8" />For his disciples had gone away into the city to buy food.</para>
+  <para style="p"><verse number="9" style="v" sid="JHN 4:9" />The Samaritan woman therefore said to him, “How is it that you, being a Jew, ask for a drink from me, a Samaritan woman?” (For Jews have no dealings with Samaritans.)</para>
+  <para style="p"><verse number="10" style="v" sid="JHN 4:10" />Jesus answered her, <char style="wj"> “If you knew the gift of God, and who it is who says to you, ‘Give me a drink,’ you would have asked him, and he would have given you living water.”</char></para>
+  <para style="p"><verse number="11" style="v" sid="JHN 4:11" />The woman said to him, “Sir, you have nothing to draw with, and the well is deep. So where do you get that living water?  
+<verse number="12" style="v" sid="JHN 4:12" />Are you greater than our father Jacob, who gave us the well and drank from it himself, as did his children and his livestock?”</para>
+  <para style="p"><verse number="13" style="v" sid="JHN 4:13" />Jesus answered her, <char style="wj"> “Everyone who drinks of this water will thirst again, </char>  
+<verse number="14" style="v" sid="JHN 4:14" /><char style="wj"> but whoever drinks of the water that I will give him will never thirst again; but the water that I will give him will become in him a well of water springing up to eternal life.”</char></para>
+  <para style="p"><verse number="15" style="v" sid="JHN 4:15" />The woman said to him, “Sir, give me this water, so that I don’t get thirsty, neither come all the way here to draw.”</para>
+  <para style="p"><verse number="16" style="v" sid="JHN 4:16" />Jesus said to her, <char style="wj"> “Go, call your husband, and come here.” </char></para>
+  <para style="p"><verse number="17" style="v" sid="JHN 4:17" />The woman answered, “I have no husband.”</para>
+  <para style="p">Jesus said to her, <char style="wj"> “You said well, ‘I have no husband,’ </char>  
+<verse number="18" style="v" sid="JHN 4:18" /><char style="wj"> for you have had five husbands; and he whom you now have is not your husband. This you have said truly.”</char></para>
+  <para style="p"><verse number="19" style="v" sid="JHN 4:19" />The woman said to him, “Sir, I perceive that you are a prophet.  
+<verse number="20" style="v" sid="JHN 4:20" />Our fathers worshiped in this mountain, and you Jews say that in Jerusalem is the place where people ought to worship.”</para>
+  <para style="p"><verse number="21" style="v" sid="JHN 4:21" />Jesus said to her, <char style="wj"> “Woman, believe me, the hour is coming when neither in this mountain nor in Jerusalem will you worship the Father. </char>  
+<verse number="22" style="v" sid="JHN 4:22" /><char style="wj"> You worship that which you don’t know. We worship that which we know; for salvation is from the Jews. </char>  
+<verse number="23" style="v" sid="JHN 4:23" /><char style="wj"> But the hour comes, and now is, when the true worshipers will worship the Father in spirit and truth, for the Father seeks such to be his worshipers. </char>  
+<verse number="24" style="v" sid="JHN 4:24" /><char style="wj"> God is spirit, and those who worship him must worship in spirit and truth.”</char></para>
+  <para style="p"><verse number="25" style="v" sid="JHN 4:25" />The woman said to him, “I know that Messiah is coming, he who is called Christ.<note style="f" caller="+"><char style="fr">4:25</char><char style="ft">“Messiah” (Hebrew) and “Christ” (Greek) both mean “Anointed One”.</char></note> When he has come, he will declare to us all things.”</para>
+  <para style="p"><verse number="26" style="v" sid="JHN 4:26" />Jesus said to her, <char style="wj"> “I am he, the one who speaks to you.”</char></para>
+  <para style="p"><verse number="27" style="v" sid="JHN 4:27" />Just then, his disciples came. They marveled that he was speaking with a woman; yet no one said, “What are you looking for?” or, “Why do you speak with her?”  
+<verse number="28" style="v" sid="JHN 4:28" />So the woman left her water pot, went away into the city, and said to the people,  
+<verse number="29" style="v" sid="JHN 4:29" />“Come, see a man who told me everything that I have done. Can this be the Christ?”  
+<verse number="30" style="v" sid="JHN 4:30" />They went out of the city, and were coming to him.</para>
+  <para style="p"><verse number="31" style="v" sid="JHN 4:31" />In the meanwhile, the disciples urged him, saying, “Rabbi, eat.”</para>
+  <para style="p"><verse number="32" style="v" sid="JHN 4:32" />But he said to them, <char style="wj"> “I have food to eat that you don’t know about.”</char></para>
+  <para style="p"><verse number="33" style="v" sid="JHN 4:33" />The disciples therefore said to one another, “Has anyone brought him something to eat?”</para>
+  <para style="p"><verse number="34" style="v" sid="JHN 4:34" />Jesus said to them, <char style="wj"> “My food is to do the will of him who sent me and to accomplish his work. </char>  
+<verse number="35" style="v" sid="JHN 4:35" /><char style="wj"> Don’t you say, ‘There are yet four months until the harvest’? Behold, I tell you, lift up your eyes and look at the fields, that they are white for harvest already. </char>  
+<verse number="36" style="v" sid="JHN 4:36" /><char style="wj"> He who reaps receives wages and gathers fruit to eternal life, that both he who sows and he who reaps may rejoice together. </char>  
+<verse number="37" style="v" sid="JHN 4:37" /><char style="wj"> For in this the saying is true, ‘One sows, and another reaps.’ </char>  
+<verse number="38" style="v" sid="JHN 4:38" /><char style="wj"> I sent you to reap that for which you haven’t labored. Others have labored, and you have entered into their labor.”</char></para>
+  <para style="p"><verse number="39" style="v" sid="JHN 4:39" />From that city many of the Samaritans believed in him because of the word of the woman, who testified, “He told me everything that I have done.”  
+<verse number="40" style="v" sid="JHN 4:40" />So when the Samaritans came to him, they begged him to stay with them. He stayed there two days.  
+<verse number="41" style="v" sid="JHN 4:41" />Many more believed because of his word.  
+<verse number="42" style="v" sid="JHN 4:42" />They said to the woman, “Now we believe, not because of your speaking; for we have heard for ourselves, and know that this is indeed the Christ, the Savior of the world.”</para>
+  <para style="p"><verse number="43" style="v" sid="JHN 4:43" />After the two days he went out from there and went into Galilee.  
+<verse number="44" style="v" sid="JHN 4:44" />For Jesus himself testified that a prophet has no honor in his own country.  
+<verse number="45" style="v" sid="JHN 4:45" />So when he came into Galilee, the Galileans received him, having seen all the things that he did in Jerusalem at the feast, for they also went to the feast.  
+<verse number="46" style="v" sid="JHN 4:46" />Jesus came therefore again to Cana of Galilee, where he made the water into wine. There was a certain nobleman whose son was sick at Capernaum.  
+<verse number="47" style="v" sid="JHN 4:47" />When he heard that Jesus had come out of Judea into Galilee, he went to him and begged him that he would come down and heal his son, for he was at the point of death.  
+<verse number="48" style="v" sid="JHN 4:48" />Jesus therefore said to him, <char style="wj"> “Unless you people see signs and wonders, you will in no way believe.”</char></para>
+  <para style="p"><verse number="49" style="v" sid="JHN 4:49" />The nobleman said to him, “Sir, come down before my child dies.”</para>
+  <para style="p"><verse number="50" style="v" sid="JHN 4:50" />Jesus said to him, <char style="wj"> “Go your way. Your son lives.”</char> The man believed the word that Jesus spoke to him, and he went his way.  
+<verse number="51" style="v" sid="JHN 4:51" />As he was going down, his servants met him and reported, saying “Your child lives!”  
+<verse number="52" style="v" sid="JHN 4:52" />So he inquired of them the hour when he began to get better. They said therefore to him, “Yesterday at the seventh hour,<note style="f" caller="+"><char style="fr">4:52</char><char style="ft">1:00 p.m.</char></note> the fever left him.”  
+<verse number="53" style="v" sid="JHN 4:53" />So the father knew that it was at that hour in which Jesus said to him, <char style="wj"> “Your son lives.”</char> He believed, as did his whole house.  
+<verse number="54" style="v" sid="JHN 4:54" />This is again the second sign that Jesus did, having come out of Judea into Galilee.</para>
+  <chapter number="5" style="c" sid="JHN 5" />
+  <para style="p"><verse number="1" style="v" sid="JHN 5:1" />After these things, there was a feast of the Jews, and Jesus went up to Jerusalem.  
+<verse number="2" style="v" sid="JHN 5:2" />Now in Jerusalem by the sheep gate, there is a pool, which is called in Hebrew, “Bethesda”, having five porches.  
+<verse number="3" style="v" sid="JHN 5:3" />In these lay a great multitude of those who were sick, blind, lame, or paralyzed, waiting for the moving of the water;  
+<verse number="4" style="v" sid="JHN 5:4" />for an angel went down at certain times into the pool and stirred up the water. Whoever stepped in first after the stirring of the water was healed of whatever disease he had.<note style="f" caller="+"><char style="fr">5:4</char><char style="ft">NU omits from “waiting” in verse 3 to the end of verse 4.</char></note>  
+<verse number="5" style="v" sid="JHN 5:5" />A certain man was there who had been sick for thirty-eight years.  
+<verse number="6" style="v" sid="JHN 5:6" />When Jesus saw him lying there, and knew that he had been sick for a long time, he asked him, <char style="wj"> “Do you want to be made well?”</char></para>
+  <para style="p"><verse number="7" style="v" sid="JHN 5:7" />The sick man answered him, “Sir, I have no one to put me into the pool when the water is stirred up, but while I’m coming, another steps down before me.”</para>
+  <para style="p"><verse number="8" style="v" sid="JHN 5:8" />Jesus said to him, <char style="wj"> “Arise, take up your mat, and walk.”</char></para>
+  <para style="p"><verse number="9" style="v" sid="JHN 5:9" />Immediately, the man was made well, and took up his mat and walked.</para>
+  <para style="p">Now that day was a Sabbath.  
+<verse number="10" style="v" sid="JHN 5:10" />So the Jews said to him who was cured, “It is the Sabbath. It is not lawful for you to carry the mat.”</para>
+  <para style="p"><verse number="11" style="v" sid="JHN 5:11" />He answered them, “He who made me well said to me, <char style="wj"> ‘Take up your mat and walk.’</char> ”</para>
+  <para style="p"><verse number="12" style="v" sid="JHN 5:12" />Then they asked him, “Who is the man who said to you, <char style="wj"> ‘Take up your mat and walk’</char>?”</para>
+  <para style="p"><verse number="13" style="v" sid="JHN 5:13" />But he who was healed didn’t know who it was, for Jesus had withdrawn, a crowd being in the place.</para>
+  <para style="p"><verse number="14" style="v" sid="JHN 5:14" />Afterward Jesus found him in the temple and said to him, <char style="wj"> “Behold, you are made well. Sin no more, so that nothing worse happens to you.” </char></para>
+  <para style="p"><verse number="15" style="v" sid="JHN 5:15" />The man went away, and told the Jews that it was Jesus who had made him well.  
+<verse number="16" style="v" sid="JHN 5:16" />For this cause the Jews persecuted Jesus and sought to kill him, because he did these things on the Sabbath.  
+<verse number="17" style="v" sid="JHN 5:17" />But Jesus answered them, <char style="wj"> “My Father is still working, so I am working, too.”</char></para>
+  <para style="p"><verse number="18" style="v" sid="JHN 5:18" />For this cause therefore the Jews sought all the more to kill him, because he not only broke the Sabbath, but also called God his own Father, making himself equal with God.  
+<verse number="19" style="v" sid="JHN 5:19" />Jesus therefore answered them, <char style="wj"> “Most certainly, I tell you, the Son can do nothing of himself, but what he sees the Father doing. For whatever things he does, these the Son also does likewise. </char>  
+<verse number="20" style="v" sid="JHN 5:20" /><char style="wj"> For the Father has affection for the Son, and shows him all things that he himself does. He will show him greater works than these, that you may marvel. </char>  
+<verse number="21" style="v" sid="JHN 5:21" /><char style="wj"> For as the Father raises the dead and gives them life, even so the Son also gives life to whom he desires. </char>  
+<verse number="22" style="v" sid="JHN 5:22" /><char style="wj"> For the Father judges no one, but he has given all judgment to the Son, </char>  
+<verse number="23" style="v" sid="JHN 5:23" /><char style="wj"> that all may honor the Son, even as they honor the Father. He who doesn’t honor the Son doesn’t honor the Father who sent him.</char></para>
+  <para style="p"><verse number="24" style="v" sid="JHN 5:24" /><char style="wj"> “Most certainly I tell you, he who hears my word and believes him who sent me has eternal life, and doesn’t come into judgment, but has passed out of death into life. </char>  
+<verse number="25" style="v" sid="JHN 5:25" /><char style="wj"> Most certainly I tell you, the hour comes, and now is, when the dead will hear the Son of God’s voice; and those who hear will live. </char>  
+<verse number="26" style="v" sid="JHN 5:26" /><char style="wj"> For as the Father has life in himself, even so he gave to the Son also to have life in himself. </char>  
+<verse number="27" style="v" sid="JHN 5:27" /><char style="wj"> He also gave him authority to execute judgment, because he is a son of man. </char>  
+<verse number="28" style="v" sid="JHN 5:28" /><char style="wj"> Don’t marvel at this, for the hour comes in which all who are in the tombs will hear his voice </char>  
+<verse number="29" style="v" sid="JHN 5:29" /><char style="wj"> and will come out; those who have done good, to the resurrection of life; and those who have done evil, to the resurrection of judgment. </char>  
+<verse number="30" style="v" sid="JHN 5:30" /><char style="wj"> I can of myself do nothing. As I hear, I judge; and my judgment is righteous, because I don’t seek my own will, but the will of my Father who sent me.</char></para>
+  <para style="p"><verse number="31" style="v" sid="JHN 5:31" /><char style="wj"> “If I testify about myself, my witness is not valid. </char>  
+<verse number="32" style="v" sid="JHN 5:32" /><char style="wj"> It is another who testifies about me. I know that the testimony which he testifies about me is true. </char>  
+<verse number="33" style="v" sid="JHN 5:33" /><char style="wj"> You have sent to John, and he has testified to the truth. </char>  
+<verse number="34" style="v" sid="JHN 5:34" /><char style="wj"> But the testimony which I receive is not from man. However, I say these things that you may be saved. </char>  
+<verse number="35" style="v" sid="JHN 5:35" /><char style="wj"> He was the burning and shining lamp, and you were willing to rejoice for a while in his light. </char>  
+<verse number="36" style="v" sid="JHN 5:36" /><char style="wj"> But the testimony which I have is greater than that of John; for the works which the Father gave me to accomplish, the very works that I do, testify about me, that the Father has sent me. </char>  
+<verse number="37" style="v" sid="JHN 5:37" /><char style="wj"> The Father himself, who sent me, has testified about me. You have neither heard his voice at any time, nor seen his form. </char>  
+<verse number="38" style="v" sid="JHN 5:38" /><char style="wj"> You don’t have his word living in you, because you don’t believe him whom he sent.</char></para>
+  <para style="p"><verse number="39" style="v" sid="JHN 5:39" /><char style="wj"> “You search the Scriptures, because you think that in them you have eternal life; and these are they which testify about me. </char>  
+<verse number="40" style="v" sid="JHN 5:40" /><char style="wj"> Yet you will not come to me, that you may have life. </char>  
+<verse number="41" style="v" sid="JHN 5:41" /><char style="wj"> I don’t receive glory from men. </char>  
+<verse number="42" style="v" sid="JHN 5:42" /><char style="wj"> But I know you, that you don’t have God’s love in yourselves. </char>  
+<verse number="43" style="v" sid="JHN 5:43" /><char style="wj"> I have come in my Father’s name, and you don’t receive me. If another comes in his own name, you will receive him. </char>  
+<verse number="44" style="v" sid="JHN 5:44" /><char style="wj"> How can you believe, who receive glory from one another, and you don’t seek the glory that comes from the only God?</char></para>
+  <para style="p"><verse number="45" style="v" sid="JHN 5:45" /><char style="wj"> “Don’t think that I will accuse you to the Father. There is one who accuses you, even Moses, on whom you have set your hope. </char>  
+<verse number="46" style="v" sid="JHN 5:46" /><char style="wj"> For if you believed Moses, you would believe me; for he wrote about me. </char>  
+<verse number="47" style="v" sid="JHN 5:47" /><char style="wj"> But if you don’t believe his writings, how will you believe my words?”</char></para>
+  <chapter number="6" style="c" sid="JHN 6" />
+  <para style="p"><verse number="1" style="v" sid="JHN 6:1" />After these things, Jesus went away to the other side of the sea of Galilee, which is also called the Sea of Tiberias.  
+<verse number="2" style="v" sid="JHN 6:2" />A great multitude followed him, because they saw his signs which he did on those who were sick.  
+<verse number="3" style="v" sid="JHN 6:3" />Jesus went up into the mountain, and he sat there with his disciples.  
+<verse number="4" style="v" sid="JHN 6:4" />Now the Passover, the feast of the Jews, was at hand.  
+<verse number="5" style="v" sid="JHN 6:5" />Jesus therefore, lifting up his eyes and seeing that a great multitude was coming to him, said to Philip, <char style="wj"> “Where are we to buy bread, that these may eat?”</char>  
+<verse number="6" style="v" sid="JHN 6:6" />He said this to test him, for he himself knew what he would do.</para>
+  <para style="p"><verse number="7" style="v" sid="JHN 6:7" />Philip answered him, “Two hundred denarii<note style="f" caller="+"><char style="fr">6:7</char><char style="ft">A denarius was a silver coin worth about a day’s wages for an agricultural laborer, so 200 denarii would be between 6 and 7 month’s pay.</char></note> worth of bread is not sufficient for them, that every one of them may receive a little.”</para>
+  <para style="p"><verse number="8" style="v" sid="JHN 6:8" />One of his disciples, Andrew, Simon Peter’s brother, said to him,  
+<verse number="9" style="v" sid="JHN 6:9" />“There is a boy here who has five barley loaves and two fish, but what are these among so many?”</para>
+  <para style="p"><verse number="10" style="v" sid="JHN 6:10" />Jesus said, <char style="wj"> “Have the people sit down.”</char> Now there was much grass in that place. So the men sat down, in number about five thousand.  
+<verse number="11" style="v" sid="JHN 6:11" />Jesus took the loaves, and having given thanks, he distributed to the disciples, and the disciples to those who were sitting down, likewise also of the fish as much as they desired.  
+<verse number="12" style="v" sid="JHN 6:12" />When they were filled, he said to his disciples, <char style="wj"> “Gather up the broken pieces which are left over, that nothing be lost.”</char>  
+<verse number="13" style="v" sid="JHN 6:13" />So they gathered them up, and filled twelve baskets with broken pieces from the five barley loaves, which were left over by those who had eaten.  
+<verse number="14" style="v" sid="JHN 6:14" />When therefore the people saw the sign which Jesus did, they said, “This is truly the prophet who comes into the world.”  
+<verse number="15" style="v" sid="JHN 6:15" />Jesus therefore, perceiving that they were about to come and take him by force to make him king, withdrew again to the mountain by himself.</para>
+  <para style="p"><verse number="16" style="v" sid="JHN 6:16" />When evening came, his disciples went down to the sea.  
+<verse number="17" style="v" sid="JHN 6:17" />They entered into the boat, and were going over the sea to Capernaum. It was now dark, and Jesus had not come to them.  
+<verse number="18" style="v" sid="JHN 6:18" />The sea was tossed by a great wind blowing.  
+<verse number="19" style="v" sid="JHN 6:19" />When therefore they had rowed about twenty-five or thirty stadia,<note style="f" caller="+"><char style="fr">6:19</char><char style="ft">25 to 30 stadia is about 5 to 6 kilometers or about 3 to 4 miles</char></note> they saw Jesus walking on the sea and drawing near to the boat; and they were afraid.  
+<verse number="20" style="v" sid="JHN 6:20" />But he said to them, <char style="wj"> “It is I.</char><note style="f" caller="+"><char style="fr">6:20</char><char style="ft">or, I AM</char></note> <char style="wj"> Don’t be afraid.”</char>  
+<verse number="21" style="v" sid="JHN 6:21" />They were willing therefore to receive him into the boat. Immediately the boat was at the land where they were going.</para>
+  <para style="p"><verse number="22" style="v" sid="JHN 6:22" />On the next day, the multitude that stood on the other side of the sea saw that there was no other boat there, except the one in which his disciples had embarked, and that Jesus hadn’t entered with his disciples into the boat, but his disciples had gone away alone.  
+<verse number="23" style="v" sid="JHN 6:23" />However, boats from Tiberias came near to the place where they ate the bread after the Lord had given thanks.  
+<verse number="24" style="v" sid="JHN 6:24" />When the multitude therefore saw that Jesus wasn’t there, nor his disciples, they themselves got into the boats and came to Capernaum, seeking Jesus.  
+<verse number="25" style="v" sid="JHN 6:25" />When they found him on the other side of the sea, they asked him, “Rabbi, when did you come here?”</para>
+  <para style="p"><verse number="26" style="v" sid="JHN 6:26" />Jesus answered them, <char style="wj"> “Most certainly I tell you, you seek me, not because you saw signs, but because you ate of the loaves and were filled. </char>  
+<verse number="27" style="v" sid="JHN 6:27" /><char style="wj"> Don’t work for the food which perishes, but for the food which remains to eternal life, which the Son of Man will give to you. For God the Father has sealed him.”</char></para>
+  <para style="p"><verse number="28" style="v" sid="JHN 6:28" />They said therefore to him, “What must we do, that we may work the works of God?”</para>
+  <para style="p"><verse number="29" style="v" sid="JHN 6:29" />Jesus answered them, <char style="wj"> “This is the work of God, that you believe in him whom he has sent.”</char></para>
+  <para style="p"><verse number="30" style="v" sid="JHN 6:30" />They said therefore to him, “What then do you do for a sign, that we may see and believe you? What work do you do?  
+<verse number="31" style="v" sid="JHN 6:31" />Our fathers ate the manna in the wilderness. As it is written, ‘He gave them bread out of heaven<note style="f" caller="+"><char style="fr">6:31</char><char style="ft">Greek and Hebrew use the same word for “heaven”, “the heavens”, “the sky”, and “the air”.</char></note> to eat.’”</para>
+  <para style="p"><verse number="32" style="v" sid="JHN 6:32" />Jesus therefore said to them, <char style="wj"> “Most certainly, I tell you, it wasn’t Moses who gave you the bread out of heaven, but my Father gives you the true bread out of heaven. </char>  
+<verse number="33" style="v" sid="JHN 6:33" /><char style="wj"> For the bread of God is that which comes down out of heaven and gives life to the world.”</char></para>
+  <para style="p"><verse number="34" style="v" sid="JHN 6:34" />They said therefore to him, “Lord, always give us this bread.”</para>
+  <para style="p"><verse number="35" style="v" sid="JHN 6:35" />Jesus said to them, <char style="wj"> “I am the bread of life. Whoever comes to me will not be hungry, and whoever believes in me will never be thirsty. </char>  
+<verse number="36" style="v" sid="JHN 6:36" /><char style="wj"> But I told you that you have seen me, and yet you don’t believe. </char>  
+<verse number="37" style="v" sid="JHN 6:37" /><char style="wj"> All those whom the Father gives me will come to me. He who comes to me I will in no way throw out. </char>  
+<verse number="38" style="v" sid="JHN 6:38" /><char style="wj"> For I have come down from heaven, not to do my own will, but the will of him who sent me. </char>  
+<verse number="39" style="v" sid="JHN 6:39" /><char style="wj"> This is the will of my Father who sent me, that of all he has given to me I should lose nothing, but should raise him up at the last day. </char>  
+<verse number="40" style="v" sid="JHN 6:40" /><char style="wj"> This is the will of the one who sent me, that everyone who sees the Son and believes in him should have eternal life; and I will raise him up at the last day.”</char></para>
+  <para style="p"><verse number="41" style="v" sid="JHN 6:41" />The Jews therefore murmured concerning him, because he said, <char style="wj"> “I am the bread which came down out of heaven.”</char>  
+<verse number="42" style="v" sid="JHN 6:42" />They said, “Isn’t this Jesus, the son of Joseph, whose father and mother we know? How then does he say, <char style="wj"> ‘I have come down out of heaven’?” </char></para>
+  <para style="p"><verse number="43" style="v" sid="JHN 6:43" />Therefore Jesus answered them, <char style="wj"> “Don’t murmur among yourselves. </char>  
+<verse number="44" style="v" sid="JHN 6:44" /><char style="wj"> No one can come to me unless the Father who sent me draws him; and I will raise him up in the last day. </char>  
+<verse number="45" style="v" sid="JHN 6:45" /><char style="wj"> It is written in the prophets, ‘They will all be taught by God.’ </char> <char style="wj"> Therefore everyone who hears from the Father and has learned, comes to me. </char>  
+<verse number="46" style="v" sid="JHN 6:46" /><char style="wj"> Not that anyone has seen the Father, except he who is from God. He has seen the Father. </char>  
+<verse number="47" style="v" sid="JHN 6:47" /><char style="wj"> Most certainly, I tell you, he who believes in me has eternal life. </char>  
+<verse number="48" style="v" sid="JHN 6:48" /><char style="wj"> I am the bread of life. </char>  
+<verse number="49" style="v" sid="JHN 6:49" /><char style="wj"> Your fathers ate the manna in the wilderness and they died. </char>  
+<verse number="50" style="v" sid="JHN 6:50" /><char style="wj"> This is the bread which comes down out of heaven, that anyone may eat of it and not die. </char>  
+<verse number="51" style="v" sid="JHN 6:51" /><char style="wj"> I am the living bread which came down out of heaven. If anyone eats of this bread, he will live forever. Yes, the bread which I will give for the life of the world is my flesh.”</char></para>
+  <para style="p"><verse number="52" style="v" sid="JHN 6:52" />The Jews therefore contended with one another, saying, “How can this man give us his flesh to eat?”</para>
+  <para style="p"><verse number="53" style="v" sid="JHN 6:53" />Jesus therefore said to them, <char style="wj"> “Most certainly I tell you, unless you eat the flesh of the Son of Man and drink his blood, you don’t have life in yourselves. </char>  
+<verse number="54" style="v" sid="JHN 6:54" /><char style="wj"> He who eats my flesh and drinks my blood has eternal life, and I will raise him up at the last day. </char>  
+<verse number="55" style="v" sid="JHN 6:55" /><char style="wj"> For my flesh is food indeed, and my blood is drink indeed. </char>  
+<verse number="56" style="v" sid="JHN 6:56" /><char style="wj"> He who eats my flesh and drinks my blood lives in me, and I in him. </char>  
+<verse number="57" style="v" sid="JHN 6:57" /><char style="wj"> As the living Father sent me, and I live because of the Father, so he who feeds on me will also live because of me. </char>  
+<verse number="58" style="v" sid="JHN 6:58" /><char style="wj"> This is the bread which came down out of heaven—not as our fathers ate the manna and died. He who eats this bread will live forever.”</char>  
+<verse number="59" style="v" sid="JHN 6:59" />He said these things in the synagogue, as he taught in Capernaum.</para>
+  <para style="p"><verse number="60" style="v" sid="JHN 6:60" />Therefore many of his disciples, when they heard this, said, “This is a hard saying! Who can listen to it?”</para>
+  <para style="p"><verse number="61" style="v" sid="JHN 6:61" />But Jesus knowing in himself that his disciples murmured at this, said to them, <char style="wj"> “Does this cause you to stumble? </char>  
+<verse number="62" style="v" sid="JHN 6:62" /><char style="wj"> Then what if you would see the Son of Man ascending to where he was before? </char>  
+<verse number="63" style="v" sid="JHN 6:63" /><char style="wj"> It is the spirit who gives life. The flesh profits nothing. The words that I speak to you are spirit, and are life. </char>  
+<verse number="64" style="v" sid="JHN 6:64" /><char style="wj"> But there are some of you who don’t believe.”</char> For Jesus knew from the beginning who they were who didn’t believe, and who it was who would betray him.  
+<verse number="65" style="v" sid="JHN 6:65" />He said, <char style="wj"> “For this cause I have said to you that no one can come to me, unless it is given to him by my Father.”</char></para>
+  <para style="p"><verse number="66" style="v" sid="JHN 6:66" />At this, many of his disciples went back and walked no more with him.  
+<verse number="67" style="v" sid="JHN 6:67" />Jesus said therefore to the twelve, <char style="wj"> “You don’t also want to go away, do you?”</char></para>
+  <para style="p"><verse number="68" style="v" sid="JHN 6:68" />Simon Peter answered him, “Lord, to whom would we go? You have the words of eternal life.  
+<verse number="69" style="v" sid="JHN 6:69" />We have come to believe and know that you are the Christ, the Son of the living God.”</para>
+  <para style="p"><verse number="70" style="v" sid="JHN 6:70" />Jesus answered them, <char style="wj"> “Didn’t I choose you, the twelve, and one of you is a devil?”</char>  
+<verse number="71" style="v" sid="JHN 6:71" />Now he spoke of Judas, the son of Simon Iscariot, for it was he who would betray him, being one of the twelve.</para>
+  <chapter number="7" style="c" sid="JHN 7" />
+  <para style="p"><verse number="1" style="v" sid="JHN 7:1" />After these things, Jesus was walking in Galilee, for he wouldn’t walk in Judea, because the Jews sought to kill him.  
+<verse number="2" style="v" sid="JHN 7:2" />Now the feast of the Jews, the Feast of Booths, was at hand.  
+<verse number="3" style="v" sid="JHN 7:3" />His brothers therefore said to him, “Depart from here and go into Judea, that your disciples also may see your works which you do.  
+<verse number="4" style="v" sid="JHN 7:4" />For no one does anything in secret while he seeks to be known openly. If you do these things, reveal yourself to the world.”  
+<verse number="5" style="v" sid="JHN 7:5" />For even his brothers didn’t believe in him.</para>
+  <para style="p"><verse number="6" style="v" sid="JHN 7:6" />Jesus therefore said to them, <char style="wj"> “My time has not yet come, but your time is always ready. </char>  
+<verse number="7" style="v" sid="JHN 7:7" /><char style="wj"> The world can’t hate you, but it hates me, because I testify about it, that its works are evil. </char>  
+<verse number="8" style="v" sid="JHN 7:8" /><char style="wj"> You go up to the feast. I am not yet going up to this feast, because my time is not yet fulfilled.”</char></para>
+  <para style="p"><verse number="9" style="v" sid="JHN 7:9" />Having said these things to them, he stayed in Galilee.  
+<verse number="10" style="v" sid="JHN 7:10" />But when his brothers had gone up to the feast, then he also went up, not publicly, but as it were in secret.  
+<verse number="11" style="v" sid="JHN 7:11" />The Jews therefore sought him at the feast, and said, “Where is he?”  
+<verse number="12" style="v" sid="JHN 7:12" />There was much murmuring among the multitudes concerning him. Some said, “He is a good man.” Others said, “Not so, but he leads the multitude astray.”  
+<verse number="13" style="v" sid="JHN 7:13" />Yet no one spoke openly of him for fear of the Jews.  
+<verse number="14" style="v" sid="JHN 7:14" />But when it was now the middle of the feast, Jesus went up into the temple and taught.  
+<verse number="15" style="v" sid="JHN 7:15" />The Jews therefore marveled, saying, “How does this man know letters, having never been educated?”</para>
+  <para style="p"><verse number="16" style="v" sid="JHN 7:16" />Jesus therefore answered them, <char style="wj"> “My teaching is not mine, but his who sent me. </char>  
+<verse number="17" style="v" sid="JHN 7:17" /><char style="wj"> If anyone desires to do his will, he will know about the teaching, whether it is from God or if I am speaking from myself. </char>  
+<verse number="18" style="v" sid="JHN 7:18" /><char style="wj"> He who speaks from himself seeks his own glory, but he who seeks the glory of him who sent him is true, and no unrighteousness is in him. </char>  
+<verse number="19" style="v" sid="JHN 7:19" /><char style="wj"> Didn’t Moses give you the law, and yet none of you keeps the law? Why do you seek to kill me?”</char></para>
+  <para style="p"><verse number="20" style="v" sid="JHN 7:20" />The multitude answered, “You have a demon! Who seeks to kill you?”</para>
+  <para style="p"><verse number="21" style="v" sid="JHN 7:21" />Jesus answered them, <char style="wj"> “I did one work and you all marvel because of it. </char>  
+<verse number="22" style="v" sid="JHN 7:22" /><char style="wj"> Moses has given you circumcision (not that it is of Moses, but of the fathers), and on the Sabbath you circumcise a boy. </char>  
+<verse number="23" style="v" sid="JHN 7:23" /><char style="wj"> If a boy receives circumcision on the Sabbath, that the law of Moses may not be broken, are you angry with me because I made a man completely healthy on the Sabbath? </char>  
+<verse number="24" style="v" sid="JHN 7:24" /><char style="wj"> Don’t judge according to appearance, but judge righteous judgment.” </char></para>
+  <para style="p"><verse number="25" style="v" sid="JHN 7:25" />Therefore some of them of Jerusalem said, “Isn’t this he whom they seek to kill?  
+<verse number="26" style="v" sid="JHN 7:26" />Behold, he speaks openly, and they say nothing to him. Can it be that the rulers indeed know that this is truly the Christ?  
+<verse number="27" style="v" sid="JHN 7:27" />However, we know where this man comes from, but when the Christ comes, no one will know where he comes from.”</para>
+  <para style="p"><verse number="28" style="v" sid="JHN 7:28" />Jesus therefore cried out in the temple, teaching and saying, <char style="wj"> “You both know me, and know where I am from. I have not come of myself, but he who sent me is true, whom you don’t know. </char>  
+<verse number="29" style="v" sid="JHN 7:29" /><char style="wj"> I know him, because I am from him, and he sent me.”</char></para>
+  <para style="p"><verse number="30" style="v" sid="JHN 7:30" />They sought therefore to take him; but no one laid a hand on him, because his hour had not yet come.  
+<verse number="31" style="v" sid="JHN 7:31" />But of the multitude, many believed in him. They said, “When the Christ comes, he won’t do more signs than those which this man has done, will he?”  
+<verse number="32" style="v" sid="JHN 7:32" />The Pharisees heard the multitude murmuring these things concerning him, and the chief priests and the Pharisees sent officers to arrest him.</para>
+  <para style="p"><verse number="33" style="v" sid="JHN 7:33" />Then Jesus said, <char style="wj"> “I will be with you a little while longer, then I go to him who sent me. </char>  
+<verse number="34" style="v" sid="JHN 7:34" /><char style="wj"> You will seek me and won’t find me. You can’t come where I am.”</char></para>
+  <para style="p"><verse number="35" style="v" sid="JHN 7:35" />The Jews therefore said among themselves, “Where will this man go that we won’t find him? Will he go to the Dispersion among the Greeks and teach the Greeks?  
+<verse number="36" style="v" sid="JHN 7:36" />What is this word that he said, <char style="wj"> ‘You will seek me, and won’t find me;’</char> and <char style="wj"> ‘Where I am, you can’t come’</char>?”</para>
+  <para style="p"><verse number="37" style="v" sid="JHN 7:37" />Now on the last and greatest day of the feast, Jesus stood and cried out, <char style="wj"> “If anyone is thirsty, let him come to me and drink! </char>  
+<verse number="38" style="v" sid="JHN 7:38" /><char style="wj"> He who believes in me, as the Scripture has said, from within him will flow rivers of living water.”</char>  
+<verse number="39" style="v" sid="JHN 7:39" />But he said this about the Spirit, which those believing in him were to receive. For the Holy Spirit was not yet given, because Jesus wasn’t yet glorified.</para>
+  <para style="p"><verse number="40" style="v" sid="JHN 7:40" />Many of the multitude therefore, when they heard these words, said, “This is truly the prophet.”  
+<verse number="41" style="v" sid="JHN 7:41" />Others said, “This is the Christ.” But some said, “What, does the Christ come out of Galilee?  
+<verse number="42" style="v" sid="JHN 7:42" />Hasn’t the Scripture said that the Christ comes of the offspring<note style="f" caller="+"><char style="fr">7:42</char><char style="ft">or, seed</char></note> of David, and from Bethlehem, the village where David was?”  
+<verse number="43" style="v" sid="JHN 7:43" />So a division arose in the multitude because of him.  
+<verse number="44" style="v" sid="JHN 7:44" />Some of them would have arrested him, but no one laid hands on him.  
+<verse number="45" style="v" sid="JHN 7:45" />The officers therefore came to the chief priests and Pharisees; and they said to them, “Why didn’t you bring him?”</para>
+  <para style="p"><verse number="46" style="v" sid="JHN 7:46" />The officers answered, “No man ever spoke like this man!”</para>
+  <para style="p"><verse number="47" style="v" sid="JHN 7:47" />The Pharisees therefore answered them, “You aren’t also led astray, are you?  
+<verse number="48" style="v" sid="JHN 7:48" />Have any of the rulers or any of the Pharisees believed in him?  
+<verse number="49" style="v" sid="JHN 7:49" />But this multitude that doesn’t know the law is cursed.”</para>
+  <para style="p"><verse number="50" style="v" sid="JHN 7:50" />Nicodemus (he who came to him by night, being one of them) said to them,  
+<verse number="51" style="v" sid="JHN 7:51" />“Does our law judge a man unless it first hears from him personally and knows what he does?”</para>
+  <para style="p"><verse number="52" style="v" sid="JHN 7:52" />They answered him, “Are you also from Galilee? Search and see that no prophet has arisen out of Galilee.”</para>
+  <para style="p"><verse number="53" style="v" sid="JHN 7:53" />Everyone went to his own house,</para>
+  <chapter number="8" style="c" sid="JHN 8" />
+  <para style="p"><verse number="1" style="v" sid="JHN 8:1" />but Jesus went to the Mount of Olives.</para>
+  <para style="p"><verse number="2" style="v" sid="JHN 8:2" />Now very early in the morning, he came again into the temple, and all the people came to him. He sat down and taught them.  
+<verse number="3" style="v" sid="JHN 8:3" />The scribes and the Pharisees brought a woman taken in adultery. Having set her in the middle,  
+<verse number="4" style="v" sid="JHN 8:4" />they told him, “Teacher, we found this woman in adultery, in the very act.  
+<verse number="5" style="v" sid="JHN 8:5" />Now in our law, Moses commanded us to stone such women. What then do you say about her?”  
+<verse number="6" style="v" sid="JHN 8:6" />They said this testing him, that they might have something to accuse him of.</para>
+  <para style="p">But Jesus stooped down and wrote on the ground with his finger.  
+<verse number="7" style="v" sid="JHN 8:7" />But when they continued asking him, he looked up and said to them, <char style="wj"> “He who is without sin among you, let him throw the first stone at her.” </char>  
+<verse number="8" style="v" sid="JHN 8:8" />Again he stooped down and wrote on the ground with his finger.</para>
+  <para style="p"><verse number="9" style="v" sid="JHN 8:9" />They, when they heard it, being convicted by their conscience, went out one by one, beginning from the oldest, even to the last. Jesus was left alone with the woman where she was, in the middle.  
+<verse number="10" style="v" sid="JHN 8:10" />Jesus, standing up, saw her and said, <char style="wj"> “Woman, where are your accusers? Did no one condemn you?”</char></para>
+  <para style="p"><verse number="11" style="v" sid="JHN 8:11" />She said, “No one, Lord.”</para>
+  <para style="p">Jesus said, <char style="wj"> “Neither do I condemn you. Go your way. From now on, sin no more.”</char><note style="f" caller="+"><char style="fr">8:11</char><char style="ft">NU includes John 7:53–John 8:11, but puts brackets around it to indicate that the textual critics had less confidence that this was original.</char></note></para>
+  <para style="p"><verse number="12" style="v" sid="JHN 8:12" />Again, therefore, Jesus spoke to them, saying, <char style="wj"> “I am the light of the world.</char> <char style="wj"> He who follows me will not walk in the darkness, but will have the light of life.”</char></para>
+  <para style="p"><verse number="13" style="v" sid="JHN 8:13" />The Pharisees therefore said to him, “You testify about yourself. Your testimony is not valid.”</para>
+  <para style="p"><verse number="14" style="v" sid="JHN 8:14" />Jesus answered them, <char style="wj"> “Even if I testify about myself, my testimony is true, for I know where I came from, and where I am going; but you don’t know where I came from, or where I am going. </char>  
+<verse number="15" style="v" sid="JHN 8:15" /><char style="wj"> You judge according to the flesh. I judge no one. </char>  
+<verse number="16" style="v" sid="JHN 8:16" /><char style="wj"> Even if I do judge, my judgment is true, for I am not alone, but I am with the Father who sent me. </char>  
+<verse number="17" style="v" sid="JHN 8:17" /><char style="wj"> It’s also written in your law that the testimony of two people is valid.</char>  
+<verse number="18" style="v" sid="JHN 8:18" /><char style="wj"> I am one who testifies about myself, and the Father who sent me testifies about me.”</char></para>
+  <para style="p"><verse number="19" style="v" sid="JHN 8:19" />They said therefore to him, “Where is your Father?”</para>
+  <para style="p">Jesus answered, <char style="wj"> “You know neither me nor my Father. If you knew me, you would know my Father also.”</char>  
+<verse number="20" style="v" sid="JHN 8:20" />Jesus spoke these words in the treasury, as he taught in the temple. Yet no one arrested him, because his hour had not yet come.  
+<verse number="21" style="v" sid="JHN 8:21" />Jesus said therefore again to them, <char style="wj"> “I am going away, and you will seek me, and you will die in your sins. Where I go, you can’t come.” </char></para>
+  <para style="p"><verse number="22" style="v" sid="JHN 8:22" />The Jews therefore said, “Will he kill himself, because he says, <char style="wj"> ‘Where I am going, you can’t come’</char>?”</para>
+  <para style="p"><verse number="23" style="v" sid="JHN 8:23" />He said to them, <char style="wj"> “You are from beneath. I am from above. You are of this world. I am not of this world. </char>  
+<verse number="24" style="v" sid="JHN 8:24" /><char style="wj"> I said therefore to you that you will die in your sins; for unless you believe that I am</char><note style="f" caller="+"><char style="fr">8:24</char><char style="ft">or, I AM</char></note> <char style="wj"> he, you will die in your sins.” </char></para>
+  <para style="p"><verse number="25" style="v" sid="JHN 8:25" />They said therefore to him, “Who are you?”</para>
+  <para style="p">Jesus said to them, <char style="wj"> “Just what I have been saying to you from the beginning. </char>  
+<verse number="26" style="v" sid="JHN 8:26" /><char style="wj"> I have many things to speak and to judge concerning you. However, he who sent me is true; and the things which I heard from him, these I say to the world.”</char></para>
+  <para style="p"><verse number="27" style="v" sid="JHN 8:27" />They didn’t understand that he spoke to them about the Father.  
+<verse number="28" style="v" sid="JHN 8:28" />Jesus therefore said to them, <char style="wj"> “When you have lifted up the Son of Man, then you will know that I am he, and I do nothing of myself, but as my Father taught me, I say these things. </char>  
+<verse number="29" style="v" sid="JHN 8:29" /><char style="wj"> He who sent me is with me. The Father hasn’t left me alone, for I always do the things that are pleasing to him.”</char></para>
+  <para style="p"><verse number="30" style="v" sid="JHN 8:30" />As he spoke these things, many believed in him.  
+<verse number="31" style="v" sid="JHN 8:31" />Jesus therefore said to those Jews who had believed him, <char style="wj"> “If you remain in my word, then you are truly my disciples. </char>  
+<verse number="32" style="v" sid="JHN 8:32" /><char style="wj"> You will know the truth, and the truth will make you free.” </char></para>
+  <para style="p"><verse number="33" style="v" sid="JHN 8:33" />They answered him, “We are Abraham’s offspring, and have never been in bondage to anyone. How do you say, <char style="wj"> ‘You will be made free’</char>?”</para>
+  <para style="p"><verse number="34" style="v" sid="JHN 8:34" />Jesus answered them, <char style="wj"> “Most certainly I tell you, everyone who commits sin is the bondservant of sin. </char>  
+<verse number="35" style="v" sid="JHN 8:35" /><char style="wj"> A bondservant doesn’t live in the house forever. A son remains forever. </char>  
+<verse number="36" style="v" sid="JHN 8:36" /><char style="wj"> If therefore the Son makes you free, you will be free indeed. </char>  
+<verse number="37" style="v" sid="JHN 8:37" /><char style="wj"> I know that you are Abraham’s offspring, yet you seek to kill me, because my word finds no place in you. </char>  
+<verse number="38" style="v" sid="JHN 8:38" /><char style="wj"> I say the things which I have seen with my Father; and you also do the things which you have seen with your father.”</char></para>
+  <para style="p"><verse number="39" style="v" sid="JHN 8:39" />They answered him, “Our father is Abraham.”</para>
+  <para style="p">Jesus said to them, <char style="wj"> “If you were Abraham’s children, you would do the works of Abraham. </char>  
+<verse number="40" style="v" sid="JHN 8:40" /><char style="wj"> But now you seek to kill me, a man who has told you the truth which I heard from God. Abraham didn’t do this. </char>  
+<verse number="41" style="v" sid="JHN 8:41" /><char style="wj"> You do the works of your father.”</char></para>
+  <para style="p">They said to him, “We were not born of sexual immorality. We have one Father, God.”</para>
+  <para style="p"><verse number="42" style="v" sid="JHN 8:42" />Therefore Jesus said to them, <char style="wj"> “If God were your father, you would love me, for I came out and have come from God. For I haven’t come of myself, but he sent me. </char>  
+<verse number="43" style="v" sid="JHN 8:43" /><char style="wj"> Why don’t you understand my speech? Because you can’t hear my word. </char>  
+<verse number="44" style="v" sid="JHN 8:44" /><char style="wj"> You are of your father the devil, and you want to do the desires of your father. He was a murderer from the beginning, and doesn’t stand in the truth, because there is no truth in him. When he speaks a lie, he speaks on his own; for he is a liar, and the father of lies. </char>  
+<verse number="45" style="v" sid="JHN 8:45" /><char style="wj"> But because I tell the truth, you don’t believe me. </char>  
+<verse number="46" style="v" sid="JHN 8:46" /><char style="wj"> Which of you convicts me of sin? If I tell the truth, why do you not believe me? </char>  
+<verse number="47" style="v" sid="JHN 8:47" /><char style="wj"> He who is of God hears the words of God. For this cause you don’t hear, because you are not of God.”</char></para>
+  <para style="p"><verse number="48" style="v" sid="JHN 8:48" />Then the Jews answered him, “Don’t we say well that you are a Samaritan, and have a demon?”</para>
+  <para style="p"><verse number="49" style="v" sid="JHN 8:49" />Jesus answered, <char style="wj"> “I don’t have a demon, but I honor my Father and you dishonor me. </char>  
+<verse number="50" style="v" sid="JHN 8:50" /><char style="wj"> But I don’t seek my own glory. There is one who seeks and judges. </char>  
+<verse number="51" style="v" sid="JHN 8:51" /><char style="wj"> Most certainly, I tell you, if a person keeps my word, he will never see death.”</char></para>
+  <para style="p"><verse number="52" style="v" sid="JHN 8:52" />Then the Jews said to him, “Now we know that you have a demon. Abraham died, as did the prophets; and you say, <char style="wj"> ‘If a man keeps my word, he will never taste of death.’</char>  
+<verse number="53" style="v" sid="JHN 8:53" />Are you greater than our father Abraham, who died? The prophets died. Who do you make yourself out to be?”</para>
+  <para style="p"><verse number="54" style="v" sid="JHN 8:54" />Jesus answered, <char style="wj"> “If I glorify myself, my glory is nothing. It is my Father who glorifies me, of whom you say that he is our God. </char>  
+<verse number="55" style="v" sid="JHN 8:55" /><char style="wj"> You have not known him, but I know him. If I said, ‘I don’t know him,’ I would be like you, a liar. But I know him and keep his word. </char>  
+<verse number="56" style="v" sid="JHN 8:56" /><char style="wj"> Your father Abraham rejoiced to see my day. He saw it and was glad.”</char></para>
+  <para style="p"><verse number="57" style="v" sid="JHN 8:57" />The Jews therefore said to him, “You are not yet fifty years old! Have you seen Abraham?”</para>
+  <para style="p"><verse number="58" style="v" sid="JHN 8:58" />Jesus said to them, <char style="wj"> “Most certainly, I tell you, before Abraham came into existence, I AM.</char><char style="wj"> ”</char></para>
+  <para style="p"><verse number="59" style="v" sid="JHN 8:59" />Therefore they took up stones to throw at him, but Jesus hid himself and went out of the temple, having gone through the middle of them, and so passed by.</para>
+  <chapter number="9" style="c" sid="JHN 9" />
+  <para style="p"><verse number="1" style="v" sid="JHN 9:1" />As he passed by, he saw a man blind from birth.  
+<verse number="2" style="v" sid="JHN 9:2" />His disciples asked him, “Rabbi, who sinned, this man or his parents, that he was born blind?”</para>
+  <para style="p"><verse number="3" style="v" sid="JHN 9:3" />Jesus answered, <char style="wj"> “This man didn’t sin, nor did his parents, but that the works of God might be revealed in him. </char>  
+<verse number="4" style="v" sid="JHN 9:4" /><char style="wj"> I must work the works of him who sent me while it is day. The night is coming, when no one can work. </char>  
+<verse number="5" style="v" sid="JHN 9:5" /><char style="wj"> While I am in the world, I am the light of the world.”</char>  
+<verse number="6" style="v" sid="JHN 9:6" />When he had said this, he spat on the ground, made mud with the saliva, anointed the blind man’s eyes with the mud,  
+<verse number="7" style="v" sid="JHN 9:7" />and said to him, <char style="wj"> “Go, wash in the pool of Siloam”</char> (which means “Sent”). So he went away, washed, and came back seeing.</para>
+  <para style="p"><verse number="8" style="v" sid="JHN 9:8" />Therefore the neighbors and those who saw that he was blind before said, “Isn’t this he who sat and begged?”  
+<verse number="9" style="v" sid="JHN 9:9" />Others were saying, “It is he.” Still others were saying, “He looks like him.”</para>
+  <para style="p">He said, “I am he.”</para>
+  <para style="p"><verse number="10" style="v" sid="JHN 9:10" />They therefore were asking him, “How were your eyes opened?”</para>
+  <para style="p"><verse number="11" style="v" sid="JHN 9:11" />He answered, “A man called Jesus made mud, anointed my eyes, and said to me, <char style="wj"> ‘Go to the pool of Siloam and wash.’</char> So I went away and washed, and I received sight.”</para>
+  <para style="p"><verse number="12" style="v" sid="JHN 9:12" />Then they asked him, “Where is he?”</para>
+  <para style="p">He said, “I don’t know.”</para>
+  <para style="p"><verse number="13" style="v" sid="JHN 9:13" />They brought him who had been blind to the Pharisees.  
+<verse number="14" style="v" sid="JHN 9:14" />It was a Sabbath when Jesus made the mud and opened his eyes.  
+<verse number="15" style="v" sid="JHN 9:15" />Again therefore the Pharisees also asked him how he received his sight. He said to them, “He put mud on my eyes, I washed, and I see.”</para>
+  <para style="p"><verse number="16" style="v" sid="JHN 9:16" />Some therefore of the Pharisees said, “This man is not from God, because he doesn’t keep the Sabbath.”</para>
+  <para style="p">Others said, “How can a man who is a sinner do such signs?” So there was division among them.</para>
+  <para style="p"><verse number="17" style="v" sid="JHN 9:17" />Therefore they asked the blind man again, “What do you say about him, because he opened your eyes?”</para>
+  <para style="p">He said, “He is a prophet.”</para>
+  <para style="p"><verse number="18" style="v" sid="JHN 9:18" />The Jews therefore didn’t believe concerning him, that he had been blind and had received his sight, until they called the parents of him who had received his sight,  
+<verse number="19" style="v" sid="JHN 9:19" />and asked them, “Is this your son, whom you say was born blind? How then does he now see?”</para>
+  <para style="p"><verse number="20" style="v" sid="JHN 9:20" />His parents answered them, “We know that this is our son, and that he was born blind;  
+<verse number="21" style="v" sid="JHN 9:21" />but how he now sees, we don’t know; or who opened his eyes, we don’t know. He is of age. Ask him. He will speak for himself.”  
+<verse number="22" style="v" sid="JHN 9:22" />His parents said these things because they feared the Jews; for the Jews had already agreed that if any man would confess him as Christ, he would be put out of the synagogue.  
+<verse number="23" style="v" sid="JHN 9:23" />Therefore his parents said, “He is of age. Ask him.”</para>
+  <para style="p"><verse number="24" style="v" sid="JHN 9:24" />So they called the man who was blind a second time, and said to him, “Give glory to God. We know that this man is a sinner.”</para>
+  <para style="p"><verse number="25" style="v" sid="JHN 9:25" />He therefore answered, “I don’t know if he is a sinner. One thing I do know: that though I was blind, now I see.”</para>
+  <para style="p"><verse number="26" style="v" sid="JHN 9:26" />They said to him again, “What did he do to you? How did he open your eyes?”</para>
+  <para style="p"><verse number="27" style="v" sid="JHN 9:27" />He answered them, “I told you already, and you didn’t listen. Why do you want to hear it again? You don’t also want to become his disciples, do you?”</para>
+  <para style="p"><verse number="28" style="v" sid="JHN 9:28" />They insulted him and said, “You are his disciple, but we are disciples of Moses.  
+<verse number="29" style="v" sid="JHN 9:29" />We know that God has spoken to Moses. But as for this man, we don’t know where he comes from.”</para>
+  <para style="p"><verse number="30" style="v" sid="JHN 9:30" />The man answered them, “How amazing! You don’t know where he comes from, yet he opened my eyes.  
+<verse number="31" style="v" sid="JHN 9:31" />We know that God doesn’t listen to sinners, but if anyone is a worshiper of God and does his will, he listens to him.  
+<verse number="32" style="v" sid="JHN 9:32" />Since the world began it has never been heard of that anyone opened the eyes of someone born blind.  
+<verse number="33" style="v" sid="JHN 9:33" />If this man were not from God, he could do nothing.”</para>
+  <para style="p"><verse number="34" style="v" sid="JHN 9:34" />They answered him, “You were altogether born in sins, and do you teach us?” Then they threw him out.</para>
+  <para style="p"><verse number="35" style="v" sid="JHN 9:35" />Jesus heard that they had thrown him out, and finding him, he said, <char style="wj"> “Do you believe in the Son of God?”</char></para>
+  <para style="p"><verse number="36" style="v" sid="JHN 9:36" />He answered, “Who is he, Lord, that I may believe in him?”</para>
+  <para style="p"><verse number="37" style="v" sid="JHN 9:37" />Jesus said to him, <char style="wj"> “You have both seen him, and it is he who speaks with you.”</char></para>
+  <para style="p"><verse number="38" style="v" sid="JHN 9:38" />He said, “Lord, I believe!” and he worshiped him.</para>
+  <para style="p"><verse number="39" style="v" sid="JHN 9:39" />Jesus said, <char style="wj"> “I came into this world for judgment, that those who don’t see may see; and that those who see may become blind.”</char></para>
+  <para style="p"><verse number="40" style="v" sid="JHN 9:40" />Those of the Pharisees who were with him heard these things, and said to him, “Are we also blind?”</para>
+  <para style="p"><verse number="41" style="v" sid="JHN 9:41" />Jesus said to them, <char style="wj"> “If you were blind, you would have no sin; but now you say, ‘We see.’ Therefore your sin remains.</char></para>
+  <chapter number="10" style="c" sid="JHN 10" />
+  <para style="p"><verse number="1" style="v" sid="JHN 10:1" /><char style="wj"> “Most certainly, I tell you, one who doesn’t enter by the door into the sheep fold, but climbs up some other way, is a thief and a robber. </char>  
+<verse number="2" style="v" sid="JHN 10:2" /><char style="wj"> But one who enters in by the door is the shepherd of the sheep. </char>  
+<verse number="3" style="v" sid="JHN 10:3" /><char style="wj"> The gatekeeper opens the gate for him, and the sheep listen to his voice. He calls his own sheep by name and leads them out. </char>  
+<verse number="4" style="v" sid="JHN 10:4" /><char style="wj"> Whenever he brings out his own sheep, he goes before them; and the sheep follow him, for they know his voice. </char>  
+<verse number="5" style="v" sid="JHN 10:5" /><char style="wj"> They will by no means follow a stranger, but will flee from him; for they don’t know the voice of strangers.”</char>  
+<verse number="6" style="v" sid="JHN 10:6" />Jesus spoke this parable to them, but they didn’t understand what he was telling them.</para>
+  <para style="p"><verse number="7" style="v" sid="JHN 10:7" />Jesus therefore said to them again, <char style="wj"> “Most certainly, I tell you, I am the sheep’s door. </char>  
+<verse number="8" style="v" sid="JHN 10:8" /><char style="wj"> All who came before me are thieves and robbers, but the sheep didn’t listen to them. </char>  
+<verse number="9" style="v" sid="JHN 10:9" /><char style="wj"> I am the door. If anyone enters in by me, he will be saved, and will go in and go out and will find pasture. </char>  
+<verse number="10" style="v" sid="JHN 10:10" /><char style="wj"> The thief only comes to steal, kill, and destroy. I came that they may have life, and may have it abundantly. </char></para>
+  <para style="p"><verse number="11" style="v" sid="JHN 10:11" /><char style="wj"> “I am the good shepherd.</char> <char style="wj"> The good shepherd lays down his life for the sheep. </char>  
+<verse number="12" style="v" sid="JHN 10:12" /><char style="wj"> He who is a hired hand, and not a shepherd, who doesn’t own the sheep, sees the wolf coming, leaves the sheep, and flees. The wolf snatches the sheep and scatters them. </char>  
+<verse number="13" style="v" sid="JHN 10:13" /><char style="wj"> The hired hand flees because he is a hired hand and doesn’t care for the sheep. </char>  
+<verse number="14" style="v" sid="JHN 10:14" /><char style="wj"> I am the good shepherd. I know my own, and I’m known by my own; </char>  
+<verse number="15" style="v" sid="JHN 10:15" /><char style="wj"> even as the Father knows me, and I know the Father. I lay down my life for the sheep. </char>  
+<verse number="16" style="v" sid="JHN 10:16" /><char style="wj"> I have other sheep which are not of this fold.</char> <char style="wj"> I must bring them also, and they will hear my voice. They will become one flock with one shepherd. </char>  
+<verse number="17" style="v" sid="JHN 10:17" /><char style="wj"> Therefore the Father loves me, because I lay down my life, </char> <char style="wj"> that I may take it again. </char>  
+<verse number="18" style="v" sid="JHN 10:18" /><char style="wj"> No one takes it away from me, but I lay it down by myself. I have power to lay it down, and I have power to take it again. I received this commandment from my Father.”</char></para>
+  <para style="p"><verse number="19" style="v" sid="JHN 10:19" />Therefore a division arose again among the Jews because of these words.  
+<verse number="20" style="v" sid="JHN 10:20" />Many of them said, “He has a demon and is insane! Why do you listen to him?”  
+<verse number="21" style="v" sid="JHN 10:21" />Others said, “These are not the sayings of one possessed by a demon. It isn’t possible for a demon to open the eyes of the blind, is it?”</para>
+  <para style="p"><verse number="22" style="v" sid="JHN 10:22" />It was the Feast of the Dedication<note style="f" caller="+"><char style="fr">10:22</char><char style="ft">The “Feast of the Dedication” is the Greek name for “Hanukkah”, a celebration of the rededication of the Temple.</char></note> at Jerusalem.  
+<verse number="23" style="v" sid="JHN 10:23" />It was winter, and Jesus was walking in the temple, in Solomon’s porch.  
+<verse number="24" style="v" sid="JHN 10:24" />The Jews therefore came around him and said to him, “How long will you hold us in suspense? If you are the Christ, tell us plainly.”</para>
+  <para style="p"><verse number="25" style="v" sid="JHN 10:25" />Jesus answered them, <char style="wj"> “I told you, and you don’t believe. The works that I do in my Father’s name, these testify about me. </char>  
+<verse number="26" style="v" sid="JHN 10:26" /><char style="wj"> But you don’t believe, because you are not of my sheep, as I told you. </char>  
+<verse number="27" style="v" sid="JHN 10:27" /><char style="wj"> My sheep hear my voice, and I know them, and they follow me. </char>  
+<verse number="28" style="v" sid="JHN 10:28" /><char style="wj"> I give eternal life to them. They will never perish, and no one will snatch them out of my hand. </char>  
+<verse number="29" style="v" sid="JHN 10:29" /><char style="wj"> My Father who has given them to me is greater than all. No one is able to snatch them out of my Father’s hand. </char>  
+<verse number="30" style="v" sid="JHN 10:30" /><char style="wj"> I and the Father are one.”</char></para>
+  <para style="p"><verse number="31" style="v" sid="JHN 10:31" />Therefore the Jews took up stones again to stone him.  
+<verse number="32" style="v" sid="JHN 10:32" />Jesus answered them, <char style="wj"> “I have shown you many good works from my Father. For which of those works do you stone me?”</char></para>
+  <para style="p"><verse number="33" style="v" sid="JHN 10:33" />The Jews answered him, “We don’t stone you for a good work, but for blasphemy, because you, being a man, make yourself God.”</para>
+  <para style="p"><verse number="34" style="v" sid="JHN 10:34" />Jesus answered them, <char style="wj"> “Isn’t it written in your law, ‘I said, you are gods’?</char>  
+<verse number="35" style="v" sid="JHN 10:35" /><char style="wj"> If he called them gods, to whom the word of God came (and the Scripture can’t be broken), </char>  
+<verse number="36" style="v" sid="JHN 10:36" /><char style="wj"> do you say of him whom the Father sanctified and sent into the world, ‘You blaspheme,’ because I said, ‘I am the Son of God’? </char>  
+<verse number="37" style="v" sid="JHN 10:37" /><char style="wj"> If I don’t do the works of my Father, don’t believe me. </char>  
+<verse number="38" style="v" sid="JHN 10:38" /><char style="wj"> But if I do them, though you don’t believe me, believe the works, that you may know and believe that the Father is in me, and I in the Father.” </char></para>
+  <para style="p"><verse number="39" style="v" sid="JHN 10:39" />They sought again to seize him, and he went out of their hand.  
+<verse number="40" style="v" sid="JHN 10:40" />He went away again beyond the Jordan into the place where John was baptizing at first, and he stayed there.  
+<verse number="41" style="v" sid="JHN 10:41" />Many came to him. They said, “John indeed did no sign, but everything that John said about this man is true.”  
+<verse number="42" style="v" sid="JHN 10:42" />Many believed in him there.</para>
+  <chapter number="11" style="c" sid="JHN 11" />
+  <para style="p"><verse number="1" style="v" sid="JHN 11:1" />Now a certain man was sick, Lazarus from Bethany, of the village of Mary and her sister, Martha.  
+<verse number="2" style="v" sid="JHN 11:2" />It was that Mary who had anointed the Lord with ointment and wiped his feet with her hair, whose brother Lazarus was sick.  
+<verse number="3" style="v" sid="JHN 11:3" />The sisters therefore sent to him, saying, “Lord, behold, he for whom you have great affection is sick.”</para>
+  <para style="p"><verse number="4" style="v" sid="JHN 11:4" />But when Jesus heard it, he said, <char style="wj"> “This sickness is not to death, but for the glory of God, that God’s Son may be glorified by it.”</char>  
+<verse number="5" style="v" sid="JHN 11:5" />Now Jesus loved Martha, and her sister, and Lazarus.  
+<verse number="6" style="v" sid="JHN 11:6" />When therefore he heard that he was sick, he stayed two days in the place where he was.  
+<verse number="7" style="v" sid="JHN 11:7" />Then after this he said to the disciples, <char style="wj"> “Let’s go into Judea again.”</char></para>
+  <para style="p"><verse number="8" style="v" sid="JHN 11:8" />The disciples asked him, “Rabbi, the Jews were just trying to stone you. Are you going there again?”</para>
+  <para style="p"><verse number="9" style="v" sid="JHN 11:9" />Jesus answered, <char style="wj"> “Aren’t there twelve hours of daylight? If a man walks in the day, he doesn’t stumble, because he sees the light of this world. </char>  
+<verse number="10" style="v" sid="JHN 11:10" /><char style="wj"> But if a man walks in the night, he stumbles, because the light isn’t in him.”</char>  
+<verse number="11" style="v" sid="JHN 11:11" />He said these things, and after that, he said to them, <char style="wj"> “Our friend Lazarus has fallen asleep, but I am going so that I may awake him out of sleep.”</char></para>
+  <para style="p"><verse number="12" style="v" sid="JHN 11:12" />The disciples therefore said, “Lord, if he has fallen asleep, he will recover.”</para>
+  <para style="p"><verse number="13" style="v" sid="JHN 11:13" />Now Jesus had spoken of his death, but they thought that he spoke of taking rest in sleep.  
+<verse number="14" style="v" sid="JHN 11:14" />So Jesus said to them plainly then, <char style="wj"> “Lazarus is dead. </char>  
+<verse number="15" style="v" sid="JHN 11:15" /><char style="wj"> I am glad for your sakes that I was not there, so that you may believe. Nevertheless, let’s go to him.”</char></para>
+  <para style="p"><verse number="16" style="v" sid="JHN 11:16" />Thomas therefore, who is called Didymus,<note style="f" caller="+"><char style="fr">11:16</char><char style="ft">“Didymus” means “Twin”.</char></note> said to his fellow disciples, “Let’s also go, that we may die with him.”</para>
+  <para style="p"><verse number="17" style="v" sid="JHN 11:17" />So when Jesus came, he found that he had been in the tomb four days already.  
+<verse number="18" style="v" sid="JHN 11:18" />Now Bethany was near Jerusalem, about fifteen stadia<note style="f" caller="+"><char style="fr">11:18</char><char style="ft">15 stadia is about 2.8 kilometers or 1.7 miles</char></note> away.  
+<verse number="19" style="v" sid="JHN 11:19" />Many of the Jews had joined the women around Martha and Mary, to console them concerning their brother.  
+<verse number="20" style="v" sid="JHN 11:20" />Then when Martha heard that Jesus was coming, she went and met him, but Mary stayed in the house.  
+<verse number="21" style="v" sid="JHN 11:21" />Therefore Martha said to Jesus, “Lord, if you would have been here, my brother wouldn’t have died.  
+<verse number="22" style="v" sid="JHN 11:22" />Even now I know that whatever you ask of God, God will give you.”</para>
+  <para style="p"><verse number="23" style="v" sid="JHN 11:23" />Jesus said to her, <char style="wj"> “Your brother will rise again.”</char></para>
+  <para style="p"><verse number="24" style="v" sid="JHN 11:24" />Martha said to him, “I know that he will rise again in the resurrection at the last day.”</para>
+  <para style="p"><verse number="25" style="v" sid="JHN 11:25" />Jesus said to her, <char style="wj"> “I am the resurrection and the life. He who believes in me will still live, even if he dies. </char>  
+<verse number="26" style="v" sid="JHN 11:26" /><char style="wj"> Whoever lives and believes in me will never die. Do you believe this?”</char></para>
+  <para style="p"><verse number="27" style="v" sid="JHN 11:27" />She said to him, “Yes, Lord. I have come to believe that you are the Christ, God’s Son, he who comes into the world.”</para>
+  <para style="p"><verse number="28" style="v" sid="JHN 11:28" />When she had said this, she went away and called Mary, her sister, secretly, saying, “The Teacher is here and is calling you.”</para>
+  <para style="p"><verse number="29" style="v" sid="JHN 11:29" />When she heard this, she arose quickly and went to him.  
+<verse number="30" style="v" sid="JHN 11:30" />Now Jesus had not yet come into the village, but was in the place where Martha met him.  
+<verse number="31" style="v" sid="JHN 11:31" />Then the Jews who were with her in the house and were consoling her, when they saw Mary, that she rose up quickly and went out, followed her, saying, “She is going to the tomb to weep there.”</para>
+  <para style="p"><verse number="32" style="v" sid="JHN 11:32" />Therefore when Mary came to where Jesus was and saw him, she fell down at his feet, saying to him, “Lord, if you would have been here, my brother wouldn’t have died.”</para>
+  <para style="p"><verse number="33" style="v" sid="JHN 11:33" />When Jesus therefore saw her weeping, and the Jews weeping who came with her, he groaned in the spirit and was troubled,  
+<verse number="34" style="v" sid="JHN 11:34" />and said, <char style="wj"> “Where have you laid him?”</char></para>
+  <para style="p">They told him, “Lord, come and see.”</para>
+  <para style="p"><verse number="35" style="v" sid="JHN 11:35" />Jesus wept.</para>
+  <para style="p"><verse number="36" style="v" sid="JHN 11:36" />The Jews therefore said, “See how much affection he had for him!”  
+<verse number="37" style="v" sid="JHN 11:37" />Some of them said, “Couldn’t this man, who opened the eyes of him who was blind, have also kept this man from dying?”</para>
+  <para style="p"><verse number="38" style="v" sid="JHN 11:38" />Jesus therefore, again groaning in himself, came to the tomb. Now it was a cave, and a stone lay against it.  
+<verse number="39" style="v" sid="JHN 11:39" />Jesus said, <char style="wj"> “Take away the stone.”</char></para>
+  <para style="p">Martha, the sister of him who was dead, said to him, “Lord, by this time there is a stench, for he has been dead four days.”</para>
+  <para style="p"><verse number="40" style="v" sid="JHN 11:40" />Jesus said to her, <char style="wj"> “Didn’t I tell you that if you believed, you would see God’s glory?”</char></para>
+  <para style="p"><verse number="41" style="v" sid="JHN 11:41" />So they took away the stone from the place where the dead man was lying.<note style="f" caller="+"><char style="fr">11:41</char><char style="ft">NU omits “from the place where the dead man was lying.”</char></note> Jesus lifted up his eyes and said, <char style="wj"> “Father, I thank you that you listened to me. </char>  
+<verse number="42" style="v" sid="JHN 11:42" /><char style="wj"> I know that you always listen to me, but because of the multitude standing around I said this, that they may believe that you sent me.” </char>  
+<verse number="43" style="v" sid="JHN 11:43" />When he had said this, he cried with a loud voice, <char style="wj"> “Lazarus, come out!”</char></para>
+  <para style="p"><verse number="44" style="v" sid="JHN 11:44" />He who was dead came out, bound hand and foot with wrappings, and his face was wrapped around with a cloth.</para>
+  <para style="p">Jesus said to them, <char style="wj"> “Free him, and let him go.”</char></para>
+  <para style="p"><verse number="45" style="v" sid="JHN 11:45" />Therefore many of the Jews who came to Mary and saw what Jesus did believed in him.  
+<verse number="46" style="v" sid="JHN 11:46" />But some of them went away to the Pharisees and told them the things which Jesus had done.  
+<verse number="47" style="v" sid="JHN 11:47" />The chief priests therefore and the Pharisees gathered a council, and said, “What are we doing? For this man does many signs.  
+<verse number="48" style="v" sid="JHN 11:48" />If we leave him alone like this, everyone will believe in him, and the Romans will come and take away both our place and our nation.”</para>
+  <para style="p"><verse number="49" style="v" sid="JHN 11:49" />But a certain one of them, Caiaphas, being high priest that year, said to them, “You know nothing at all,  
+<verse number="50" style="v" sid="JHN 11:50" />nor do you consider that it is advantageous for us that one man should die for the people, and that the whole nation not perish.”  
+<verse number="51" style="v" sid="JHN 11:51" />Now he didn’t say this of himself, but being high priest that year, he prophesied that Jesus would die for the nation,  
+<verse number="52" style="v" sid="JHN 11:52" />and not for the nation only, but that he might also gather together into one the children of God who are scattered abroad.  
+<verse number="53" style="v" sid="JHN 11:53" />So from that day forward they took counsel that they might put him to death.  
+<verse number="54" style="v" sid="JHN 11:54" />Jesus therefore walked no more openly among the Jews, but departed from there into the country near the wilderness, to a city called Ephraim. He stayed there with his disciples.</para>
+  <para style="p"><verse number="55" style="v" sid="JHN 11:55" />Now the Passover of the Jews was at hand. Many went up from the country to Jerusalem before the Passover, to purify themselves.  
+<verse number="56" style="v" sid="JHN 11:56" />Then they sought for Jesus and spoke with one another as they stood in the temple, “What do you think—that he isn’t coming to the feast at all?”  
+<verse number="57" style="v" sid="JHN 11:57" />Now the chief priests and the Pharisees had commanded that if anyone knew where he was, he should report it, that they might seize him.</para>
+  <chapter number="12" style="c" sid="JHN 12" />
+  <para style="p"><verse number="1" style="v" sid="JHN 12:1" />Then, six days before the Passover, Jesus came to Bethany, where Lazarus was, who had been dead, whom he raised from the dead.  
+<verse number="2" style="v" sid="JHN 12:2" />So they made him a supper there. Martha served, but Lazarus was one of those who sat at the table with him.  
+<verse number="3" style="v" sid="JHN 12:3" />Therefore Mary took a pound<note style="f" caller="+"><char style="fr">12:3</char><char style="ft">a Roman pound of 12 ounces, or about 340 grams</char></note> of ointment of pure nard, very precious, and anointed Jesus’ feet and wiped his feet with her hair. The house was filled with the fragrance of the ointment.</para>
+  <para style="p"><verse number="4" style="v" sid="JHN 12:4" />Then Judas Iscariot, Simon’s son, one of his disciples, who would betray him, said,  
+<verse number="5" style="v" sid="JHN 12:5" />“Why wasn’t this ointment sold for three hundred denarii<note style="f" caller="+"><char style="fr">12:5</char><char style="ft">300 denarii was about a year’s wages for an agricultural laborer.</char></note> and given to the poor?”  
+<verse number="6" style="v" sid="JHN 12:6" />Now he said this, not because he cared for the poor, but because he was a thief, and having the money box, used to steal what was put into it.</para>
+  <para style="p"><verse number="7" style="v" sid="JHN 12:7" />But Jesus said, <char style="wj"> “Leave her alone. She has kept this for the day of my burial. </char>  
+<verse number="8" style="v" sid="JHN 12:8" /><char style="wj"> For you always have the poor with you, but you don’t always have me.”</char></para>
+  <para style="p"><verse number="9" style="v" sid="JHN 12:9" />A large crowd therefore of the Jews learned that he was there; and they came, not for Jesus’ sake only, but that they might see Lazarus also, whom he had raised from the dead.  
+<verse number="10" style="v" sid="JHN 12:10" />But the chief priests conspired to put Lazarus to death also,  
+<verse number="11" style="v" sid="JHN 12:11" />because on account of him many of the Jews went away and believed in Jesus.</para>
+  <para style="p"><verse number="12" style="v" sid="JHN 12:12" />On the next day a great multitude had come to the feast. When they heard that Jesus was coming to Jerusalem,  
+<verse number="13" style="v" sid="JHN 12:13" />they took the branches of the palm trees and went out to meet him, and cried out, “Hosanna!<note style="f" caller="+"><char style="fr">12:13</char><char style="ft">“Hosanna” means “save us” or “help us, we pray”.</char></note> Blessed is he who comes in the name of the Lord, the King of Israel!”</para>
+  <para style="p"><verse number="14" style="v" sid="JHN 12:14" />Jesus, having found a young donkey, sat on it. As it is written,  
+<verse number="15" style="v" sid="JHN 12:15" />“Don’t be afraid, daughter of Zion. Behold, your King comes, sitting on a donkey’s colt.”  
+<verse number="16" style="v" sid="JHN 12:16" />His disciples didn’t understand these things at first, but when Jesus was glorified, then they remembered that these things were written about him, and that they had done these things to him.  
+<verse number="17" style="v" sid="JHN 12:17" />The multitude therefore that was with him when he called Lazarus out of the tomb and raised him from the dead was testifying about it.  
+<verse number="18" style="v" sid="JHN 12:18" />For this cause also the multitude went and met him, because they heard that he had done this sign.  
+<verse number="19" style="v" sid="JHN 12:19" />The Pharisees therefore said among themselves, “See how you accomplish nothing. Behold, the world has gone after him.”</para>
+  <para style="p"><verse number="20" style="v" sid="JHN 12:20" />Now there were certain Greeks among those who went up to worship at the feast.  
+<verse number="21" style="v" sid="JHN 12:21" />Therefore, these came to Philip, who was from Bethsaida of Galilee, and asked him, saying, “Sir, we want to see Jesus.”  
+<verse number="22" style="v" sid="JHN 12:22" />Philip came and told Andrew, and in turn, Andrew came with Philip, and they told Jesus.</para>
+  <para style="p"><verse number="23" style="v" sid="JHN 12:23" />Jesus answered them, <char style="wj"> “The time has come for the Son of Man to be glorified. </char>  
+<verse number="24" style="v" sid="JHN 12:24" /><char style="wj"> Most certainly I tell you, unless a grain of wheat falls into the earth and dies, it remains by itself alone. But if it dies, it bears much fruit. </char>  
+<verse number="25" style="v" sid="JHN 12:25" /><char style="wj"> He who loves his life will lose it. He who hates his life in this world will keep it to eternal life. </char>  
+<verse number="26" style="v" sid="JHN 12:26" /><char style="wj"> If anyone serves me, let him follow me. Where I am, there my servant will also be. If anyone serves me, the Father will honor him.</char></para>
+  <para style="p"><verse number="27" style="v" sid="JHN 12:27" /><char style="wj"> “Now my soul is troubled. What shall I say? ‘Father, save me from this time’? But I came to this time for this cause. </char>  
+<verse number="28" style="v" sid="JHN 12:28" /><char style="wj"> Father, glorify your name!”</char></para>
+  <para style="p">Then a voice came out of the sky, saying, “I have both glorified it and will glorify it again.”</para>
+  <para style="p"><verse number="29" style="v" sid="JHN 12:29" />Therefore the multitude who stood by and heard it said that it had thundered. Others said, “An angel has spoken to him.”</para>
+  <para style="p"><verse number="30" style="v" sid="JHN 12:30" />Jesus answered, <char style="wj"> “This voice hasn’t come for my sake, but for your sakes. </char>  
+<verse number="31" style="v" sid="JHN 12:31" /><char style="wj"> Now is the judgment of this world. Now the prince of this world will be cast out. </char>  
+<verse number="32" style="v" sid="JHN 12:32" /><char style="wj"> And I, if I am lifted up from the earth, will draw all people to myself.”</char>  
+<verse number="33" style="v" sid="JHN 12:33" />But he said this, signifying by what kind of death he should die.</para>
+  <para style="p"><verse number="34" style="v" sid="JHN 12:34" />The multitude answered him, “We have heard out of the law that the Christ remains forever. How do you say, <char style="wj"> ‘The Son of Man must be lifted up’</char>? Who is this Son of Man?”</para>
+  <para style="p"><verse number="35" style="v" sid="JHN 12:35" />Jesus therefore said to them, <char style="wj"> “Yet a little while the light is with you. Walk while you have the light, that darkness doesn’t overtake you. He who walks in the darkness doesn’t know where he is going. </char>  
+<verse number="36" style="v" sid="JHN 12:36" /><char style="wj"> While you have the light, believe in the light, that you may become children of light.”</char> Jesus said these things, and he departed and hid himself from them.  
+<verse number="37" style="v" sid="JHN 12:37" />But though he had done so many signs before them, yet they didn’t believe in him,  
+<verse number="38" style="v" sid="JHN 12:38" />that the word of Isaiah the prophet might be fulfilled, which he spoke:</para>
+  <para style="q1">“Lord, who has believed our report?</para>
+  <para style="q2">To whom has the arm of the Lord been revealed?”</para>
+  <para style="p"><verse number="39" style="v" sid="JHN 12:39" />For this cause they couldn’t believe, for Isaiah said again:</para>
+  <para style="q1"><verse number="40" style="v" sid="JHN 12:40" />“He has blinded their eyes and he hardened their heart,</para>
+  <para style="q2">lest they should see with their eyes,</para>
+  <para style="q2">and perceive with their heart,</para>
+  <para style="q2">and would turn,</para>
+  <para style="q2">and I would heal them.”</para>
+  <para style="p"><verse number="41" style="v" sid="JHN 12:41" />Isaiah said these things when he saw his glory, and spoke of him.   
+<verse number="42" style="v" sid="JHN 12:42" />Nevertheless, even many of the rulers believed in him, but because of the Pharisees they didn’t confess it, so that they wouldn’t be put out of the synagogue,  
+<verse number="43" style="v" sid="JHN 12:43" />for they loved men’s praise more than God’s praise.</para>
+  <para style="p"><verse number="44" style="v" sid="JHN 12:44" />Jesus cried out and said, <char style="wj"> “Whoever believes in me, believes not in me, but in him who sent me. </char>  
+<verse number="45" style="v" sid="JHN 12:45" /><char style="wj"> He who sees me sees him who sent me. </char>  
+<verse number="46" style="v" sid="JHN 12:46" /><char style="wj"> I have come as a light into the world, that whoever believes in me may not remain in the darkness. </char>  
+<verse number="47" style="v" sid="JHN 12:47" /><char style="wj"> If anyone listens to my sayings and doesn’t believe, I don’t judge him. For I came not to judge the world, but to save the world. </char>  
+<verse number="48" style="v" sid="JHN 12:48" /><char style="wj"> He who rejects me, and doesn’t receive my sayings, has one who judges him. The word that I spoke will judge him in the last day. </char>  
+<verse number="49" style="v" sid="JHN 12:49" /><char style="wj"> For I spoke not from myself, but the Father who sent me gave me a commandment, what I should say and what I should speak. </char>  
+<verse number="50" style="v" sid="JHN 12:50" /><char style="wj"> I know that his commandment is eternal life. The things therefore which I speak, even as the Father has said to me, so I speak.”</char></para>
+  <chapter number="13" style="c" sid="JHN 13" />
+  <para style="p"><verse number="1" style="v" sid="JHN 13:1" />Now before the feast of the Passover, Jesus, knowing that his time had come that he would depart from this world to the Father, having loved his own who were in the world, he loved them to the end.  
+<verse number="2" style="v" sid="JHN 13:2" />During supper, the devil having already put into the heart of Judas Iscariot, Simon’s son, to betray him,  
+<verse number="3" style="v" sid="JHN 13:3" />Jesus, knowing that the Father had given all things into his hands, and that he came from God and was going to God,  
+<verse number="4" style="v" sid="JHN 13:4" />arose from supper, and laid aside his outer garments. He took a towel and wrapped a towel around his waist.  
+<verse number="5" style="v" sid="JHN 13:5" />Then he poured water into the basin, and began to wash the disciples’ feet and to wipe them with the towel that was wrapped around him.  
+<verse number="6" style="v" sid="JHN 13:6" />Then he came to Simon Peter. He said to him, “Lord, do you wash my feet?”</para>
+  <para style="p"><verse number="7" style="v" sid="JHN 13:7" />Jesus answered him, <char style="wj"> “You don’t know what I am doing now, but you will understand later.”</char></para>
+  <para style="p"><verse number="8" style="v" sid="JHN 13:8" />Peter said to him, “You will never wash my feet!”</para>
+  <para style="p">Jesus answered him, <char style="wj"> “If I don’t wash you, you have no part with me.” </char></para>
+  <para style="p"><verse number="9" style="v" sid="JHN 13:9" />Simon Peter said to him, “Lord, not my feet only, but also my hands and my head!”</para>
+  <para style="p"><verse number="10" style="v" sid="JHN 13:10" />Jesus said to him, <char style="wj"> “Someone who has bathed only needs to have his feet washed, but is completely clean. You are clean, but not all of you.” </char>  
+<verse number="11" style="v" sid="JHN 13:11" />For he knew him who would betray him; therefore he said, <char style="wj"> “You are not all clean.”</char>  
+<verse number="12" style="v" sid="JHN 13:12" />So when he had washed their feet, put his outer garment back on, and sat down again, he said to them, <char style="wj"> “Do you know what I have done to you? </char>  
+<verse number="13" style="v" sid="JHN 13:13" /><char style="wj"> You call me, ‘Teacher’ and ‘Lord.’ You say so correctly, for so I am. </char>  
+<verse number="14" style="v" sid="JHN 13:14" /><char style="wj"> If I then, the Lord and the Teacher, have washed your feet, you also ought to wash one another’s feet. </char>  
+<verse number="15" style="v" sid="JHN 13:15" /><char style="wj"> For I have given you an example, that you should also do as I have done to you. </char>  
+<verse number="16" style="v" sid="JHN 13:16" /><char style="wj"> Most certainly I tell you, a servant is not greater than his lord, neither is one who is sent greater than he who sent him. </char>  
+<verse number="17" style="v" sid="JHN 13:17" /><char style="wj"> If you know these things, blessed are you if you do them. </char>  
+<verse number="18" style="v" sid="JHN 13:18" /><char style="wj"> I don’t speak concerning all of you. I know whom I have chosen; but that the Scripture may be fulfilled, ‘He who eats bread with me has lifted up his heel against me.’</char>  
+<verse number="19" style="v" sid="JHN 13:19" /><char style="wj"> From now on, I tell you before it happens, that when it happens, you may believe that I am he. </char>  
+<verse number="20" style="v" sid="JHN 13:20" /><char style="wj"> Most certainly I tell you, he who receives whomever I send, receives me; and he who receives me, receives him who sent me.”</char></para>
+  <para style="p"><verse number="21" style="v" sid="JHN 13:21" />When Jesus had said this, he was troubled in spirit, and testified, <char style="wj"> “Most certainly I tell you that one of you will betray me.”</char></para>
+  <para style="p"><verse number="22" style="v" sid="JHN 13:22" />The disciples looked at one another, perplexed about whom he spoke.  
+<verse number="23" style="v" sid="JHN 13:23" />One of his disciples, whom Jesus loved, was at the table, leaning against Jesus’ chest.  
+<verse number="24" style="v" sid="JHN 13:24" />Simon Peter therefore beckoned to him, and said to him, “Tell us who it is of whom he speaks.”</para>
+  <para style="p"><verse number="25" style="v" sid="JHN 13:25" />He, leaning back, as he was, on Jesus’ chest, asked him, “Lord, who is it?”</para>
+  <para style="p"><verse number="26" style="v" sid="JHN 13:26" />Jesus therefore answered, <char style="wj"> “It is he to whom I will give this piece of bread when I have dipped it.”</char> So when he had dipped the piece of bread, he gave it to Judas, the son of Simon Iscariot.  
+<verse number="27" style="v" sid="JHN 13:27" />After the piece of bread, then Satan entered into him.</para>
+  <para style="p">Then Jesus said to him, <char style="wj"> “What you do, do quickly.”</char></para>
+  <para style="p"><verse number="28" style="v" sid="JHN 13:28" />Now nobody at the table knew why he said this to him.  
+<verse number="29" style="v" sid="JHN 13:29" />For some thought, because Judas had the money box, that Jesus said to him, “Buy what things we need for the feast,” or that he should give something to the poor.  
+<verse number="30" style="v" sid="JHN 13:30" />Therefore having received that morsel, he went out immediately. It was night.</para>
+  <para style="p"><verse number="31" style="v" sid="JHN 13:31" />When he had gone out, Jesus said, <char style="wj"> “Now the Son of Man has been glorified, and God has been glorified in him. </char>  
+<verse number="32" style="v" sid="JHN 13:32" /><char style="wj"> If God has been glorified in him, God will also glorify him in himself, and he will glorify him immediately. </char>  
+<verse number="33" style="v" sid="JHN 13:33" /><char style="wj"> Little children, I will be with you a little while longer. You will seek me, and as I said to the Jews, ‘Where I am going, you can’t come,’ so now I tell you. </char>  
+<verse number="34" style="v" sid="JHN 13:34" /><char style="wj"> A new commandment I give to you, that you love one another. Just as I have loved you, you also love one another. </char>  
+<verse number="35" style="v" sid="JHN 13:35" /><char style="wj"> By this everyone will know that you are my disciples, if you have love for one another.”</char></para>
+  <para style="p"><verse number="36" style="v" sid="JHN 13:36" />Simon Peter said to him, “Lord, where are you going?”</para>
+  <para style="p">Jesus answered, <char style="wj"> “Where I am going, you can’t follow now, but you will follow afterwards.”</char></para>
+  <para style="p"><verse number="37" style="v" sid="JHN 13:37" />Peter said to him, “Lord, why can’t I follow you now? I will lay down my life for you.”</para>
+  <para style="p"><verse number="38" style="v" sid="JHN 13:38" />Jesus answered him, <char style="wj"> “Will you lay down your life for me? Most certainly I tell you, the rooster won’t crow until you have denied me three times.</char></para>
+  <chapter number="14" style="c" sid="JHN 14" />
+  <para style="p"><verse number="1" style="v" sid="JHN 14:1" /><char style="wj"> “Don’t let your heart be troubled. Believe in God. Believe also in me. </char>  
+<verse number="2" style="v" sid="JHN 14:2" /><char style="wj"> In my Father’s house are many homes. If it weren’t so, I would have told you. I am going to prepare a place for you. </char>  
+<verse number="3" style="v" sid="JHN 14:3" /><char style="wj"> If I go and prepare a place for you, I will come again and will receive you to myself; that where I am, you may be there also. </char>  
+<verse number="4" style="v" sid="JHN 14:4" /><char style="wj"> You know where I go, and you know the way.”</char></para>
+  <para style="p"><verse number="5" style="v" sid="JHN 14:5" />Thomas said to him, “Lord, we don’t know where you are going. How can we know the way?”</para>
+  <para style="p"><verse number="6" style="v" sid="JHN 14:6" />Jesus said to him, <char style="wj"> “I am the way, the truth, and the life. No one comes to the Father, except through me. </char>  
+<verse number="7" style="v" sid="JHN 14:7" /><char style="wj"> If you had known me, you would have known my Father also. From now on, you know him and have seen him.”</char></para>
+  <para style="p"><verse number="8" style="v" sid="JHN 14:8" />Philip said to him, “Lord, show us the Father, and that will be enough for us.”</para>
+  <para style="p"><verse number="9" style="v" sid="JHN 14:9" />Jesus said to him, <char style="wj"> “Have I been with you such a long time, and do you not know me, Philip? He who has seen me has seen the Father. How do you say, ‘Show us the Father’? </char>  
+<verse number="10" style="v" sid="JHN 14:10" /><char style="wj"> Don’t you believe that I am in the Father, and the Father in me? The words that I tell you, I speak not from myself; but the Father who lives in me does his works. </char>  
+<verse number="11" style="v" sid="JHN 14:11" /><char style="wj"> Believe me that I am in the Father, and the Father in me; or else believe me for the very works’ sake. </char>  
+<verse number="12" style="v" sid="JHN 14:12" /><char style="wj"> Most certainly I tell you, he who believes in me, the works that I do, he will do also; and he will do greater works than these, because I am going to my Father. </char>  
+<verse number="13" style="v" sid="JHN 14:13" /><char style="wj"> Whatever you will ask in my name, I will do it, that the Father may be glorified in the Son. </char>  
+<verse number="14" style="v" sid="JHN 14:14" /><char style="wj"> If you will ask anything in my name, I will do it. </char>  
+<verse number="15" style="v" sid="JHN 14:15" /><char style="wj"> If you love me, keep my commandments. </char>  
+<verse number="16" style="v" sid="JHN 14:16" /><char style="wj"> I will pray to the Father, and he will give you another Counselor, </char><note style="f" caller="+"><char style="fr">14:16</char><char style="ft">Greek παρακλητον: Counselor, Helper, Intercessor, Advocate, and Comforter.</char></note> <char style="wj"> that he may be with you forever:</char>  
+<verse number="17" style="v" sid="JHN 14:17" /><char style="wj"> the Spirit of truth, whom the world can’t receive, for it doesn’t see him and doesn’t know him. You know him, for he lives with you and will be in you. </char>  
+<verse number="18" style="v" sid="JHN 14:18" /><char style="wj"> I will not leave you orphans. I will come to you. </char>  
+<verse number="19" style="v" sid="JHN 14:19" /><char style="wj"> Yet a little while, and the world will see me no more; but you will see me. Because I live, you will live also. </char>  
+<verse number="20" style="v" sid="JHN 14:20" /><char style="wj"> In that day you will know that I am in my Father, and you in me, and I in you. </char>  
+<verse number="21" style="v" sid="JHN 14:21" /><char style="wj"> One who has my commandments and keeps them, that person is one who loves me. One who loves me will be loved by my Father, and I will love him, and will reveal myself to him.”</char></para>
+  <para style="p"><verse number="22" style="v" sid="JHN 14:22" />Judas (not Iscariot) said to him, “Lord, what has happened that you are about to reveal yourself to us, and not to the world?”</para>
+  <para style="p"><verse number="23" style="v" sid="JHN 14:23" />Jesus answered him, <char style="wj"> “If a man loves me, he will keep my word. My Father will love him, and we will come to him and make our home with him. </char>  
+<verse number="24" style="v" sid="JHN 14:24" /><char style="wj"> He who doesn’t love me doesn’t keep my words. The word which you hear isn’t mine, but the Father’s who sent me. </char></para>
+  <para style="p"><verse number="25" style="v" sid="JHN 14:25" /><char style="wj"> “I have said these things to you while still living with you. </char>  
+<verse number="26" style="v" sid="JHN 14:26" /><char style="wj"> But the Counselor, the Holy Spirit, whom the Father will send in my name, will teach you all things, and will remind you of all that I said to you. </char>  
+<verse number="27" style="v" sid="JHN 14:27" /><char style="wj"> Peace I leave with you. My peace I give to you; not as the world gives, I give to you. Don’t let your heart be troubled, neither let it be fearful. </char>  
+<verse number="28" style="v" sid="JHN 14:28" /><char style="wj"> You heard how I told you, ‘I am going away, and I will come back to you.’ If you loved me, you would have rejoiced because I said ‘I am going to my Father;’ for the Father is greater than I. </char>  
+<verse number="29" style="v" sid="JHN 14:29" /><char style="wj"> Now I have told you before it happens so that when it happens, you may believe. </char>  
+<verse number="30" style="v" sid="JHN 14:30" /><char style="wj"> I will no more speak much with you, for the prince of the world comes, and he has nothing in me. </char>  
+<verse number="31" style="v" sid="JHN 14:31" /><char style="wj"> But that the world may know that I love the Father, and as the Father commanded me, even so I do. Arise, let’s go from here.</char></para>
+  <chapter number="15" style="c" sid="JHN 15" />
+  <para style="p"><verse number="1" style="v" sid="JHN 15:1" /><char style="wj"> “I am the true vine, and my Father is the farmer. </char>  
+<verse number="2" style="v" sid="JHN 15:2" /><char style="wj"> Every branch in me that doesn’t bear fruit, he takes away. Every branch that bears fruit, he prunes, that it may bear more fruit. </char>  
+<verse number="3" style="v" sid="JHN 15:3" /><char style="wj"> You are already pruned clean because of the word which I have spoken to you. </char>  
+<verse number="4" style="v" sid="JHN 15:4" /><char style="wj"> Remain in me, and I in you. As the branch can’t bear fruit by itself unless it remains in the vine, so neither can you, unless you remain in me. </char>  
+<verse number="5" style="v" sid="JHN 15:5" /><char style="wj"> I am the vine. You are the branches. He who remains in me and I in him bears much fruit, for apart from me you can do nothing. </char>  
+<verse number="6" style="v" sid="JHN 15:6" /><char style="wj"> If a man doesn’t remain in me, he is thrown out as a branch and is withered; and they gather them, throw them into the fire, and they are burned. </char>  
+<verse number="7" style="v" sid="JHN 15:7" /><char style="wj"> If you remain in me, and my words remain in you, you will ask whatever you desire, and it will be done for you.</char></para>
+  <para style="p"><verse number="8" style="v" sid="JHN 15:8" /><char style="wj"> “In this my Father is glorified, that you bear much fruit; and so you will be my disciples. </char>  
+<verse number="9" style="v" sid="JHN 15:9" /><char style="wj"> Even as the Father has loved me, I also have loved you. Remain in my love. </char>  
+<verse number="10" style="v" sid="JHN 15:10" /><char style="wj"> If you keep my commandments, you will remain in my love, even as I have kept my Father’s commandments and remain in his love. </char>  
+<verse number="11" style="v" sid="JHN 15:11" /><char style="wj"> I have spoken these things to you, that my joy may remain in you, and that your joy may be made full.</char></para>
+  <para style="p"><verse number="12" style="v" sid="JHN 15:12" /><char style="wj"> “This is my commandment, that you love one another, even as I have loved you. </char>  
+<verse number="13" style="v" sid="JHN 15:13" /><char style="wj"> Greater love has no one than this, that someone lay down his life for his friends. </char>  
+<verse number="14" style="v" sid="JHN 15:14" /><char style="wj"> You are my friends if you do whatever I command you. </char>  
+<verse number="15" style="v" sid="JHN 15:15" /><char style="wj"> No longer do I call you servants, for the servant doesn’t know what his lord does. But I have called you friends, for everything that I heard from my Father, I have made known to you. </char>  
+<verse number="16" style="v" sid="JHN 15:16" /><char style="wj"> You didn’t choose me, but I chose you and appointed you, that you should go and bear fruit, and that your fruit should remain; that whatever you will ask of the Father in my name, he may give it to you.</char></para>
+  <para style="p"><verse number="17" style="v" sid="JHN 15:17" /><char style="wj"> “I command these things to you, that you may love one another. </char>  
+<verse number="18" style="v" sid="JHN 15:18" /><char style="wj"> If the world hates you, you know that it has hated me before it hated you. </char>  
+<verse number="19" style="v" sid="JHN 15:19" /><char style="wj"> If you were of the world, the world would love its own. But because you are not of the world, since I chose you out of the world, therefore the world hates you. </char>  
+<verse number="20" style="v" sid="JHN 15:20" /><char style="wj"> Remember the word that I said to you: ‘A servant is not greater than his lord.’</char> <char style="wj"> If they persecuted me, they will also persecute you. If they kept my word, they will also keep yours. </char>  
+<verse number="21" style="v" sid="JHN 15:21" /><char style="wj"> But they will do all these things to you for my name’s sake, because they don’t know him who sent me. </char>  
+<verse number="22" style="v" sid="JHN 15:22" /><char style="wj"> If I had not come and spoken to them, they would not have had sin; but now they have no excuse for their sin. </char>  
+<verse number="23" style="v" sid="JHN 15:23" /><char style="wj"> He who hates me, hates my Father also. </char>  
+<verse number="24" style="v" sid="JHN 15:24" /><char style="wj"> If I hadn’t done among them the works which no one else did, they wouldn’t have had sin. But now they have seen and also hated both me and my Father. </char>  
+<verse number="25" style="v" sid="JHN 15:25" /><char style="wj"> But this happened so that the word may be fulfilled which was written in their law, ‘They hated me without a cause.’</char></para>
+  <para style="p"><verse number="26" style="v" sid="JHN 15:26" /><char style="wj"> “When the Counselor</char><note style="f" caller="+"><char style="fr">15:26</char><char style="ft">Greek Parakletos: Counselor, Helper, Advocate, Intercessor, and Comforter.</char></note> <char style="wj"> has come, whom I will send to you from the Father, the Spirit of truth, who proceeds from the Father, he will testify about me. </char>  
+<verse number="27" style="v" sid="JHN 15:27" /><char style="wj"> You will also testify, because you have been with me from the beginning.</char></para>
+  <chapter number="16" style="c" sid="JHN 16" />
+  <para style="p"><verse number="1" style="v" sid="JHN 16:1" /><char style="wj"> “I have said these things to you so that you wouldn’t be caused to stumble. </char>  
+<verse number="2" style="v" sid="JHN 16:2" /><char style="wj"> They will put you out of the synagogues. Yes, the time is coming that whoever kills you will think that he offers service to God. </char>  
+<verse number="3" style="v" sid="JHN 16:3" /><char style="wj"> They will do these things</char><note style="f" caller="+"><char style="fr">16:3</char><char style="ft">TR adds “to you”</char></note> <char style="wj"> because they have not known the Father nor me. </char>  
+<verse number="4" style="v" sid="JHN 16:4" /><char style="wj"> But I have told you these things so that when the time comes, you may remember that I told you about them. I didn’t tell you these things from the beginning, because I was with you. </char>  
+<verse number="5" style="v" sid="JHN 16:5" /><char style="wj"> But now I am going to him who sent me, and none of you asks me, ‘Where are you going?’ </char>  
+<verse number="6" style="v" sid="JHN 16:6" /><char style="wj"> But because I have told you these things, sorrow has filled your heart. </char>  
+<verse number="7" style="v" sid="JHN 16:7" /><char style="wj"> Nevertheless I tell you the truth: It is to your advantage that I go away; for if I don’t go away, the Counselor won’t come to you. But if I go, I will send him to you. </char>  
+<verse number="8" style="v" sid="JHN 16:8" /><char style="wj"> When he has come, he will convict the world about sin, about righteousness, and about judgment; </char>  
+<verse number="9" style="v" sid="JHN 16:9" /><char style="wj"> about sin, because they don’t believe in me; </char>  
+<verse number="10" style="v" sid="JHN 16:10" /><char style="wj"> about righteousness, because I am going to my Father, and you won’t see me any more; </char>  
+<verse number="11" style="v" sid="JHN 16:11" /><char style="wj"> about judgment, because the prince of this world has been judged. </char></para>
+  <para style="p"><verse number="12" style="v" sid="JHN 16:12" /><char style="wj"> “I still have many things to tell you, but you can’t bear them now. </char>  
+<verse number="13" style="v" sid="JHN 16:13" /><char style="wj"> However, when he, the Spirit of truth, has come, he will guide you into all truth, for he will not speak from himself; but whatever he hears, he will speak. He will declare to you things that are coming. </char>  
+<verse number="14" style="v" sid="JHN 16:14" /><char style="wj"> He will glorify me, for he will take from what is mine and will declare it to you. </char>  
+<verse number="15" style="v" sid="JHN 16:15" /><char style="wj"> All things that the Father has are mine; therefore I said that he takes</char><note style="f" caller="+"><char style="fr">16:15</char><char style="ft">TR reads “will take” instead of “takes”</char></note> <char style="wj"> of mine and will declare it to you. </char></para>
+  <para style="p"><verse number="16" style="v" sid="JHN 16:16" /><char style="wj"> “A little while, and you will not see me. Again a little while, and you will see me.”</char></para>
+  <para style="p"><verse number="17" style="v" sid="JHN 16:17" />Some of his disciples therefore said to one another, “What is this that he says to us, <char style="wj"> ‘A little while, and you won’t see me, and again a little while, and you will see me;’</char> and, <char style="wj"> ‘Because I go to the Father’</char>?”  
+<verse number="18" style="v" sid="JHN 16:18" />They said therefore, “What is this that he says, <char style="wj"> ‘A little while’</char>? We don’t know what he is saying.”</para>
+  <para style="p"><verse number="19" style="v" sid="JHN 16:19" />Therefore Jesus perceived that they wanted to ask him, and he said to them, <char style="wj"> “Do you inquire among yourselves concerning this, that I said, ‘A little while, and you won’t see me, and again a little while, and you will see me’? </char>  
+<verse number="20" style="v" sid="JHN 16:20" /><char style="wj"> Most certainly I tell you that you will weep and lament, but the world will rejoice. You will be sorrowful, but your sorrow will be turned into joy. </char>  
+<verse number="21" style="v" sid="JHN 16:21" /><char style="wj"> A woman, when she gives birth, has sorrow because her time has come. But when she has delivered the child, she doesn’t remember the anguish any more, for the joy that a human being is born into the world. </char>  
+<verse number="22" style="v" sid="JHN 16:22" /><char style="wj"> Therefore you now have sorrow, but I will see you again, and your heart will rejoice, and no one will take your joy away from you.</char></para>
+  <para style="p"><verse number="23" style="v" sid="JHN 16:23" /><char style="wj"> “In that day you will ask me no questions. Most certainly I tell you, whatever you may ask of the Father in my name, he will give it to you. </char>  
+<verse number="24" style="v" sid="JHN 16:24" /><char style="wj"> Until now, you have asked nothing in my name. Ask, and you will receive, that your joy may be made full. </char></para>
+  <para style="p"><verse number="25" style="v" sid="JHN 16:25" /><char style="wj"> “I have spoken these things to you in figures of speech. But the time is coming when I will no more speak to you in figures of speech, but will tell you plainly about the Father. </char>  
+<verse number="26" style="v" sid="JHN 16:26" /><char style="wj"> In that day you will ask in my name; and I don’t say to you that I will pray to the Father for you, </char>  
+<verse number="27" style="v" sid="JHN 16:27" /><char style="wj"> for the Father himself loves you, because you have loved me, and have believed that I came from God. </char>  
+<verse number="28" style="v" sid="JHN 16:28" /><char style="wj"> I came from the Father and have come into the world. Again, I leave the world and go to the Father.”</char></para>
+  <para style="p"><verse number="29" style="v" sid="JHN 16:29" />His disciples said to him, “Behold, now you are speaking plainly, and using no figures of speech.  
+<verse number="30" style="v" sid="JHN 16:30" />Now we know that you know all things, and don’t need for anyone to question you. By this we believe that you came from God.”</para>
+  <para style="p"><verse number="31" style="v" sid="JHN 16:31" />Jesus answered them, <char style="wj"> “Do you now believe? </char>  
+<verse number="32" style="v" sid="JHN 16:32" /><char style="wj"> Behold, the time is coming, yes, and has now come, that you will be scattered, everyone to his own place, and you will leave me alone. Yet I am not alone, because the Father is with me. </char>  
+<verse number="33" style="v" sid="JHN 16:33" /><char style="wj"> I have told you these things, that in me you may have peace. In the world you have trouble; but cheer up! I have overcome the world.” </char></para>
+  <chapter number="17" style="c" sid="JHN 17" />
+  <para style="p"><verse number="1" style="v" sid="JHN 17:1" />Jesus said these things, then lifting up his eyes to heaven, he said, <char style="wj"> “Father, the time has come. Glorify your Son, that your Son may also glorify you; </char>  
+<verse number="2" style="v" sid="JHN 17:2" /><char style="wj"> even as you gave him authority over all flesh, so he will give eternal life to all whom you have given him. </char>  
+<verse number="3" style="v" sid="JHN 17:3" /><char style="wj"> This is eternal life, that they should know you, the only true God, and him whom you sent, Jesus Christ. </char>  
+<verse number="4" style="v" sid="JHN 17:4" /><char style="wj"> I glorified you on the earth. I have accomplished the work which you have given me to do. </char>  
+<verse number="5" style="v" sid="JHN 17:5" /><char style="wj"> Now, Father, glorify me with your own self with the glory which I had with you before the world existed. </char></para>
+  <para style="p"><verse number="6" style="v" sid="JHN 17:6" /><char style="wj"> “I revealed your name to the people whom you have given me out of the world. They were yours, and you have given them to me. They have kept your word. </char>  
+<verse number="7" style="v" sid="JHN 17:7" /><char style="wj"> Now they have known that all things whatever you have given me are from you, </char>  
+<verse number="8" style="v" sid="JHN 17:8" /><char style="wj"> for the words which you have given me I have given to them; and they received them, and knew for sure that I came from you. They have believed that you sent me. </char>  
+<verse number="9" style="v" sid="JHN 17:9" /><char style="wj"> I pray for them. I don’t pray for the world, but for those whom you have given me, for they are yours. </char>  
+<verse number="10" style="v" sid="JHN 17:10" /><char style="wj"> All things that are mine are yours, and yours are mine, and I am glorified in them. </char>  
+<verse number="11" style="v" sid="JHN 17:11" /><char style="wj"> I am no more in the world, but these are in the world, and I am coming to you. Holy Father, keep them through your name which you have given me, that they may be one, even as we are. </char>  
+<verse number="12" style="v" sid="JHN 17:12" /><char style="wj"> While I was with them in the world, I kept them in your name. I have kept those whom you have given me. None of them is lost except the son of destruction, that the Scripture might be fulfilled. </char>  
+<verse number="13" style="v" sid="JHN 17:13" /><char style="wj"> But now I come to you, and I say these things in the world, that they may have my joy made full in themselves. </char>  
+<verse number="14" style="v" sid="JHN 17:14" /><char style="wj"> I have given them your word. The world hated them because they are not of the world, even as I am not of the world. </char>  
+<verse number="15" style="v" sid="JHN 17:15" /><char style="wj"> I pray not that you would take them from the world, but that you would keep them from the evil one. </char>  
+<verse number="16" style="v" sid="JHN 17:16" /><char style="wj"> They are not of the world, even as I am not of the world. </char>  
+<verse number="17" style="v" sid="JHN 17:17" /><char style="wj"> Sanctify them in your truth. Your word is truth.</char>  
+<verse number="18" style="v" sid="JHN 17:18" /><char style="wj"> As you sent me into the world, even so I have sent them into the world. </char>  
+<verse number="19" style="v" sid="JHN 17:19" /><char style="wj"> For their sakes I sanctify myself, that they themselves also may be sanctified in truth. </char></para>
+  <para style="p"><verse number="20" style="v" sid="JHN 17:20" /><char style="wj"> “Not for these only do I pray, but for those also who will believe in me through their word, </char>  
+<verse number="21" style="v" sid="JHN 17:21" /><char style="wj"> that they may all be one; even as you, Father, are in me, and I in you, that they also may be one in us; that the world may believe that you sent me. </char>  
+<verse number="22" style="v" sid="JHN 17:22" /><char style="wj"> The glory which you have given me, I have given to them, that they may be one, even as we are one, </char>  
+<verse number="23" style="v" sid="JHN 17:23" /><char style="wj"> I in them, and you in me, that they may be perfected into one, that the world may know that you sent me and loved them, even as you loved me. </char>  
+<verse number="24" style="v" sid="JHN 17:24" /><char style="wj"> Father, I desire that they also whom you have given me be with me where I am, that they may see my glory which you have given me, for you loved me before the foundation of the world. </char>  
+<verse number="25" style="v" sid="JHN 17:25" /><char style="wj"> Righteous Father, the world hasn’t known you, but I knew you; and these knew that you sent me. </char>  
+<verse number="26" style="v" sid="JHN 17:26" /><char style="wj"> I made known to them your name, and will make it known; that the love with which you loved me may be in them, and I in them.”</char></para>
+  <chapter number="18" style="c" sid="JHN 18" />
+  <para style="p"><verse number="1" style="v" sid="JHN 18:1" />When Jesus had spoken these words, he went out with his disciples over the brook Kidron, where there was a garden, into which he and his disciples entered.  
+<verse number="2" style="v" sid="JHN 18:2" />Now Judas, who betrayed him, also knew the place, for Jesus often met there with his disciples.  
+<verse number="3" style="v" sid="JHN 18:3" />Judas then, having taken a detachment of soldiers and officers from the chief priests and the Pharisees, came there with lanterns, torches, and weapons.  
+<verse number="4" style="v" sid="JHN 18:4" />Jesus therefore, knowing all the things that were happening to him, went out and said to them, <char style="wj"> “Who are you looking for?”</char></para>
+  <para style="p"><verse number="5" style="v" sid="JHN 18:5" />They answered him, “Jesus of Nazareth.”</para>
+  <para style="p">Jesus said to them, <char style="wj"> “I am he.”</char></para>
+  <para style="p">Judas also, who betrayed him, was standing with them.  
+<verse number="6" style="v" sid="JHN 18:6" />When therefore he said to them, <char style="wj"> “I am he,”</char> they went backward and fell to the ground.</para>
+  <para style="p"><verse number="7" style="v" sid="JHN 18:7" />Again therefore he asked them, <char style="wj"> “Who are you looking for?”</char></para>
+  <para style="p">They said, “Jesus of Nazareth.”</para>
+  <para style="p"><verse number="8" style="v" sid="JHN 18:8" />Jesus answered, <char style="wj"> “I told you that I am he. If therefore you seek me, let these go their way,”</char>  
+<verse number="9" style="v" sid="JHN 18:9" />that the word might be fulfilled which he spoke, <char style="wj"> “Of those whom you have given me, I have lost none.”</char></para>
+  <para style="p"><verse number="10" style="v" sid="JHN 18:10" />Simon Peter therefore, having a sword, drew it, struck the high priest’s servant, and cut off his right ear. The servant’s name was Malchus.  
+<verse number="11" style="v" sid="JHN 18:11" />Jesus therefore said to Peter, <char style="wj"> “Put the sword into its sheath. The cup which the Father has given me, shall I not surely drink it?”</char></para>
+  <para style="p"><verse number="12" style="v" sid="JHN 18:12" />So the detachment, the commanding officer, and the officers of the Jews seized Jesus and bound him,  
+<verse number="13" style="v" sid="JHN 18:13" />and led him to Annas first, for he was father-in-law to Caiaphas, who was high priest that year.  
+<verse number="14" style="v" sid="JHN 18:14" />Now it was Caiaphas who advised the Jews that it was expedient that one man should perish for the people.</para>
+  <para style="p"><verse number="15" style="v" sid="JHN 18:15" />Simon Peter followed Jesus, as did another disciple. Now that disciple was known to the high priest, and entered in with Jesus into the court of the high priest;  
+<verse number="16" style="v" sid="JHN 18:16" />but Peter was standing at the door outside. So the other disciple, who was known to the high priest, went out and spoke to her who kept the door, and brought in Peter.  
+<verse number="17" style="v" sid="JHN 18:17" />Then the maid who kept the door said to Peter, “Are you also one of this man’s disciples?”</para>
+  <para style="p">He said, “I am not.”</para>
+  <para style="p"><verse number="18" style="v" sid="JHN 18:18" />Now the servants and the officers were standing there, having made a fire of coals, for it was cold. They were warming themselves. Peter was with them, standing and warming himself.</para>
+  <para style="p"><verse number="19" style="v" sid="JHN 18:19" />The high priest therefore asked Jesus about his disciples and about his teaching.</para>
+  <para style="p"><verse number="20" style="v" sid="JHN 18:20" />Jesus answered him, <char style="wj"> “I spoke openly to the world. I always taught in synagogues and in the temple, where the Jews always meet. I said nothing in secret. </char>  
+<verse number="21" style="v" sid="JHN 18:21" /><char style="wj"> Why do you ask me? Ask those who have heard me what I said to them. Behold, they know the things which I said.”</char></para>
+  <para style="p"><verse number="22" style="v" sid="JHN 18:22" />When he had said this, one of the officers standing by slapped Jesus with his hand, saying, “Do you answer the high priest like that?”</para>
+  <para style="p"><verse number="23" style="v" sid="JHN 18:23" />Jesus answered him, <char style="wj"> “If I have spoken evil, testify of the evil; but if well, why do you beat me?”</char></para>
+  <para style="p"><verse number="24" style="v" sid="JHN 18:24" />Annas sent him bound to Caiaphas, the high priest.</para>
+  <para style="p"><verse number="25" style="v" sid="JHN 18:25" />Now Simon Peter was standing and warming himself. They said therefore to him, “You aren’t also one of his disciples, are you?”</para>
+  <para style="p">He denied it and said, “I am not.”</para>
+  <para style="p"><verse number="26" style="v" sid="JHN 18:26" />One of the servants of the high priest, being a relative of him whose ear Peter had cut off, said, “Didn’t I see you in the garden with him?”</para>
+  <para style="p"><verse number="27" style="v" sid="JHN 18:27" />Peter therefore denied it again, and immediately the rooster crowed.</para>
+  <para style="p"><verse number="28" style="v" sid="JHN 18:28" />They led Jesus therefore from Caiaphas into the Praetorium. It was early, and they themselves didn’t enter into the Praetorium, that they might not be defiled, but might eat the Passover.  
+<verse number="29" style="v" sid="JHN 18:29" />Pilate therefore went out to them and said, “What accusation do you bring against this man?”</para>
+  <para style="p"><verse number="30" style="v" sid="JHN 18:30" />They answered him, “If this man weren’t an evildoer, we wouldn’t have delivered him up to you.”</para>
+  <para style="p"><verse number="31" style="v" sid="JHN 18:31" />Pilate therefore said to them, “Take him yourselves, and judge him according to your law.”</para>
+  <para style="p">Therefore the Jews said to him, “It is illegal for us to put anyone to death,”  
+<verse number="32" style="v" sid="JHN 18:32" />that the word of Jesus might be fulfilled, which he spoke, signifying by what kind of death he should die.</para>
+  <para style="p"><verse number="33" style="v" sid="JHN 18:33" />Pilate therefore entered again into the Praetorium, called Jesus, and said to him, “Are you the King of the Jews?”</para>
+  <para style="p"><verse number="34" style="v" sid="JHN 18:34" />Jesus answered him, <char style="wj"> “Do you say this by yourself, or did others tell you about me?”</char></para>
+  <para style="p"><verse number="35" style="v" sid="JHN 18:35" />Pilate answered, “I’m not a Jew, am I? Your own nation and the chief priests delivered you to me. What have you done?”</para>
+  <para style="p"><verse number="36" style="v" sid="JHN 18:36" />Jesus answered, <char style="wj"> “My Kingdom is not of this world. If my Kingdom were of this world, then my servants would fight, that I wouldn’t be delivered to the Jews. But now my Kingdom is not from here.”</char></para>
+  <para style="p"><verse number="37" style="v" sid="JHN 18:37" />Pilate therefore said to him, “Are you a king then?”</para>
+  <para style="p">Jesus answered, <char style="wj"> “You say that I am a king. For this reason I have been born, and for this reason I have come into the world, that I should testify to the truth. Everyone who is of the truth listens to my voice.”</char></para>
+  <para style="p"><verse number="38" style="v" sid="JHN 18:38" />Pilate said to him, “What is truth?”</para>
+  <para style="p">When he had said this, he went out again to the Jews, and said to them, “I find no basis for a charge against him.  
+<verse number="39" style="v" sid="JHN 18:39" />But you have a custom that I should release someone to you at the Passover. Therefore, do you want me to release to you the King of the Jews?”</para>
+  <para style="p"><verse number="40" style="v" sid="JHN 18:40" />Then they all shouted again, saying, “Not this man, but Barabbas!” Now Barabbas was a robber.</para>
+  <chapter number="19" style="c" sid="JHN 19" />
+  <para style="p"><verse number="1" style="v" sid="JHN 19:1" />So Pilate then took Jesus and flogged him.  
+<verse number="2" style="v" sid="JHN 19:2" />The soldiers twisted thorns into a crown and put it on his head, and dressed him in a purple garment.  
+<verse number="3" style="v" sid="JHN 19:3" />They kept saying, “Hail, King of the Jews!” and they kept slapping him.</para>
+  <para style="p"><verse number="4" style="v" sid="JHN 19:4" />Then Pilate went out again, and said to them, “Behold, I bring him out to you, that you may know that I find no basis for a charge against him.”</para>
+  <para style="p"><verse number="5" style="v" sid="JHN 19:5" />Jesus therefore came out, wearing the crown of thorns and the purple garment. Pilate said to them, “Behold, the man!”</para>
+  <para style="p"><verse number="6" style="v" sid="JHN 19:6" />When therefore the chief priests and the officers saw him, they shouted, saying, “Crucify! Crucify!”</para>
+  <para style="p">Pilate said to them, “Take him yourselves and crucify him, for I find no basis for a charge against him.”</para>
+  <para style="p"><verse number="7" style="v" sid="JHN 19:7" />The Jews answered him, “We have a law, and by our law he ought to die, because he made himself the Son of God.”</para>
+  <para style="p"><verse number="8" style="v" sid="JHN 19:8" />When therefore Pilate heard this saying, he was more afraid.  
+<verse number="9" style="v" sid="JHN 19:9" />He entered into the Praetorium again, and said to Jesus, “Where are you from?” But Jesus gave him no answer.  
+<verse number="10" style="v" sid="JHN 19:10" />Pilate therefore said to him, “Aren’t you speaking to me? Don’t you know that I have power to release you and have power to crucify you?”</para>
+  <para style="p"><verse number="11" style="v" sid="JHN 19:11" />Jesus answered, <char style="wj"> “You would have no power at all against me, unless it were given to you from above. Therefore he who delivered me to you has greater sin.”</char></para>
+  <para style="p"><verse number="12" style="v" sid="JHN 19:12" />At this, Pilate was seeking to release him, but the Jews cried out, saying, “If you release this man, you aren’t Caesar’s friend! Everyone who makes himself a king speaks against Caesar!”</para>
+  <para style="p"><verse number="13" style="v" sid="JHN 19:13" />When Pilate therefore heard these words, he brought Jesus out and sat down on the judgment seat at a place called “The Pavement”, but in Hebrew, “Gabbatha.”  
+<verse number="14" style="v" sid="JHN 19:14" />Now it was the Preparation Day of the Passover, at about the sixth hour.<note style="f" caller="+"><char style="fr">19:14</char><char style="ft">“the sixth hour” would have been 6:00 a.m. according to the Roman timekeeping system, or noon for the Jewish timekeeping system in use, then.</char></note> He said to the Jews, “Behold, your King!”</para>
+  <para style="p"><verse number="15" style="v" sid="JHN 19:15" />They cried out, “Away with him! Away with him! Crucify him!”</para>
+  <para style="p">Pilate said to them, “Shall I crucify your King?”</para>
+  <para style="p">The chief priests answered, “We have no king but Caesar!”</para>
+  <para style="p"><verse number="16" style="v" sid="JHN 19:16" />So then he delivered him to them to be crucified. So they took Jesus and led him away.  
+<verse number="17" style="v" sid="JHN 19:17" />He went out, bearing his cross, to the place called “The Place of a Skull”, which is called in Hebrew, “Golgotha”,  
+<verse number="18" style="v" sid="JHN 19:18" />where they crucified him, and with him two others, on either side one, and Jesus in the middle.  
+<verse number="19" style="v" sid="JHN 19:19" />Pilate wrote a title also, and put it on the cross. There was written, “JESUS OF NAZARETH, THE KING OF THE JEWS.”  
+<verse number="20" style="v" sid="JHN 19:20" />Therefore many of the Jews read this title, for the place where Jesus was crucified was near the city; and it was written in Hebrew, in Latin, and in Greek.  
+<verse number="21" style="v" sid="JHN 19:21" />The chief priests of the Jews therefore said to Pilate, “Don’t write, ‘The King of the Jews,’ but, ‘he said, “I am King of the Jews.”’”</para>
+  <para style="p"><verse number="22" style="v" sid="JHN 19:22" />Pilate answered, “What I have written, I have written.”</para>
+  <para style="p"><verse number="23" style="v" sid="JHN 19:23" />Then the soldiers, when they had crucified Jesus, took his garments and made four parts, to every soldier a part; and also the tunic. Now the tunic was without seam, woven from the top throughout.  
+<verse number="24" style="v" sid="JHN 19:24" />Then they said to one another, “Let’s not tear it, but cast lots for it to decide whose it will be,” that the Scripture might be fulfilled, which says,</para>
+  <para style="q1">“They parted my garments among them.</para>
+  <para style="q2">They cast lots for my clothing.”</para>
+  <para style="p">Therefore the soldiers did these things.</para>
+  <para style="p"><verse number="25" style="v" sid="JHN 19:25" />But standing by Jesus’ cross were his mother, his mother’s sister, Mary the wife of Clopas, and Mary Magdalene.  
+<verse number="26" style="v" sid="JHN 19:26" />Therefore when Jesus saw his mother, and the disciple whom he loved standing there, he said to his mother, <char style="wj"> “Woman, behold, your son!” </char>  
+<verse number="27" style="v" sid="JHN 19:27" />Then he said to the disciple, <char style="wj"> “Behold, your mother!”</char> From that hour, the disciple took her to his own home.</para>
+  <para style="p"><verse number="28" style="v" sid="JHN 19:28" />After this, Jesus, seeing<note style="f" caller="+"><char style="fr">19:28</char><char style="ft">NU, TR read “knowing” instead of “seeing”</char></note> that all things were now finished, that the Scripture might be fulfilled, said, <char style="wj"> “I am thirsty!”</char>  
+<verse number="29" style="v" sid="JHN 19:29" />Now a vessel full of vinegar was set there; so they put a sponge full of the vinegar on hyssop, and held it at his mouth.  
+<verse number="30" style="v" sid="JHN 19:30" />When Jesus therefore had received the vinegar, he said, <char style="wj"> “It is finished!”</char> Then he bowed his head and gave up his spirit.</para>
+  <para style="p"><verse number="31" style="v" sid="JHN 19:31" />Therefore the Jews, because it was the Preparation Day, so that the bodies wouldn’t remain on the cross on the Sabbath (for that Sabbath was a special one), asked of Pilate that their legs might be broken and that they might be taken away.  
+<verse number="32" style="v" sid="JHN 19:32" />Therefore the soldiers came and broke the legs of the first and of the other who was crucified with him;  
+<verse number="33" style="v" sid="JHN 19:33" />but when they came to Jesus and saw that he was already dead, they didn’t break his legs.  
+<verse number="34" style="v" sid="JHN 19:34" />However, one of the soldiers pierced his side with a spear, and immediately blood and water came out.  
+<verse number="35" style="v" sid="JHN 19:35" />He who has seen has testified, and his testimony is true. He knows that he tells the truth, that you may believe.  
+<verse number="36" style="v" sid="JHN 19:36" />For these things happened that the Scripture might be fulfilled, “A bone of him will not be broken.”  
+<verse number="37" style="v" sid="JHN 19:37" />Again another Scripture says, “They will look on him whom they pierced.”</para>
+  <para style="p"><verse number="38" style="v" sid="JHN 19:38" />After these things, Joseph of Arimathaea, being a disciple of Jesus, but secretly for fear of the Jews, asked of Pilate that he might take away Jesus’ body. Pilate gave him permission. He came therefore and took away his body.  
+<verse number="39" style="v" sid="JHN 19:39" />Nicodemus, who at first came to Jesus by night, also came bringing a mixture of myrrh and aloes, about a hundred Roman pounds.<note style="f" caller="+"><char style="fr">19:39</char><char style="ft">100 Roman pounds of 12 ounces each, or about 72 pounds, or 33 Kilograms.</char></note>  
+<verse number="40" style="v" sid="JHN 19:40" />So they took Jesus’ body, and bound it in linen cloths with the spices, as the custom of the Jews is to bury.  
+<verse number="41" style="v" sid="JHN 19:41" />Now in the place where he was crucified there was a garden. In the garden was a new tomb in which no man had ever yet been laid.  
+<verse number="42" style="v" sid="JHN 19:42" />Then, because of the Jews’ Preparation Day (for the tomb was near at hand), they laid Jesus there.</para>
+  <chapter number="20" style="c" sid="JHN 20" />
+  <para style="p"><verse number="1" style="v" sid="JHN 20:1" />Now on the first day of the week, Mary Magdalene went early, while it was still dark, to the tomb, and saw that the stone had been taken away from the tomb.  
+<verse number="2" style="v" sid="JHN 20:2" />Therefore she ran and came to Simon Peter and to the other disciple whom Jesus loved, and said to them, “They have taken away the Lord out of the tomb, and we don’t know where they have laid him!”</para>
+  <para style="p"><verse number="3" style="v" sid="JHN 20:3" />Therefore Peter and the other disciple went out, and they went toward the tomb.  
+<verse number="4" style="v" sid="JHN 20:4" />They both ran together. The other disciple outran Peter and came to the tomb first.  
+<verse number="5" style="v" sid="JHN 20:5" />Stooping and looking in, he saw the linen cloths lying there; yet he didn’t enter in.  
+<verse number="6" style="v" sid="JHN 20:6" />Then Simon Peter came, following him, and entered into the tomb. He saw the linen cloths lying,  
+<verse number="7" style="v" sid="JHN 20:7" />and the cloth that had been on his head, not lying with the linen cloths, but rolled up in a place by itself.  
+<verse number="8" style="v" sid="JHN 20:8" />So then the other disciple who came first to the tomb also entered in, and he saw and believed.  
+<verse number="9" style="v" sid="JHN 20:9" />For as yet they didn’t know the Scripture, that he must rise from the dead.  
+<verse number="10" style="v" sid="JHN 20:10" />So the disciples went away again to their own homes.</para>
+  <para style="p"><verse number="11" style="v" sid="JHN 20:11" />But Mary was standing outside at the tomb weeping. So as she wept, she stooped and looked into the tomb,  
+<verse number="12" style="v" sid="JHN 20:12" />and she saw two angels in white sitting, one at the head and one at the feet, where the body of Jesus had lain.  
+<verse number="13" style="v" sid="JHN 20:13" />They asked her, “Woman, why are you weeping?”</para>
+  <para style="p">She said to them, “Because they have taken away my Lord, and I don’t know where they have laid him.”  
+<verse number="14" style="v" sid="JHN 20:14" />When she had said this, she turned around and saw Jesus standing, and didn’t know that it was Jesus.</para>
+  <para style="p"><verse number="15" style="v" sid="JHN 20:15" />Jesus said to her, <char style="wj"> “Woman, why are you weeping? Who are you looking for?”</char></para>
+  <para style="p">She, supposing him to be the gardener, said to him, “Sir, if you have carried him away, tell me where you have laid him, and I will take him away.”</para>
+  <para style="p"><verse number="16" style="v" sid="JHN 20:16" />Jesus said to her, <char style="wj"> “Mary.”</char></para>
+  <para style="p">She turned and said to him, “Rabboni!”<note style="f" caller="+"><char style="fr">20:16</char><char style="ft">Rabboni is a transliteration of the Hebrew word for “great teacher.”</char></note> which is to say, “Teacher!”<note style="f" caller="+"><char style="fr">20:16</char><char style="ft">or, Master</char></note></para>
+  <para style="p"><verse number="17" style="v" sid="JHN 20:17" />Jesus said to her, <char style="wj"> “Don’t hold me, for I haven’t yet ascended to my Father; but go to my brothers and tell them, ‘I am ascending to my Father and your Father, to my God and your God.’”</char></para>
+  <para style="p"><verse number="18" style="v" sid="JHN 20:18" />Mary Magdalene came and told the disciples that she had seen the Lord, and that he had said these things to her.  
+<verse number="19" style="v" sid="JHN 20:19" />When therefore it was evening on that day, the first day of the week, and when the doors were locked where the disciples were assembled, for fear of the Jews, Jesus came and stood in the middle and said to them, <char style="wj"> “Peace be to you.”</char></para>
+  <para style="p"><verse number="20" style="v" sid="JHN 20:20" />When he had said this, he showed them his hands and his side. The disciples therefore were glad when they saw the Lord.  
+<verse number="21" style="v" sid="JHN 20:21" />Jesus therefore said to them again, <char style="wj"> “Peace be to you. As the Father has sent me, even so I send you.”</char>  
+<verse number="22" style="v" sid="JHN 20:22" />When he had said this, he breathed on them, and said to them, <char style="wj"> “Receive the Holy Spirit! </char>  
+<verse number="23" style="v" sid="JHN 20:23" /><char style="wj"> If you forgive anyone’s sins, they have been forgiven them. If you retain anyone’s sins, they have been retained.”</char></para>
+  <para style="p"><verse number="24" style="v" sid="JHN 20:24" />But Thomas, one of the twelve, called Didymus,<note style="f" caller="+"><char style="fr">20:24</char><char style="ft">or, Twin</char></note> wasn’t with them when Jesus came.  
+<verse number="25" style="v" sid="JHN 20:25" />The other disciples therefore said to him, “We have seen the Lord!”</para>
+  <para style="p">But he said to them, “Unless I see in his hands the print of the nails, put my finger into the print of the nails, and put my hand into his side, I will not believe.”</para>
+  <para style="p"><verse number="26" style="v" sid="JHN 20:26" />After eight days, again his disciples were inside and Thomas was with them. Jesus came, the doors being locked, and stood in the middle, and said, <char style="wj"> “Peace be to you.”</char>  
+<verse number="27" style="v" sid="JHN 20:27" />Then he said to Thomas, <char style="wj"> “Reach here your finger, and see my hands. Reach here your hand, and put it into my side. Don’t be unbelieving, but believing.”</char></para>
+  <para style="p"><verse number="28" style="v" sid="JHN 20:28" />Thomas answered him, “My Lord and my God!”</para>
+  <para style="p"><verse number="29" style="v" sid="JHN 20:29" />Jesus said to him, <char style="wj"> “Because you have seen me,</char><note style="f" caller="+"><char style="fr">20:29</char><char style="ft">TR adds “Thomas,”</char></note> <char style="wj"> you have believed. Blessed are those who have not seen and have believed.”</char></para>
+  <para style="p"><verse number="30" style="v" sid="JHN 20:30" />Therefore Jesus did many other signs in the presence of his disciples, which are not written in this book;  
+<verse number="31" style="v" sid="JHN 20:31" />but these are written that you may believe that Jesus is the Christ, the Son of God, and that believing you may have life in his name.</para>
+  <chapter number="21" style="c" sid="JHN 21" />
+  <para style="p"><verse number="1" style="v" sid="JHN 21:1" />After these things, Jesus revealed himself again to the disciples at the sea of Tiberias. He revealed himself this way.  
+<verse number="2" style="v" sid="JHN 21:2" />Simon Peter, Thomas called Didymus,<note style="f" caller="+"><char style="fr">21:2</char><char style="ft">or, Twin</char></note> Nathanael of Cana in Galilee, and the sons of Zebedee, and two others of his disciples were together.  
+<verse number="3" style="v" sid="JHN 21:3" />Simon Peter said to them, “I’m going fishing.”</para>
+  <para style="p">They told him, “We are also coming with you.” They immediately went out and entered into the boat. That night, they caught nothing.  
+<verse number="4" style="v" sid="JHN 21:4" />But when day had already come, Jesus stood on the beach; yet the disciples didn’t know that it was Jesus.  
+<verse number="5" style="v" sid="JHN 21:5" />Jesus therefore said to them, <char style="wj"> “Children, have you anything to eat?” </char></para>
+  <para style="p">They answered him, “No.”</para>
+  <para style="p"><verse number="6" style="v" sid="JHN 21:6" />He said to them, <char style="wj"> “Cast the net on the right side of the boat, and you will find some.”</char></para>
+  <para style="p">They cast it therefore, and now they weren’t able to draw it in for the multitude of fish.  
+<verse number="7" style="v" sid="JHN 21:7" />That disciple therefore whom Jesus loved said to Peter, “It’s the Lord!”</para>
+  <para style="p">So when Simon Peter heard that it was the Lord, he wrapped his coat around himself (for he was naked), and threw himself into the sea.  
+<verse number="8" style="v" sid="JHN 21:8" />But the other disciples came in the little boat (for they were not far from the land, but about two hundred cubits<note style="f" caller="+"><char style="fr">21:8</char><char style="ft">200 cubits is about 100 yards or about 91 meters</char></note> away), dragging the net full of fish.  
+<verse number="9" style="v" sid="JHN 21:9" />So when they got out on the land, they saw a fire of coals there, with fish and bread laid on it.  
+<verse number="10" style="v" sid="JHN 21:10" />Jesus said to them, <char style="wj"> “Bring some of the fish which you have just caught.”</char></para>
+  <para style="p"><verse number="11" style="v" sid="JHN 21:11" />Simon Peter went up, and drew the net to land, full of one hundred fifty-three great fish. Even though there were so many, the net wasn’t torn.</para>
+  <para style="p"><verse number="12" style="v" sid="JHN 21:12" />Jesus said to them, <char style="wj"> “Come and eat breakfast!”</char></para>
+  <para style="p">None of the disciples dared inquire of him, “Who are you?” knowing that it was the Lord.</para>
+  <para style="p"><verse number="13" style="v" sid="JHN 21:13" />Then Jesus came and took the bread, gave it to them, and the fish likewise.  
+<verse number="14" style="v" sid="JHN 21:14" />This is now the third time that Jesus was revealed to his disciples after he had risen from the dead.  
+<verse number="15" style="v" sid="JHN 21:15" />So when they had eaten their breakfast, Jesus said to Simon Peter, <char style="wj"> “Simon, son of Jonah, do you love me more than these?”</char></para>
+  <para style="p">He said to him, “Yes, Lord; you know that I have affection for you.”</para>
+  <para style="p">He said to him, <char style="wj"> “Feed my lambs.”</char>  
+<verse number="16" style="v" sid="JHN 21:16" />He said to him again a second time, <char style="wj"> “Simon, son of Jonah, do you love me?”</char></para>
+  <para style="p">He said to him, “Yes, Lord; you know that I have affection for you.”</para>
+  <para style="p">He said to him, <char style="wj"> “Tend my sheep.”</char>  
+<verse number="17" style="v" sid="JHN 21:17" />He said to him the third time, <char style="wj"> “Simon, son of Jonah, do you have affection for me?”</char></para>
+  <para style="p">Peter was grieved because he asked him the third time, <char style="wj"> “Do you have affection for me?”</char> He said to him, “Lord, you know everything. You know that I have affection for you.”</para>
+  <para style="p">Jesus said to him, <char style="wj"> “Feed my sheep. </char>  
+<verse number="18" style="v" sid="JHN 21:18" /><char style="wj"> Most certainly I tell you, when you were young, you dressed yourself and walked where you wanted to. But when you are old, you will stretch out your hands, and another will dress you and carry you where you don’t want to go.”</char></para>
+  <para style="p"><verse number="19" style="v" sid="JHN 21:19" />Now he said this, signifying by what kind of death he would glorify God. When he had said this, he said to him, <char style="wj"> “Follow me.”</char></para>
+  <para style="p"><verse number="20" style="v" sid="JHN 21:20" />Then Peter, turning around, saw a disciple following. This was the disciple whom Jesus loved, the one who had also leaned on Jesus’ chest at the supper and asked, “Lord, who is going to betray you?”  
+<verse number="21" style="v" sid="JHN 21:21" />Peter, seeing him, said to Jesus, “Lord, what about this man?”</para>
+  <para style="p"><verse number="22" style="v" sid="JHN 21:22" />Jesus said to him, <char style="wj"> “If I desire that he stay until I come, what is that to you? You follow me.”</char>  
+<verse number="23" style="v" sid="JHN 21:23" />This saying therefore went out among the brothers<note style="f" caller="+"><char style="fr">21:23</char><char style="ft">The word for “brothers” here may be also correctly translated “brothers and sisters” or “siblings.”</char></note> that this disciple wouldn’t die. Yet Jesus didn’t say to him that he wouldn’t die, but, <char style="wj"> “If I desire that he stay until I come, what is that to you?”</char></para>
+  <para style="p"><verse number="24" style="v" sid="JHN 21:24" />This is the disciple who testifies about these things, and wrote these things. We know that his witness is true.  
+<verse number="25" style="v" sid="JHN 21:25" />There are also many other things which Jesus did, which if they would all be written, I suppose that even the world itself wouldn’t have room for the books that would be written.</para>
+</usx>

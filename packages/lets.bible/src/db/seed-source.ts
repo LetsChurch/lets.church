@@ -33,8 +33,10 @@ function expandBooks(spec: string): string[] {
 const BOOKS = expandBooks(process.env.BOOKS ?? 'JHN');
 
 // Which Greek editions count as a translation's textual basis (NT only). BSB
-// follows the critical text (Nestlé-Aland); MSB the Byzantine/Majority text.
-const GREEK_BASIS = TRANSLATION_ID === 'MSB' ? 'Byz' : 'NA2';
+// follows the critical text (Nestlé-Aland); MSB and WEB the Byzantine/Majority
+// text (the WEB NT is translated from the Greek Majority Text).
+const GREEK_BASIS =
+  TRANSLATION_ID === 'MSB' || TRANSLATION_ID === 'WEB' ? 'Byz' : 'NA2';
 
 // The STEPBible source files and which books each covers. The book lists are
 // sliced from the canon (so the USFM codes are authoritative), matching each

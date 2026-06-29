@@ -1,0 +1,424 @@
+<?xml version="1.0" encoding="utf-8"?>
+<usx version="3.0">
+  <book code="AMO" style="id">World English Bible</book>
+  <chapter number="1" style="c" sid="AMO 1" />
+  <para style="p"><verse number="1" style="v" sid="AMO 1:1" />The words of Amos, who was among the herdsmen of Tekoa, which he saw concerning Israel in the days of Uzziah king of Judah and in the days of Jeroboam the son of Joash, king of Israel, two years before the earthquake.  
+<verse number="2" style="v" sid="AMO 1:2" />He said:</para>
+  <para style="q1">“Yahweh<note style="f" caller="+"><char style="fr">1:2</char><char style="ft">“Yahweh” is God’s proper Name, sometimes rendered “LORD” (all caps) in other translations.</char></note> will roar from Zion,</para>
+  <para style="q2">and utter his voice from Jerusalem;</para>
+  <para style="q1">and the pastures of the shepherds will mourn,</para>
+  <para style="q2">and the top of Carmel will wither.”</para>
+  <para style="p"><verse number="3" style="v" sid="AMO 1:3" />Yahweh says:</para>
+  <para style="q1">“For three transgressions of Damascus, yes, for four,</para>
+  <para style="q2">I will not turn away its punishment,</para>
+  <para style="q2">because they have threshed Gilead with threshing instruments of iron;</para>
+  <para style="q1"><verse number="4" style="v" sid="AMO 1:4" />but I will send a fire into the house of Hazael,</para>
+  <para style="q2">and it will devour the palaces of Ben Hadad.</para>
+  <para style="q1"><verse number="5" style="v" sid="AMO 1:5" />I will break the bar of Damascus,</para>
+  <para style="q2">and cut off the inhabitant from the valley of Aven,</para>
+  <para style="q2">and him who holds the scepter from the house of Eden;</para>
+  <para style="q2">and the people of Syria shall go into captivity to Kir,”</para>
+  <para style="p">says Yahweh.</para>
+  <para style="p"><verse number="6" style="v" sid="AMO 1:6" />Yahweh says:</para>
+  <para style="q1">“For three transgressions of Gaza, yes, for four,</para>
+  <para style="q2">I will not turn away its punishment,</para>
+  <para style="q2">because they carried away captive the whole community,</para>
+  <para style="q2">to deliver them up to Edom;</para>
+  <para style="q1"><verse number="7" style="v" sid="AMO 1:7" />but I will send a fire on the wall of Gaza,</para>
+  <para style="q2">and it will devour its palaces.</para>
+  <para style="q1"><verse number="8" style="v" sid="AMO 1:8" />I will cut off the inhabitant from Ashdod,</para>
+  <para style="q2">and him who holds the scepter from Ashkelon;</para>
+  <para style="q1">and I will turn my hand against Ekron;</para>
+  <para style="q2">and the remnant of the Philistines will perish,”</para>
+  <para style="p">says the Lord<note style="f" caller="+"><char style="fr">1:8</char><char style="ft">The word translated “Lord” is “Adonai.”</char></note> Yahweh.</para>
+  <para style="p"><verse number="9" style="v" sid="AMO 1:9" />Yahweh says:</para>
+  <para style="q1">“For three transgressions of Tyre, yes, for four,</para>
+  <para style="q2">I will not turn away its punishment;</para>
+  <para style="q2">because they delivered up the whole community to Edom,</para>
+  <para style="q2">and didn’t remember the brotherly covenant;</para>
+  <para style="q1"><verse number="10" style="v" sid="AMO 1:10" />but I will send a fire on the wall of Tyre,</para>
+  <para style="q2">and it will devour its palaces.”</para>
+  <para style="p"><verse number="11" style="v" sid="AMO 1:11" />Yahweh says:</para>
+  <para style="q1">“For three transgressions of Edom, yes, for four,</para>
+  <para style="q2">I will not turn away its punishment,</para>
+  <para style="q2">because he pursued his brother with the sword</para>
+  <para style="q2">and cast off all pity,</para>
+  <para style="q2">and his anger raged continually,</para>
+  <para style="q2">and he kept his wrath forever;</para>
+  <para style="q1"><verse number="12" style="v" sid="AMO 1:12" />but I will send a fire on Teman,</para>
+  <para style="q2">and it will devour the palaces of Bozrah.”</para>
+  <para style="p"><verse number="13" style="v" sid="AMO 1:13" />Yahweh says:</para>
+  <para style="q1">“For three transgressions of the children of Ammon, yes, for four,</para>
+  <para style="q2">I will not turn away its punishment,</para>
+  <para style="q2">because they have ripped open the pregnant women of Gilead,</para>
+  <para style="q2">that they may enlarge their border.</para>
+  <para style="q1"><verse number="14" style="v" sid="AMO 1:14" />But I will kindle a fire in the wall of Rabbah,</para>
+  <para style="q2">and it will devour its palaces,</para>
+  <para style="q2">with shouting in the day of battle,</para>
+  <para style="q2">with a storm in the day of the whirlwind;</para>
+  <para style="q1"><verse number="15" style="v" sid="AMO 1:15" />and their king will go into captivity,</para>
+  <para style="q2">he and his princes together,”</para>
+  <para style="p">says Yahweh.</para>
+  <chapter number="2" style="c" sid="AMO 2" />
+  <para style="p"><verse number="1" style="v" sid="AMO 2:1" />Yahweh says:</para>
+  <para style="q1">“For three transgressions of Moab, yes, for four,</para>
+  <para style="q2">I will not turn away its punishment,</para>
+  <para style="q2">because he burned the bones of the king of Edom into lime;</para>
+  <para style="q1"><verse number="2" style="v" sid="AMO 2:2" />but I will send a fire on Moab,</para>
+  <para style="q2">and it will devour the palaces of Kerioth;</para>
+  <para style="q2">and Moab will die with tumult, with shouting, and with the sound of the trumpet;</para>
+  <para style="q1"><verse number="3" style="v" sid="AMO 2:3" />and I will cut off the judge from among them,</para>
+  <para style="q2">and will kill all its princes with him,”</para>
+  <para style="p">says Yahweh.</para>
+  <para style="p"><verse number="4" style="v" sid="AMO 2:4" />Yahweh says:</para>
+  <para style="q1">“For three transgressions of Judah, yes, for four,</para>
+  <para style="q2">I will not turn away its punishment,</para>
+  <para style="q2">because they have rejected Yahweh’s law,</para>
+  <para style="q2">and have not kept his statutes,</para>
+  <para style="q2">and their lies have led them astray,</para>
+  <para style="q2">after which their fathers walked;</para>
+  <para style="q1"><verse number="5" style="v" sid="AMO 2:5" />but I will send a fire on Judah,</para>
+  <para style="q2">and it will devour the palaces of Jerusalem.”</para>
+  <para style="p"><verse number="6" style="v" sid="AMO 2:6" />Yahweh says:</para>
+  <para style="q1">“For three transgressions of Israel, yes, for four,</para>
+  <para style="q2">I will not turn away its punishment,</para>
+  <para style="q2">because they have sold the righteous for silver,</para>
+  <para style="q2">and the needy for a pair of sandals;</para>
+  <para style="q2"><verse number="7" style="v" sid="AMO 2:7" />They trample the heads of the poor into the dust of the earth</para>
+  <para style="q2">and deny justice to the oppressed.</para>
+  <para style="q1">A man and his father use the same maiden, to profane my holy name.</para>
+  <para style="q2"><verse number="8" style="v" sid="AMO 2:8" />They lay themselves down beside every altar on clothes taken in pledge.</para>
+  <para style="q2">In the house of their God<note style="f" caller="+"><char style="fr">2:8</char><char style="ft">The Hebrew word rendered “God” is “ אֱלֹהִ֑ים” (Elohim).</char></note> they drink the wine of those who have been fined.</para>
+  <para style="q1"><verse number="9" style="v" sid="AMO 2:9" />Yet I destroyed the Amorite before them,</para>
+  <para style="q2">whose height was like the height of the cedars,</para>
+  <para style="q2">and he was strong as the oaks;</para>
+  <para style="q2">yet I destroyed his fruit from above,</para>
+  <para style="q2">and his roots from beneath.</para>
+  <para style="q1"><verse number="10" style="v" sid="AMO 2:10" />Also I brought you up out of the land of Egypt</para>
+  <para style="q2">and led you forty years in the wilderness,</para>
+  <para style="q2">to possess the land of the Amorite.</para>
+  <para style="q1"><verse number="11" style="v" sid="AMO 2:11" />I raised up some of your sons for prophets,</para>
+  <para style="q2">and some of your young men for Nazirites.</para>
+  <para style="q1">Isn’t this true,</para>
+  <para style="q2">you children of Israel?” says Yahweh.</para>
+  <para style="q1"><verse number="12" style="v" sid="AMO 2:12" />“But you gave the Nazirites wine to drink,</para>
+  <para style="q2">and commanded the prophets, saying, ‘Don’t prophesy!’</para>
+  <para style="q1"><verse number="13" style="v" sid="AMO 2:13" />Behold,<note style="f" caller="+"><char style="fr">2:13</char><char style="ft">“Behold”, from “ הִנֵּה”, means look at, take notice, observe, see, or gaze at. It is often used as an interjection.</char></note> I will crush you in your place,</para>
+  <para style="q2">as a cart crushes that is full of grain.</para>
+  <para style="q1"><verse number="14" style="v" sid="AMO 2:14" />Flight will perish from the swift.</para>
+  <para style="q2">The strong won’t strengthen his force.</para>
+  <para style="q2">The mighty won’t deliver himself.</para>
+  <para style="q1"><verse number="15" style="v" sid="AMO 2:15" />He who handles the bow won’t stand.</para>
+  <para style="q2">He who is swift of foot won’t escape.</para>
+  <para style="q2">He who rides the horse won’t deliver himself.</para>
+  <para style="q1"><verse number="16" style="v" sid="AMO 2:16" />He who is courageous among the mighty</para>
+  <para style="q2">will flee away naked on that day,”</para>
+  <para style="p">says Yahweh.</para>
+  <chapter number="3" style="c" sid="AMO 3" />
+  <para style="p"><verse number="1" style="v" sid="AMO 3:1" />Hear this word that Yahweh has spoken against you, children of Israel, against the whole family which I brought up out of the land of Egypt, saying:</para>
+  <para style="q1"><verse number="2" style="v" sid="AMO 3:2" />“I have only chosen you of all the families of the earth.</para>
+  <para style="q2">Therefore I will punish you for all of your sins.”</para>
+  <para style="q1"><verse number="3" style="v" sid="AMO 3:3" />Do two walk together,</para>
+  <para style="q2">unless they have agreed?</para>
+  <para style="q1"><verse number="4" style="v" sid="AMO 3:4" />Will a lion roar in the thicket,</para>
+  <para style="q2">when he has no prey?</para>
+  <para style="q1">Does a young lion cry out of his den,</para>
+  <para style="q2">if he has caught nothing?</para>
+  <para style="q1"><verse number="5" style="v" sid="AMO 3:5" />Can a bird fall in a trap on the earth,</para>
+  <para style="q2">where no snare is set for him?</para>
+  <para style="q1">Does a snare spring up from the ground,</para>
+  <para style="q2">when there is nothing to catch?</para>
+  <para style="q1"><verse number="6" style="v" sid="AMO 3:6" />Does the trumpet alarm sound in a city,</para>
+  <para style="q2">without the people being afraid?</para>
+  <para style="q1">Does evil happen to a city,</para>
+  <para style="q2">and Yahweh hasn’t done it?</para>
+  <para style="q1"><verse number="7" style="v" sid="AMO 3:7" />Surely the Lord Yahweh will do nothing,</para>
+  <para style="q2">unless he reveals his secret to his servants the prophets.</para>
+  <para style="q1"><verse number="8" style="v" sid="AMO 3:8" />The lion has roared.</para>
+  <para style="q2">Who will not fear?</para>
+  <para style="q1">The Lord Yahweh has spoken.</para>
+  <para style="q2">Who can but prophesy?</para>
+  <para style="q1"><verse number="9" style="v" sid="AMO 3:9" />Proclaim in the palaces at Ashdod,</para>
+  <para style="q2">and in the palaces in the land of Egypt,</para>
+  <para style="q1">and say, “Assemble yourselves on the mountains of Samaria,</para>
+  <para style="q2">and see what unrest is in her,</para>
+  <para style="q2">and what oppression is among them.”</para>
+  <para style="q1"><verse number="10" style="v" sid="AMO 3:10" />“Indeed they don’t know to do right,” says Yahweh,</para>
+  <para style="q2">“Who hoard plunder and loot in their palaces.”</para>
+  <para style="p"><verse number="11" style="v" sid="AMO 3:11" />Therefore the Lord Yahweh says:</para>
+  <para style="q1">“An adversary will overrun the land;</para>
+  <para style="q2">and he will pull down your strongholds,</para>
+  <para style="q2">and your fortresses will be plundered.”</para>
+  <para style="p"><verse number="12" style="v" sid="AMO 3:12" />Yahweh says:</para>
+  <para style="q1">“As the shepherd rescues out of the mouth of the lion two legs,</para>
+  <para style="q2">or a piece of an ear,</para>
+  <para style="q2">so shall the children of Israel be rescued who sit in Samaria on the corner of a couch,</para>
+  <para style="q2">and on the silken cushions of a bed.”</para>
+  <para style="p"><verse number="13" style="v" sid="AMO 3:13" />“Listen, and testify against the house of Jacob,” says the Lord Yahweh, the God of Armies.</para>
+  <para style="q1"><verse number="14" style="v" sid="AMO 3:14" />“For in the day that I visit the transgressions of Israel on him,</para>
+  <para style="q2">I will also visit the altars of Bethel;</para>
+  <para style="q2">and the horns of the altar will be cut off,</para>
+  <para style="q2">and fall to the ground.</para>
+  <para style="q1"><verse number="15" style="v" sid="AMO 3:15" />I will strike the winter house with the summer house;</para>
+  <para style="q2">and the houses of ivory will perish,</para>
+  <para style="q2">and the great houses will have an end,”</para>
+  <para style="p">says Yahweh.</para>
+  <chapter number="4" style="c" sid="AMO 4" />
+  <para style="p"><verse number="1" style="v" sid="AMO 4:1" />Listen to this word, you cows of Bashan, who are on the mountain of Samaria, who oppress the poor, who crush the needy, who tell their husbands, “Bring us drinks!”</para>
+  <para style="q1"><verse number="2" style="v" sid="AMO 4:2" />The Lord Yahweh has sworn by his holiness,</para>
+  <para style="q2">“Behold, the days shall come on you that they will take you away with hooks,</para>
+  <para style="q2">and the last of you with fish hooks.</para>
+  <para style="q1"><verse number="3" style="v" sid="AMO 4:3" />You will go out at the breaks in the wall,</para>
+  <para style="q2">everyone straight before her;</para>
+  <para style="q2">and you will cast yourselves into Harmon,” says Yahweh.</para>
+  <para style="q1"><verse number="4" style="v" sid="AMO 4:4" />“Go to Bethel, and sin;</para>
+  <para style="q2">to Gilgal, and sin more.</para>
+  <para style="q1">Bring your sacrifices every morning,</para>
+  <para style="q2">your tithes every three days,</para>
+  <para style="q2"><verse number="5" style="v" sid="AMO 4:5" />offer a sacrifice of thanksgiving of that which is leavened,</para>
+  <para style="q2">and proclaim free will offerings and brag about them;</para>
+  <para style="q2">for this pleases you, you children of Israel,” says the Lord Yahweh.</para>
+  <para style="q1"><verse number="6" style="v" sid="AMO 4:6" />“I also have given you cleanness of teeth in all your cities,</para>
+  <para style="q2">and lack of bread in every town;</para>
+  <para style="q2">yet you haven’t returned to me,” says Yahweh.</para>
+  <para style="q1"><verse number="7" style="v" sid="AMO 4:7" />“I also have withheld the rain from you,</para>
+  <para style="q2">when there were yet three months to the harvest;</para>
+  <para style="q2">and I caused it to rain on one city,</para>
+  <para style="q2">and caused it not to rain on another city.</para>
+  <para style="q1">One field was rained on,</para>
+  <para style="q2">and the field where it didn’t rain withered.</para>
+  <para style="q1"><verse number="8" style="v" sid="AMO 4:8" />So two or three cities staggered to one city to drink water,</para>
+  <para style="q2">and were not satisfied;</para>
+  <para style="q2">yet you haven’t returned to me,” says Yahweh.</para>
+  <para style="q1"><verse number="9" style="v" sid="AMO 4:9" />“I struck you with blight and mildew many times in your gardens and your vineyards,</para>
+  <para style="q2">and the swarming locusts have devoured your fig trees and your olive trees;</para>
+  <para style="q2">yet you haven’t returned to me,” says Yahweh.</para>
+  <para style="q1"><verse number="10" style="v" sid="AMO 4:10" />“I sent plagues among you like I did Egypt.</para>
+  <para style="q2">I have slain your young men with the sword,</para>
+  <para style="q2">and have carried away your horses.</para>
+  <para style="q1">I filled your nostrils with the stench of your camp,</para>
+  <para style="q2">yet you haven’t returned to me,” says Yahweh.</para>
+  <para style="q1"><verse number="11" style="v" sid="AMO 4:11" />“I have overthrown some of you,</para>
+  <para style="q2">as when God overthrew Sodom and Gomorrah,</para>
+  <para style="q2">and you were like a burning stick plucked out of the fire;</para>
+  <para style="q2">yet you haven’t returned to me,” says Yahweh.</para>
+  <para style="q1"><verse number="12" style="v" sid="AMO 4:12" />“Therefore I will do this to you, Israel;</para>
+  <para style="q2">because I will do this to you,</para>
+  <para style="q2">prepare to meet your God, Israel.</para>
+  <para style="q1"><verse number="13" style="v" sid="AMO 4:13" />For, behold, he who forms the mountains, creates the wind, declares to man what is his thought,</para>
+  <para style="q2">who makes the morning darkness, and treads on the high places of the earth:</para>
+  <para style="q2">Yahweh, the God of Armies, is his name.”</para>
+  <chapter number="5" style="c" sid="AMO 5" />
+  <para style="p"><verse number="1" style="v" sid="AMO 5:1" />Listen to this word which I take up for a lamentation over you, O house of Israel:</para>
+  <para style="q1"><verse number="2" style="v" sid="AMO 5:2" />“The virgin of Israel has fallen;</para>
+  <para style="q2">She shall rise no more.</para>
+  <para style="q1">She is cast down on her land;</para>
+  <para style="q2">there is no one to raise her up.”</para>
+  <para style="p"><verse number="3" style="v" sid="AMO 5:3" />For the Lord Yahweh says:</para>
+  <para style="q1">“The city that went out a thousand shall have a hundred left,</para>
+  <para style="q2">and that which went out one hundred shall have ten left to the house of Israel.”</para>
+  <para style="p"><verse number="4" style="v" sid="AMO 5:4" />For Yahweh says to the house of Israel:</para>
+  <para style="q1">“Seek me, and you will live;</para>
+  <para style="q1"><verse number="5" style="v" sid="AMO 5:5" />but don’t seek Bethel,</para>
+  <para style="q2">nor enter into Gilgal,</para>
+  <para style="q2">and don’t pass to Beersheba;</para>
+  <para style="q1">for Gilgal shall surely go into captivity,</para>
+  <para style="q2">and Bethel shall come to nothing.</para>
+  <para style="q1"><verse number="6" style="v" sid="AMO 5:6" />Seek Yahweh, and you will live,</para>
+  <para style="q2">lest he break out like fire in the house of Joseph,</para>
+  <para style="q2">and it devour, and there be no one to quench it in Bethel.</para>
+  <para style="q1"><verse number="7" style="v" sid="AMO 5:7" />You who turn justice to wormwood,</para>
+  <para style="q2">and cast down righteousness to the earth!</para>
+  <para style="q1"><verse number="8" style="v" sid="AMO 5:8" />Seek him who made the Pleiades and Orion,</para>
+  <para style="q2">and turns the shadow of death into the morning,</para>
+  <para style="q2">and makes the day dark with night;</para>
+  <para style="q2">who calls for the waters of the sea,</para>
+  <para style="q2">and pours them out on the surface of the earth, Yahweh is his name,</para>
+  <para style="q1"><verse number="9" style="v" sid="AMO 5:9" />who brings sudden destruction on the strong,</para>
+  <para style="q2">so that destruction comes on the fortress.</para>
+  <para style="q1"><verse number="10" style="v" sid="AMO 5:10" />They hate him who reproves in the gate,</para>
+  <para style="q2">and they abhor him who speaks blamelessly.</para>
+  <para style="q1"><verse number="11" style="v" sid="AMO 5:11" />Therefore, because you trample on the poor and take taxes from him of wheat,</para>
+  <para style="q2">you have built houses of cut stone, but you will not dwell in them.</para>
+  <para style="q1">You have planted pleasant vineyards,</para>
+  <para style="q2">but you shall not drink their wine.</para>
+  <para style="q1"><verse number="12" style="v" sid="AMO 5:12" />For I know how many are your offenses,</para>
+  <para style="q2">and how great are your sins—</para>
+  <para style="q2">you who afflict the just,</para>
+  <para style="q2">who take a bribe,</para>
+  <para style="q2">and who turn away the needy in the courts.</para>
+  <para style="q1"><verse number="13" style="v" sid="AMO 5:13" />Therefore a prudent person keeps silent in such a time,</para>
+  <para style="q2">for it is an evil time.</para>
+  <para style="q1"><verse number="14" style="v" sid="AMO 5:14" />Seek good, and not evil,</para>
+  <para style="q2">that you may live;</para>
+  <para style="q2">and so Yahweh, the God of Armies, will be with you,</para>
+  <para style="q2">as you say.</para>
+  <para style="q1"><verse number="15" style="v" sid="AMO 5:15" />Hate evil, love good,</para>
+  <para style="q2">and establish justice in the courts.</para>
+  <para style="q2">It may be that Yahweh, the God of Armies, will be gracious to the remnant of Joseph.”</para>
+  <para style="p"><verse number="16" style="v" sid="AMO 5:16" />Therefore Yahweh, the God of Armies, the Lord, says:</para>
+  <para style="q1">“Wailing will be in all the wide ways.</para>
+  <para style="q2">They will say in all the streets, ‘Alas! Alas!’</para>
+  <para style="q2">They will call the farmer to mourning,</para>
+  <para style="q2">and those who are skillful in lamentation to wailing.</para>
+  <para style="q1"><verse number="17" style="v" sid="AMO 5:17" />In all vineyards there will be wailing,</para>
+  <para style="q2">for I will pass through the middle of you,” says Yahweh.</para>
+  <para style="q1"><verse number="18" style="v" sid="AMO 5:18" />“Woe to you who desire the day of Yahweh!</para>
+  <para style="q2">Why do you long for the day of Yahweh?</para>
+  <para style="q1">It is darkness,</para>
+  <para style="q2">and not light.</para>
+  <para style="q1"><verse number="19" style="v" sid="AMO 5:19" />As if a man fled from a lion,</para>
+  <para style="q2">and a bear met him;</para>
+  <para style="q1">or he went into the house and leaned his hand on the wall,</para>
+  <para style="q2">and a snake bit him.</para>
+  <para style="q1"><verse number="20" style="v" sid="AMO 5:20" />Won’t the day of Yahweh be darkness, and not light?</para>
+  <para style="q2">Even very dark, and no brightness in it?</para>
+  <para style="q1"><verse number="21" style="v" sid="AMO 5:21" />I hate, I despise your feasts,</para>
+  <para style="q2">and I can’t stand your solemn assemblies.</para>
+  <para style="q1"><verse number="22" style="v" sid="AMO 5:22" />Yes, though you offer me your burnt offerings and meal offerings,</para>
+  <para style="q2">I will not accept them;</para>
+  <para style="q2">neither will I regard the peace offerings of your fat animals.</para>
+  <para style="q1"><verse number="23" style="v" sid="AMO 5:23" />Take away from me the noise of your songs!</para>
+  <para style="q2">I will not listen to the music of your harps.</para>
+  <para style="q1"><verse number="24" style="v" sid="AMO 5:24" />But let justice roll on like rivers,</para>
+  <para style="q2">and righteousness like a mighty stream.</para>
+  <para style="p"><verse number="25" style="v" sid="AMO 5:25" />“Did you bring to me sacrifices and offerings in the wilderness forty years, house of Israel?  
+<verse number="26" style="v" sid="AMO 5:26" />You also carried the tent of your king and the shrine of your images, the star of your god, which you made for yourselves.  
+<verse number="27" style="v" sid="AMO 5:27" />Therefore I will cause you to go into captivity beyond Damascus,” says Yahweh, whose name is the God of Armies.</para>
+  <chapter number="6" style="c" sid="AMO 6" />
+  <para style="p"><verse number="1" style="v" sid="AMO 6:1" />Woe to those who are at ease in Zion,</para>
+  <para style="q2">and to those who are secure on the mountain of Samaria,</para>
+  <para style="q2">the notable men of the chief of the nations,</para>
+  <para style="q2">to whom the house of Israel come!</para>
+  <para style="q1"><verse number="2" style="v" sid="AMO 6:2" />Go to Calneh, and see.</para>
+  <para style="q2">From there go to Hamath the great.</para>
+  <para style="q2">Then go down to Gath of the Philistines.</para>
+  <para style="q1">Are they better than these kingdoms?</para>
+  <para style="q2">Is their border greater than your border?</para>
+  <para style="q1"><verse number="3" style="v" sid="AMO 6:3" />Alas for you who put far away the evil day,</para>
+  <para style="q2">and cause the seat of violence to come near,</para>
+  <para style="q2"><verse number="4" style="v" sid="AMO 6:4" />who lie on beds of ivory,</para>
+  <para style="q2">and stretch themselves on their couches,</para>
+  <para style="q2">and eat the lambs out of the flock,</para>
+  <para style="q2">and the calves out of the middle of the stall,</para>
+  <para style="q2"><verse number="5" style="v" sid="AMO 6:5" />who strum on the strings of a harp,</para>
+  <para style="q2">who invent for themselves instruments of music, like David;</para>
+  <para style="q2"><verse number="6" style="v" sid="AMO 6:6" />who drink wine in bowls,</para>
+  <para style="q2">and anoint themselves with the best oils,</para>
+  <para style="q2">but they are not grieved for the affliction of Joseph.</para>
+  <para style="q1"><verse number="7" style="v" sid="AMO 6:7" />Therefore they will now go captive with the first who go captive.</para>
+  <para style="q2">The feasting and lounging will end.</para>
+  <para style="q1"><verse number="8" style="v" sid="AMO 6:8" />“The Lord Yahweh has sworn by himself,” says Yahweh, the God of Armies:</para>
+  <para style="q2">“I abhor the pride of Jacob,</para>
+  <para style="q2">and detest his fortresses.</para>
+  <para style="q2">Therefore I will deliver up the city with all that is in it.</para>
+  <para style="q1"><verse number="9" style="v" sid="AMO 6:9" />It will happen that if ten men remain in one house,</para>
+  <para style="q2">they will die.</para>
+  <para style="p"><verse number="10" style="v" sid="AMO 6:10" />“When a man’s relative carries him, even he who burns him, to bring bodies out of the house, and asks him who is in the innermost parts of the house, ‘Is there yet any with you?’ And he says, ‘No;’ then he will say, ‘Hush! Indeed we must not mention Yahweh’s name.’</para>
+  <para style="b" />
+  <para style="q1"><verse number="11" style="v" sid="AMO 6:11" />“For, behold, Yahweh commands, and the great house will be smashed to pieces,</para>
+  <para style="q2">and the little house into bits.</para>
+  <para style="q1"><verse number="12" style="v" sid="AMO 6:12" />Do horses run on the rocky crags?</para>
+  <para style="q2">Does one plow there with oxen?</para>
+  <para style="q1">But you have turned justice into poison,</para>
+  <para style="q2">and the fruit of righteousness into bitterness,</para>
+  <para style="q1"><verse number="13" style="v" sid="AMO 6:13" />you who rejoice in a thing of nothing, who say,</para>
+  <para style="q2">‘Haven’t we taken for ourselves horns by our own strength?’</para>
+  <para style="q1"><verse number="14" style="v" sid="AMO 6:14" />For, behold, I will raise up against you a nation, house of Israel,”</para>
+  <para style="q2">says Yahweh, the God of Armies;</para>
+  <para style="q2">“and they will afflict you from the entrance of Hamath to the brook of the Arabah.”</para>
+  <chapter number="7" style="c" sid="AMO 7" />
+  <para style="p"><verse number="1" style="v" sid="AMO 7:1" />Thus the Lord Yahweh showed me: behold, he formed locusts in the beginning of the shooting up of the latter growth; and behold, it was the latter growth after the king’s harvest.  
+<verse number="2" style="v" sid="AMO 7:2" />When they finished eating the grass of the land, then I said, “Lord Yahweh, forgive, I beg you! How could Jacob stand? For he is small.”</para>
+  <para style="p"><verse number="3" style="v" sid="AMO 7:3" />Yahweh relented concerning this. “It shall not be,” says Yahweh.</para>
+  <para style="p"><verse number="4" style="v" sid="AMO 7:4" />Thus the Lord Yahweh showed me: behold, the Lord Yahweh called for judgment by fire; and it dried up the great deep, and would have devoured the land.  
+<verse number="5" style="v" sid="AMO 7:5" />Then I said, “Lord Yahweh, stop, I beg you! How could Jacob stand? For he is small.”</para>
+  <para style="p"><verse number="6" style="v" sid="AMO 7:6" />Yahweh relented concerning this. “This also shall not be,” says the Lord Yahweh.</para>
+  <para style="p"><verse number="7" style="v" sid="AMO 7:7" />Thus he showed me: behold, the Lord stood beside a wall made by a plumb line, with a plumb line in his hand.  
+<verse number="8" style="v" sid="AMO 7:8" />Yahweh said to me, “Amos, what do you see?”</para>
+  <para style="p">I said, “A plumb line.”</para>
+  <para style="p">Then the Lord said, “Behold, I will set a plumb line in the middle of my people Israel. I will not again pass by them any more.  
+<verse number="9" style="v" sid="AMO 7:9" />The high places of Isaac will be desolate, the sanctuaries of Israel will be laid waste; and I will rise against the house of Jeroboam with the sword.”</para>
+  <para style="p"><verse number="10" style="v" sid="AMO 7:10" />Then Amaziah the priest of Bethel sent to Jeroboam king of Israel, saying, “Amos has conspired against you in the middle of the house of Israel. The land is not able to bear all his words.  
+<verse number="11" style="v" sid="AMO 7:11" />For Amos says, ‘Jeroboam will die by the sword, and Israel shall surely be led away captive out of his land.’”</para>
+  <para style="p"><verse number="12" style="v" sid="AMO 7:12" />Amaziah also said to Amos, “You seer, go, flee away into the land of Judah, and there eat bread, and prophesy there,  
+<verse number="13" style="v" sid="AMO 7:13" />but don’t prophesy again any more at Bethel; for it is the king’s sanctuary, and it is a royal house!”</para>
+  <para style="p"><verse number="14" style="v" sid="AMO 7:14" />Then Amos answered Amaziah, “I was no prophet, neither was I a prophet’s son, but I was a herdsman, and a farmer of sycamore figs;  
+<verse number="15" style="v" sid="AMO 7:15" />and Yahweh took me from following the flock, and Yahweh said to me, ‘Go, prophesy to my people Israel.’  
+<verse number="16" style="v" sid="AMO 7:16" />Now therefore listen to Yahweh’s word: ‘You say, Don’t prophesy against Israel, and don’t preach against the house of Isaac.’  
+<verse number="17" style="v" sid="AMO 7:17" />Therefore Yahweh says: ‘Your wife shall be a prostitute in the city, and your sons and your daughters shall fall by the sword, and your land shall be divided by line; and you yourself shall die in a land that is unclean, and Israel shall surely be led away captive out of his land.’”</para>
+  <chapter number="8" style="c" sid="AMO 8" />
+  <para style="p"><verse number="1" style="v" sid="AMO 8:1" />Thus the Lord Yahweh showed me: behold, a basket of summer fruit.</para>
+  <para style="p"><verse number="2" style="v" sid="AMO 8:2" />He said, “Amos, what do you see?”</para>
+  <para style="p">I said, “A basket of summer fruit.”</para>
+  <para style="p">Then Yahweh said to me,</para>
+  <para style="q1">“The end has come on my people Israel.</para>
+  <para style="q2">I will not again pass by them any more.</para>
+  <para style="q1"><verse number="3" style="v" sid="AMO 8:3" />The songs of the temple will be wailing in that day,” says the Lord Yahweh.</para>
+  <para style="q2">“The dead bodies will be many. In every place they will throw them out with silence.</para>
+  <para style="q1"><verse number="4" style="v" sid="AMO 8:4" />Hear this, you who desire to swallow up the needy,</para>
+  <para style="q2">and cause the poor of the land to fail,</para>
+  <para style="q2"><verse number="5" style="v" sid="AMO 8:5" />saying, ‘When will the new moon be gone, that we may sell grain?</para>
+  <para style="q2">And the Sabbath, that we may market wheat,</para>
+  <para style="q2">making the ephah<note style="f" caller="+"><char style="fr">8:5</char><char style="ft">1 ephah is about 22 liters or about 2/3 of a bushel</char></note> small, and the shekel<note style="f" caller="+"><char style="fr">8:5</char><char style="ft">a normal shekel is about 10 grams or about 0.35 ounces.</char></note> large,</para>
+  <para style="q2">and dealing falsely with balances of deceit;</para>
+  <para style="q1"><verse number="6" style="v" sid="AMO 8:6" />that we may buy the poor for silver,</para>
+  <para style="q2">and the needy for a pair of sandals,</para>
+  <para style="q2">and sell the sweepings with the wheat?’”</para>
+  <para style="q1"><verse number="7" style="v" sid="AMO 8:7" />Yahweh has sworn by the pride of Jacob,</para>
+  <para style="q2">“Surely I will never forget any of their works.</para>
+  <para style="q1"><verse number="8" style="v" sid="AMO 8:8" />Won’t the land tremble for this,</para>
+  <para style="q2">and everyone mourn who dwells in it?</para>
+  <para style="q1">Yes, it will rise up wholly like the River;</para>
+  <para style="q2">and it will be stirred up and sink again, like the River of Egypt.</para>
+  <para style="q1"><verse number="9" style="v" sid="AMO 8:9" />It will happen in that day,” says the Lord Yahweh,</para>
+  <para style="q2">“that I will cause the sun to go down at noon,</para>
+  <para style="q2">and I will darken the earth in the clear day.</para>
+  <para style="q1"><verse number="10" style="v" sid="AMO 8:10" />I will turn your feasts into mourning,</para>
+  <para style="q2">and all your songs into lamentation;</para>
+  <para style="q1">and I will make you wear sackcloth on all your bodies,</para>
+  <para style="q2">and baldness on every head.</para>
+  <para style="q1">I will make it like the mourning for an only son,</para>
+  <para style="q2">and its end like a bitter day.</para>
+  <para style="q1"><verse number="11" style="v" sid="AMO 8:11" />Behold, the days come,” says the Lord Yahweh,</para>
+  <para style="q2">“that I will send a famine in the land,</para>
+  <para style="q2">not a famine of bread,</para>
+  <para style="q2">nor a thirst for water,</para>
+  <para style="q2">but of hearing Yahweh’s words.</para>
+  <para style="q1"><verse number="12" style="v" sid="AMO 8:12" />They will wander from sea to sea,</para>
+  <para style="q2">and from the north even to the east;</para>
+  <para style="q2">they will run back and forth to seek Yahweh’s word,</para>
+  <para style="q2">and will not find it.</para>
+  <para style="q1"><verse number="13" style="v" sid="AMO 8:13" />In that day the beautiful virgins</para>
+  <para style="q2">and the young men will faint for thirst.</para>
+  <para style="q1"><verse number="14" style="v" sid="AMO 8:14" />Those who swear by the sin of Samaria,</para>
+  <para style="q2">and say, ‘As your god, Dan, lives,’</para>
+  <para style="q2">and, ‘As the way of Beersheba lives,’</para>
+  <para style="q2">they will fall, and never rise up again.”</para>
+  <chapter number="9" style="c" sid="AMO 9" />
+  <para style="p"><verse number="1" style="v" sid="AMO 9:1" />I saw the Lord standing beside the altar, and he said, “Strike the tops of the pillars, that the thresholds may shake. Break them in pieces on the head of all of them. I will kill the last of them with the sword. Not one of them will flee away. Not one of them will escape.  
+<verse number="2" style="v" sid="AMO 9:2" />Though they dig into Sheol,<note style="f" caller="+"><char style="fr">9:2</char><char style="ft">Sheol is the place of the dead.</char></note> there my hand will take them; and though they climb up to heaven, there I will bring them down.  
+<verse number="3" style="v" sid="AMO 9:3" />Though they hide themselves in the top of Carmel, I will search and take them out from there; and though they be hidden from my sight in the bottom of the sea, there I will command the serpent, and it will bite them.  
+<verse number="4" style="v" sid="AMO 9:4" />Though they go into captivity before their enemies, there I will command the sword, and it will kill them. I will set my eyes on them for evil, and not for good.  
+<verse number="5" style="v" sid="AMO 9:5" />For the Lord, Yahweh of Armies, is he who touches the land and it melts, and all who dwell in it will mourn; and it will rise up wholly like the River, and will sink again, like the River of Egypt.  
+<verse number="6" style="v" sid="AMO 9:6" />It is he who builds his rooms in the heavens, and has founded his vault on the earth; he who calls for the waters of the sea, and pours them out on the surface of the earth—Yahweh is his name.  
+<verse number="7" style="v" sid="AMO 9:7" />Are you not like the children of the Ethiopians to me, children of Israel?” says Yahweh. “Haven’t I brought up Israel out of the land of Egypt, and the Philistines from Caphtor, and the Syrians from Kir?  
+<verse number="8" style="v" sid="AMO 9:8" />Behold, the eyes of the Lord Yahweh are on the sinful kingdom, and I will destroy it from off the surface of the earth, except that I will not utterly destroy the house of Jacob,” says Yahweh.  
+<verse number="9" style="v" sid="AMO 9:9" />“For behold, I will command, and I will sift the house of Israel among all the nations as grain is sifted in a sieve, yet not the least kernel will fall on the earth.  
+<verse number="10" style="v" sid="AMO 9:10" />All the sinners of my people will die by the sword, who say, ‘Evil won’t overtake nor meet us.’  
+<verse number="11" style="v" sid="AMO 9:11" />In that day I will raise up the tent of David who is fallen and close up its breaches, and I will raise up its ruins, and I will build it as in the days of old,  
+<verse number="12" style="v" sid="AMO 9:12" />that they may possess the remnant of Edom and all the nations who are called by my name,” says Yahweh who does this.</para>
+  <para style="q1"><verse number="13" style="v" sid="AMO 9:13" />“Behold, the days come,” says Yahweh,</para>
+  <para style="q2">“that the plowman shall overtake the reaper,</para>
+  <para style="q2">and the one treading grapes him who sows seed;</para>
+  <para style="q2">and sweet wine will drip from the mountains,</para>
+  <para style="q2">and flow from the hills.</para>
+  <para style="q1"><verse number="14" style="v" sid="AMO 9:14" />I will bring my people Israel back from captivity,</para>
+  <para style="q2">and they will rebuild the ruined cities, and inhabit them;</para>
+  <para style="q2">and they will plant vineyards, and drink wine from them.</para>
+  <para style="q1">They shall also make gardens,</para>
+  <para style="q2">and eat their fruit.</para>
+  <para style="q1"><verse number="15" style="v" sid="AMO 9:15" />I will plant them on their land,</para>
+  <para style="q2">and they will no more be plucked up out of their land which I have given them,”</para>
+  <para style="q2">says Yahweh your God.</para>
+</usx>

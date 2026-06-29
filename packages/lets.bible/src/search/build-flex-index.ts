@@ -68,6 +68,7 @@ const TRANSLATIONS: { id: string; load: () => ChaptersByBook }[] = [
   { id: 'BSB', load: () => usxChapters(join(seedDir, 'bsb', 'USX_1')) },
   { id: 'MSB', load: () => usxChapters(join(seedDir, 'msb', 'USX_1')) },
   { id: 'KJV', load: kjvChapters },
+  { id: 'WEB', load: () => usxChapters(join(seedDir, 'web', 'USX_1')) },
 ];
 
 mkdirSync(OUT, { recursive: true });

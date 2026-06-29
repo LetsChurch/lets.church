@@ -17,6 +17,7 @@ const TRANSLATIONS: [id: string, reference: string][] = [
   ['BSB', 'BSB'],
   ['MSB', 'MSB'],
   ['KJV', 'MSB'],
+  ['WEB', 'MSB'],
 ];
 
 async function main() {

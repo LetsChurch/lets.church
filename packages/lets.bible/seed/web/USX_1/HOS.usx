@@ -1,0 +1,654 @@
+<?xml version="1.0" encoding="utf-8"?>
+<usx version="3.0">
+  <book code="HOS" style="id">World English Bible</book>
+  <chapter number="1" style="c" sid="HOS 1" />
+  <para style="p"><verse number="1" style="v" sid="HOS 1:1" />Yahweh’s<note style="f" caller="+"><char style="fr">1:1</char><char style="ft">“Yahweh” is God’s proper Name, sometimes rendered “LORD” (all caps) in other translations.</char></note> word that came to Hosea the son of Beeri, in the days of Uzziah, Jotham, Ahaz, and Hezekiah, kings of Judah, and in the days of Jeroboam the son of Joash, king of Israel.</para>
+  <para style="p"><verse number="2" style="v" sid="HOS 1:2" />When Yahweh spoke at first by Hosea, Yahweh said to Hosea, “Go, take for yourself a wife of prostitution and children of unfaithfulness; for the land commits great adultery, forsaking Yahweh.”</para>
+  <para style="p"><verse number="3" style="v" sid="HOS 1:3" />So he went and took Gomer the daughter of Diblaim; and she conceived, and bore him a son.</para>
+  <para style="p"><verse number="4" style="v" sid="HOS 1:4" />Yahweh said to him, “Call his name Jezreel, for yet a little while, and I will avenge the blood of Jezreel on the house of Jehu, and will cause the kingdom of the house of Israel to cease.  
+<verse number="5" style="v" sid="HOS 1:5" />It will happen in that day that I will break the bow of Israel in the valley of Jezreel.”</para>
+  <para style="p"><verse number="6" style="v" sid="HOS 1:6" />She conceived again, and bore a daughter.</para>
+  <para style="p">Then he said to him, “Call her name Lo-Ruhamah,<note style="f" caller="+"><char style="fr">1:6</char><char style="ft">Lo-Ruhamah means “not loved”.</char></note> for I will no longer have mercy on the house of Israel, that I should in any way pardon them.  
+<verse number="7" style="v" sid="HOS 1:7" />But I will have mercy on the house of Judah, and will save them by Yahweh their God,<note style="f" caller="+"><char style="fr">1:7</char><char style="ft">The Hebrew word rendered “God” is “ אֱלֹהִ֑ים” (Elohim).</char></note> and will not save them by bow, sword, battle, horses, or horsemen.”</para>
+  <para style="p"><verse number="8" style="v" sid="HOS 1:8" />Now when she had weaned Lo-Ruhamah, she conceived, and bore a son.</para>
+  <para style="p"><verse number="9" style="v" sid="HOS 1:9" />He said, “Call his name Lo-Ammi,<note style="f" caller="+"><char style="fr">1:9</char><char style="ft">Lo-Ammi means “not my people”.</char></note> for you are not my people, and I will not be yours.  
+<verse number="10" style="v" sid="HOS 1:10" />Yet the number of the children of Israel will be as the sand of the sea, which can’t be measured or counted; and it will come to pass that, in the place where it was said to them, ‘You are not my people,’ they will be called ‘sons of the living God.’  
+<verse number="11" style="v" sid="HOS 1:11" />The children of Judah and the children of Israel will be gathered together, and they will appoint themselves one head, and will go up from the land; for great will be the day of Jezreel.</para>
+  <chapter number="2" style="c" sid="HOS 2" />
+  <para style="p"><verse number="1" style="v" sid="HOS 2:1" />“Say to your brothers, ‘My people!’<note style="f" caller="+"><char style="fr">2:1</char><char style="ft">‘Ammi’ in Hebrew</char></note></para>
+  <para style="q2">and to your sisters, ‘My loved one!’<note style="f" caller="+"><char style="fr">2:1</char><char style="ft">‘Ruhamah’ in Hebrew</char></note></para>
+  <para style="q1"><verse number="2" style="v" sid="HOS 2:2" />Contend with your mother!</para>
+  <para style="q2">Contend, for she is not my wife,</para>
+  <para style="q2">neither am I her husband;</para>
+  <para style="q1">and let her put away her prostitution from her face,</para>
+  <para style="q2">and her adulteries from between her breasts;</para>
+  <para style="q1"><verse number="3" style="v" sid="HOS 2:3" />lest I strip her naked,</para>
+  <para style="q2">and make her bare as in the day that she was born,</para>
+  <para style="q1">and make her like a wilderness,</para>
+  <para style="q2">and set her like a dry land,</para>
+  <para style="q2">and kill her with thirst.</para>
+  <para style="q1"><verse number="4" style="v" sid="HOS 2:4" />Indeed, on her children I will have no mercy,</para>
+  <para style="q2">for they are children of unfaithfulness.</para>
+  <para style="q1"><verse number="5" style="v" sid="HOS 2:5" />For their mother has played the prostitute.</para>
+  <para style="q2">She who conceived them has done shamefully;</para>
+  <para style="q1">for she said, ‘I will go after my lovers,</para>
+  <para style="q2">who give me my bread and my water,</para>
+  <para style="q2">my wool and my flax,</para>
+  <para style="q2">my oil and my drink.’</para>
+  <para style="q1"><verse number="6" style="v" sid="HOS 2:6" />Therefore behold,<note style="f" caller="+"><char style="fr">2:6</char><char style="ft">“Behold”, from “ הִנֵּה”, means look at, take notice, observe, see, or gaze at. It is often used as an interjection.</char></note> I will hedge up your way with thorns,</para>
+  <para style="q2">and I will build a wall against her,</para>
+  <para style="q2">that she can’t find her way.</para>
+  <para style="q1"><verse number="7" style="v" sid="HOS 2:7" />She will follow after her lovers,</para>
+  <para style="q2">but she won’t overtake them;</para>
+  <para style="q1">and she will seek them,</para>
+  <para style="q2">but won’t find them.</para>
+  <para style="q1">Then she will say, ‘I will go and return to my first husband,</para>
+  <para style="q2">for then it was better with me than now.’</para>
+  <para style="q1"><verse number="8" style="v" sid="HOS 2:8" />For she didn’t know that I gave her the grain, the new wine, and the oil,</para>
+  <para style="q2">and multiplied to her silver and gold, which they used for Baal.</para>
+  <para style="q1"><verse number="9" style="v" sid="HOS 2:9" />Therefore I will take back my grain in its time,</para>
+  <para style="q2">and my new wine in its season,</para>
+  <para style="q2">and will pluck away my wool and my flax which should have covered her nakedness.</para>
+  <para style="q1"><verse number="10" style="v" sid="HOS 2:10" />Now I will uncover her lewdness in the sight of her lovers,</para>
+  <para style="q2">and no one will deliver her out of my hand.</para>
+  <para style="q1"><verse number="11" style="v" sid="HOS 2:11" />I will also cause all her celebrations to cease:</para>
+  <para style="q2">her feasts, her new moons, her Sabbaths, and all her solemn assemblies.</para>
+  <para style="q1"><verse number="12" style="v" sid="HOS 2:12" />I will lay waste her vines and her fig trees,</para>
+  <para style="q2">about which she has said, ‘These are my wages that my lovers have given me,’</para>
+  <para style="q2">and I will make them a forest,</para>
+  <para style="q2">and the animals of the field shall eat them.</para>
+  <para style="q1"><verse number="13" style="v" sid="HOS 2:13" />I will visit on her the days of the Baals,</para>
+  <para style="q2">to which she burned incense</para>
+  <para style="q1">when she decked herself with her earrings and her jewels,</para>
+  <para style="q2">and went after her lovers</para>
+  <para style="q2">and forgot me,” says Yahweh.</para>
+  <para style="q1"><verse number="14" style="v" sid="HOS 2:14" />“Therefore behold, I will allure her,</para>
+  <para style="q2">and bring her into the wilderness,</para>
+  <para style="q2">and speak tenderly to her.</para>
+  <para style="q1"><verse number="15" style="v" sid="HOS 2:15" />I will give her vineyards from there,</para>
+  <para style="q2">and the valley of Achor for a door of hope;</para>
+  <para style="q1">and she will respond there</para>
+  <para style="q2">as in the days of her youth,</para>
+  <para style="q2">and as in the day when she came up out of the land of Egypt.</para>
+  <para style="q1"><verse number="16" style="v" sid="HOS 2:16" />It will be in that day,” says Yahweh,</para>
+  <para style="q2">“that you will call me ‘my husband,’</para>
+  <para style="q2">and no longer call me ‘my master.’</para>
+  <para style="q1"><verse number="17" style="v" sid="HOS 2:17" />For I will take away the names of the Baals out of her mouth,</para>
+  <para style="q2">and they will no longer be mentioned by name.</para>
+  <para style="q1"><verse number="18" style="v" sid="HOS 2:18" />In that day I will make a covenant for them with the animals of the field,</para>
+  <para style="q2">and with the birds of the sky,</para>
+  <para style="q2">and with the creeping things of the ground.</para>
+  <para style="q1">I will break the bow, the sword, and the battle out of the land,</para>
+  <para style="q2">and will make them lie down safely.</para>
+  <para style="q1"><verse number="19" style="v" sid="HOS 2:19" />I will betroth you to me forever.</para>
+  <para style="q2">Yes, I will betroth you to me in righteousness, in justice, in loving kindness, and in compassion.</para>
+  <para style="q1"><verse number="20" style="v" sid="HOS 2:20" />I will even betroth you to me in faithfulness;</para>
+  <para style="q2">and you shall know Yahweh.</para>
+  <para style="q1"><verse number="21" style="v" sid="HOS 2:21" />It will happen in that day, that I will respond,” says Yahweh.</para>
+  <para style="q2">“I will respond to the heavens,</para>
+  <para style="q2">and they will respond to the earth;</para>
+  <para style="q2"><verse number="22" style="v" sid="HOS 2:22" />and the earth will respond to the grain, and the new wine, and the oil;</para>
+  <para style="q2">and they will respond to Jezreel.</para>
+  <para style="q1"><verse number="23" style="v" sid="HOS 2:23" />I will sow her to me in the earth;</para>
+  <para style="q2">and I will have mercy on her who had not obtained mercy;</para>
+  <para style="q2">and I will tell those who were not my people, ‘You are my people;’</para>
+  <para style="q2">and they will say, ‘You are My God!’”</para>
+  <chapter number="3" style="c" sid="HOS 3" />
+  <para style="p"><verse number="1" style="v" sid="HOS 3:1" />Yahweh said to me, “Go again, love a woman loved by another, and an adulteress, even as Yahweh loves the children of Israel, though they turn to other gods, and love cakes of raisins.”</para>
+  <para style="p"><verse number="2" style="v" sid="HOS 3:2" />So I bought her for myself for fifteen pieces of silver and a homer<note style="f" caller="+"><char style="fr">3:2</char><char style="ft">1 homer is about 220 liters or 6 bushels</char></note> and a half of barley.  
+<verse number="3" style="v" sid="HOS 3:3" />I said to her, “You shall stay with me many days. You shall not play the prostitute, and you shall not be with any other man. I will also be so toward you.”</para>
+  <para style="p"><verse number="4" style="v" sid="HOS 3:4" />For the children of Israel shall live many days without king, without prince, without sacrifice, without sacred stone, and without ephod or idols.  
+<verse number="5" style="v" sid="HOS 3:5" />Afterward the children of Israel shall return and seek Yahweh their God, and David their king, and shall come with trembling to Yahweh and to his blessings in the last days.</para>
+  <chapter number="4" style="c" sid="HOS 4" />
+  <para style="p"><verse number="1" style="v" sid="HOS 4:1" />Hear Yahweh’s word, you children of Israel,</para>
+  <para style="q2">for Yahweh has a charge against the inhabitants of the land:</para>
+  <para style="q1">“Indeed there is no truth, nor goodness,</para>
+  <para style="q2">nor knowledge of God in the land.</para>
+  <para style="q1"><verse number="2" style="v" sid="HOS 4:2" />There is cursing, lying, murder, stealing, and committing adultery;</para>
+  <para style="q2">they break boundaries, and bloodshed causes bloodshed.</para>
+  <para style="q1"><verse number="3" style="v" sid="HOS 4:3" />Therefore the land will mourn,</para>
+  <para style="q2">and everyone who dwells in it will waste away,</para>
+  <para style="q1">with all living things in her,</para>
+  <para style="q2">even the animals of the field and the birds of the sky;</para>
+  <para style="q2">yes, the fish of the sea also die.</para>
+  <para style="b" />
+  <para style="q1"><verse number="4" style="v" sid="HOS 4:4" />“Yet let no man bring a charge, neither let any man accuse;</para>
+  <para style="q2">for your people are like those who bring charges against a priest.</para>
+  <para style="q1"><verse number="5" style="v" sid="HOS 4:5" />You will stumble in the day,</para>
+  <para style="q2">and the prophet will also stumble with you in the night;</para>
+  <para style="q2">and I will destroy your mother.</para>
+  <para style="q1"><verse number="6" style="v" sid="HOS 4:6" />My people are destroyed for lack of knowledge.</para>
+  <para style="q2">Because you have rejected knowledge, I will also reject you,</para>
+  <para style="q2">that you may be no priest to me.</para>
+  <para style="q1">Because you have forgotten your God’s law,</para>
+  <para style="q2">I will also forget your children.</para>
+  <para style="q1"><verse number="7" style="v" sid="HOS 4:7" />As they were multiplied, so they sinned against me.</para>
+  <para style="q2">I will change their glory into shame.</para>
+  <para style="q1"><verse number="8" style="v" sid="HOS 4:8" />They feed on the sin of my people,</para>
+  <para style="q2">and set their heart on their iniquity.</para>
+  <para style="q1"><verse number="9" style="v" sid="HOS 4:9" />It will be like people, like priest;</para>
+  <para style="q2">and I will punish them for their ways,</para>
+  <para style="q2">and will repay them for their deeds.</para>
+  <para style="q1"><verse number="10" style="v" sid="HOS 4:10" />They will eat, and not have enough.</para>
+  <para style="q2">They will play the prostitute, and will not increase;</para>
+  <para style="q2">because they have abandoned listening to Yahweh.</para>
+  <para style="q1"><verse number="11" style="v" sid="HOS 4:11" />Prostitution, wine, and new wine take away understanding.</para>
+  <para style="q2"><verse number="12" style="v" sid="HOS 4:12" />My people consult with their wooden idol,</para>
+  <para style="q2">and answer to a stick of wood.</para>
+  <para style="q1">Indeed the spirit of prostitution has led them astray,</para>
+  <para style="q2">and they have been unfaithful to their God.</para>
+  <para style="q1"><verse number="13" style="v" sid="HOS 4:13" />They sacrifice on the tops of the mountains,</para>
+  <para style="q2">and burn incense on the hills, under oaks, poplars, and terebinths,</para>
+  <para style="q2">because its shade is good.</para>
+  <para style="q1">Therefore your daughters play the prostitute,</para>
+  <para style="q2">and your brides commit adultery.</para>
+  <para style="q1"><verse number="14" style="v" sid="HOS 4:14" />I will not punish your daughters when they play the prostitute,</para>
+  <para style="q2">nor your brides when they commit adultery;</para>
+  <para style="q1">because the men consort with prostitutes,</para>
+  <para style="q2">and they sacrifice with the shrine prostitutes;</para>
+  <para style="q2">so the people without understanding will come to ruin.</para>
+  <para style="b" />
+  <para style="q1"><verse number="15" style="v" sid="HOS 4:15" />“Though you, Israel, play the prostitute,</para>
+  <para style="q2">yet don’t let Judah offend;</para>
+  <para style="q2">and don’t come to Gilgal,</para>
+  <para style="q2">neither go up to Beth Aven,</para>
+  <para style="q2">nor swear, ‘As Yahweh lives.’</para>
+  <para style="q1"><verse number="16" style="v" sid="HOS 4:16" />For Israel has behaved extremely stubbornly, like a stubborn heifer.</para>
+  <para style="q2">Then how will Yahweh feed them like a lamb in a meadow?</para>
+  <para style="q1"><verse number="17" style="v" sid="HOS 4:17" />Ephraim is joined to idols.</para>
+  <para style="q2">Leave him alone!</para>
+  <para style="q1"><verse number="18" style="v" sid="HOS 4:18" />Their drink has become sour.</para>
+  <para style="q2">They play the prostitute continually.</para>
+  <para style="q2">Her rulers dearly love their shameful way.</para>
+  <para style="q1"><verse number="19" style="v" sid="HOS 4:19" />The wind has wrapped her up in its wings;</para>
+  <para style="q2">and they shall be disappointed because of their sacrifices.</para>
+  <para style="b" />
+  <chapter number="5" style="c" sid="HOS 5" />
+  <para style="p"><verse number="1" style="v" sid="HOS 5:1" />“Listen to this, you priests!</para>
+  <para style="q2">Listen, house of Israel,</para>
+  <para style="q2">and give ear, house of the king!</para>
+  <para style="q1">For the judgment is against you;</para>
+  <para style="q2">for you have been a snare at Mizpah,</para>
+  <para style="q2">and a net spread on Tabor.</para>
+  <para style="q1"><verse number="2" style="v" sid="HOS 5:2" />The rebels are deep in slaughter,</para>
+  <para style="q2">but I discipline all of them.</para>
+  <para style="q1"><verse number="3" style="v" sid="HOS 5:3" />I know Ephraim,</para>
+  <para style="q2">and Israel is not hidden from me;</para>
+  <para style="q1">for now, Ephraim, you have played the prostitute.</para>
+  <para style="q2">Israel is defiled.</para>
+  <para style="q1"><verse number="4" style="v" sid="HOS 5:4" />Their deeds won’t allow them to turn to their God,</para>
+  <para style="q2">for the spirit of prostitution is within them,</para>
+  <para style="q2">and they don’t know Yahweh.</para>
+  <para style="q1"><verse number="5" style="v" sid="HOS 5:5" />The pride of Israel testifies to his face.</para>
+  <para style="q2">Therefore Israel and Ephraim will stumble in their iniquity.</para>
+  <para style="q2">Judah also will stumble with them.</para>
+  <para style="q1"><verse number="6" style="v" sid="HOS 5:6" />They will go with their flocks and with their herds to seek Yahweh,</para>
+  <para style="q2">but they won’t find him.</para>
+  <para style="q2">He has withdrawn himself from them.</para>
+  <para style="q1"><verse number="7" style="v" sid="HOS 5:7" />They are unfaithful to Yahweh;</para>
+  <para style="q2">for they have borne illegitimate children.</para>
+  <para style="q2">Now the new moon will devour them with their fields.</para>
+  <para style="b" />
+  <para style="q1"><verse number="8" style="v" sid="HOS 5:8" />“Blow the cornet in Gibeah,</para>
+  <para style="q2">and the trumpet in Ramah!</para>
+  <para style="q2">Sound a battle cry at Beth Aven, behind you, Benjamin!</para>
+  <para style="q1"><verse number="9" style="v" sid="HOS 5:9" />Ephraim will become a desolation in the day of rebuke.</para>
+  <para style="q2">Among the tribes of Israel, I have made known that which will surely be.</para>
+  <para style="q1"><verse number="10" style="v" sid="HOS 5:10" />The princes of Judah are like those who remove a landmark.</para>
+  <para style="q2">I will pour out my wrath on them like water.</para>
+  <para style="q1"><verse number="11" style="v" sid="HOS 5:11" />Ephraim is oppressed,</para>
+  <para style="q2">he is crushed in judgment,</para>
+  <para style="q2">because he is intent in his pursuit of idols.</para>
+  <para style="q1"><verse number="12" style="v" sid="HOS 5:12" />Therefore I am to Ephraim like a moth,</para>
+  <para style="q2">and to the house of Judah like rottenness.</para>
+  <para style="b" />
+  <para style="q1"><verse number="13" style="v" sid="HOS 5:13" />“When Ephraim saw his sickness,</para>
+  <para style="q2">and Judah his wound,</para>
+  <para style="q2">then Ephraim went to Assyria,</para>
+  <para style="q2">and sent to King Jareb:</para>
+  <para style="q1">but he is not able to heal you,</para>
+  <para style="q2">neither will he cure you of your wound.</para>
+  <para style="q1"><verse number="14" style="v" sid="HOS 5:14" />For I will be to Ephraim like a lion,</para>
+  <para style="q2">and like a young lion to the house of Judah.</para>
+  <para style="q1">I myself will tear in pieces and go away.</para>
+  <para style="q2">I will carry off, and there will be no one to deliver.</para>
+  <para style="q1"><verse number="15" style="v" sid="HOS 5:15" />I will go and return to my place,</para>
+  <para style="q2">until they acknowledge their offense,</para>
+  <para style="q2">and seek my face.</para>
+  <para style="q2">In their affliction they will seek me earnestly.”</para>
+  <para style="b" />
+  <chapter number="6" style="c" sid="HOS 6" />
+  <para style="p"><verse number="1" style="v" sid="HOS 6:1" />“Come! Let’s return to Yahweh;</para>
+  <para style="q2">for he has torn us to pieces,</para>
+  <para style="q2">and he will heal us;</para>
+  <para style="q1">he has injured us,</para>
+  <para style="q2">and he will bind up our wounds.</para>
+  <para style="q1"><verse number="2" style="v" sid="HOS 6:2" />After two days he will revive us.</para>
+  <para style="q2">On the third day he will raise us up,</para>
+  <para style="q2">and we will live before him.</para>
+  <para style="q1"><verse number="3" style="v" sid="HOS 6:3" />Let’s acknowledge Yahweh.</para>
+  <para style="q2">Let’s press on to know Yahweh.</para>
+  <para style="q1">As surely as the sun rises,</para>
+  <para style="q2">Yahweh will appear.</para>
+  <para style="q1">He will come to us like the rain,</para>
+  <para style="q2">like the spring rain that waters the earth.”</para>
+  <para style="b" />
+  <para style="q1"><verse number="4" style="v" sid="HOS 6:4" />“Ephraim, what shall I do to you?</para>
+  <para style="q2">Judah, what shall I do to you?</para>
+  <para style="q2">For your love is like a morning cloud,</para>
+  <para style="q2">and like the dew that disappears early.</para>
+  <para style="q1"><verse number="5" style="v" sid="HOS 6:5" />Therefore I have cut them to pieces with the prophets;</para>
+  <para style="q2">I killed them with the words of my mouth.</para>
+  <para style="q2">Your judgments are like a flash of lightning.</para>
+  <para style="q1"><verse number="6" style="v" sid="HOS 6:6" />For I desire mercy, and not sacrifice;</para>
+  <para style="q2">and the knowledge of God more than burnt offerings.</para>
+  <para style="q1"><verse number="7" style="v" sid="HOS 6:7" />But they, like Adam, have broken the covenant.</para>
+  <para style="q2">They were unfaithful to me there.</para>
+  <para style="q1"><verse number="8" style="v" sid="HOS 6:8" />Gilead is a city of those who work iniquity;</para>
+  <para style="q2">it is stained with blood.</para>
+  <para style="q1"><verse number="9" style="v" sid="HOS 6:9" />As gangs of robbers wait to ambush a man,</para>
+  <para style="q2">so the company of priests murder on the path toward Shechem,</para>
+  <para style="q2">committing shameful crimes.</para>
+  <para style="q1"><verse number="10" style="v" sid="HOS 6:10" />In the house of Israel I have seen a horrible thing.</para>
+  <para style="q2">There is prostitution in Ephraim.</para>
+  <para style="q2">Israel is defiled.</para>
+  <para style="b" />
+  <para style="q1"><verse number="11" style="v" sid="HOS 6:11" />“Also, Judah, there is a harvest appointed for you,</para>
+  <para style="q2">when I restore the fortunes of my people.</para>
+  <chapter number="7" style="c" sid="HOS 7" />
+  <para style="p"><verse number="1" style="v" sid="HOS 7:1" />When I would heal Israel,</para>
+  <para style="q2">then the iniquity of Ephraim is uncovered,</para>
+  <para style="q2">also the wickedness of Samaria;</para>
+  <para style="q2">for they commit falsehood,</para>
+  <para style="q2">and the thief enters in,</para>
+  <para style="q2">and the gang of robbers ravages outside.</para>
+  <para style="q1"><verse number="2" style="v" sid="HOS 7:2" />They don’t consider in their hearts that I remember all their wickedness.</para>
+  <para style="q2">Now their own deeds have engulfed them.</para>
+  <para style="q2">They are before my face.</para>
+  <para style="q1"><verse number="3" style="v" sid="HOS 7:3" />They make the king glad with their wickedness,</para>
+  <para style="q2">and the princes with their lies.</para>
+  <para style="q1"><verse number="4" style="v" sid="HOS 7:4" />They are all adulterers.</para>
+  <para style="q2">They are burning like an oven that the baker stops stirring,</para>
+  <para style="q2">from the kneading of the dough, until it is leavened.</para>
+  <para style="q1"><verse number="5" style="v" sid="HOS 7:5" />On the day of our king, the princes made themselves sick with the heat of wine.</para>
+  <para style="q2">He joined his hand with mockers.</para>
+  <para style="q1"><verse number="6" style="v" sid="HOS 7:6" />For they have prepared their heart like an oven,</para>
+  <para style="q2">while they lie in wait.</para>
+  <para style="q2">Their anger smolders all night.</para>
+  <para style="q2">In the morning it burns as a flaming fire.</para>
+  <para style="q1"><verse number="7" style="v" sid="HOS 7:7" />They are all hot as an oven,</para>
+  <para style="q2">and devour their judges.</para>
+  <para style="q1">All their kings have fallen.</para>
+  <para style="q2">There is no one among them who calls to me.</para>
+  <para style="q1"><verse number="8" style="v" sid="HOS 7:8" />Ephraim mixes himself among the nations.</para>
+  <para style="q2">Ephraim is a pancake not turned over.</para>
+  <para style="q1"><verse number="9" style="v" sid="HOS 7:9" />Strangers have devoured his strength,</para>
+  <para style="q2">and he doesn’t realize it.</para>
+  <para style="q1">Indeed, gray hairs are here and there on him,</para>
+  <para style="q2">and he doesn’t realize it.</para>
+  <para style="q1"><verse number="10" style="v" sid="HOS 7:10" />The pride of Israel testifies to his face;</para>
+  <para style="q2">yet they haven’t returned to Yahweh their God,</para>
+  <para style="q2">nor sought him, for all this.</para>
+  <para style="b" />
+  <para style="q1"><verse number="11" style="v" sid="HOS 7:11" />“Ephraim is like an easily deceived dove, without understanding.</para>
+  <para style="q2">They call to Egypt.</para>
+  <para style="q2">They go to Assyria.</para>
+  <para style="q1"><verse number="12" style="v" sid="HOS 7:12" />When they go, I will spread my net on them.</para>
+  <para style="q2">I will bring them down like the birds of the sky.</para>
+  <para style="q2">I will chastise them, as their congregation has heard.</para>
+  <para style="q1"><verse number="13" style="v" sid="HOS 7:13" />Woe to them!</para>
+  <para style="q2">For they have wandered from me.</para>
+  <para style="q1">Destruction to them!</para>
+  <para style="q2">For they have trespassed against me.</para>
+  <para style="q1">Though I would redeem them,</para>
+  <para style="q2">yet they have spoken lies against me.</para>
+  <para style="q1"><verse number="14" style="v" sid="HOS 7:14" />They haven’t cried to me with their heart,</para>
+  <para style="q2">but they howl on their beds.</para>
+  <para style="q1">They assemble themselves for grain and new wine.</para>
+  <para style="q2">They turn away from me.</para>
+  <para style="q1"><verse number="15" style="v" sid="HOS 7:15" />Though I have taught and strengthened their arms,</para>
+  <para style="q2">yet they plot evil against me.</para>
+  <para style="q1"><verse number="16" style="v" sid="HOS 7:16" />They return, but not to the Most High.</para>
+  <para style="q2">They are like a faulty bow.</para>
+  <para style="q2">Their princes will fall by the sword for the rage of their tongue.</para>
+  <para style="q2">This will be their derision in the land of Egypt.</para>
+  <para style="b" />
+  <chapter number="8" style="c" sid="HOS 8" />
+  <para style="p"><verse number="1" style="v" sid="HOS 8:1" />“Put the trumpet to your lips!</para>
+  <para style="q2">Something like an eagle is over Yahweh’s house,</para>
+  <para style="q2">because they have broken my covenant</para>
+  <para style="q2">and rebelled against my law.</para>
+  <para style="q1"><verse number="2" style="v" sid="HOS 8:2" />They cry to me, ‘My God, we, Israel, acknowledge you!’</para>
+  <para style="q2"><verse number="3" style="v" sid="HOS 8:3" />Israel has cast off that which is good.</para>
+  <para style="q2">The enemy will pursue him.</para>
+  <para style="q1"><verse number="4" style="v" sid="HOS 8:4" />They have set up kings, but not by me.</para>
+  <para style="q2">They have made princes, and I didn’t approve.</para>
+  <para style="q2">Of their silver and their gold they have made themselves idols,</para>
+  <para style="q2">that they may be cut off.</para>
+  <para style="q1"><verse number="5" style="v" sid="HOS 8:5" />Let Samaria throw out his calf idol!</para>
+  <para style="q2">My anger burns against them!</para>
+  <para style="q2">How long will it be until they are capable of purity?</para>
+  <para style="q1"><verse number="6" style="v" sid="HOS 8:6" />For this is even from Israel!</para>
+  <para style="q2">The workman made it, and it is no God;</para>
+  <para style="q2">indeed, the calf of Samaria shall be broken in pieces.</para>
+  <para style="q1"><verse number="7" style="v" sid="HOS 8:7" />For they sow the wind,</para>
+  <para style="q2">and they will reap the whirlwind.</para>
+  <para style="q1">He has no standing grain.</para>
+  <para style="q2">The stalk will yield no head.</para>
+  <para style="q2">If it does yield, strangers will swallow it up.</para>
+  <para style="q1"><verse number="8" style="v" sid="HOS 8:8" />Israel is swallowed up.</para>
+  <para style="q2">Now they are among the nations like a worthless thing.</para>
+  <para style="q1"><verse number="9" style="v" sid="HOS 8:9" />For they have gone up to Assyria,</para>
+  <para style="q2">like a wild donkey wandering alone.</para>
+  <para style="q2">Ephraim has hired lovers for himself.</para>
+  <para style="q1"><verse number="10" style="v" sid="HOS 8:10" />But although they sold themselves among the nations,</para>
+  <para style="q2">I will now gather them;</para>
+  <para style="q2">and they begin to waste away because of the oppression of the king of mighty ones.</para>
+  <para style="q1"><verse number="11" style="v" sid="HOS 8:11" />Because Ephraim has multiplied altars for sinning,</para>
+  <para style="q2">they became for him altars for sinning.</para>
+  <para style="q1"><verse number="12" style="v" sid="HOS 8:12" />I wrote for him the many things of my law,</para>
+  <para style="q2">but they were regarded as a strange thing.</para>
+  <para style="q1"><verse number="13" style="v" sid="HOS 8:13" />As for the sacrifices of my offerings,</para>
+  <para style="q2">they sacrifice meat and eat it,</para>
+  <para style="q2">but Yahweh doesn’t accept them.</para>
+  <para style="q1">Now he will remember their iniquity,</para>
+  <para style="q2">and punish their sins.</para>
+  <para style="q2">They will return to Egypt.</para>
+  <para style="q1"><verse number="14" style="v" sid="HOS 8:14" />For Israel has forgotten his Maker and built palaces;</para>
+  <para style="q2">and Judah has multiplied fortified cities;</para>
+  <para style="q2">but I will send a fire on his cities,</para>
+  <para style="q2">and it will devour its fortresses.”</para>
+  <para style="b" />
+  <chapter number="9" style="c" sid="HOS 9" />
+  <para style="p"><verse number="1" style="v" sid="HOS 9:1" />Don’t rejoice, Israel, to jubilation like the nations;</para>
+  <para style="q2">for you were unfaithful to your God.</para>
+  <para style="q2">You love the wages of a prostitute at every grain threshing floor.</para>
+  <para style="q1"><verse number="2" style="v" sid="HOS 9:2" />The threshing floor and the wine press won’t feed them,</para>
+  <para style="q2">and the new wine will fail her.</para>
+  <para style="q1"><verse number="3" style="v" sid="HOS 9:3" />They won’t dwell in Yahweh’s land;</para>
+  <para style="q2">but Ephraim will return to Egypt,</para>
+  <para style="q2">and they will eat unclean food in Assyria.</para>
+  <para style="q1"><verse number="4" style="v" sid="HOS 9:4" />They won’t pour out wine offerings to Yahweh,</para>
+  <para style="q2">neither will they be pleasing to him.</para>
+  <para style="q2">Their sacrifices will be to them like the bread of mourners;</para>
+  <para style="q2">all who eat of it will be polluted;</para>
+  <para style="q2">for their bread will be for their appetite.</para>
+  <para style="q2">It will not come into Yahweh’s house.</para>
+  <para style="q1"><verse number="5" style="v" sid="HOS 9:5" />What will you do in the day of solemn assembly,</para>
+  <para style="q2">and in the day of the feast of Yahweh?</para>
+  <para style="q1"><verse number="6" style="v" sid="HOS 9:6" />For, behold, when they flee destruction,</para>
+  <para style="q2">Egypt will gather them up.</para>
+  <para style="q2">Memphis will bury them.</para>
+  <para style="q2">Nettles will possess their pleasant things of silver.</para>
+  <para style="q2">Thorns will be in their tents.</para>
+  <para style="q1"><verse number="7" style="v" sid="HOS 9:7" />The days of visitation have come.</para>
+  <para style="q2">The days of reckoning have come.</para>
+  <para style="q1">Israel will consider the prophet to be a fool,</para>
+  <para style="q2">and the man who is inspired to be insane,</para>
+  <para style="q2">because of the abundance of your sins,</para>
+  <para style="q2">and because your hostility is great.</para>
+  <para style="q1"><verse number="8" style="v" sid="HOS 9:8" />A prophet watches over Ephraim with my God.</para>
+  <para style="q2">A fowler’s snare is on all of his paths,</para>
+  <para style="q2">and hostility in the house of his God.</para>
+  <para style="q1"><verse number="9" style="v" sid="HOS 9:9" />They have deeply corrupted themselves,</para>
+  <para style="q2">as in the days of Gibeah.</para>
+  <para style="q2">He will remember their iniquity.</para>
+  <para style="q2">He will punish them for their sins.</para>
+  <para style="q1"><verse number="10" style="v" sid="HOS 9:10" />I found Israel like grapes in the wilderness.</para>
+  <para style="q2">I saw your fathers as the first ripe in the fig tree at its first season;</para>
+  <para style="q2">but they came to Baal Peor, and consecrated themselves to the shameful thing,</para>
+  <para style="q2">and became abominable like that which they loved.</para>
+  <para style="q1"><verse number="11" style="v" sid="HOS 9:11" />As for Ephraim, their glory will fly away like a bird.</para>
+  <para style="q2">There will be no birth, no one with child, and no conception.</para>
+  <para style="q1"><verse number="12" style="v" sid="HOS 9:12" />Though they bring up their children,</para>
+  <para style="q2">yet I will bereave them, so that not a man shall be left.</para>
+  <para style="q2">Indeed, woe also to them when I depart from them!</para>
+  <para style="q1"><verse number="13" style="v" sid="HOS 9:13" />I have seen Ephraim, like Tyre, planted in a pleasant place;</para>
+  <para style="q2">but Ephraim will bring out his children to the murderer.</para>
+  <para style="q1"><verse number="14" style="v" sid="HOS 9:14" />Give them—Yahweh what will you give?</para>
+  <para style="q2">Give them a miscarrying womb and dry breasts.</para>
+  <para style="b" />
+  <para style="q1"><verse number="15" style="v" sid="HOS 9:15" />“All their wickedness is in Gilgal;</para>
+  <para style="q2">for there I hated them.</para>
+  <para style="q2">Because of the wickedness of their deeds, I will drive them out of my house!</para>
+  <para style="q2">I will love them no more.</para>
+  <para style="q2">All their princes are rebels.</para>
+  <para style="q1"><verse number="16" style="v" sid="HOS 9:16" />Ephraim is struck.</para>
+  <para style="q2">Their root has dried up.</para>
+  <para style="q2">They will bear no fruit.</para>
+  <para style="q2">Even though they give birth, yet I will kill the beloved ones of their womb.”</para>
+  <para style="b" />
+  <para style="q1"><verse number="17" style="v" sid="HOS 9:17" />My God will cast them away, because they didn’t listen to him;</para>
+  <para style="q2">and they will be wanderers among the nations.</para>
+  <chapter number="10" style="c" sid="HOS 10" />
+  <para style="p"><verse number="1" style="v" sid="HOS 10:1" />Israel is a luxuriant vine that produces his fruit.</para>
+  <para style="q2">According to the abundance of his fruit he has multiplied his altars.</para>
+  <para style="q2">As their land has prospered, they have adorned their sacred stones.</para>
+  <para style="q1"><verse number="2" style="v" sid="HOS 10:2" />Their heart is divided.</para>
+  <para style="q2">Now they will be found guilty.</para>
+  <para style="q2">He will demolish their altars.</para>
+  <para style="q2">He will destroy their sacred stones.</para>
+  <para style="q1"><verse number="3" style="v" sid="HOS 10:3" />Surely now they will say, “We have no king; for we don’t fear Yahweh;</para>
+  <para style="q2">and the king, what can he do for us?”</para>
+  <para style="q1"><verse number="4" style="v" sid="HOS 10:4" />They make promises, swearing falsely in making covenants.</para>
+  <para style="q2">Therefore judgment springs up like poisonous weeds in the furrows of the field.</para>
+  <para style="q1"><verse number="5" style="v" sid="HOS 10:5" />The inhabitants of Samaria will be in terror for the calves of Beth Aven,</para>
+  <para style="q2">for its people will mourn over it,</para>
+  <para style="q2">along with its priests who rejoiced over it,</para>
+  <para style="q2">for its glory, because it has departed from it.</para>
+  <para style="q1"><verse number="6" style="v" sid="HOS 10:6" />It also will be carried to Assyria for a present to a great king.</para>
+  <para style="q2">Ephraim will receive shame,</para>
+  <para style="q2">and Israel will be ashamed of his own counsel.</para>
+  <para style="q1"><verse number="7" style="v" sid="HOS 10:7" />Samaria and her king float away</para>
+  <para style="q2">like a twig on the water.</para>
+  <para style="q1"><verse number="8" style="v" sid="HOS 10:8" />The high places also of Aven, the sin of Israel, will be destroyed.</para>
+  <para style="q2">The thorn and the thistle will come up on their altars.</para>
+  <para style="q2">They will tell the mountains, “Cover us!” and the hills, “Fall on us!”</para>
+  <para style="b" />
+  <para style="q1"><verse number="9" style="v" sid="HOS 10:9" />“Israel, you have sinned from the days of Gibeah.</para>
+  <para style="q2">There they remained.</para>
+  <para style="q2">The battle against the children of iniquity doesn’t overtake them in Gibeah.</para>
+  <para style="q1"><verse number="10" style="v" sid="HOS 10:10" />When it is my desire, I will chastise them;</para>
+  <para style="q2">and the nations will be gathered against them</para>
+  <para style="q2">when they are bound to their two transgressions.</para>
+  <para style="q1"><verse number="11" style="v" sid="HOS 10:11" />Ephraim is a trained heifer that loves to thresh,</para>
+  <para style="q2">so I will put a yoke on her beautiful neck.</para>
+  <para style="q2">I will set a rider on Ephraim.</para>
+  <para style="q2">Judah will plow.</para>
+  <para style="q2">Jacob will break his clods.</para>
+  <para style="q1"><verse number="12" style="v" sid="HOS 10:12" />Sow to yourselves in righteousness,</para>
+  <para style="q2">reap according to kindness.</para>
+  <para style="q1">Break up your fallow ground,</para>
+  <para style="q2">for it is time to seek Yahweh,</para>
+  <para style="q2">until he comes and rains righteousness on you.</para>
+  <para style="q1"><verse number="13" style="v" sid="HOS 10:13" />You have plowed wickedness.</para>
+  <para style="q2">You have reaped iniquity.</para>
+  <para style="q2">You have eaten the fruit of lies,</para>
+  <para style="q2">for you trusted in your way, in the multitude of your mighty men.</para>
+  <para style="q1"><verse number="14" style="v" sid="HOS 10:14" />Therefore a battle roar will arise among your people,</para>
+  <para style="q2">and all your fortresses will be destroyed,</para>
+  <para style="q2">as Shalman destroyed Beth Arbel in the day of battle.</para>
+  <para style="q2">The mother was dashed in pieces with her children.</para>
+  <para style="q1"><verse number="15" style="v" sid="HOS 10:15" />So Bethel will do to you because of your great wickedness.</para>
+  <para style="q2">At daybreak the king of Israel will be destroyed.</para>
+  <para style="b" />
+  <chapter number="11" style="c" sid="HOS 11" />
+  <para style="p"><verse number="1" style="v" sid="HOS 11:1" />“When Israel was a child, then I loved him,</para>
+  <para style="q2">and called my son out of Egypt.</para>
+  <para style="q1"><verse number="2" style="v" sid="HOS 11:2" />They called to them, so they went from them.</para>
+  <para style="q2">They sacrificed to the Baals,</para>
+  <para style="q2">and burned incense to engraved images.</para>
+  <para style="q1"><verse number="3" style="v" sid="HOS 11:3" />Yet I taught Ephraim to walk.</para>
+  <para style="q2">I took them by their arms,</para>
+  <para style="q2">but they didn’t know that I healed them.</para>
+  <para style="q1"><verse number="4" style="v" sid="HOS 11:4" />I drew them with cords of a man, with ties of love;</para>
+  <para style="q2">and I was to them like those who lift up the yoke on their necks;</para>
+  <para style="q2">and I bent down to him and I fed him.</para>
+  <para style="b" />
+  <para style="q1"><verse number="5" style="v" sid="HOS 11:5" />“They won’t return into the land of Egypt;</para>
+  <para style="q2">but the Assyrian will be their king,</para>
+  <para style="q2">because they refused to repent.</para>
+  <para style="q1"><verse number="6" style="v" sid="HOS 11:6" />The sword will fall on their cities,</para>
+  <para style="q2">and will destroy the bars of their gates,</para>
+  <para style="q2">and will put an end to their plans.</para>
+  <para style="q1"><verse number="7" style="v" sid="HOS 11:7" />My people are determined to turn from me.</para>
+  <para style="q2">Though they call to the Most High,</para>
+  <para style="q2">he certainly won’t exalt them.</para>
+  <para style="b" />
+  <para style="q1"><verse number="8" style="v" sid="HOS 11:8" />“How can I give you up, Ephraim?</para>
+  <para style="q2">How can I hand you over, Israel?</para>
+  <para style="q2">How can I make you like Admah?</para>
+  <para style="q2">How can I make you like Zeboiim?</para>
+  <para style="q1">My heart is turned within me,</para>
+  <para style="q2">my compassion is aroused.</para>
+  <para style="q1"><verse number="9" style="v" sid="HOS 11:9" />I will not execute the fierceness of my anger.</para>
+  <para style="q2">I will not return to destroy Ephraim,</para>
+  <para style="q2">for I am God, and not man—the Holy One among you.</para>
+  <para style="q2">I will not come in wrath.</para>
+  <para style="q1"><verse number="10" style="v" sid="HOS 11:10" />They will walk after Yahweh,</para>
+  <para style="q2">who will roar like a lion;</para>
+  <para style="q2">for he will roar, and the children will come trembling from the west.</para>
+  <para style="q1"><verse number="11" style="v" sid="HOS 11:11" />They will come trembling like a bird out of Egypt,</para>
+  <para style="q2">and like a dove out of the land of Assyria;</para>
+  <para style="q1">and I will settle them in their houses,” says Yahweh.</para>
+  <para style="b" />
+  <para style="q1"><verse number="12" style="v" sid="HOS 11:12" />Ephraim surrounds me with falsehood,</para>
+  <para style="q2">and the house of Israel with deceit.</para>
+  <para style="q2">Judah still strays from God,</para>
+  <para style="q2">and is unfaithful to the Holy One.</para>
+  <chapter number="12" style="c" sid="HOS 12" />
+  <para style="p"><verse number="1" style="v" sid="HOS 12:1" />Ephraim feeds on wind,</para>
+  <para style="q2">and chases the east wind.</para>
+  <para style="q2">He continually multiplies lies and desolation.</para>
+  <para style="q2">They make a covenant with Assyria,</para>
+  <para style="q2">and oil is carried into Egypt.</para>
+  <para style="q1"><verse number="2" style="v" sid="HOS 12:2" />Yahweh also has a controversy with Judah,</para>
+  <para style="q2">and will punish Jacob according to his ways;</para>
+  <para style="q2">according to his deeds he will repay him.</para>
+  <para style="q1"><verse number="3" style="v" sid="HOS 12:3" />In the womb he took his brother by the heel,</para>
+  <para style="q2">and in his manhood he contended with God.</para>
+  <para style="q1"><verse number="4" style="v" sid="HOS 12:4" />Indeed, he struggled with the angel, and prevailed;</para>
+  <para style="q2">he wept, and made supplication to him.</para>
+  <para style="q2">He found him at Bethel, and there he spoke with us—</para>
+  <para style="q2"><verse number="5" style="v" sid="HOS 12:5" />even Yahweh, the God of Armies.</para>
+  <para style="q2">Yahweh is his name of renown!</para>
+  <para style="q1"><verse number="6" style="v" sid="HOS 12:6" />Therefore turn to your God.</para>
+  <para style="q2">Keep kindness and justice,</para>
+  <para style="q2">and wait continually for your God.</para>
+  <para style="b" />
+  <para style="q1"><verse number="7" style="v" sid="HOS 12:7" />A merchant has dishonest scales in his hand.</para>
+  <para style="q2">He loves to defraud.</para>
+  <para style="q1"><verse number="8" style="v" sid="HOS 12:8" />Ephraim said, “Surely I have become rich.</para>
+  <para style="q2">I have found myself wealth.</para>
+  <para style="q2">In all my wealth they won’t find in me any iniquity that is sin.”</para>
+  <para style="b" />
+  <para style="q1"><verse number="9" style="v" sid="HOS 12:9" />“But I am Yahweh your God from the land of Egypt.</para>
+  <para style="q2">I will yet again make you dwell in tents,</para>
+  <para style="q2">as in the days of the solemn feast.</para>
+  <para style="q1"><verse number="10" style="v" sid="HOS 12:10" />I have also spoken to the prophets,</para>
+  <para style="q2">and I have multiplied visions;</para>
+  <para style="q2">and by the ministry of the prophets I have used parables.</para>
+  <para style="q1"><verse number="11" style="v" sid="HOS 12:11" />If Gilead is wicked,</para>
+  <para style="q2">surely they are worthless.</para>
+  <para style="q1">In Gilgal they sacrifice bulls.</para>
+  <para style="q2">Indeed, their altars are like heaps in the furrows of the field.</para>
+  <para style="q1"><verse number="12" style="v" sid="HOS 12:12" />Jacob fled into the country of Aram.</para>
+  <para style="q2">Israel served to get a wife.</para>
+  <para style="q2">For a wife he tended flocks and herds.</para>
+  <para style="q1"><verse number="13" style="v" sid="HOS 12:13" />By a prophet Yahweh brought Israel up out of Egypt,</para>
+  <para style="q2">and by a prophet he was preserved.</para>
+  <para style="q1"><verse number="14" style="v" sid="HOS 12:14" />Ephraim has bitterly provoked anger.</para>
+  <para style="q2">Therefore his blood will be left on him,</para>
+  <para style="q2">and his Lord<note style="f" caller="+"><char style="fr">12:14</char><char style="ft">The word translated “Lord” is “Adonai.”</char></note> will repay his contempt.</para>
+  <chapter number="13" style="c" sid="HOS 13" />
+  <para style="p"><verse number="1" style="v" sid="HOS 13:1" />When Ephraim spoke, there was trembling.</para>
+  <para style="q2">He exalted himself in Israel,</para>
+  <para style="q2">but when he became guilty through Baal, he died.</para>
+  <para style="q1"><verse number="2" style="v" sid="HOS 13:2" />Now they sin more and more,</para>
+  <para style="q2">and have made themselves molten images of their silver,</para>
+  <para style="q2">even idols according to their own understanding,</para>
+  <para style="q2">all of them the work of the craftsmen.</para>
+  <para style="q2">They say of them, ‘They offer human sacrifice and kiss the calves.’</para>
+  <para style="q1"><verse number="3" style="v" sid="HOS 13:3" />Therefore they will be like the morning mist,</para>
+  <para style="q2">like the dew that passes away early,</para>
+  <para style="q2">like the chaff that is driven with the whirlwind out of the threshing floor,</para>
+  <para style="q2">and like the smoke out of the chimney.</para>
+  <para style="b" />
+  <para style="q1"><verse number="4" style="v" sid="HOS 13:4" />“Yet I am Yahweh your God from the land of Egypt;</para>
+  <para style="q2">and you shall acknowledge no god but me,</para>
+  <para style="q2">and besides me there is no savior.</para>
+  <para style="q1"><verse number="5" style="v" sid="HOS 13:5" />I knew you in the wilderness,</para>
+  <para style="q2">in the land of great drought.</para>
+  <para style="q1"><verse number="6" style="v" sid="HOS 13:6" />According to their pasture, so were they filled;</para>
+  <para style="q2">they were filled, and their heart was exalted.</para>
+  <para style="q2">Therefore they have forgotten me.</para>
+  <para style="q1"><verse number="7" style="v" sid="HOS 13:7" />Therefore I am like a lion to them.</para>
+  <para style="q2">Like a leopard, I will lurk by the path.</para>
+  <para style="q1"><verse number="8" style="v" sid="HOS 13:8" />I will meet them like a bear that is bereaved of her cubs,</para>
+  <para style="q2">and will tear the covering of their heart.</para>
+  <para style="q2">There I will devour them like a lioness.</para>
+  <para style="q2">The wild animal will tear them.</para>
+  <para style="q1"><verse number="9" style="v" sid="HOS 13:9" />You are destroyed, Israel, because you are against me,</para>
+  <para style="q2">against your helper.</para>
+  <para style="q1"><verse number="10" style="v" sid="HOS 13:10" />Where is your king now, that he may save you in all your cities?</para>
+  <para style="q2">And your judges, of whom you said, ‘Give me a king and princes’?</para>
+  <para style="q1"><verse number="11" style="v" sid="HOS 13:11" />I have given you a king in my anger,</para>
+  <para style="q2">and have taken him away in my wrath.</para>
+  <para style="q1"><verse number="12" style="v" sid="HOS 13:12" />The guilt of Ephraim is stored up.</para>
+  <para style="q2">His sin is stored up.</para>
+  <para style="q1"><verse number="13" style="v" sid="HOS 13:13" />The sorrows of a travailing woman will come on him.</para>
+  <para style="q2">He is an unwise son,</para>
+  <para style="q2">for when it is time, he doesn’t come to the opening of the womb.</para>
+  <para style="q1"><verse number="14" style="v" sid="HOS 13:14" />I will ransom them from the power of Sheol.<note style="f" caller="+"><char style="fr">13:14</char><char style="ft">Sheol is the place of the dead.</char></note></para>
+  <para style="q2">I will redeem them from death!</para>
+  <para style="q2">Death, where are your plagues?</para>
+  <para style="q2">Sheol, where is your destruction?</para>
+  <para style="b" />
+  <para style="q1">“Compassion will be hidden from my eyes.</para>
+  <para style="q2"><verse number="15" style="v" sid="HOS 13:15" />Though he is fruitful among his brothers, an east wind will come,</para>
+  <para style="q2">the breath of Yahweh coming up from the wilderness;</para>
+  <para style="q2">and his spring will become dry,</para>
+  <para style="q2">and his fountain will be dried up.</para>
+  <para style="q2">He will plunder the storehouse of treasure.</para>
+  <para style="q1"><verse number="16" style="v" sid="HOS 13:16" />Samaria will bear her guilt,</para>
+  <para style="q2">for she has rebelled against her God.</para>
+  <para style="q2">They will fall by the sword.</para>
+  <para style="q2">Their infants will be dashed in pieces,</para>
+  <para style="q2">and their pregnant women will be ripped open.”</para>
+  <para style="b" />
+  <chapter number="14" style="c" sid="HOS 14" />
+  <para style="q1"><verse number="1" style="v" sid="HOS 14:1" />Israel, return to Yahweh your God;</para>
+  <para style="q2">for you have fallen because of your sin.</para>
+  <para style="q1"><verse number="2" style="v" sid="HOS 14:2" />Take words with you, and return to Yahweh.</para>
+  <para style="q2">Tell him, “Forgive all our sins,</para>
+  <para style="q2">and accept that which is good;</para>
+  <para style="q2">so we offer bulls as we vowed of our lips.</para>
+  <para style="q1"><verse number="3" style="v" sid="HOS 14:3" />Assyria can’t save us.</para>
+  <para style="q2">We won’t ride on horses;</para>
+  <para style="q2">neither will we say any more to the work of our hands, ‘Our gods!’</para>
+  <para style="q2">for in you the fatherless finds mercy.”</para>
+  <para style="b" />
+  <para style="q1"><verse number="4" style="v" sid="HOS 14:4" />“I will heal their waywardness.</para>
+  <para style="q2">I will love them freely;</para>
+  <para style="q2">for my anger is turned away from them.</para>
+  <para style="q1"><verse number="5" style="v" sid="HOS 14:5" />I will be like the dew to Israel.</para>
+  <para style="q2">He will blossom like the lily,</para>
+  <para style="q2">and send down his roots like Lebanon.</para>
+  <para style="q1"><verse number="6" style="v" sid="HOS 14:6" />His branches will spread,</para>
+  <para style="q2">and his beauty will be like the olive tree,</para>
+  <para style="q2">and his fragrance like Lebanon.</para>
+  <para style="q1"><verse number="7" style="v" sid="HOS 14:7" />Men will dwell in his shade.</para>
+  <para style="q2">They will revive like the grain,</para>
+  <para style="q2">and blossom like the vine.</para>
+  <para style="q2">Their fragrance will be like the wine of Lebanon.</para>
+  <para style="q1"><verse number="8" style="v" sid="HOS 14:8" />Ephraim, what have I to do any more with idols?</para>
+  <para style="q2">I answer, and will take care of him.</para>
+  <para style="q2">I am like a green cypress tree;</para>
+  <para style="q2">from me your fruit is found.”</para>
+  <para style="b" />
+  <para style="q1"><verse number="9" style="v" sid="HOS 14:9" />Who is wise, that he may understand these things?</para>
+  <para style="q2">Who is prudent, that he may know them?</para>
+  <para style="q2">For the ways of Yahweh are right,</para>
+  <para style="q2">and the righteous walk in them,</para>
+  <para style="q2">but the rebellious stumble in them.</para>
+</usx>

@@ -112,19 +112,31 @@ lets-bible-es-push:
 
 # Ingest the BSB Bible text (default translation; run after lets-bible-migrate)
 lets-bible-seed-bsb:
-  docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run seed:bible'
+  docker compose exec lets-bible sh -c 'cd /usr/src/app && TRANSLATION_ATTRIBUTION="Berean Standard Bible — Public Domain" TRANSLATION_ATTRIBUTION_URL="https://berean.bible" pnpm --filter @letschurch/lets.bible run seed:bible'
 
 # Ingest the MSB Bible text (second translation)
 lets-bible-seed-msb:
-  docker compose exec lets-bible sh -c 'cd /usr/src/app && TRANSLATION_ID=MSB TRANSLATION_NAME="Majority Standard Bible" TRANSLATION_IS_DEFAULT=false USX_DIR="$(pwd)/packages/lets.bible/seed/msb/USX_1" pnpm --filter @letschurch/lets.bible run seed:bible'
+  docker compose exec lets-bible sh -c 'cd /usr/src/app && TRANSLATION_ID=MSB TRANSLATION_NAME="Majority Standard Bible" TRANSLATION_IS_DEFAULT=false TRANSLATION_ATTRIBUTION="Majority Standard Bible — Public Domain" TRANSLATION_ATTRIBUTION_URL="https://berean.bible" USX_DIR="$(pwd)/packages/lets.bible/seed/msb/USX_1" pnpm --filter @letschurch/lets.bible run seed:bible'
 
 # Ingest the King James Version (1769, with Strong's + morphology). Source JSON
 # committed under packages/lets.bible/seed/kjv (override the path with KJV_SOURCE).
 lets-bible-seed-kjv:
   docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run seed:kjv'
 
-# Seed all Bible translations (BSB + MSB + KJV) in one step
-lets-bible-seed-bible: lets-bible-seed-bsb lets-bible-seed-msb lets-bible-seed-kjv
+# Ingest the World English Bible (public domain). Reading + footnotes + red-letter
+# only — Strong's are stripped on conversion (eBible's WEB tags are misaligned), so
+# no English word-study; the original-language interlinear comes from STEPBible.
+lets-bible-seed-web:
+  docker compose exec lets-bible sh -c 'cd /usr/src/app && TRANSLATION_ID=WEB TRANSLATION_NAME="World English Bible" TRANSLATION_IS_DEFAULT=false TRANSLATION_ATTRIBUTION="World English Bible — Public Domain (trademark eBible.org)" TRANSLATION_ATTRIBUTION_URL="https://ebible.org/web/" USX_DIR="$(pwd)/packages/lets.bible/seed/web/USX_1" pnpm --filter @letschurch/lets.bible run seed:bible'
+
+# Regenerate the committed WEB USX artifact (seed/web/USX_1) from eBible.org USFM.
+# HOST-only; downloads USFM to seed/.web-usfm (gitignored) and converts (strips the
+# misaligned Strong's, keeps footnotes + red-letter). Run before committing updates.
+lets-bible-build-web-usx:
+  cd packages/lets.bible && ./scripts/web/download-web.sh && pnpm exec tsx scripts/web/build-web-usx.ts
+
+# Seed all Bible translations (BSB + MSB + KJV + WEB) in one step
+lets-bible-seed-bible: lets-bible-seed-bsb lets-bible-seed-msb lets-bible-seed-kjv lets-bible-seed-web
 
 # Seed the Strong's lexicon (translation-agnostic)
 lets-bible-seed-lexicon:

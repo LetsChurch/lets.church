@@ -53,12 +53,17 @@ export function InterlinearControls({
   options,
   onChange,
   parsingAvailable = false,
+  reverseAvailable = true,
 }: {
   options: InterlinearOptions;
   onChange: (next: InterlinearOptions) => void;
   // True once a chapter has original-language source tokens with morphology, so
   // the "Parsing" line is a real toggle rather than an inert "not in our data".
   parsingAvailable?: boolean;
+  // True when the translation has its own Strong's-tagged English tokens, so the
+  // reading-order "English (reverse)" word order is offered. Public-domain texts
+  // without per-word Strong's (e.g. WEB) only have the original-language view.
+  reverseAvailable?: boolean;
 }) {
   const { englishFirst, showTranslit, showGloss, showStrong, showParsing } =
     options;
@@ -71,33 +76,44 @@ export function InterlinearControls({
     // Below lg it may wrap to a taller bar (mobile uses a bottom-sheet panel, not
     // the top-offset rail, so that doesn't matter).
     <div className="sticky top-15 z-20 flex min-h-14 flex-shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 border-line border-b bg-paper-soft/95 px-4 py-2.5 backdrop-blur-sm sm:px-[26px] lg:h-15 lg:flex-nowrap">
-      <div className="flex items-center gap-2.5">
-        <span className="text-[12px] text-faint">Word order</span>
-        <div className="inline-flex gap-0.5 rounded-[10px] border border-line-strong bg-paper p-[3px]">
-          <button
-            type="button"
-            onClick={() => set({ englishFirst: false })}
-            className={`${segBase} ${
-              englishFirst
-                ? 'font-medium text-muted-2'
-                : 'bg-paper-raised font-semibold text-ink shadow-sm'
-            }`}
-          >
-            Original
-          </button>
-          <button
-            type="button"
-            onClick={() => set({ englishFirst: true })}
-            className={`${segBase} ${
-              englishFirst
-                ? 'bg-paper-raised font-semibold text-ink shadow-sm'
-                : 'font-medium text-muted-2'
-            }`}
-          >
-            English (reverse)
-          </button>
+      {reverseAvailable ? (
+        <div className="flex items-center gap-2.5">
+          <span className="text-[12px] text-faint">Word order</span>
+          <div className="inline-flex gap-0.5 rounded-[10px] border border-line-strong bg-paper p-[3px]">
+            <button
+              type="button"
+              onClick={() => set({ englishFirst: false })}
+              className={`${segBase} ${
+                englishFirst
+                  ? 'font-medium text-muted-2'
+                  : 'bg-paper-raised font-semibold text-ink shadow-sm'
+              }`}
+            >
+              Original
+            </button>
+            <button
+              type="button"
+              onClick={() => set({ englishFirst: true })}
+              className={`${segBase} ${
+                englishFirst
+                  ? 'bg-paper-raised font-semibold text-ink shadow-sm'
+                  : 'font-medium text-muted-2'
+              }`}
+            >
+              English (reverse)
+            </button>
+          </div>
         </div>
-      </div>
+      ) : (
+        // No per-word Strong's in this translation — only the original-language
+        // interlinear is available, so show a static label instead of the toggle.
+        <div className="flex items-center gap-2.5">
+          <span className="text-[12px] text-faint">Word order</span>
+          <span className={`${chipBase} cursor-default text-muted-2`}>
+            Original
+          </span>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <span className="mr-0.5 text-[12px] text-faint">Lines</span>
         <span

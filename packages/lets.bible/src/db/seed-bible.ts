@@ -42,6 +42,8 @@ const translation = {
   isDefault:
     (process.env.TRANSLATION_IS_DEFAULT ??
       (id === 'BSB' ? 'true' : 'false')) === 'true',
+  attribution: process.env.TRANSLATION_ATTRIBUTION || null,
+  attributionUrl: process.env.TRANSLATION_ATTRIBUTION_URL || null,
 };
 const usxDir =
   process.env.USX_DIR ?? join(here, '..', '..', 'seed', 'bsb', 'USX_1');

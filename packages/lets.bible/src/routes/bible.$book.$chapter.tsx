@@ -295,10 +295,18 @@ function Reader() {
     enabled: interlinearView,
   });
   const hasSource = (sourceRows?.length ?? 0) > 0;
+  // Whether this translation has its own Strong's-tagged English tokens (the
+  // reading-order "English (reverse)" interlinear + word study). Public-domain
+  // texts without per-word Strong's (e.g. WEB) only get the original-language view.
+  const currentTranslationRow = translations.find(
+    (t) => t.id === currentTranslation,
+  );
+  const reverseAvailable = currentTranslationRow?.hasEnglishInterlinear ?? true;
   // The "Original" word-order option shows the true source order; "English
-  // (reverse)" shows the reading-order interlinear. Without source data we keep
-  // the reading-order view regardless.
-  const showSource = hasSource && !interlinearOptions.englishFirst;
+  // (reverse)" shows the reading-order interlinear. Without source data, or when
+  // the translation has no English tokens, we keep the original-language view.
+  const showSource =
+    hasSource && (!interlinearOptions.englishFirst || !reverseAvailable);
   // Highlights + notes: the server is the source of truth (prefetched in the
   // loader → SSR'd, so they render on first paint and stay consistent across
   // devices). The local-first store overlays this for optimistic writes +
@@ -504,6 +512,7 @@ function Reader() {
           options={interlinearOptions}
           onChange={setInterlinearOptions}
           parsingAvailable={showSource}
+          reverseAvailable={reverseAvailable}
         />
       ) : null}
 
@@ -622,6 +631,25 @@ function Reader() {
                 interlinear={interlinearView}
               />
             </div>
+
+            {/* Translation attribution / copyright courtesy line. */}
+            {currentTranslationRow?.attribution ? (
+              <p className="mt-5 text-center text-[11px] text-faint">
+                {currentTranslationRow.name} ({currentTranslationRow.id}).{' '}
+                {currentTranslationRow.attributionUrl ? (
+                  <a
+                    href={currentTranslationRow.attributionUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline decoration-line-strong underline-offset-2 hover:text-muted-2"
+                  >
+                    {currentTranslationRow.attribution}
+                  </a>
+                ) : (
+                  currentTranslationRow.attribution
+                )}
+              </p>
+            ) : null}
           </div>
         </div>
       </div>

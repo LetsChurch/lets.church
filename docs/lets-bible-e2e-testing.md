@@ -48,6 +48,28 @@ In scope (everything implemented to date):
   places (Psalm titles counted in v1, 3 John length, Joel/Malachi chapter splits),
   so ref-anchored cross-translation features (Compare, highlights, notes) can
   diverge from BSB/MSB at exactly those verses.
+- **World English Bible (WEB)** — a fourth translation (public domain, trademark
+  eBible.org). Sourced from eBible.org's WEB **USFM** and converted to USX 3.0 by
+  `scripts/web/build-web-usx.ts` (committed output under `seed/web/USX_1`,
+  regenerated via `just lets-bible-build-web-usx`), then ingested by the shared
+  `seed-bible.ts` (`just lets-bible-seed-web`). WEB keeps its **paragraphing,
+  poetry, headings, translator footnotes, and red-letter** (words of Jesus), uses
+  `org` versification, and projects **cross-references from MSB** (like KJV). It is
+  the first translation with **no per-word Strong's**: eBible's `\w …strong="…"`
+  tags are badly misaligned (Gen 1:1 "earth"→H8064 *heavens*; John 3:16 "loved"
+  untagged), so they are **stripped on conversion** — WEB has **no `bible_token`
+  rows**, hence **no English word study and no "English (reverse)" interlinear**.
+  WEB still gets the **Original-language interlinear** (Greek/Hebrew) from the
+  shared STEPBible source tokens (`bible_source_token`; NT seeded under WEB with
+  the **Byzantine/Majority** basis — the WEB NT's Greek text — OT Hebrew falls back
+  to the default translation). So reading, search, Compare, footnotes, red-letter,
+  cross-references, and the original-language interlinear all work; only the
+  English token layer is absent.
+- **Per-translation attribution.** `bible_translation` carries `attribution` +
+  `attribution_url` (courtesy/copyright line). It is shown in the **version picker**
+  (a muted line under each translation's name), at the **bottom of the reader**
+  (a small line, linked to the source), and on **`/about`** (a Translations list).
+  All four current texts are public domain.
 - Verse deep links (`?v=`): scroll the referenced verse to the center of the
   viewport and flash a transient highlight that fades out — without selecting it
   or opening the study panel.
@@ -224,14 +246,17 @@ just lets-bible-es-push        # create lets_bible_verses_v1 mappings
 just lets-bible-seed-bsb       # BSB (default) — 66 books / 31,086 verses
 just lets-bible-seed-msb       # MSB (second translation) — 31,100 verses
 just lets-bible-seed-kjv       # KJV (1769, Strong's + morphology) — 31,102 verses / 790,868 tokens
-just lets-bible-seed-crossrefs # backfill bible_cross_reference from the committed artifact (BSB 514 / MSB 516 / KJV 516)
+just lets-bible-build-web-usx  # HOST-only: download eBible WEB USFM → convert to seed/web/USX_1 (committed; only needed to regenerate)
+just lets-bible-seed-web       # WEB (World English Bible, public domain) — 31,101 verses / 0 tokens (Strong's stripped)
+just lets-bible-seed-crossrefs # backfill bible_cross_reference from the committed artifact (BSB 514 / MSB 516 / KJV 516 / WEB 516)
 just lets-bible-seed-commentaries # load bible_commentary[_work] from committed seed/commentaries/*.json (Calvin/MHC/MHCC/Geneva/Wesley — ~52k entries)
 just lets-bible-seed-lexicon   # 14,197 Greek+Hebrew Strong's entries
 just lets-bible-seed-source NT BSB   # true interlinear: BSB NT Greek (STEPBible TAGNT, critical/NA)
-just lets-bible-seed-source OT BSB   # BSB OT Hebrew (STEPBible TAHOT, Masoretic) — MSB OT falls back to this
+just lets-bible-seed-source OT BSB   # BSB OT Hebrew (STEPBible TAHOT, Masoretic) — MSB/WEB OT fall back to this
 just lets-bible-seed-source NT MSB   # MSB NT Greek (Byzantine/Majority)
-just lets-bible-index          # index 93,288 verses into ES (BSB + MSB + KJV)
-just lets-bible-flex           # build client FlexSearch + reading assets + overlay index → public/{search,reading,overlays}/* (incl. KJV)
+just lets-bible-seed-source NT WEB   # WEB NT Greek (Byzantine/Majority — the WEB NT's text basis)
+just lets-bible-index          # index 124,389 verses into ES (BSB + MSB + KJV + WEB)
+just lets-bible-flex           # build client FlexSearch + reading assets + overlay index → public/{search,reading,overlays}/* (incl. KJV + WEB)
 just lets-bible-up             # all of the above, in order
 ```
 
@@ -248,15 +273,17 @@ just lets-bible-up             # all of the above, in order
 
 | Check | Command | Expected |
 | --- | --- | --- |
-| Translations | `psql letsbible -c "select id,is_default from bible_translation"` | BSB (default=t), MSB (f), KJV (f) |
-| Verses | `select count(*) from bible_verse` | 93,288 (31,086 BSB + 31,100 MSB + 31,102 KJV) |
+| Translations | `psql letsbible -c "select id,is_default,attribution from bible_translation"` | BSB (default=t), KJV (f), MSB (f), WEB (f); each has a non-null `attribution` (all public domain) |
+| Verses | `select count(*) from bible_verse` | 124,389 (31,086 BSB + 31,100 MSB + 31,102 KJV + 31,101 WEB) |
 | KJV tokens | `select count(*) from bible_token where translation_id='KJV'` | 790,868 (347,261 with a Strong's number) |
+| WEB tokens | `select count(*) from bible_token where translation_id='WEB'` | 0 (Strong's stripped on conversion — WEB has no English word layer) |
 | KJV red-letter | `select count(distinct (chapter,verse)) from bible_token where translation_id='KJV' and words_of_jesus` | 2,050 verses (~41,412 tokens; projected from MSB's 2,056) |
 | Lexemes | `select count(*) from bible_lexeme` | 14,197 |
-| Cross-refs | `select count(*) from bible_cross_reference` | ~1,546 (BSB + MSB + 516 KJV projected from MSB) |
+| Cross-refs | `select count(*) from bible_cross_reference` | ~2,062 (BSB + MSB + 516 KJV + 516 WEB, both projected from MSB) |
+| WEB source tokens | `select language,count(*) from bible_source_token where translation_id='WEB' group by language` | greek (John, Byzantine) seeded; hebrew via OT fallback to the default translation |
 | Commentary works | `select count(*) from bible_commentary_work` | 5 (calvin, mhc, mhcc, geneva, wesley) |
 | Commentary entries | `select count(*) from bible_commentary` | ~52,125 (calvin 11,063 / mhc 5,360 / mhcc 4,059 / geneva 14,713 / wesley 16,930) |
-| ES docs | `GET lets_bible_verses_v1/_count` | 93,288 |
+| ES docs | `GET lets_bible_verses_v1/_count` | 124,389 |
 
 ### 2.4 Test accounts & inputs
 
@@ -358,7 +385,7 @@ LB-IL-01..05/09/10 (`interlinear`), LB-CM-01..05/07/11 + LB-OFF-CM-01 (`commenta
 | LB-TR-02 | — | Open `/bible/john/1?translation=MSB` directly | MSB renders. |
 | LB-TR-03 | No pref, no URL param | Open `/bible/john/1` | BSB (the default-flagged translation) renders. |
 | LB-TR-04 | Translation pref = MSB (Suite D) | Open `/bible/john/1` (no URL param) | MSB renders (pref wins over default). URL `?translation=` still overrides the pref. |
-| LB-TR-05 | — | Open the version picker on `/bible/john/3` | The list shows **three** translations: BSB (Berean Standard Bible), MSB (Majority Standard Bible), **KJV (King James Version)**. KJV's row carries the interlinear **`Aα`** + **Compare** buttons (it has `bible_token` rows, so `hasInterlinear` is true). |
+| LB-TR-05 | — | Open the version picker on `/bible/john/3` | The list shows **four** translations: BSB (Berean Standard Bible), KJV (King James Version), MSB (Majority Standard Bible), **WEB (World English Bible)**. Each row carries the interlinear **`Aα`** button (all have `hasInterlinear` — BSB/MSB/KJV via `bible_token`, WEB via `bible_source_token`) and, for non-current rows, **Compare**. Each row also shows a **muted attribution line** under the name (e.g. "Berean Standard Bible — Public Domain", "World English Bible — Public Domain (trademark eBible.org)"). |
 | LB-TR-06 | — | Open `/bible/john/3?translation=KJV` | KJV renders: verse 16 reads "For God so loved the world, that he gave his only begotten Son…"; the chapter is **prose** (no poetry blocks); every Strong's-tagged word carries `data-strong` (John 3 has 552 such runs). No console/hydration errors. |
 | LB-TR-07 | — | On KJV, two-click "God" in John 3:16 (Greek) and "beginning" in `/bible/genesis/1?v=1` (Hebrew) | Word study resolves the lexicon for both: **θεός / G2316 / Greek** and **רֵאשִׁית / H7225 / Hebrew**, each with the KJV verse shown as context. (Confirms `bible_token` → `bible_lexeme` join for the KJV across both Testaments.) |
 | LB-TR-08 | Red-letter pref ON (default) | Open `/bible/john/14?translation=KJV` and `/bible/matthew/4?translation=KJV` | KJV renders **red-letter** (words of Jesus, `.text-redletter`), projected from MSB via Strong's alignment. Full-verse speech is fully red (John 14:1 "Let not your heart be troubled…" entirely red; 14:6 "I am the way…"). Mixed verses split correctly: Matthew 4:4 narration "But he answered and said," is **black**, "It is written, Man shall not live…" is **red**; Matthew 4:20 "And they straightway left their nets…" has **no** red. (Toggling red-letter off hides it, same as BSB — Suite D.) |
@@ -366,6 +393,11 @@ LB-IL-01..05/09/10 (`interlinear`), LB-CM-01..05/07/11 + LB-OFF-CM-01 (`commenta
 | LB-TR-11 | Source-text overlays ON (default) | Open `/bible/john/1?translation=KJV` and `/bible/genesis/2?translation=KJV` | The **divine-name** and **OT-quotation** overlays render on KJV, applied at render time from the translation-independent index (`seed/overlays/index.json` → `src/lib/apply-overlays.ts`), not baked: John 1:23 underlines the quotation "voice of one crying in the wilderness, Make straight the way of the Lord" with a dotted decoration (normal case), while the intro "He said, I am the" and "as said the prophet Esaias" stay plain; Genesis 2:4 "**LORD**" renders small caps + dotted underline + `cursor-help` (`[font-variant:small-caps] … decoration-dotted`), like BSB. The quotation underline is **one continuous span** — a single wrapper draws the dotted decoration across the whole quote (DOM check: exactly one element with `text-decoration-line: underline` declared, whose parent has none, spanning the full quote; the footnote marker inside it is `no-underline`). The span runs first→last anchored Strong's word, covering unanchored words in between (so KJV's "of one", "Make", "of the" are underlined). Hovering shows a **source link** — John 1:23 → "Quoting Isaiah 40:3" → `/bible/isaiah/40?v=3` (cross-references projected from MSB; Matthew 1:23 → Isaiah 7:14). Word study's Source-text section also shows the divine name. |
 | LB-TR-12 | Source-text overlays ON | Open `/bible/john/1?translation=KJV` | John 1:23 carries a **divine-name-note footnote** (a `divine_name_note` from the render-time overlay index): a superscript marker `a` after "Lord", whose **hover card** reads "Old Testament YHWH, cf. **Is 40:3**" with the ref linked → `/bible/isaiah/40?v=3`. Selecting the verse, the study panel's **Footnotes** section lists it ("a — Old Testament YHWH, cf. Is 40:3"), matching BSB. These footnotes are the *only* footnotes the KJV has (its source carries none); they come from the committed overlay index (`seed/overlays/index.json`), applied at render time. |
 | LB-TR-10 | Red-letter pref ON | Open `/bible/acts/9?translation=KJV` and `/bible/luke/17?translation=KJV` | The two **pure-TR** red-letter gaps (absent from even the Byzantine text, so filled by the `MANUAL_RED` curated override) render red: Acts 9:5 "I am Jesus whom thou persecutest: **it is hard for thee to kick against the pricks**" (the whole clause is red); Luke 17:36 "**Two men shall be in the field; the one shall be taken, and the other left**" (whole verse red, matching the red 17:34–35). Regression guard: Acts 9:6's TR insertion "And he trembling and astonished said, Lord, what wilt thou have me to do?" stays **black** (the projection's full-red fast path is coverage-guarded, so it doesn't blanket-redden a KJV verse that the MSB reference only partly covers). |
+| LB-TR-13 | — | Open `/bible/john/3?translation=WEB` | WEB renders: verse 16 reads "For God so loved the world, that he gave his only born Son…"; paragraphs/poetry preserved; **translator footnotes** present as superscript letters (John 3 has a–d; e.g. v3 "born anew" a, v16 "only born" c) with hover cards (Suite B). **Red-letter** words of Jesus render (Suite F pref). No `data-strong` runs (WEB has no per-word Strong's). No console/hydration errors. |
+| LB-TR-14 | — | Open `/bible/genesis/1?translation=WEB`; observe v1 | WEB OT renders: Genesis 1:1 "In the beginning, God created the heavens and the earth." Poetry/footnotes where present; WEB prints "Yahweh" for the divine name in its own text (so the divine-name overlay is moot for WEB). |
+| LB-TR-15 | — | On `/bible/john/3?translation=WEB`, two-click a word (e.g. "world") in v16 | The word does **not** open an English word-study lexicon entry (WEB has **no `bible_token`** → no per-word Strong's). Verse selection still works (study panel opens with cross-references + footnotes). (Confirms WEB has reading + footnotes + cross-refs but no English word study.) |
+| LB-TR-16 | — | Open `/compare/john/3?with=WEB,KJV` | Side-by-side renders both columns: WEB v16 "…only **born** Son…" vs KJV v16 "…only **begotten** Son…". Confirms WEB participates in Compare. |
+| LB-TR-17 | — | On `/bible/john/3?translation=WEB`, scroll to the bottom; on `/about` | The reader bottom shows the **attribution line** "World English Bible (WEB). World English Bible — Public Domain (trademark eBible.org)" (the credit linked to `https://ebible.org/web/`). `/about` has a **Translations** section listing all four translations with their attribution lines + a STEPBible interlinear-data credit. |
 
 ---
 
@@ -931,6 +963,8 @@ normalization.)
 | LB-IL-17 | Open `/bible/genesis/1?view=interlinear&translation=MSB` | Hebrew renders (via the OT fallback to the default translation's source tokens — MSB OT is not seeded separately; same Masoretic text). |
 | LB-IL-18 | Tap a word in the true (Original) interlinear | The study panel's word view shows a **Parsing** section at the top — decoded grammar (e.g. "Adjective · Accusative · Singular · Masculine") with the raw code beneath — above the lexicon entry. |
 | LB-IL-19 | Open an unseeded book's interlinear (if any remain) | Falls back to the reading-order layer; the Parsing chip is inert; no console error. |
+| LB-IL-20 | Open `/bible/john/3?view=interlinear&translation=WEB` | WEB has **no English token layer**, so the controls bar's "Word order" is a **static "Original" label, not a toggle** — there is **no "English (reverse)" button** (`reverseAvailable=false`). The view shows the TRUE Greek-order interlinear (Byzantine basis, like MSB): John 3:1 starts Ἦν δὲ ἄνθρωπος; tokens carry transliteration/English/Strong's and open word study on tap. (The `Aα` affordance shows for WEB because it has `bible_source_token` rows.) |
+| LB-IL-21 | Open `/bible/genesis/1?view=interlinear&translation=WEB` | WEB OT interlinear renders **Hebrew RTL** via the OT fallback (WEB has no Hebrew of its own; falls back to the default translation's source tokens — same Masoretic text): בְּרֵאשִׁית "in beginning" H7225 is the rightmost/first word. Word order stays the static "Original" label (no reverse toggle). |
 
 ---
 
@@ -940,7 +974,8 @@ A fast pass to run after any change:
 
 1. `/bible/john/1` renders; verse numbers + red letter on.
 1b. Chapter paging: desktop shows fixed side chevrons flanking the column (reading + interlinear); mobile hides them and **swipes** instead (left→next, right→prev; vertical scroll doesn't trigger it); a bottom prev/next nav shows on all viewports. Crosses book boundaries; Genesis 1 has no prev; all paths keep `?view=interlinear`.
-2. Translation switch to MSB works; the version picker also lists **KJV** (King James Version). `/bible/john/3?translation=KJV` renders KJV prose (v16 "For God so loved the world…"); two-clicking "God" → θεός / G2316. KJV **red-letter** works (John 14 mostly red; Matthew 4:4 intro black + speech red), projected from BSB. (KJV is prose-only — no poetry/cross-refs; see §18.)
+2. Translation switch to MSB works; the version picker lists **four** translations (BSB/KJV/MSB/WEB), each with a muted attribution line. `/bible/john/3?translation=KJV` renders KJV prose (v16 "For God so loved the world…"); two-clicking "God" → θεός / G2316. KJV **red-letter** works (John 14 mostly red; Matthew 4:4 intro black + speech red), projected from BSB. (KJV is prose-only — no poetry/cross-refs; see §18.)
+2b. **WEB** (`?translation=WEB`): John 3 renders with paragraphs + translator footnotes (a–d hover cards) + red-letter; v16 "…his only born Son…". Two-clicking a word does **not** open word study (no `bible_token`). `Aα` interlinear shows **Original only** (no "English (reverse)" toggle): John 3 Greek (Byzantine), Genesis 1 Hebrew RTL (OT fallback). Compare WEB↔KJV works. Attribution line at the reader bottom + on `/about`.
 3. Double-click "God" in John 1 → study panel shows θεός / G2316.
 4. One study panel: reading column is centered while idle; select a verse → verse view (highlight/copy/share/compare/note); click a word twice (or press-and-hold on touch) → word view with the verse as context, single highlight. Selecting a word clears the verse and vice-versa (mutually exclusive).
 4b. Commentaries tab: select John 3:16 → verse view has **Verse**/**Commentaries** tabs; Commentaries tab lists Calvin, Matthew Henry (×2, "on vv. 1–21"), Geneva, Wesley; click Calvin → detail (body + Source + back). Click verse 17 → still on Commentaries tab, still following Calvin (his note on v.17) — tab + work persist. (Requires `just lets-bible-seed-commentaries`.)

@@ -32,3 +32,7 @@ storybook-static
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Downloaded eBible WEB USFM (regenerable cache; the committed artifact is
+# the converted USX under seed/web/USX_1 — see scripts/web/build-web-usx.ts).
+/seed/.web-usfm/

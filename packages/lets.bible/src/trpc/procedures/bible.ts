@@ -111,22 +111,38 @@ async function fetchCrossReferences(
 export const bibleProcedures = {
   // Available translations (default first) for the reader's translation picker.
   translations: publicProcedure.query(async () => {
-    const [rows, tokenized] = await Promise.all([
+    const [rows, tokenized, sourced] = await Promise.all([
       db
         .select({
           id: bibleTranslation.id,
           name: bibleTranslation.name,
           isDefault: bibleTranslation.isDefault,
+          attribution: bibleTranslation.attribution,
+          attributionUrl: bibleTranslation.attributionUrl,
         })
         .from(bibleTranslation)
         .orderBy(desc(bibleTranslation.isDefault), bibleTranslation.id),
-      // Translations with word tokens can be shown interlinear.
+      // English word tokens (with Strong's) → the reading-order "English (reverse)"
+      // interlinear and per-word study.
       db
         .selectDistinct({ translationId: bibleToken.translationId })
         .from(bibleToken),
+      // Original-language source tokens → the "Original" (Greek/Hebrew) interlinear.
+      // A translation without its own English tokens (e.g. WEB) still gets the
+      // interlinear affordance from these.
+      db
+        .selectDistinct({ translationId: bibleSourceToken.translationId })
+        .from(bibleSourceToken),
     ]);
-    const interlinear = new Set(tokenized.map((t) => t.translationId));
-    return rows.map((r) => ({ ...r, hasInterlinear: interlinear.has(r.id) }));
+    const english = new Set(tokenized.map((t) => t.translationId));
+    const source = new Set(sourced.map((t) => t.translationId));
+    return rows.map((r) => ({
+      ...r,
+      hasInterlinear: english.has(r.id) || source.has(r.id),
+      // Only translations with their own Strong's-tagged English tokens can show
+      // the reverse (reading-order) interlinear + English word study.
+      hasEnglishInterlinear: english.has(r.id),
+    }));
   }),
 
   // Unified search: detects a scripture reference ("John 3:16", "rom 8") for a

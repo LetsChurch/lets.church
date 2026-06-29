@@ -1,8 +1,13 @@
+import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { PageShell } from '@/components/chrome';
 import { passageLink } from '@/lib/reference';
+import { useTRPC } from '@/trpc/react';
 
 export const Route = createFileRoute('/about')({
+  loader: async ({ context: { queryClient, trpc } }) => {
+    await queryClient.ensureQueryData(trpc.bible.translations.queryOptions());
+  },
   component: About,
 });
 
@@ -27,6 +32,10 @@ const FEATURES: { title: string; body: string }[] = [
 ];
 
 function About() {
+  const trpc = useTRPC();
+  const { data: translations } = useSuspenseQuery(
+    trpc.bible.translations.queryOptions(),
+  );
   return (
     <PageShell>
       <div className="mx-auto max-w-[680px] px-6 py-16 sm:py-24">
@@ -54,6 +63,42 @@ function About() {
             </div>
           ))}
         </dl>
+
+        <h2 className="mt-12 font-bold text-[11px] text-gold-soft uppercase tracking-[0.12em]">
+          Translations
+        </h2>
+        <ul className="mt-4 divide-y divide-line overflow-hidden rounded-[14px] border border-line">
+          {translations.map((t) => (
+            <li key={t.id} className="bg-paper-raised px-5 py-3.5">
+              <div className="flex items-baseline gap-2">
+                <span className="font-semibold text-[13px] text-ink">
+                  {t.id}
+                </span>
+                <span className="text-[13px] text-muted-2">{t.name}</span>
+              </div>
+              {t.attribution ? (
+                <p className="mt-1 text-[12px] text-faint">
+                  {t.attributionUrl ? (
+                    <a
+                      href={t.attributionUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline decoration-line-strong underline-offset-2 hover:text-muted-2"
+                    >
+                      {t.attribution}
+                    </a>
+                  ) : (
+                    t.attribution
+                  )}
+                </p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 text-[12px] text-faint leading-relaxed">
+          Original-language interlinear data is from the STEPBible Tagged
+          Greek/Hebrew (TAGNT/TAHOT), CC&nbsp;BY&nbsp;4.0.
+        </p>
 
         <p className="mt-10 max-w-[560px] text-[15px] text-muted-2 leading-relaxed">
           Sign in with your lets.church account to sync your highlights and

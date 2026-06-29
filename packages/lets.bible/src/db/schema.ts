@@ -139,6 +139,11 @@ export const bibleTranslation = pgTable(
     // it (BSB & MSB are both 'org'; MSB just carries extra Majority-Text verses).
     versification: text('versification').notNull().default('org'),
     isDefault: boolean('is_default').notNull().default(false),
+    // Courtesy attribution / copyright line shown wherever the translation is
+    // surfaced (picker, reader, /about). Public-domain texts get a credit line;
+    // future licensed texts (e.g. NET) will carry their required notice here.
+    attribution: text('attribution'),
+    attributionUrl: text('attribution_url'),
   },
   (t) => [
     // At most one translation may be the default.

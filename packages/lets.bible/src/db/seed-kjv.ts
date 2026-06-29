@@ -62,6 +62,8 @@ const translation = {
   direction: 'ltr',
   versification: 'kjv',
   isDefault: false,
+  attribution: 'King James Version (1769) — Public Domain',
+  attributionUrl: null,
 };
 
 async function insertChunked<T>(

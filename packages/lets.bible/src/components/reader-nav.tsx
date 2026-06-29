@@ -249,6 +249,7 @@ type TranslationOption = {
   name: string;
   isDefault: boolean;
   hasInterlinear: boolean;
+  attribution?: string | null;
 };
 
 const rowActionClass =
@@ -288,16 +289,23 @@ function TranslationRows({
               params={{ book, chapter: String(chapter) }}
               search={{ translation: t.id }}
               onClick={onAction}
-              className="flex min-w-0 flex-1 items-baseline gap-2 rounded-md py-1 text-[13.5px] outline-none focus-visible:ring-2 focus-visible:ring-gold/40"
+              className="flex min-w-0 flex-1 flex-col rounded-md py-1 text-[13.5px] outline-none focus-visible:ring-2 focus-visible:ring-gold/40"
             >
-              <span
-                className={`font-semibold ${isCurrent ? 'text-gold' : 'text-ink'}`}
-              >
-                {t.id}
+              <span className="flex items-baseline gap-2">
+                <span
+                  className={`font-semibold ${isCurrent ? 'text-gold' : 'text-ink'}`}
+                >
+                  {t.id}
+                </span>
+                <span className="truncate text-[12px] text-muted-2">
+                  {t.name}
+                </span>
               </span>
-              <span className="truncate text-[12px] text-muted-2">
-                {t.name}
-              </span>
+              {t.attribution ? (
+                <span className="truncate text-[10.5px] text-faint">
+                  {t.attribution}
+                </span>
+              ) : null}
             </Link>
             {/* Interlinear (Aα) — fixed-width column so it aligns across rows. */}
             {t.hasInterlinear ? (
