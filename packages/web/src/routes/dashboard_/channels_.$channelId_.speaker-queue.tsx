@@ -1,4 +1,12 @@
-import { Group, Loader, Stack, Tabs, Text, Title } from '@mantine/core';
+import {
+  Group,
+  Loader,
+  Pagination,
+  Stack,
+  Tabs,
+  Text,
+  Title,
+} from '@mantine/core';
 import {
   useMutation,
   useQuery,
@@ -19,6 +27,11 @@ import {
   SpeakerLabelingQueue,
 } from './-components/speaker-labeling-queue';
 
+// Server-side page size for the bounded segment scan. Large channels can have
+// tens of thousands of unlabeled voices; the queue procedure only scans (and
+// runs kNN/clustering over) one page of the most-spoken segments at a time.
+const PAGE_SIZE = 200;
+
 export const Route = createFileRoute(
   '/dashboard_/channels_/$channelId_/speaker-queue',
 )({
@@ -35,6 +48,8 @@ export const Route = createFileRoute(
     await queryClient.ensureQueryData(
       trpc.dashboard.channels.getSpeakerLabelingQueue.queryOptions({
         channelId: params.channelId,
+        limit: PAGE_SIZE,
+        offset: 0,
       }),
     );
     return {
@@ -52,9 +67,18 @@ function ChannelSpeakerQueuePage() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
+  // Server-driven pagination over the bounded segment scan. Changing the offset
+  // re-suspends this query; React preserves component state across suspense.
+  const [offset, setOffset] = useState(0);
   const { data } = useSuspenseQuery(
-    trpc.dashboard.channels.getSpeakerLabelingQueue.queryOptions({ channelId }),
+    trpc.dashboard.channels.getSpeakerLabelingQueue.queryOptions({
+      channelId,
+      limit: PAGE_SIZE,
+      offset,
+    }),
   );
+  const pageCount = Math.max(1, Math.ceil(data.total / PAGE_SIZE));
+  const page = Math.floor(offset / PAGE_SIZE) + 1;
 
   const invalidate = () =>
     queryClient.invalidateQueries({
@@ -92,12 +116,20 @@ function ChannelSpeakerQueuePage() {
   // Appearances are an expensive cross-platform scan — load only when the tab
   // is opened (not in the route loader).
   const [tab, setTab] = useState<string | null>('matches');
+  const [appearancesOffset, setAppearancesOffset] = useState(0);
   const appearancesQuery = useQuery({
     ...trpc.dashboard.channels.getSpeakerAppearances.queryOptions({
       channelId,
+      limit: PAGE_SIZE,
+      offset: appearancesOffset,
     }),
     enabled: tab === 'appearances',
   });
+  const appearancesPageCount = Math.max(
+    1,
+    Math.ceil((appearancesQuery.data?.total ?? 0) / PAGE_SIZE),
+  );
+  const appearancesPage = Math.floor(appearancesOffset / PAGE_SIZE) + 1;
 
   const requestMutation = useMutation(
     trpc.dashboard.channels.requestSpeakerTag.mutationOptions({
@@ -137,6 +169,36 @@ function ChannelSpeakerQueuePage() {
     });
   };
 
+  const queuePagination =
+    data.total > PAGE_SIZE ? (
+      <Group justify="space-between" mt="md">
+        <Text c="dimmed" size="sm">
+          {data.total.toLocaleString()} unlabeled voices · showing the
+          most-spoken {PAGE_SIZE} per page
+        </Text>
+        <Pagination
+          value={page}
+          total={pageCount}
+          onChange={(p) => setOffset((p - 1) * PAGE_SIZE)}
+        />
+      </Group>
+    ) : null;
+
+  const appearancesPagination =
+    (appearancesQuery.data?.total ?? 0) > PAGE_SIZE ? (
+      <Group justify="space-between" mt="md">
+        <Text c="dimmed" size="sm">
+          {(appearancesQuery.data?.total ?? 0).toLocaleString()} cross-channel
+          voices · {PAGE_SIZE} per page
+        </Text>
+        <Pagination
+          value={appearancesPage}
+          total={appearancesPageCount}
+          onChange={(p) => setAppearancesOffset((p - 1) * PAGE_SIZE)}
+        />
+      </Group>
+    ) : null;
+
   return (
     <Stack gap="lg">
       <div>
@@ -165,6 +227,7 @@ function ChannelSpeakerQueuePage() {
             onAssign={onAssign}
             isAssigning={assignMutation.isPending}
           />
+          {queuePagination}
         </Tabs.Panel>
         <Tabs.Panel value="groups">
           <SpeakerClusters
@@ -172,6 +235,7 @@ function ChannelSpeakerQueuePage() {
             onCreate={onCreateCluster}
             isWorking={clusterMutation.isPending}
           />
+          {queuePagination}
         </Tabs.Panel>
         <Tabs.Panel value="appearances">
           {appearancesQuery.isLoading ? (
@@ -179,11 +243,14 @@ function ChannelSpeakerQueuePage() {
               <Loader />
             </Group>
           ) : (
-            <SpeakerAppearances
-              appearances={appearancesQuery.data?.appearances ?? []}
-              onRequest={onRequest}
-              isRequesting={requestMutation.isPending}
-            />
+            <>
+              <SpeakerAppearances
+                appearances={appearancesQuery.data?.appearances ?? []}
+                onRequest={onRequest}
+                isRequesting={requestMutation.isPending}
+              />
+              {appearancesPagination}
+            </>
           )}
         </Tabs.Panel>
       </Tabs>

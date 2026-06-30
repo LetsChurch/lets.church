@@ -18,7 +18,16 @@ import {
 } from '@letschurch/db';
 import { suggestSpeakersByEmbedding } from '@letschurch/opensearch';
 import { TRPCError } from '@trpc/server';
-import { and, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  sql,
+} from 'drizzle-orm';
 import { startIndexMediaDocument } from '@/temporal';
 import {
   assertSpeakerUsable,
@@ -81,6 +90,11 @@ export type SpeakerCluster = {
 export type LabelingData = {
   queue: LabelingQueueItem[];
   clusters: SpeakerCluster[];
+  // Pagination over the underlying unlabeled (upload, label) segments. `total` is
+  // the full count for the channel(s); `queue` + `clusters` are derived from the
+  // current page only (one page = up to `limit` segments scanned).
+  total: number;
+  hasMore: boolean;
 };
 
 // An untagged segment on ANOTHER channel whose voice matches one of a channel's
@@ -165,14 +179,103 @@ type Segment = {
   startSeconds: number;
 };
 
-// Gather every unlabeled (upload, effective-label) segment across the given
-// channels, with its averaged voice vector + a preview. The shared input to the
-// existing-speaker match (queue), the mutual-similarity clustering, and the
-// cross-channel appearance search.
+// Effective speaker label per paragraph: the user's per-paragraph override if
+// any, else the diarization speaker. Shared across the unlabeled-segment queries.
+const effectiveLabelSql = sql<string>`coalesce(${SpeakerParagraphLabel.label}, ${TranscriptParagraph.speaker})`;
+
+type UnlabeledKey = {
+  uploadId: string;
+  speakerLabel: string;
+  paragraphCount: number;
+};
+
+// The "unlabeled (upload, effective-label) segment" selection for a set of
+// channels: paragraphs whose effective label has NO speaker_attribution, on
+// transcribed, non-deleted uploads in those channels, grouped by (upload, label).
+// No embeddings — cheap enough to count + paginate before touching the 192-dim
+// vectors.
+function unlabeledSegmentsBase(owningChannelIds: string[]) {
+  return db
+    .select({
+      uploadId: TranscriptParagraph.uploadRecordId,
+      speakerLabel: effectiveLabelSql,
+      paragraphCount: sql<number>`count(*)::int`,
+    })
+    .from(TranscriptParagraph)
+    .innerJoin(
+      UploadRecord,
+      eq(UploadRecord.id, TranscriptParagraph.uploadRecordId),
+    )
+    .leftJoin(
+      SpeakerParagraphLabel,
+      eq(SpeakerParagraphLabel.paragraphId, TranscriptParagraph.id),
+    )
+    .leftJoin(
+      SpeakerAttribution,
+      and(
+        eq(
+          SpeakerAttribution.uploadRecordId,
+          TranscriptParagraph.uploadRecordId,
+        ),
+        eq(SpeakerAttribution.speakerLabel, effectiveLabelSql),
+      ),
+    )
+    .where(
+      and(
+        inArray(UploadRecord.channelId, owningChannelIds),
+        isNotNull(UploadRecord.transcribingFinishedAt),
+        isNull(UploadRecord.deletedAt),
+        isNull(SpeakerAttribution.speakerId),
+        isNotNull(effectiveLabelSql),
+      ),
+    )
+    .groupBy(TranscriptParagraph.uploadRecordId, effectiveLabelSql);
+}
+
+// One page of unlabeled segment keys, most-spoken voices first. No embeddings.
+async function unlabeledSegmentKeys(
+  owningChannelIds: string[],
+  limit: number,
+  offset: number,
+): Promise<UnlabeledKey[]> {
+  if (owningChannelIds.length === 0) return [];
+  const rows = await unlabeledSegmentsBase(owningChannelIds)
+    .orderBy(desc(sql`count(*)`), asc(TranscriptParagraph.uploadRecordId))
+    .limit(limit)
+    .offset(offset);
+  return rows.map((r) => ({
+    uploadId: r.uploadId,
+    speakerLabel: r.speakerLabel,
+    paragraphCount: Number(r.paragraphCount),
+  }));
+}
+
+// Total distinct unlabeled segments for the channel(s) — the pagination total.
+export async function countUnlabeledSegments(
+  owningChannelIds: string[],
+): Promise<number> {
+  if (owningChannelIds.length === 0) return 0;
+  const sub = unlabeledSegmentsBase(owningChannelIds).as('unlabeled');
+  const r = await db.select({ count: sql<string>`count(*)` }).from(sub);
+  return Number(r[0]?.count ?? 0);
+}
+
+// Build ONE PAGE of unlabeled (upload, effective-label) segments with averaged
+// voice vectors + previews. Bounded: a cheap key enumeration (above) is paginated
+// first, then embeddings are loaded only for that page's uploads — so the cost is
+// O(page), not O(channel). The shared input to the existing-speaker match
+// (queue), the mutual-similarity clustering, and the cross-channel appearance
+// search.
 export async function collectUnlabeledSegments(
   owningChannelIds: string[],
+  { limit, offset }: { limit: number; offset: number },
 ): Promise<Segment[]> {
   if (owningChannelIds.length === 0) return [];
+
+  const keys = await unlabeledSegmentKeys(owningChannelIds, limit, offset);
+  if (keys.length === 0) return [];
+  const keySet = new Set(keys.map((k) => `${k.uploadId}::${k.speakerLabel}`));
+  const uploadIds = [...new Set(keys.map((k) => k.uploadId))];
 
   const uploads = await db
     .select({
@@ -183,16 +286,8 @@ export async function collectUnlabeledSegments(
     })
     .from(UploadRecord)
     .innerJoin(Channel, eq(Channel.id, UploadRecord.channelId))
-    .where(
-      and(
-        inArray(UploadRecord.channelId, owningChannelIds),
-        isNotNull(UploadRecord.transcribingFinishedAt),
-        isNull(UploadRecord.deletedAt),
-      ),
-    );
-  if (uploads.length === 0) return [];
+    .where(inArray(UploadRecord.id, uploadIds));
   const uploadById = new Map(uploads.map((u) => [u.id, u]));
-  const uploadIds = uploads.map((u) => u.id);
 
   const paras = await db
     .select({
@@ -243,6 +338,7 @@ export async function collectUnlabeledSegments(
     const upload = uploadById.get(p.uploadRecordId);
     if (!upload) continue;
     const key = `${p.uploadRecordId}::${label}`;
+    if (!keySet.has(key)) continue; // only the segments in this page
     let g = groups.get(key);
     if (!g) {
       g = {
@@ -390,29 +486,36 @@ export type BuildLabelingDataArgs = {
   owningChannelIds: string[];
   minMatchPercent?: number;
   clusterThreshold?: number;
-  /** Max ranked queue items to return (descending confidence). */
+  /** Page size: max unlabeled segments to SCAN (kNN + cluster) per call. */
   limit?: number;
+  /** Page offset into the most-spoken-first ordering of unlabeled segments. */
+  offset?: number;
 };
 
-// TODO(perf): this scans every owning channel's unlabeled segments and runs a
-// kNN per segment (bounded to KNN_CONCURRENCY) on each call. If the labeling
-// pages get slow at scale, cache the result in Valkey keyed by
-// `labeling-queue:channel:<id>:<minMatchPercent>` (and `:admin:` for the
-// site-wide view) and invalidate that prefix from every attribution write
-// (applySpeakerAssignments / createSpeakerAndAssign / approveTagRequest).
+// The work is bounded to ONE PAGE of unlabeled segments (collectUnlabeledSegments
+// paginates the cheap key enumeration, then loads embeddings + kNN + clusters only
+// for that page), so a channel with tens of thousands of unlabeled voices no
+// longer scans them all in a single request. `total`/`hasMore` drive UI paging.
 export async function buildLabelingData({
   owningChannelIds,
   minMatchPercent = 70,
   clusterThreshold = CLUSTER_THRESHOLD_DEFAULT,
   limit = 200,
+  offset = 0,
 }: BuildLabelingDataArgs): Promise<LabelingData> {
-  if (owningChannelIds.length === 0) return { queue: [], clusters: [] };
+  if (owningChannelIds.length === 0)
+    return { queue: [], clusters: [], total: 0, hasMore: false };
 
-  const segments = await collectUnlabeledSegments(owningChannelIds);
+  const [segments, total] = await Promise.all([
+    collectUnlabeledSegments(owningChannelIds, { limit, offset }),
+    countUnlabeledSegments(owningChannelIds),
+  ]);
+  const hasMore = offset + segments.length < total;
   const candidates = segments.filter(
     (s) => s.avgVector && s.avgVector.length > 0,
   );
-  if (candidates.length === 0) return { queue: [], clusters: [] };
+  if (candidates.length === 0)
+    return { queue: [], clusters: [], total, hasMore };
 
   // Authorized speaker pool per owning channel (own + ACCEPTED links).
   const authorizedByChannel = new Map<string, string[]>();
@@ -501,29 +604,35 @@ export async function buildLabelingData({
 
   queue.sort((a, b) => b.topMatch.matchPercent - a.topMatch.matchPercent);
   return {
-    queue: queue.slice(0, limit),
+    // The page already bounds the work; `queue` is the matched subset of the page.
+    queue,
     clusters: clusterUnmatched(unmatched, clusterThreshold),
+    total,
+    hasMore,
   };
 }
 
 // Find untagged segments on OTHER channels that voice-match one of `channelId`'s
-// own speakers. Scans every channel's unlabeled segments, drops this channel's,
-// and kNN-matches each against ONLY this channel's speaker pool — a hit means
-// "your speaker appears here but isn't tagged".
-// TODO(perf): like buildLabelingData, this scans every OTHER channel's unlabeled
-// segments and runs a kNN per segment. If "Appearances elsewhere" gets slow at
-// scale, cache under `labeling-queue:appearances:<channelId>` and invalidate that
-// prefix on attribution writes.
+// own speakers — a hit means "your speaker appears here but isn't tagged". The
+// scan over other channels' unlabeled segments is bounded to ONE PAGE (same
+// mechanism as buildLabelingData), so this no longer scans every other channel's
+// segments in a single request; `total`/`hasMore` page through them.
 export async function buildSpeakerAppearances({
   channelId,
   minMatchPercent = 80,
   limit = 200,
+  offset = 0,
 }: {
   channelId: string;
   minMatchPercent?: number;
   limit?: number;
-}): Promise<SpeakerAppearance[]> {
-  const contentChannels = await db
+  offset?: number;
+}): Promise<{
+  appearances: SpeakerAppearance[];
+  total: number;
+  hasMore: boolean;
+}> {
+  const contentChannelRows = await db
     .selectDistinct({ channelId: UploadRecord.channelId })
     .from(UploadRecord)
     .where(
@@ -532,11 +641,22 @@ export async function buildSpeakerAppearances({
         isNull(UploadRecord.deletedAt),
       ),
     );
-  const segments = (
-    await collectUnlabeledSegments(contentChannels.map((c) => c.channelId))
-  ).filter((s) => s.channelId !== channelId && s.avgVector);
+  // Other channels only (exclude mine) — those are where my speakers could be
+  // untagged. Scan + count are over that set so paging is over real candidates.
+  const otherChannelIds = contentChannelRows
+    .map((c) => c.channelId)
+    .filter((cid) => cid !== channelId);
+  if (otherChannelIds.length === 0) {
+    return { appearances: [], total: 0, hasMore: false };
+  }
+  const [pageSegments, total] = await Promise.all([
+    collectUnlabeledSegments(otherChannelIds, { limit, offset }),
+    countUnlabeledSegments(otherChannelIds),
+  ]);
+  const hasMore = offset + pageSegments.length < total;
+  const segments = pageSegments.filter((s) => s.avgVector);
   if (segments.length === 0) {
-    return [];
+    return { appearances: [], total, hasMore };
   }
 
   // kNN each other-channel segment against ONLY my channel's speakers.
@@ -580,7 +700,8 @@ export async function buildSpeakerAppearances({
     });
   }
   items.sort((a, b) => b.matchPercent - a.matchPercent);
-  return items.slice(0, limit);
+  // The page already bounds the work, so no extra slice.
+  return { appearances: items, total, hasMore };
 }
 
 // Apply a batch of (upload, label) → speaker attributions, authorizing each

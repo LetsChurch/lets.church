@@ -306,6 +306,16 @@ export const speakerAssignmentSchema = z.object({
 export const getSpeakerLabelingQueueSchema = z.object({
   channelId: channelIdSchema,
   minMatchPercent: z.number().min(0).max(100).optional(),
+  // Pagination over the unlabeled segments (most-spoken first). One page bounds
+  // the per-request scan + kNN + clustering so large channels don't time out.
+  limit: z.number().min(1).max(500).optional(),
+  offset: z.number().min(0).optional(),
+});
+
+export const getSpeakerAppearancesSchema = z.object({
+  channelId: channelIdSchema,
+  limit: z.number().min(1).max(500).optional(),
+  offset: z.number().min(0).optional(),
 });
 
 export const assignSpeakerLabelsSchema = z.object({
@@ -317,6 +327,7 @@ export const assignSpeakerLabelsSchema = z.object({
 export const adminLabelingQueueSchema = z.object({
   minMatchPercent: z.number().min(0).max(100).optional(),
   limit: z.number().min(1).max(1000).optional(),
+  offset: z.number().min(0).optional(),
 });
 
 export const adminAssignSpeakerLabelsSchema = z.object({

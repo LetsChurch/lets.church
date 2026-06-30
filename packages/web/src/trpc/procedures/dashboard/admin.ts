@@ -193,6 +193,7 @@ export const adminRouter = router({
         owningChannelIds: contentChannels.map((r) => r.channelId),
         minMatchPercent: input.minMatchPercent,
         limit: input.limit,
+        offset: input.offset,
       });
     }),
 

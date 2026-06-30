@@ -66,6 +66,7 @@ import {
   deletePlaylistSchema,
   deleteSpeakerSchema,
   deleteUploadSchema,
+  getSpeakerAppearancesSchema,
   getSpeakerLabelingQueueSchema,
   importMediaSchema,
   inviteChannelMemberSchema,
@@ -1360,6 +1361,8 @@ export const channelRouter = router({
       return buildLabelingData({
         owningChannelIds: [input.channelId],
         minMatchPercent: input.minMatchPercent,
+        limit: input.limit,
+        offset: input.offset,
       });
     }),
 
@@ -1820,38 +1823,44 @@ export const channelRouter = router({
 
   // Untagged appearances of this channel's speakers on OTHER channels' uploads
   // (voice matches), each flagged if a tag request is already pending.
-  getSpeakerAppearances: channelAdminProcedure.query(async ({ input }) => {
-    const appearances = await buildSpeakerAppearances({
-      channelId: input.channelId,
-    });
-    const pending = await db
-      .select({
-        speakerId: SpeakerTagRequest.speakerId,
-        uploadRecordId: SpeakerTagRequest.uploadRecordId,
-        speakerLabel: SpeakerTagRequest.speakerLabel,
-      })
-      .from(SpeakerTagRequest)
-      .innerJoin(Speaker, eq(Speaker.id, SpeakerTagRequest.speakerId))
-      .where(
-        and(
-          eq(Speaker.channelId, input.channelId),
-          eq(SpeakerTagRequest.status, 'PENDING'),
+  getSpeakerAppearances: channelAdminProcedure
+    .input(getSpeakerAppearancesSchema)
+    .query(async ({ input }) => {
+      const { appearances, total, hasMore } = await buildSpeakerAppearances({
+        channelId: input.channelId,
+        limit: input.limit,
+        offset: input.offset,
+      });
+      const pending = await db
+        .select({
+          speakerId: SpeakerTagRequest.speakerId,
+          uploadRecordId: SpeakerTagRequest.uploadRecordId,
+          speakerLabel: SpeakerTagRequest.speakerLabel,
+        })
+        .from(SpeakerTagRequest)
+        .innerJoin(Speaker, eq(Speaker.id, SpeakerTagRequest.speakerId))
+        .where(
+          and(
+            eq(Speaker.channelId, input.channelId),
+            eq(SpeakerTagRequest.status, 'PENDING'),
+          ),
+        );
+      const pendingKeys = new Set(
+        pending.map(
+          (p) => `${p.speakerId}:${p.uploadRecordId}:${p.speakerLabel}`,
         ),
       );
-    const pendingKeys = new Set(
-      pending.map(
-        (p) => `${p.speakerId}:${p.uploadRecordId}:${p.speakerLabel}`,
-      ),
-    );
-    return {
-      appearances: appearances.map((a) => ({
-        ...a,
-        requested: pendingKeys.has(
-          `${a.speakerId}:${a.uploadId}:${a.speakerLabel}`,
-        ),
-      })),
-    };
-  }),
+      return {
+        appearances: appearances.map((a) => ({
+          ...a,
+          requested: pendingKeys.has(
+            `${a.speakerId}:${a.uploadId}:${a.speakerLabel}`,
+          ),
+        })),
+        total,
+        hasMore,
+      };
+    }),
 
   // Owner asks the content channel to tag its speaker on that upload.
   requestSpeakerTag: channelAdminProcedure
