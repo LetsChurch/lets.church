@@ -26,10 +26,9 @@ export function InfoTip({
   className,
 }: InfoTipProps) {
   return (
-    <LcTooltip.Provider>
+    <LcTooltip.Provider delay={0}>
       <LcTooltip
         content={content}
-        delay={0}
         side={side}
         render={
           <button
