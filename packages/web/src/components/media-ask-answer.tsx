@@ -28,7 +28,6 @@ export function MediaAskAnswer({ mediaId }: { mediaId: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Clear when switching videos / unmounting so an answer never leaks across.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: cleanup keyed on mediaId
   useEffect(() => () => closeVideoAsk(), [mediaId]);
 
   // Focus (and reset) the compose input whenever the "Ask" button opens it.

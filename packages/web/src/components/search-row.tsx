@@ -75,7 +75,6 @@ export function SearchRow({
               </div>
               <div
                 className="text-primary/80 text-sm"
-                // biome-ignore lint/security/noDangerouslySetInnerHtml: escaped ElasticSearch output
                 dangerouslySetInnerHTML={{
                   __html: joinAdjacentMarks(transcriptSegment.text),
                 }}

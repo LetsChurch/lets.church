@@ -86,7 +86,6 @@ function SearchDetail({ params }: { params: SearchLogParams }) {
           {label}
         </Text>
         {values.map((v, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: static list; index disambiguates duplicate values
           <Badge key={`${v}-${i}`} size="sm" variant="light" color={color}>
             {v}
           </Badge>

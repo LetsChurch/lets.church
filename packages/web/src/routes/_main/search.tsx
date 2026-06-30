@@ -294,11 +294,7 @@ function SearchResultsSkeleton() {
   return (
     <div className="space-y-4" aria-hidden="true">
       {Array.from({ length: 5 }).map((_, i) => (
-        <div
-          // biome-ignore lint/suspicious/noArrayIndexKey: static placeholder list
-          key={i}
-          className="flex gap-4 rounded-lg p-2"
-        >
+        <div key={i} className="flex gap-4 rounded-lg p-2">
           <div className="h-[90px] w-40 shrink-0 animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-800" />
           <div className="min-w-0 flex-1 space-y-2 py-1">
             <div className="h-4 w-2/3 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
@@ -723,7 +719,6 @@ function SegmentPreview({
       </div>
       <div
         className="[&_mark]:-my-0.5 [&_mark]:-mx-1 text-primary/80 text-sm [&_mark]:rounded-sm [&_mark]:bg-orange-400/40 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:text-primary"
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: escaped ElasticSearch output
         dangerouslySetInnerHTML={{ __html: joinAdjacentMarks(segment.text) }}
       />
     </MediaPreviewTarget>
@@ -764,12 +759,7 @@ function Result({ item }: { item: SearchResultItem }) {
               <Collapsible.Root open={showAll} onOpenChange={setShowAll}>
                 <Collapsible.Panel className="space-y-2">
                   {rest.map((segment, index) => (
-                    <SegmentPreview
-                      // biome-ignore lint/suspicious/noArrayIndexKey: stable order
-                      key={index}
-                      item={item}
-                      segment={segment}
-                    />
+                    <SegmentPreview key={index} item={item} segment={segment} />
                   ))}
                 </Collapsible.Panel>
                 <Collapsible.Trigger className="relative z-10 mt-2 w-full px-1 py-0.5 text-center text-muted text-xs transition-colors hover:text-primary">

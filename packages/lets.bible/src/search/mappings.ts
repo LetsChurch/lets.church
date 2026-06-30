@@ -8,9 +8,7 @@ export const verseSettings: Record<string, unknown> = {
   number_of_replicas: 0,
 };
 
-// biome-ignore lint/suspicious/noExplicitAny: OpenSearch's generated mapping
-// property types are thinner than the real API; the cluster validates the shape
-// on push, and `any` lets these literals satisfy the client's putMapping types.
+// biome-ignore lint/suspicious/noExplicitAny: OpenSearch's mapping-property types are thin; `any` lets these literals satisfy putMapping, and the cluster validates the shape on push (see above).
 export const verseProperties: Record<string, any> = {
   translationId: { type: 'keyword' },
   book: { type: 'keyword' }, // USFM code, e.g. JHN
