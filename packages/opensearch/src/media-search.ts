@@ -46,6 +46,18 @@ const PARA_KNN = 'para_knn';
 // kNN candidate pool per sub-query.
 const KNN_K = 50;
 
+// Query-time analyzer for the lexical (BM25) clauses that define the matched set.
+// `paragraphs.text`/`title`/etc. are indexed with the standard analyzer (keeps
+// stopwords, no stemming), so a query like "The Dorean Principle" makes the
+// nested paragraph `match` scan "the"'s enormous posting list across ~7.86M
+// nested docs — ~3s, and it pulls a broad, low-relevance set into the facet
+// counts. The `stop` analyzer drops English stopwords from the QUERY only
+// (lowercase, no stemming → its tokens stay a subset of the standard-indexed
+// tokens, so matches are unaffected), cutting that to ~30ms with identical top
+// results and a far more relevant facet set. Applied only to the set-defining
+// clauses (multi_match + nested match), not the phrase boosts.
+const LEXICAL_QUERY_ANALYZER = 'stop';
+
 // TEMPORARY mitigation for the off-heap faiss OOM. faiss loads a knn_vector
 // field's HNSW graph into native (off-heap) memory the moment that field is
 // queried with kNN. The nested `paragraphs.embedding` graph is ~100GB resident
@@ -71,20 +83,15 @@ const SPEAKER_SUGGEST_MIN_MATCH_PERCENT = 70;
 
 // Verse facet `terms` size. The facet UI lists the most-cited verses as filter
 // chips; nobody scrolls thousands. Cap at a display-sized top-N (doc_count
-// order, most-cited first) instead of the full ~31k-verse canon — a giant
-// `size` forces global-ordinals fielddata + a huge per-shard priority queue on a
-// high-cardinality keyword field, and `buildMediaHybridBody` runs this agg on
-// every facet body. `execution_hint: 'map'` (below) keeps it scoped to the verses
-// actually in the matched set.
+// order, most-cited first) instead of the full ~31k-verse canon — a giant `size`
+// bloats the per-shard priority queue and the response payload for no benefit.
 const VERSE_FACET_SIZE = 100;
 // Speaker facet `terms` size — same display-chip rationale; bounded well under
 // the real speaker cardinality.
 const SPEAKER_FACET_SIZE = 200;
 
-// Which facet aggregations a hybrid body should compute. Aggregations are by far
-// the heaviest heap consumer on this path, so every caller asks for exactly the
-// facets it will read — the result query asks for none, and each leave-one-out
-// facet body asks for only its own.
+// Which facet aggregations a facet body should compute. Each caller asks for
+// exactly the facets it will read (the leave-one-out scoping in runMediaFacets).
 export type MediaFacetKey = 'channels' | 'speakers' | 'verses' | 'years';
 
 function facetAggs(facets: MediaFacetKey[]): Record<string, unknown> {
@@ -92,29 +99,20 @@ function facetAggs(facets: MediaFacetKey[]): Record<string, unknown> {
   for (const facet of facets) {
     switch (facet) {
       case 'channels':
-        // `map` avoids loading global ordinals for the whole index — it counts
-        // only terms present in the matched set, which a filtered hybrid query
-        // keeps small.
-        aggs.channelIds = {
-          terms: { field: 'channelId', size: 100, execution_hint: 'map' },
-        };
+        // Default execution (global ordinals) — far faster than `execution_hint:
+        // 'map'` over the broad lexical matched set, and the ordinals fielddata
+        // is cheap heap that the cluster has to spare (the OOM was off-heap
+        // faiss, not heap).
+        aggs.channelIds = { terms: { field: 'channelId', size: 100 } };
         break;
       case 'speakers':
         aggs.speakers = {
-          terms: {
-            field: 'speakers',
-            size: SPEAKER_FACET_SIZE,
-            execution_hint: 'map',
-          },
+          terms: { field: 'speakers', size: SPEAKER_FACET_SIZE },
         };
         break;
       case 'verses':
         aggs.bibleRefs = {
-          terms: {
-            field: 'bibleRefs',
-            size: VERSE_FACET_SIZE,
-            execution_hint: 'map',
-          },
+          terms: { field: 'bibleRefs', size: VERSE_FACET_SIZE },
         };
         break;
       case 'years':
@@ -245,6 +243,15 @@ export type BuildMediaSearchArgs = {
    * body requests only the one facet it's read for. See `facetAggs`.
    */
   facets?: MediaFacetKey[];
+  /**
+   * Attach paragraph `inner_hits` (the snippet sources) to the BM25/kNN nested
+   * clauses. Default true. The hybrid query computes inner_hits for the whole
+   * `pagination_depth` fusion window (≈100), not just the returned page — for a
+   * common-term query each candidate has hundreds of matching paragraphs, so this
+   * is ~3s. `runMediaHybridSearch` therefore passes `false` and fetches snippets
+   * for just the returned page via `buildMediaSnippetBody` (~10x cheaper).
+   */
+  withInnerHits?: boolean;
 };
 
 // nested inner_hits config shared by the BM25 and kNN paragraph sub-queries.
@@ -271,6 +278,65 @@ function paragraphInnerHits(
   };
 }
 
+// Access-control filter + paragraph-level speaker scope, shared by the hybrid
+// result query and the (cheap) facet query so both match the same doc set.
+function resolveFilter(
+  args: Pick<
+    BuildMediaSearchArgs,
+    | 'channelIds'
+    | 'publishedAt'
+    | 'bibleRefs'
+    | 'bibleBooks'
+    | 'speakers'
+    | 'uploadIds'
+    | 'paragraphSpeakers'
+  >,
+): {
+  filter: OsQuery[];
+  speakerNested: OsQuery | null;
+  scopeToSpeaker: (q: OsQuery) => OsQuery;
+} {
+  const filter = buildFilter(
+    args.channelIds,
+    args.publishedAt,
+    args.bibleRefs,
+    args.bibleBooks,
+    args.speakers,
+    args.uploadIds,
+  );
+
+  // Paragraph-level speaker scope: a bool over the analyzed speakerName so a
+  // paragraph matches when its attributed speaker is one of the requested names.
+  // Used both as a nested constraint on the paragraph sub-queries (so the
+  // matched/context paragraphs are the speaker's) and — wrapped in a doc-level
+  // nested filter below — to drop videos the speaker never appears in.
+  const speakerNested: OsQuery | null =
+    args.paragraphSpeakers && args.paragraphSpeakers.length > 0
+      ? {
+          bool: {
+            should: args.paragraphSpeakers.map((n) => ({
+              match: {
+                'paragraphs.speakerName': { query: n, operator: 'and' },
+              },
+            })),
+            minimum_should_match: 1,
+          },
+        }
+      : null;
+  if (speakerNested) {
+    filter.push({ nested: { path: 'paragraphs', query: speakerNested } });
+  }
+
+  // Wrap a nested paragraph query so its matches are limited to the requested
+  // speaker (no-op when no speaker scope is set).
+  const scopeToSpeaker = (paragraphQuery: OsQuery): OsQuery =>
+    speakerNested
+      ? { bool: { must: [paragraphQuery], filter: [speakerNested] } }
+      : paragraphQuery;
+
+  return { filter, speakerNested, scopeToSpeaker };
+}
+
 /**
  * Build the OpenSearch hybrid-query request body for lc_media_v1. Run with
  * `search_pipeline: RRF_PIPELINE` (see `runMediaHybridSearch`).
@@ -293,45 +359,18 @@ export function buildMediaHybridBody({
   knnInnerHitsSize = innerHitsSize,
   highlight = true,
   facets = [],
+  withInnerHits = true,
 }: BuildMediaSearchArgs): OsMsearchItem {
   const trimmed = lexicalText.trim();
-  const filter = buildFilter(
+  const { filter, speakerNested, scopeToSpeaker } = resolveFilter({
     channelIds,
     publishedAt,
     bibleRefs,
     bibleBooks,
     speakers,
     uploadIds,
-  );
-
-  // Paragraph-level speaker scope: a bool over the analyzed speakerName so a
-  // paragraph matches when its attributed speaker is one of the requested names.
-  // Used both as a nested constraint on the paragraph sub-queries (so the
-  // matched/context paragraphs are the speaker's) and — wrapped in a doc-level
-  // nested filter below — to drop videos the speaker never appears in.
-  const speakerNested =
-    paragraphSpeakers && paragraphSpeakers.length > 0
-      ? {
-          bool: {
-            should: paragraphSpeakers.map((n) => ({
-              match: {
-                'paragraphs.speakerName': { query: n, operator: 'and' },
-              },
-            })),
-            minimum_should_match: 1,
-          },
-        }
-      : null;
-  if (speakerNested) {
-    filter.push({ nested: { path: 'paragraphs', query: speakerNested } });
-  }
-
-  // Wrap a nested paragraph query so its matches are limited to the requested
-  // speaker (no-op when no speaker scope is set).
-  const scopeToSpeaker = (paragraphQuery: OsQuery): OsQuery =>
-    speakerNested
-      ? { bool: { must: [paragraphQuery], filter: [speakerNested] } }
-      : paragraphQuery;
+    paragraphSpeakers,
+  });
 
   // (1) BM25 lexical
   const lexicalShould: OsQuery[] = [
@@ -339,6 +378,7 @@ export function buildMediaHybridBody({
       multi_match: {
         query: trimmed,
         fields: ['title^2', 'description', 'summary', 'channelName'],
+        analyzer: LEXICAL_QUERY_ANALYZER,
       },
     },
     {
@@ -346,17 +386,19 @@ export function buildMediaHybridBody({
         path: 'paragraphs',
         // Require a paragraph to match a fraction of the query terms before it
         // counts as a match — `match` is OR over tokens, so otherwise any
-        // paragraph containing a single common word ("of", "the") qualifies and
-        // floods the snippet list with irrelevant matches. The combined
-        // `2<70%` rule requires ALL terms for 1–2 word queries (a bare percent
-        // would floor to 1 and let single-token matches back in) and scales to
-        // 70% for longer queries (5 words → 3, 10 → 7). Note: stopwords count
-        // toward the total, so it's an approximation of content-word overlap.
+        // paragraph containing a single common word qualifies and floods the
+        // snippet list with irrelevant matches. The combined `2<70%` rule
+        // requires ALL terms for 1–2 word queries (a bare percent would floor to
+        // 1 and let single-token matches back in) and scales to 70% for longer
+        // queries (5 words → 3, 10 → 7). The `stop` analyzer removes stopwords
+        // from the query first, so they no longer count toward the total (or
+        // scan their huge posting lists — see LEXICAL_QUERY_ANALYZER).
         query: scopeToSpeaker({
           match: {
             'paragraphs.text': {
               query: trimmed,
               minimum_should_match: '2<70%',
+              analyzer: LEXICAL_QUERY_ANALYZER,
             },
           },
         }),
@@ -364,7 +406,15 @@ export function buildMediaHybridBody({
         // a video with one paragraph that nails the query shouldn't be diluted
         // by its many other, weakly-matching paragraphs.
         score_mode: 'max',
-        inner_hits: paragraphInnerHits(PARA_BM25, innerHitsSize, highlight),
+        ...(withInnerHits
+          ? {
+              inner_hits: paragraphInnerHits(
+                PARA_BM25,
+                innerHitsSize,
+                highlight,
+              ),
+            }
+          : {}),
       },
     },
   ];
@@ -451,11 +501,15 @@ export function buildMediaHybridBody({
                   },
                 },
                 score_mode: 'max',
-                inner_hits: paragraphInnerHits(
-                  PARA_KNN,
-                  knnInnerHitsSize,
-                  false,
-                ),
+                ...(withInnerHits
+                  ? {
+                      inner_hits: paragraphInnerHits(
+                        PARA_KNN,
+                        knnInnerHitsSize,
+                        false,
+                      ),
+                    }
+                  : {}),
               },
             },
           ],
@@ -484,8 +538,76 @@ export function buildMediaHybridBody({
 }
 
 /**
- * Execute the hybrid search and return the (already paginated) hits, the total,
- * and channel facet buckets. RRF fusion happens in the search pipeline.
+ * Build a snippet-only body that re-derives the paragraph `inner_hits` for a
+ * specific set of result `uploadIds` (the displayed page). Scoped to those ids,
+ * the nested paragraph matches touch only ~10 docs, so this is cheap — unlike
+ * computing inner_hits inline on the hybrid (which spans the whole
+ * `pagination_depth` fusion window). Mirrors the BM25 (and, when enabled,
+ * paragraph-kNN) nested clauses of `buildMediaHybridBody` so the snippets are
+ * identical to what the inline inner_hits would have produced.
+ */
+export function buildMediaSnippetBody(
+  args: BuildMediaSearchArgs,
+  uploadIds: string[],
+): OsMsearchItem {
+  const trimmed = args.lexicalText.trim();
+  const innerHitsSize = args.innerHitsSize ?? 3;
+  const knnInnerHitsSize = args.knnInnerHitsSize ?? innerHitsSize;
+  const highlight = args.highlight ?? true;
+  const { speakerNested, scopeToSpeaker } = resolveFilter(args);
+
+  const should: OsQuery[] = [
+    {
+      nested: {
+        path: 'paragraphs',
+        query: scopeToSpeaker({
+          match: {
+            'paragraphs.text': {
+              query: trimmed,
+              minimum_should_match: '2<70%',
+              analyzer: LEXICAL_QUERY_ANALYZER,
+            },
+          },
+        }),
+        score_mode: 'max',
+        inner_hits: paragraphInnerHits(PARA_BM25, innerHitsSize, highlight),
+      },
+    },
+  ];
+  if (PARAGRAPH_KNN_ENABLED) {
+    should.push({
+      nested: {
+        path: 'paragraphs',
+        query: {
+          knn: {
+            'paragraphs.embedding': {
+              vector: args.queryVector,
+              k: KNN_K,
+              expand_nested_docs: true,
+              ...(speakerNested ? { filter: speakerNested } : {}),
+            },
+          },
+        },
+        score_mode: 'max',
+        inner_hits: paragraphInnerHits(PARA_KNN, knnInnerHitsSize, false),
+      },
+    });
+  }
+
+  return {
+    size: uploadIds.length,
+    _source: false,
+    query: { bool: { filter: [{ ids: { values: uploadIds } }], should } },
+  };
+}
+
+/**
+ * Execute the hybrid search and return the (already paginated) hits + total.
+ * RRF fusion happens in the search pipeline. Snippets (`inner_hits`) are NOT
+ * computed inline — that costs ~10x because the hybrid spans the whole
+ * `pagination_depth` window — but fetched in a cheap second query scoped to the
+ * returned page and attached, so callers (and `mergeParagraphSnippets`) see the
+ * same shape.
  */
 export async function runMediaHybridSearch(
   args: BuildMediaSearchArgs,
@@ -493,17 +615,81 @@ export async function runMediaHybridSearch(
   hits: MediaHit[];
   total: number;
 }> {
-  // The result query computes no aggregations — facets come from
-  // `runMediaFacets`, and the channel buckets this used to return were dead.
+  // The result query computes no aggregations (facets come from
+  // `runMediaFacets`) and no inner_hits (fetched separately below).
   const raw = await osSearch({
     index: MEDIA_INDEX,
     search_pipeline: RRF_PIPELINE,
-    ...buildMediaHybridBody({ ...args, facets: [] }),
+    ...buildMediaHybridBody({ ...args, facets: [], withInnerHits: false }),
   });
   const parsed = MediaSearchResponseSchema.parse(raw);
+  const hits = parsed.hits.hits;
+
+  if (hits.length > 0) {
+    const snippetRaw = await osSearch({
+      index: MEDIA_INDEX,
+      ...buildMediaSnippetBody(
+        args,
+        hits.map((h) => h._id),
+      ),
+    });
+    const byId = new Map(
+      MediaSearchResponseSchema.parse(snippetRaw).hits.hits.map((h) => [
+        h._id,
+        h.inner_hits,
+      ]),
+    );
+    for (const hit of hits) {
+      hit.inner_hits = byId.get(hit._id);
+    }
+  }
+
+  return { hits, total: parsed.hits.total.value };
+}
+
+/**
+ * Build a CHEAP aggregation-only body for facet counts. Critically, this does
+ * NOT use the `hybrid` query or the RRF pipeline: aggregating on top of a
+ * `hybrid` query is pathologically slow (~12s vs ~15ms here — ~800x) because the
+ * hybrid collector defeats the aggregation fast paths. Facet counts are
+ * score-independent, so we aggregate over just the lexical matched set: the same
+ * BM25 doc set the hybrid's lexical sub-query matches, minus the kNN-only
+ * neighbours (an acceptable approximation for counts). No kNN, no nested
+ * inner_hits, no phrase boosts (they change scoring, not the matched set), no
+ * pipeline — run as a plain `_search`.
+ */
+export function buildMediaFacetBody(args: BuildMediaSearchArgs): OsMsearchItem {
+  const trimmed = args.lexicalText.trim();
+  const { filter, scopeToSpeaker } = resolveFilter(args);
+  const should: OsQuery[] = [
+    {
+      multi_match: {
+        query: trimmed,
+        fields: ['title^2', 'description', 'summary', 'channelName'],
+        analyzer: LEXICAL_QUERY_ANALYZER,
+      },
+    },
+    {
+      nested: {
+        path: 'paragraphs',
+        query: scopeToSpeaker({
+          match: {
+            'paragraphs.text': {
+              query: trimmed,
+              minimum_should_match: '2<70%',
+              analyzer: LEXICAL_QUERY_ANALYZER,
+            },
+          },
+        }),
+        score_mode: 'max',
+      },
+    },
+  ];
   return {
-    hits: parsed.hits.hits,
-    total: parsed.hits.total.value,
+    size: 1,
+    _source: false,
+    query: { bool: { filter, should, minimum_should_match: 1 } },
+    aggs: facetAggs(args.facets ?? []),
   };
 }
 
@@ -522,10 +708,8 @@ export async function runMediaHybridSearch(
  * A facet whose own selection is inactive reuses the fully-filtered body (dropping
  * an absent filter changes nothing), so a search with 0–1 active filters issues
  * only 1–2 aggregation queries, growing to one per active filter (+1) at most;
- * they run in parallel. Each runs the hybrid query under RRF_PIPELINE with
- * `size: 1` — the normalization processor throws on `size: 0`, and aggregations
- * are computed over all matches in the query phase regardless, so the single
- * fetched hit is just discarded.
+ * they run in parallel. Each is a cheap lexical aggregation body
+ * (`buildMediaFacetBody`) — NOT the hybrid query — so it returns in ~tens of ms.
  */
 export async function runMediaFacets(args: BuildMediaSearchArgs): Promise<{
   channels: Array<{ key: string; doc_count: number }>;
@@ -559,14 +743,14 @@ export async function runMediaFacets(args: BuildMediaSearchArgs): Promise<{
     ...(hasDate ? [] : (['years'] as const)),
   ];
   const bodies: OsMsearchItem[] = [
-    buildMediaHybridBody({ ...base, facets: fullFacets }),
+    buildMediaFacetBody({ ...base, facets: fullFacets }),
   ];
   const fullIndex = 0;
   const pushBody = (
     overrides: Partial<BuildMediaSearchArgs>,
     facets: MediaFacetKey[],
   ): number => {
-    bodies.push(buildMediaHybridBody({ ...base, ...overrides, facets }));
+    bodies.push(buildMediaFacetBody({ ...base, ...overrides, facets }));
     return bodies.length - 1;
   };
   const channelIndex = hasChannel
@@ -582,19 +766,11 @@ export async function runMediaFacets(args: BuildMediaSearchArgs): Promise<{
     ? pushBody({ publishedAt: null }, ['years'])
     : fullIndex;
 
-  // Issued as separate `_search` requests in parallel rather than one `_msearch`
-  // on purpose: a hybrid query needs the RRF normalization pipeline, and this
-  // OpenSearch version rejects `search_pipeline` in the `_msearch` metadata
-  // header ("key [search_pipeline] is not supported in the metadata section",
-  // 400) — so each facet body goes as its own `_search` with the pipeline as a
-  // URL param (the proven path). They run concurrently, so wall-clock stays ~one
-  // round-trip; the count is 1 + (active filters), usually 1–2. (An unpiped
-  // `_msearch` would technically yield correct aggregations since they're
-  // score-independent, but it returns garbage `_score`s — too sharp an edge.)
+  // Plain `_search` per body, in parallel (no RRF pipeline — these are simple
+  // lexical aggregation queries, not hybrid). The count is 1 + (active filters),
+  // usually 1–2, and each returns in ~tens of ms.
   const responses = await Promise.all(
-    bodies.map((body) =>
-      osSearch({ index: MEDIA_INDEX, search_pipeline: RRF_PIPELINE, ...body }),
-    ),
+    bodies.map((body) => osSearch({ index: MEDIA_INDEX, ...body })),
   );
   const aggs = responses.map(
     (raw) => MediaSearchResponseSchema.parse(raw).aggregations,
