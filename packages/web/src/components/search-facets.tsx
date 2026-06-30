@@ -3,6 +3,7 @@ import {
   IconCheck,
   IconChevronDown,
   IconSparkles,
+  IconX,
 } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
@@ -823,20 +824,39 @@ export function MobileFacets({
 
       <MobileDrawer.Root open={open} onOpenChange={setOpen}>
         <MobileDrawer.Portal>
-          <MobileDrawer.Backdrop />
           <MobileDrawer.Content>
-            <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-8">
-              <SearchFacets
-                availableChannels={availableChannels}
-                availableSpeakers={availableSpeakers}
-                availableVerses={availableVerses}
-                availableYears={availableYears}
-                bordered={false}
-                channelsLoading={channelsLoading}
-                recommendedChannelSlugs={recommendedChannelSlugs}
-                recommendedSpeakers={recommendedSpeakers}
-                recommendedDate={recommendedDate}
-              />
+            {/* Fixed, non-scrolling header — matches the transcript/playlist
+                drawers, so the whole top is a draggable (swipe-to-dismiss)
+                surface, not just the grab handle. */}
+            <div className="flex h-10 items-center gap-2 border-zinc-200 border-b border-solid px-5 dark:border-zinc-800">
+              <MobileDrawer.Title className="grow font-bold text-base text-primary">
+                Filters
+              </MobileDrawer.Title>
+              <MobileDrawer.Close
+                className="flex size-7 items-center justify-center rounded-lg hover:bg-white/10"
+                aria-label="Close filters"
+              >
+                <IconX size={16} className="text-primary/80" />
+              </MobileDrawer.Close>
+            </div>
+
+            {/* Scroll lives on a nested element (outer overflow-hidden) like the
+                other drawers, so Base UI's swipe-to-dismiss reads the body's
+                scroll position and drags the sheet when scrolled to the top. */}
+            <div className="fade-bottom flex-1 overflow-hidden">
+              <div className="h-full overflow-y-auto p-4 pb-8">
+                <SearchFacets
+                  availableChannels={availableChannels}
+                  availableSpeakers={availableSpeakers}
+                  availableVerses={availableVerses}
+                  availableYears={availableYears}
+                  bordered={false}
+                  channelsLoading={channelsLoading}
+                  recommendedChannelSlugs={recommendedChannelSlugs}
+                  recommendedSpeakers={recommendedSpeakers}
+                  recommendedDate={recommendedDate}
+                />
+              </div>
             </div>
           </MobileDrawer.Content>
         </MobileDrawer.Portal>
