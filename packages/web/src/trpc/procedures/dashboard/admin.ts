@@ -4779,6 +4779,8 @@ export const adminRouter = router({
       'transcript',
       'channel',
       'organization',
+      'media',
+      'speaker',
     ];
     const statuses = await Promise.all(
       kinds.map(async (kind) => ({
@@ -4794,7 +4796,14 @@ export const adminRouter = router({
   startReindex: adminProcedure
     .input(
       z.object({
-        kind: z.enum(['upload', 'transcript', 'channel', 'organization']),
+        kind: z.enum([
+          'upload',
+          'transcript',
+          'channel',
+          'organization',
+          'media',
+          'speaker',
+        ]),
         batchSize: z.number().min(1).max(500).default(50),
       }),
     )
@@ -4837,7 +4846,14 @@ export const adminRouter = router({
   cancelReindex: adminProcedure
     .input(
       z.object({
-        kind: z.enum(['upload', 'transcript', 'channel', 'organization']),
+        kind: z.enum([
+          'upload',
+          'transcript',
+          'channel',
+          'organization',
+          'media',
+          'speaker',
+        ]),
       }),
     )
     .mutation(async ({ ctx, input }) => {

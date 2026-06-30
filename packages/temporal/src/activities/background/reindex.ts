@@ -1,10 +1,27 @@
-import { Channel, db, Organization, UploadRecord } from '@letschurch/db';
+import {
+  Channel,
+  db,
+  Organization,
+  SpeakerAttribution,
+  UploadRecord,
+} from '@letschurch/db';
 import { heartbeat } from '@temporalio/activity';
 import { asc, isNotNull, sql } from 'drizzle-orm';
 import logger from '../../util/logger';
 import indexDocument from './index-document';
+import { syncSpeakerVectors } from './sync-speaker-vectors';
 
-export type ReindexKind = 'upload' | 'transcript' | 'channel' | 'organization';
+// `media` → lc_media_v1 (the unified search index; also re-syncs the upload's
+// speaker vectors as a side effect). `speaker` → lc_speaker_vectors only (for
+// uploads with attributions but no summary embedding, which the media pass
+// skips). The other four are the legacy per-entity indices.
+export type ReindexKind =
+  | 'upload'
+  | 'transcript'
+  | 'channel'
+  | 'organization'
+  | 'media'
+  | 'speaker';
 
 export type ReindexBatchResult = {
   indexed: number;
@@ -35,6 +52,23 @@ export async function getReindexCount(kind: ReindexKind): Promise<number> {
     }
     case 'organization': {
       const r = await db.select({ count: countCol }).from(Organization);
+      return Number(r[0]?.count ?? 0);
+    }
+    case 'media': {
+      // Only uploads with a summary embedding produce an lc_media_v1 doc; the
+      // rest are skipped by indexDocument('media'), so don't count them.
+      const r = await db
+        .select({ count: countCol })
+        .from(UploadRecord)
+        .where(isNotNull(UploadRecord.summaryEmbedding));
+      return Number(r[0]?.count ?? 0);
+    }
+    case 'speaker': {
+      const r = await db
+        .select({
+          count: sql<string>`count(distinct ${SpeakerAttribution.uploadRecordId})`,
+        })
+        .from(SpeakerAttribution);
       return Number(r[0]?.count ?? 0);
     }
   }
@@ -93,12 +127,39 @@ export async function reindexBatch(
       rows = r.map((x) => ({ id: x.id }));
       break;
     }
+    case 'media': {
+      const r = await db
+        .select({ id: UploadRecord.id })
+        .from(UploadRecord)
+        .where(isNotNull(UploadRecord.summaryEmbedding))
+        .orderBy(asc(UploadRecord.id))
+        .limit(batchSize)
+        .offset(offset);
+      rows = r.map((x) => ({ id: x.id }));
+      break;
+    }
+    case 'speaker': {
+      // Distinct uploads that have at least one speaker attribution.
+      const r = await db
+        .selectDistinct({ id: SpeakerAttribution.uploadRecordId })
+        .from(SpeakerAttribution)
+        .orderBy(asc(SpeakerAttribution.uploadRecordId))
+        .limit(batchSize)
+        .offset(offset);
+      rows = r.map((x) => ({ id: x.id }));
+      break;
+    }
   }
 
   let indexed = 0;
   for (const { id, s3Key } of rows) {
     try {
-      await indexDocument(kind, id, s3Key);
+      if (kind === 'speaker') {
+        await syncSpeakerVectors(id);
+      } else {
+        // `kind` is narrowed to a DocumentKind here ('speaker' handled above).
+        await indexDocument(kind, id, s3Key);
+      }
       indexed++;
     } catch (err) {
       moduleLogger.error(

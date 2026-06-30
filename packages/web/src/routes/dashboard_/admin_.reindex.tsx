@@ -53,6 +53,16 @@ const KIND_LABELS: Record<ReindexKind, { label: string; description: string }> =
       label: 'Organizations',
       description: 'Church and ministry names, tags, and locations',
     },
+    media: {
+      label: 'Media (search)',
+      description:
+        'The unified lc_media_v1 index that powers the main search — summaries, embeddings, paragraphs, speakers, and Bible refs (uploads with a summary embedding). Also re-syncs their speaker vectors.',
+    },
+    speaker: {
+      label: 'Speaker vectors',
+      description:
+        'Voice vectors (lc_speaker_vectors) for speaker-labeling suggestions, for every upload with speaker attributions.',
+    },
   };
 
 const KINDS: ReindexKind[] = [
@@ -60,6 +70,8 @@ const KINDS: ReindexKind[] = [
   'transcript',
   'channel',
   'organization',
+  'media',
+  'speaker',
 ];
 
 function statusBadge(status: string | undefined) {
