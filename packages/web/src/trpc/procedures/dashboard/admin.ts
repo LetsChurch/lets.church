@@ -11,6 +11,8 @@ import {
   OrganizationChannelAssociation,
   OrganizationTag,
   SearchLogEntry,
+  Speaker,
+  SpeakerAttribution,
   StorageAudit,
   TranscriptParagraph,
   UploadRecord,
@@ -41,7 +43,9 @@ import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
 import {
   and,
+  asc,
   count,
+  countDistinct,
   desc,
   eq,
   gt,
@@ -49,6 +53,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  ne,
   notExists,
   or,
   sql,
@@ -57,6 +62,14 @@ import {
 import { z } from 'zod';
 import { usernameSchema } from '@/schemas/auth';
 import { IncomingIdSchema } from '@/schemas/common';
+import {
+  adminAssignSpeakerLabelsSchema,
+  adminCreateSpeakerFromClusterSchema,
+  adminLabelingQueueSchema,
+  adminSearchSpeakersSchema,
+  adminSpeakersPageSchema,
+  mergeSpeakersSchema,
+} from '@/schemas/dashboard';
 import {
   addFeaturedUploadSchema,
   removeFeaturedUploadSchema,
@@ -101,6 +114,7 @@ import {
   startStorageAudit,
 } from '@/temporal';
 import { mantineAvatarSm2x } from '@/util/avatar-sizes';
+import { clearByPrefix } from '@/util/cache';
 import logger from '@/util/logger';
 import {
   getMaintenanceSettings,
@@ -114,6 +128,13 @@ import {
   filterUploadsWithoutActiveWorkflows,
 } from '@/util/temporal-workflow';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
+import { authorizedSpeakerChannelIds } from '../../speaker-labeling/helpers';
+import { mergeSpeakers } from '../../speaker-labeling/merge';
+import {
+  applySpeakerAssignments,
+  buildLabelingData,
+  createSpeakerAndAssign,
+} from '../../speaker-labeling/queue';
 import { authProcedure, router } from '../../trpc';
 import { newsletterListsRouter } from '../newsletter-lists';
 
@@ -152,6 +173,142 @@ const adminProcedure = authProcedure.use(async ({ ctx, next }) => {
 });
 
 export const adminRouter = router({
+  // Site-wide labeling data across every channel with transcribed content:
+  // `queue` = segments matching an existing named speaker (channels without
+  // speakers simply contribute none); `clusters` = unmatched segments grouped
+  // by voice similarity — including channels not yet labeled at all.
+  getSpeakerLabelingQueue: adminProcedure
+    .input(adminLabelingQueueSchema)
+    .query(async ({ input }) => {
+      const contentChannels = await db
+        .selectDistinct({ channelId: UploadRecord.channelId })
+        .from(UploadRecord)
+        .where(
+          and(
+            isNotNull(UploadRecord.transcribingFinishedAt),
+            isNull(UploadRecord.deletedAt),
+          ),
+        );
+      return buildLabelingData({
+        owningChannelIds: contentChannels.map((r) => r.channelId),
+        minMatchPercent: input.minMatchPercent,
+        limit: input.limit,
+      });
+    }),
+
+  // Bulk-apply attributions from the site-wide queue. A site admin may assign
+  // across channels; each speaker still must be owned-or-linked by its upload's
+  // channel (assertSpeakerUsable, inside applySpeakerAssignments).
+  assignSpeakerLabels: adminProcedure
+    .input(adminAssignSpeakerLabelsSchema)
+    .mutation(async ({ ctx, input }) => {
+      return applySpeakerAssignments(input.assignments, {
+        actingUserId: ctx.session.appUserId,
+        authorizeChannel: () => true,
+      });
+    }),
+
+  // Create a new speaker (in the cluster's channel) and attribute its members.
+  createSpeakerFromCluster: adminProcedure
+    .input(adminCreateSpeakerFromClusterSchema)
+    .mutation(async ({ ctx, input }) => {
+      return createSpeakerAndAssign({
+        channelId: input.channelId,
+        name: input.name,
+        members: input.members,
+        actingUserId: ctx.session.appUserId,
+        authorizeChannel: () => true,
+      });
+    }),
+
+  // Site-wide roster of every named speaker, with its owning channel and how
+  // many uploads it's attributed to. Manage individual speakers from the owning
+  // channel's speakers page. Server-paginated (the roster can grow unbounded).
+  getAllSpeakers: adminProcedure
+    .input(adminSpeakersPageSchema)
+    .query(async ({ input }) => {
+      const pageSize = 50;
+      const [speakers, totalRow] = await Promise.all([
+        db
+          .select({
+            id: Speaker.id,
+            name: Speaker.name,
+            slug: Speaker.slug,
+            channelId: Speaker.channelId,
+            channelName: Channel.name,
+            createdAt: Speaker.createdAt,
+            // Distinct uploads the speaker is attributed to (a speaker tagged on
+            // multiple labels in one upload would otherwise over-count).
+            attributionCount: countDistinct(SpeakerAttribution.uploadRecordId),
+          })
+          .from(Speaker)
+          .innerJoin(Channel, eq(Channel.id, Speaker.channelId))
+          .leftJoin(
+            SpeakerAttribution,
+            eq(SpeakerAttribution.speakerId, Speaker.id),
+          )
+          .where(isNull(Speaker.deletedAt))
+          .groupBy(Speaker.id, Channel.name)
+          // Deterministic tiebreaker so LIMIT/OFFSET pages are stable.
+          .orderBy(asc(Channel.name), asc(Speaker.name), asc(Speaker.id))
+          .limit(pageSize)
+          .offset((input.page - 1) * pageSize),
+        db
+          .select({ count: count() })
+          .from(Speaker)
+          .where(isNull(Speaker.deletedAt))
+          .then((r) => r[0]),
+      ]);
+      const total = Number(totalRow?.count ?? 0);
+      return {
+        speakers,
+        total,
+        page: input.page,
+        pageCount: Math.max(1, Math.ceil(total / pageSize)),
+      };
+    }),
+
+  // Speaker search by name. Global by default (the merge target picker); when a
+  // `channelId` is given, scoped to that channel's assignable pool (own +
+  // ACCEPTED links) so a queue cluster can only be attributed to a usable
+  // speaker. `excludeId` drops one (e.g. a merge's own source).
+  searchSpeakers: adminProcedure
+    .input(adminSearchSpeakersSchema)
+    .query(async ({ input }) => {
+      const channelPool = input.channelId
+        ? await authorizedSpeakerChannelIds(input.channelId)
+        : null;
+      const results = await db
+        .select({
+          speakerId: Speaker.id,
+          name: Speaker.name,
+          channelId: Speaker.channelId,
+          channelName: Channel.name,
+        })
+        .from(Speaker)
+        .innerJoin(Channel, eq(Speaker.channelId, Channel.id))
+        .where(
+          and(
+            isNull(Speaker.deletedAt),
+            ilike(Speaker.name, `%${escapeLikePattern(input.query)}%`),
+            input.excludeId ? ne(Speaker.id, input.excludeId) : undefined,
+            channelPool ? inArray(Speaker.channelId, channelPool) : undefined,
+          ),
+        )
+        .orderBy(asc(Speaker.name))
+        .limit(20);
+      return { results };
+    }),
+
+  // Merge one speaker into another: move all attributions/links/tag requests onto
+  // the target, then permanently delete the source. Re-indexes the affected
+  // uploads. A site admin may merge across channels.
+  mergeSpeakers: adminProcedure
+    .input(mergeSpeakersSchema)
+    .mutation(async ({ input }) =>
+      mergeSpeakers({ sourceId: input.sourceId, targetId: input.targetId }),
+    ),
+
   getPendingApprovals: adminProcedure.query(async () => {
     moduleLogger.info('Fetching pending approvals');
 
@@ -4015,6 +4172,9 @@ export const adminRouter = router({
       if (input.task === 'annotate') {
         const r = await runAnnotation(paragraphs, metadata, input.model, {
           maxTokens: input.maxTokens,
+          // The eval page runs arbitrary, possibly non-OpenAI models — route it
+          // through OpenRouter (production annotate runs OpenAI-direct).
+          via: 'openrouter',
           tracking: {
             activity: 'evalAnnotate',
             uploadRecordId: input.uploadRecordId,
@@ -4035,6 +4195,8 @@ export const adminRouter = router({
         input.model,
         {
           maxTokens: input.maxTokens,
+          // Eval runs arbitrary models via OpenRouter (prod summarize is direct).
+          via: 'openrouter',
           tracking: {
             activity: 'evalSummarize',
             uploadRecordId: input.uploadRecordId,
@@ -4351,6 +4513,22 @@ export const adminRouter = router({
         totalCount: totalCountRows[0]?.cnt ?? 0,
       };
     }),
+
+  // Flush the Valkey-backed search caches (query parses, related searches, and
+  // final AI answers) so the next search re-parses and regenerates. No-op when
+  // Valkey is unset.
+  clearSearchCache: adminProcedure.mutation(async () => {
+    const [parses, related, answers] = await Promise.all([
+      clearByPrefix('search-parse:'),
+      clearByPrefix('search-related:'),
+      clearByPrefix('search-answer:'),
+    ]);
+    moduleLogger.info(
+      { context: { parses, related, answers } },
+      'Cleared search caches',
+    );
+    return { parses, related, answers, total: parses + related + answers };
+  }),
 
   getDeletingUploadsCount: adminProcedure.query(async () => {
     moduleLogger.info('Fetching deleting uploads count');

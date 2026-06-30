@@ -11,6 +11,9 @@ type LcTooltipProps = {
   render?: ComponentProps<typeof Tooltip.Trigger>['render'];
 };
 
+// Per-tooltip delay isn't a `Tooltip.Root` prop in Base UI 1.6 — it's set on
+// `Tooltip.Provider` (exposed here as `LcTooltip.Provider`). Wrap a group in
+// `<LcTooltip.Provider delay={…}>` to control hover timing.
 export function LcTooltip({
   children,
   content,

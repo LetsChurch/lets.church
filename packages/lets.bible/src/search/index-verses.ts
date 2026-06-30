@@ -4,9 +4,9 @@
 
 import { bibleVerse, db } from '../db';
 import { findBook } from '../lib/canon';
-import { client, VERSE_INDEX, waitForElasticsearch } from './client';
+import { client, VERSE_INDEX, waitForOpenSearch } from './client';
 
-await waitForElasticsearch();
+await waitForOpenSearch();
 
 const rows = await db
   .select({
@@ -45,9 +45,10 @@ for (let i = 0; i < rows.length; i += BATCH) {
     ];
   });
 
-  const res = await client.bulk({ operations, refresh: false });
-  if (res.errors) {
-    const firstError = res.items.find((it) => it.index?.error)?.index?.error;
+  const res = await client.bulk({ body: operations, refresh: false });
+  if (res.body.errors) {
+    const items = res.body.items as Array<{ index?: { error?: unknown } }>;
+    const firstError = items.find((it) => it.index?.error)?.index?.error;
     throw new Error(`Bulk index error: ${JSON.stringify(firstError)}`);
   }
   indexed += slice.length;

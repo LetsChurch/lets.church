@@ -13,7 +13,6 @@ import {
   ANNOTATE_FALLBACK_MODEL,
   ANNOTATE_MODEL,
   createChatCompletionTracked,
-  openrouterExtras,
 } from '../../util/llm';
 import { resolveCostUsd } from '../../util/llm-pricing';
 import logger from '../../util/logger';
@@ -776,6 +775,12 @@ export async function runAnnotation(
       activity: string;
       uploadRecordId?: string | null;
     };
+    /**
+     * Provider routing. Production annotate runs `'openai'` (direct); the admin
+     * LLM-eval page passes `'openrouter'` so it can run arbitrary multi-provider
+     * models. Defaults to `'openai'`.
+     */
+    via?: 'openai' | 'openrouter';
   } = {},
 ): Promise<RunAnnotationResult> {
   invariant(paragraphs.length > 0, 'runAnnotation: no paragraphs provided');
@@ -814,6 +819,7 @@ export async function runAnnotation(
   );
   const completion = await createChatCompletionTracked({
     tracking: options.tracking,
+    via: options.via ?? 'openai',
     model,
     // Switch to ANNOTATE_FALLBACK_MODEL (defaults to Anthropic Haiku) only
     // when OpenAI's content classifier blocks the response — covers
@@ -836,7 +842,6 @@ export async function runAnnotation(
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: userContent },
     ],
-    ...(openrouterExtras as Record<string, unknown>),
     guards: (completion) => {
       const completionTokens = completion.usage?.completion_tokens ?? 0;
       if (

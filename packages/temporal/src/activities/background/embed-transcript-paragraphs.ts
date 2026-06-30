@@ -6,7 +6,6 @@ import {
   EMBED_DIMS,
   EMBED_MAX_INPUTS,
   EMBED_MODEL,
-  openrouterExtras,
 } from '../../util/llm';
 import logger from '../../util/logger';
 
@@ -78,7 +77,6 @@ export default async function embedTranscriptParagraphs(
       tracking: { activity: 'embedTranscriptParagraphs', uploadRecordId },
       model: EMBED_MODEL,
       input: slice.map((r) => r.text),
-      ...(openrouterExtras as Record<string, unknown>),
     });
 
     invariant(

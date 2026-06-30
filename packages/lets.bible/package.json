@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@base-ui/react": "catalog:",
-    "@elastic/elasticsearch": "catalog:",
+    "@opensearch-project/opensearch": "^3.6.0",
     "@tailwindcss/vite": "catalog:",
     "drizzle-orm": "catalog:",
     "flexsearch": "^0.8.212",

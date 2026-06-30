@@ -172,6 +172,192 @@ export const resendChannelInvitationSchema = z.object({
   invitationId: IncomingIdSchema,
 });
 
+// Speaker library schemas
+export const speakerIdSchema = IncomingIdSchema;
+const speakerLabelSchema = z.string().trim().min(1).max(120);
+
+export const uploadSpeakerQuerySchema = z.object({
+  channelId: channelIdSchema,
+  uploadId: uploadIdSchema,
+});
+
+export const setParagraphLabelSchema = z.object({
+  channelId: channelIdSchema,
+  uploadId: uploadIdSchema,
+  paragraphId: IncomingIdSchema,
+  label: speakerLabelSchema,
+});
+
+// Batched save of a labeling session: paragraph-label overrides + label→speaker
+// attributions applied in one transaction with a single reindex. A null
+// speakerId unassigns the label.
+export const saveSpeakerLabelingSchema = z.object({
+  channelId: channelIdSchema,
+  uploadId: uploadIdSchema,
+  paragraphLabels: z
+    .array(
+      z.object({
+        paragraphId: IncomingIdSchema,
+        label: speakerLabelSchema,
+      }),
+    )
+    .default([]),
+  attributions: z
+    .array(
+      z.object({
+        speakerLabel: speakerLabelSchema,
+        speakerId: speakerIdSchema.nullable(),
+      }),
+    )
+    .default([]),
+});
+
+export const attributeSpeakerSchema = z.object({
+  channelId: channelIdSchema,
+  uploadId: uploadIdSchema,
+  speakerLabel: speakerLabelSchema,
+  speakerId: speakerIdSchema,
+});
+
+export const unattributeSpeakerSchema = z.object({
+  channelId: channelIdSchema,
+  uploadId: uploadIdSchema,
+  speakerLabel: speakerLabelSchema,
+});
+
+export const suggestSpeakerCandidatesSchema = z.object({
+  channelId: channelIdSchema,
+  uploadId: uploadIdSchema,
+  speakerLabel: speakerLabelSchema,
+});
+
+export const createSpeakerSchema = z.object({
+  channelId: channelIdSchema,
+  name: z.string().trim().min(1, 'Name is required').max(200),
+  slug: z
+    .string()
+    .regex(
+      /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+      'Slug can only contain lowercase letters, numbers, and hyphens',
+    )
+    .optional(),
+  bio: z.string().max(2000).optional(),
+});
+
+export const updateSpeakerSchema = z.object({
+  channelId: channelIdSchema,
+  speakerId: speakerIdSchema,
+  name: z.string().trim().min(1).max(200).optional(),
+  bio: z.string().max(2000).nullable().optional(),
+});
+
+export const deleteSpeakerSchema = z.object({
+  channelId: channelIdSchema,
+  speakerId: speakerIdSchema,
+});
+
+export const searchSpeakersSchema = z.object({
+  channelId: channelIdSchema,
+  query: z.string().trim().min(1).max(200),
+});
+
+// Site-admin speaker search. Without `channelId` it spans every channel (the
+// merge target picker); with one it's scoped to that channel's assignable pool
+// (own + ACCEPTED links), for picking an existing speaker to attribute a queue
+// cluster to. `excludeId` drops one speaker (e.g. a merge's source).
+export const adminSearchSpeakersSchema = z.object({
+  query: z.string().trim().min(1).max(200),
+  channelId: channelIdSchema.optional(),
+  excludeId: speakerIdSchema.optional(),
+});
+
+// Merge the `sourceId` speaker into `targetId`: move every attribution, link,
+// and tag request onto the target, then permanently delete the source.
+export const mergeSpeakersSchema = z.object({
+  sourceId: speakerIdSchema,
+  targetId: speakerIdSchema,
+});
+
+export const requestSpeakerLinkSchema = z.object({
+  channelId: channelIdSchema,
+  speakerId: speakerIdSchema,
+  forUploadId: uploadIdSchema.optional(),
+});
+
+export const speakerLinkActionSchema = z.object({
+  channelId: channelIdSchema,
+  linkId: IncomingIdSchema,
+});
+
+export const approveSpeakerLinkSchema = z.object({
+  channelId: channelIdSchema,
+  linkId: IncomingIdSchema,
+  scope: z.enum(['upload', 'channel']),
+});
+
+// One (upload, effective-label) → speaker assignment from the labeling queue.
+export const speakerAssignmentSchema = z.object({
+  uploadId: uploadIdSchema,
+  speakerLabel: speakerLabelSchema,
+  speakerId: speakerIdSchema,
+});
+
+// Per-channel labeling queue (channel admins).
+export const getSpeakerLabelingQueueSchema = z.object({
+  channelId: channelIdSchema,
+  minMatchPercent: z.number().min(0).max(100).optional(),
+});
+
+export const assignSpeakerLabelsSchema = z.object({
+  channelId: channelIdSchema,
+  assignments: z.array(speakerAssignmentSchema).min(1).max(500),
+});
+
+// Site-admin labeling queue (across all channels).
+export const adminLabelingQueueSchema = z.object({
+  minMatchPercent: z.number().min(0).max(100).optional(),
+  limit: z.number().min(1).max(1000).optional(),
+});
+
+export const adminAssignSpeakerLabelsSchema = z.object({
+  assignments: z.array(speakerAssignmentSchema).min(1).max(500),
+});
+
+// Mass-mark a cluster of unlabeled segments as one new speaker.
+const clusterMemberSchema = z.object({
+  uploadId: uploadIdSchema,
+  speakerLabel: speakerLabelSchema,
+});
+
+export const createSpeakerFromClusterSchema = z.object({
+  channelId: channelIdSchema,
+  name: z.string().trim().min(1, 'Name is required').max(200),
+  members: z.array(clusterMemberSchema).min(1).max(500),
+});
+
+export const adminCreateSpeakerFromClusterSchema = z.object({
+  channelId: channelIdSchema,
+  name: z.string().trim().min(1, 'Name is required').max(200),
+  members: z.array(clusterMemberSchema).min(1).max(500),
+});
+
+// Owner asks the content channel to tag its speaker on another channel's upload.
+export const requestSpeakerTagSchema = z.object({
+  channelId: channelIdSchema,
+  speakerId: speakerIdSchema,
+  uploadId: uploadIdSchema,
+  speakerLabel: speakerLabelSchema,
+});
+
+export const tagRequestActionSchema = z.object({
+  channelId: channelIdSchema,
+  requestId: IncomingIdSchema,
+});
+
+export const adminSpeakersPageSchema = z.object({
+  page: z.number().min(1).default(1),
+});
+
 export const createUploadSchema = z.object({
   channelId: channelIdSchema,
   originalFileName: z

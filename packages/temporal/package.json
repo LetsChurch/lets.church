@@ -35,8 +35,7 @@
   },
   "dependencies": {
     "@letschurch/db": "workspace:*",
-    "drizzle-orm": "^0.45.1",
-    "@letschurch/elasticsearch": "workspace:*",
+    "@letschurch/opensearch": "workspace:*",
     "@letschurch/s3": "workspace:*",
     "@letschurch/util": "workspace:*",
     "@node-rs/xxhash": "^1.7.6",
@@ -48,6 +47,7 @@
     "blurhash": "^2.0.5",
     "crawlee": "^3.15.3",
     "diff": "^8.0.2",
+    "drizzle-orm": "^0.45.1",
     "es-toolkit": "catalog:",
     "execa": "^9.6.0",
     "fast-glob": "^3.3.3",

@@ -311,4 +311,4 @@ prompt changes.
 | Storage activity (live pipeline) | `packages/temporal/src/activities/background/store-transcript-paragraphs.ts` |
 | Summary workflow (live pipeline) | `packages/temporal/src/workflows/background/summarize-upload.ts` |
 | LLM client + models | `packages/temporal/src/util/llm.ts` |
-| ES mapping | `packages/elasticsearch/src/mappings.ts` (`lc_media_v1`) |
+| ES mapping | `packages/opensearch/src/mappings.ts` (`lc_media_v1`) |

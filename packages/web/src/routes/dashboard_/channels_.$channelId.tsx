@@ -15,7 +15,9 @@ import {
   IconCheck,
   IconHeart,
   IconList,
+  IconMicrophone,
   IconShield,
+  IconUsers,
   IconVideo,
   IconX,
 } from '@tabler/icons-react';
@@ -295,6 +297,35 @@ function ChannelDetailsPage() {
             icon={<IconShield size={22} stroke={1.5} />}
             tooltip="People who can manage and upload content to this channel"
             value={channel._count.memberships}
+          />
+        )}
+
+        {(isChannelAdmin || isSiteAdmin) && (
+          <StatCard
+            title="Speakers"
+            to="/dashboard/channels/$channelId/speakers"
+            color="violet"
+            icon={<IconMicrophone size={22} stroke={1.5} />}
+            tooltip="Named speakers your transcripts can be attributed to"
+            value={channel._count.speakers}
+          />
+        )}
+
+        {(isChannelAdmin || isSiteAdmin) && (
+          <StatCard
+            title="Speaker labeling"
+            to="/dashboard/channels/$channelId/speaker-queue"
+            color="violet"
+            icon={<IconUsers size={22} stroke={1.5} />}
+            tooltip="Diarized voices in this channel that still need a speaker"
+            value={
+              <Text>
+                {channel._count.unlabeledVoices}{' '}
+                <Text span size="sm" c="violet.6">
+                  unlabeled voices
+                </Text>
+              </Text>
+            }
           />
         )}
 

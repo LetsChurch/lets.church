@@ -16,6 +16,8 @@ import {
   OrganizationMembership,
   OrganizationOrganizationAssociation,
   OrganizationTagInstance,
+  Speaker,
+  SpeakerAttribution,
   TranscriptParagraph,
   UploadList,
   UploadListEntry,
@@ -1742,10 +1744,242 @@ if (process.env.LIVE_PIPELINE === '1') {
         summarizedAt: new Date(snapshot.summarizedAt),
       })
       .where(eq(UploadRecord.id, uploadId));
-
-    // Push the unified doc to lc_media_v1. Same fire-and-forget pattern as
-    // the existing 'transcript' / 'upload' index calls above — the worker
-    // writes ES async, the seed returns quickly.
-    await indexDocument('media', uploadId);
+    // Media docs are indexed once at the very end of the seed (below), after
+    // speaker attributions exist — so each lc_media_v1 doc carries its speaker
+    // rollup and the voice vectors reach lc_speaker_vectors.
   }
+}
+
+// ---------------------------------------------------------------------------
+// Speakers + attributions
+//
+// Exported from the dev database so a reseed reproduces the named speakers and
+// the (upload, diarization-label) → speaker attributions that drive the media
+// speaker rollups, the labeling queue, and the admin speaker tools. Speaker ids
+// are pinned so the attributions below (and any future seed rows) stay joinable
+// across reseeds; attributions reference the fixed upload ids defined above.
+// ---------------------------------------------------------------------------
+const channelIdBySlug: Record<string, string | undefined> = {
+  dorean: doreanPrincipleChannelId,
+  'selling-jesus': sellingJesusChannel?.id,
+};
+
+const speakerSeedData = [
+  {
+    id: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    name: 'Conley Owens',
+    slug: 'conley-owens',
+    channelSlug: 'dorean',
+  },
+  {
+    id: 'c1ab1621-2455-4419-98c7-ca5bde3f87bf',
+    name: 'Joseph M. Jacowitz',
+    slug: 'joseph-m-jacowitz',
+    channelSlug: 'dorean',
+  },
+  {
+    id: '19bc911a-7482-4c66-b254-cd1a9432355b',
+    name: 'Andrew Case',
+    slug: 'andrew-case',
+    channelSlug: 'selling-jesus',
+  },
+] as const;
+
+await db.insert(Speaker).values(
+  speakerSeedData.map((s) => {
+    const channelId = channelIdBySlug[s.channelSlug];
+    invariant(channelId, `Channel ${s.channelSlug} not found for speaker seed`);
+    return {
+      id: s.id,
+      channelId,
+      name: s.name,
+      slug: s.slug,
+      createdById: adminUser.id,
+      updatedAt: new Date(),
+    };
+  }),
+);
+
+const speakerAttributionSeedData = [
+  {
+    speakerId: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    uploadId: '00000000-0000-4000-8000-000000000000',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: 'c1ab1621-2455-4419-98c7-ca5bde3f87bf',
+    uploadId: '00000000-0000-4000-8000-000000000000',
+    speakerLabel: 'SPEAKER_01',
+  },
+  {
+    speakerId: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    uploadId: '00000000-0000-4000-8000-000000000001',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    uploadId: '00000000-0000-4000-8000-000000000002',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    uploadId: '00000000-0000-4000-8000-000000000003',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    uploadId: '00000000-0000-4000-8000-000000000004',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    uploadId: '00000000-0000-4000-8000-000000000005',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    uploadId: '00000000-0000-4000-8000-000000000006',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    uploadId: '00000000-0000-4000-8000-000000000007',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    uploadId: '00000000-0000-4000-8000-000000000008',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    uploadId: '00000000-0000-4000-8000-000000000009',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    uploadId: '00000000-0000-4000-8000-00000000000a',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    uploadId: '00000000-0000-4000-8000-00000000000b',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    uploadId: '00000000-0000-4000-8000-00000000000c',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    uploadId: '00000000-0000-4000-8000-00000000000d',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    uploadId: '00000000-0000-4000-8000-00000000000e',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    uploadId: '00000000-0000-4000-8000-00000000000f',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    uploadId: '00000000-0000-4000-8000-000000000010',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    uploadId: '00000000-0000-4000-8000-000000000011',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    uploadId: '00000000-0000-4000-8000-000000000012',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '48326f0c-04a7-43d5-ae43-e1d179d29904',
+    uploadId: '00000000-0000-4000-8000-000000000013',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '19bc911a-7482-4c66-b254-cd1a9432355b',
+    uploadId: '00000000-0000-4000-8000-100000000000',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '19bc911a-7482-4c66-b254-cd1a9432355b',
+    uploadId: '00000000-0000-4000-8000-100000000001',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '19bc911a-7482-4c66-b254-cd1a9432355b',
+    uploadId: '00000000-0000-4000-8000-100000000002',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '19bc911a-7482-4c66-b254-cd1a9432355b',
+    uploadId: '00000000-0000-4000-8000-100000000002',
+    speakerLabel: 'SPEAKER_01',
+  },
+  {
+    speakerId: '19bc911a-7482-4c66-b254-cd1a9432355b',
+    uploadId: '00000000-0000-4000-8000-100000000002',
+    speakerLabel: 'SPEAKER_02',
+  },
+  {
+    speakerId: '19bc911a-7482-4c66-b254-cd1a9432355b',
+    uploadId: '00000000-0000-4000-8000-100000000003',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '19bc911a-7482-4c66-b254-cd1a9432355b',
+    uploadId: '00000000-0000-4000-8000-100000000003',
+    speakerLabel: 'SPEAKER_01',
+  },
+  {
+    speakerId: '19bc911a-7482-4c66-b254-cd1a9432355b',
+    uploadId: '00000000-0000-4000-8000-100000000004',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '19bc911a-7482-4c66-b254-cd1a9432355b',
+    uploadId: '00000000-0000-4000-8000-100000000005',
+    speakerLabel: 'SPEAKER_00',
+  },
+  {
+    speakerId: '19bc911a-7482-4c66-b254-cd1a9432355b',
+    uploadId: '00000000-0000-4000-8000-100000000005',
+    speakerLabel: 'SPEAKER_01',
+  },
+  {
+    speakerId: '19bc911a-7482-4c66-b254-cd1a9432355b',
+    uploadId: '00000000-0000-4000-8000-100000000006',
+    speakerLabel: 'SPEAKER_00',
+  },
+] as const;
+
+await db.insert(SpeakerAttribution).values(
+  speakerAttributionSeedData.map((a) => ({
+    speakerId: a.speakerId,
+    uploadRecordId: a.uploadId,
+    speakerLabel: a.speakerLabel,
+    createdById: adminUser.id,
+    updatedAt: new Date(),
+  })),
+);
+
+// Index every LLM-seeded upload's media doc once, now that paragraphs,
+// summaries, annotations, AND speaker attributions are all in place. This is
+// the single media-index pass for the seed: each lc_media_v1 doc gets its
+// speaker rollup, and the per-attributed-label mean voice vectors are synced
+// into lc_speaker_vectors — the index the labeling queue's kNN suggestions and
+// the admin speaker tools read from. (Indexing earlier, before attributions,
+// would leave both empty.)
+for (const uploadId of LLM_SEEDED_UPLOAD_IDS) {
+  await indexDocument('media', uploadId);
 }

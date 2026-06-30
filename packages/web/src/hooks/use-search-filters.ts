@@ -3,8 +3,17 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 type SearchFilters = {
   sort?: 'relevance' | 'date-asc' | 'date-desc';
   dateRange?: 'all-time' | 'today' | 'this-week' | 'this-month' | 'this-year';
+  // Custom inclusive publish-date bounds (YYYY-MM-DD). When either is set it
+  // takes precedence over the coarse `dateRange` bucket.
+  dateStart?: string;
+  dateEnd?: string;
   channelSlugs?: string[];
-  focus?: 'media' | 'transcripts';
+  // OSIS verse facet tokens ("John.3.16"). OR semantics across the list.
+  bibleRefs?: string[];
+  // OSIS book ids ("Rom") from the Bible-book facet. OR semantics.
+  bibleBooks?: string[];
+  // Resolved speaker names from the speaker facet. OR semantics.
+  speakers?: string[];
 };
 
 export function useSearchFilters() {
@@ -14,15 +23,25 @@ export function useSearchFilters() {
   const filters = {
     sort: searchParams.sort,
     dateRange: searchParams.dateRange,
+    dateStart: searchParams.dateStart,
+    dateEnd: searchParams.dateEnd,
     channelSlugs: searchParams.channelSlugs,
-    focus: searchParams.focus,
+    bibleRefs: searchParams.bibleRefs,
+    bibleBooks: searchParams.bibleBooks,
+    speakers: searchParams.speakers,
   };
+
+  const hasCustomDates = Boolean(filters.dateStart || filters.dateEnd);
 
   // Check if any filters are active (non-default values)
   const hasActiveFilters =
     (filters.sort && filters.sort !== 'relevance') ||
     (filters.dateRange && filters.dateRange !== 'all-time') ||
-    (filters.channelSlugs && filters.channelSlugs.length > 0);
+    hasCustomDates ||
+    (filters.channelSlugs && filters.channelSlugs.length > 0) ||
+    (filters.bibleRefs && filters.bibleRefs.length > 0) ||
+    (filters.bibleBooks && filters.bibleBooks.length > 0) ||
+    (filters.speakers && filters.speakers.length > 0);
 
   const setSort = (
     sort: 'relevance' | 'date-asc' | 'date-desc' | undefined,
@@ -32,6 +51,8 @@ export function useSearchFilters() {
     });
   };
 
+  // Selecting a coarse bucket clears any custom range (they're mutually
+  // exclusive in the UI; explicit bounds otherwise win server-side).
   const setDateRange = (
     dateRange:
       | 'all-time'
@@ -42,7 +63,27 @@ export function useSearchFilters() {
       | undefined,
   ) => {
     navigate({
-      search: (prev: Record<string, unknown>) => ({ ...prev, dateRange }),
+      search: (prev: Record<string, unknown>) => ({
+        ...prev,
+        dateRange,
+        dateStart: undefined,
+        dateEnd: undefined,
+      }),
+    });
+  };
+
+  // Setting a custom range clears the coarse bucket.
+  const setCustomDates = (
+    dateStart: string | undefined,
+    dateEnd: string | undefined,
+  ) => {
+    navigate({
+      search: (prev: Record<string, unknown>) => ({
+        ...prev,
+        dateRange: undefined,
+        dateStart: dateStart || undefined,
+        dateEnd: dateEnd || undefined,
+      }),
     });
   };
 
@@ -58,9 +99,21 @@ export function useSearchFilters() {
     setChannelSlugs(newSlugs.length > 0 ? newSlugs : undefined);
   };
 
-  const setFocus = (focus: 'media' | 'transcripts') => {
+  const setBibleRefs = (bibleRefs: string[] | undefined) => {
     navigate({
-      search: (prev: Record<string, unknown>) => ({ ...prev, focus }),
+      search: (prev: Record<string, unknown>) => ({ ...prev, bibleRefs }),
+    });
+  };
+
+  const setBibleBooks = (bibleBooks: string[] | undefined) => {
+    navigate({
+      search: (prev: Record<string, unknown>) => ({ ...prev, bibleBooks }),
+    });
+  };
+
+  const setSpeakers = (speakers: string[] | undefined) => {
+    navigate({
+      search: (prev: Record<string, unknown>) => ({ ...prev, speakers }),
     });
   };
 
@@ -70,18 +123,27 @@ export function useSearchFilters() {
         ...prev,
         sort: undefined,
         dateRange: undefined,
+        dateStart: undefined,
+        dateEnd: undefined,
         channelSlugs: undefined,
+        bibleRefs: undefined,
+        bibleBooks: undefined,
+        speakers: undefined,
       }),
     });
   };
 
   return {
     filters,
+    hasCustomDates,
     setSort,
     setDateRange,
+    setCustomDates,
     setChannelSlugs,
     removeChannelSlug,
-    setFocus,
+    setBibleRefs,
+    setBibleBooks,
+    setSpeakers,
     clearFilters,
     hasActiveFilters,
   };

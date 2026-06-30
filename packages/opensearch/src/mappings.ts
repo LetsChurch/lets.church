@@ -1,26 +1,27 @@
-import type { estypes } from '@elastic/elasticsearch';
 import { logger as baseLogger } from '@letschurch/util';
 import { diff } from 'jest-diff';
 import pc from 'picocolors';
-import { client, waitForElasticsearch } from './index';
+import { client, waitForOpenSearch } from './client';
+import { RRF_PIPELINE } from './media-search';
 
 const logger = baseLogger.child({
-  package: '@letschurch/elasticsearch',
+  package: '@letschurch/opensearch',
 });
 
 const moduleLogger = logger.child({ module: 'elasticsearch/mappings' });
 
 moduleLogger.info('Waiting for Elasticsearch to be ready');
-await waitForElasticsearch();
+await waitForOpenSearch();
 moduleLogger.info('Elasticsearch is ready');
 moduleLogger.info('Starting index mapping deployment');
 
-// Define target mappings
+// Define target mappings. Loosely typed: the OpenSearch client's generated
+// mapping types are thin, and these are plain JSON we send verbatim.
 const targetMappings: Record<
   string, // index name
   {
-    properties: Record<estypes.PropertyName, estypes.MappingProperty>;
-    settings?: estypes.IndicesIndexSettings;
+    properties: Record<string, Record<string, unknown>>;
+    settings?: Record<string, unknown>;
   }
 > = {
   lc_channels: {
@@ -148,6 +149,10 @@ const targetMappings: Record<
   lc_media_v1: {
     settings: {
       number_of_replicas: 0,
+      // Enable approximate kNN (HNSW) for this index's knn_vector fields.
+      // Static setting — applied at index creation, so a fresh reindex is
+      // required to turn it on for an existing index.
+      'index.knn': true,
     },
     properties: {
       // identity + access-control denormalization
@@ -167,20 +172,33 @@ const targetMappings: Record<
         fields: { keyword: { type: 'keyword', ignore_above: 256 } },
       },
       summary: { type: 'text' },
+      // Doc-level rollup of resolved speaker names across the upload's
+      // paragraphs (from speaker_attribution in index-document.ts). Powers the
+      // speaker facet (terms agg) and speaker filter. Empty until the upload's
+      // labels are attributed; populated via re-index.
+      speakers: { type: 'keyword' },
+      // Doc-level rollup of Bible verses cited in the transcript — OSIS
+      // `Book.Chapter.Verse` tokens (e.g. "John.3.16"), expanded from BIBLE
+      // annotations in index-document.ts. Powers the verse facet (terms agg)
+      // and verse filter. Additive mapping; populated via re-index.
+      bibleRefs: { type: 'keyword' },
+      // Doc-level rollup of OSIS book ids cited (e.g. "Rom", "John") — the
+      // coarser book facet + filter. Additive; populated via re-index.
+      bibleBooks: { type: 'keyword' },
       // Video-level semantic vectors (cosine for RRF fusion + related-videos).
       // searchSummary text is intentionally NOT indexed — it exists only to
       // produce searchSummaryEmbedding, so users never see synthetic prose.
       summaryEmbedding: {
-        type: 'dense_vector',
-        dims: 1536,
-        similarity: 'cosine',
-        index: true,
+        type: 'knn_vector',
+        dimension: 1536,
+        space_type: 'cosinesimil',
+        method: { name: 'hnsw', engine: 'faiss' },
       },
       searchSummaryEmbedding: {
-        type: 'dense_vector',
-        dims: 1536,
-        similarity: 'cosine',
-        index: true,
+        type: 'knn_vector',
+        dimension: 1536,
+        space_type: 'cosinesimil',
+        method: { name: 'hnsw', engine: 'faiss' },
       },
       // Nested paragraphs — supports inner_hits on both BM25 and knn queries.
       paragraphs: {
@@ -189,23 +207,63 @@ const targetMappings: Record<
           order: { type: 'integer' },
           start: { type: 'double' },
           end: { type: 'double' },
+          // Worker-local diarization label (SPEAKER_00, …) — not a real name.
           speaker: { type: 'keyword' },
+          // The speaker-identity library's resolved values for this paragraph's
+          // effective label (override ?? diarization speaker), set in
+          // index-document.ts when a speaker_attribution exists. Null until the
+          // label is attributed.
+          speakerName: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          speakerId: { type: 'keyword' },
+          // (Speaker vectors live in the flat `lc_speaker_vectors` index, not
+          // here — see suggestSpeakersByEmbedding.)
           text: { type: 'text' },
           embedding: {
-            type: 'dense_vector',
-            dims: 1536,
-            similarity: 'cosine',
-            index: true,
+            type: 'knn_vector',
+            dimension: 1536,
+            space_type: 'cosinesimil',
+            method: { name: 'hnsw', engine: 'faiss' },
           },
         },
+      },
+    },
+  },
+  // Flat companion to lc_media_v1 for speaker-identity suggestions. One doc per
+  // (upload, label) attribution = `${uploadRecordId}:${label}`, holding that
+  // label's mean titanet vector. Suggestion = kNN over `embedding` +
+  // collapse(speakerId): server-side, score-ranked identities, no nested-kNN /
+  // aggregation limitations. Synced by index-document.ts on every media reindex.
+  lc_speaker_vectors: {
+    settings: {
+      number_of_replicas: 0,
+      'index.knn': true,
+    },
+    properties: {
+      speakerId: { type: 'keyword' },
+      channelId: { type: 'keyword' },
+      uploadRecordId: { type: 'keyword' },
+      embedding: {
+        type: 'knn_vector',
+        dimension: 192,
+        space_type: 'cosinesimil',
+        method: { name: 'hnsw', engine: 'faiss' },
       },
     },
   },
 };
 
 // Get server mappings and transform into expected format
+const getMappingRes = await client.indices.getMapping();
 const serverMappings = Object.fromEntries(
-  Object.entries(await client.indices.getMapping())
+  Object.entries(
+    getMappingRes.body as Record<
+      string,
+      { mappings: { properties?: Record<string, Record<string, unknown>> } }
+    >,
+  )
     .filter(([indexName]) => indexName.startsWith('lc_'))
     .map(
       ([
@@ -222,7 +280,12 @@ const serverMappings = Object.fromEntries(
               Object.entries(properties || {}).map(([property, mapping]) => [
                 property,
                 Object.fromEntries(
-                  Object.entries(mapping).filter(([key]) => !key.includes('_')),
+                  // Drop only OpenSearch-internal keys (`_`-prefixed), not valid
+                  // mapping keys that merely contain an underscore (e.g.
+                  // `space_type`, `ignore_above`).
+                  Object.entries(mapping).filter(
+                    ([key]) => !key.startsWith('_'),
+                  ),
                 ),
               ]),
             ),
@@ -262,19 +325,55 @@ const serverIndexNames = new Set(Object.keys(serverMappings));
 
 // Do the deployment
 for (const [name, mappings] of Object.entries(targetMappings)) {
-  // If the server doesn't have an index by the given name, create it
+  // If the server doesn't have an index by the given name, create it. Static
+  // settings (e.g. `index.knn`) only apply here, so a new index must be
+  // created — they can't be added to an existing index via putMapping.
   if (!serverIndexNames.has(name)) {
     moduleLogger.info(`Creating index: ${name}`);
-    await client.indices.create({ index: name, settings: mappings.settings });
+    await client.indices.create({
+      index: name,
+      body: { settings: mappings.settings },
+    });
   }
 
   // PUT the index mapping
   moduleLogger.info(`PUTting index mapping for ${name}`);
   await client.indices.putMapping({
     index: name,
-    properties: mappings.properties,
+    body: { properties: mappings.properties },
   });
 }
+
+// Create / update the RRF search pipeline used by hybrid media search. The JS
+// client has no typed search-pipeline API, so we issue the raw request.
+moduleLogger.info(`Creating search pipeline: ${RRF_PIPELINE}`);
+await client.transport.request({
+  method: 'PUT',
+  path: `/_search/pipeline/${RRF_PIPELINE}`,
+  body: {
+    description:
+      'Min-max normalized, weighted fusion for lc_media_v1 hybrid search',
+    phase_results_processors: [
+      {
+        // Score-normalized fusion instead of plain RRF: RRF fuses by RANK and
+        // discards magnitude, so a much stronger lexical match reads the same as
+        // a marginal one and loses to a semantically-broad result. min_max
+        // normalizes each sub-query's scores to [0,1], then we take a WEIGHTED
+        // arithmetic mean — so a decisive lexical win carries through, and we can
+        // bias toward the lexical signal. Weights map to the hybrid sub-queries
+        // in order: [BM25 lexical, doc-kNN (summary), paragraph-kNN]. Lexical is
+        // weighted highest so exact/phrase matches rank where users expect.
+        'normalization-processor': {
+          normalization: { technique: 'min_max' },
+          combination: {
+            technique: 'arithmetic_mean',
+            parameters: { weights: [0.5, 0.25, 0.25] },
+          },
+        },
+      },
+    ],
+  },
+});
 
 // Done!
 moduleLogger.info('All done!');

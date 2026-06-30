@@ -15,7 +15,7 @@
       "path": "./packages/db"
     },
     {
-      "path": "./packages/elasticsearch"
+      "path": "./packages/opensearch"
     },
     {
       "path": "./packages/s3"

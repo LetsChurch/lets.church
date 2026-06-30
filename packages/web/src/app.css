@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Generate the utility classes Streamdown uses to style streamed markdown. */
+@source "../node_modules/streamdown/dist/index.js";
+
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme {
@@ -68,6 +71,55 @@
 @utility glow-md {
   box-shadow: 0px 2px 12px 0px var(--color-brand);
   backdrop-filter: blur(8px);
+}
+
+/* Animated "shimmer" sweep for transient loading text (e.g. the AI answer
+   card's "Seeking…"). White text on the indigo card. Light mode uses a higher
+   base opacity so it reads against the lighter light-mode card; dark mode (a
+   deeper indigo) keeps the lower base for more shimmer contrast (overridden
+   below). */
+@utility text-shimmer {
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.7) 0%,
+    rgba(255, 255, 255, 0.7) 40%,
+    rgba(255, 255, 255, 1) 50%,
+    rgba(255, 255, 255, 0.7) 60%,
+    rgba(255, 255, 255, 0.7) 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: lc-shimmer 4s linear infinite;
+}
+
+@keyframes lc-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .text-shimmer {
+    animation: none;
+  }
+}
+
+/* Dark mode card is a deeper indigo, so a lower base reads + shimmers more. */
+[data-theme="dark"] .text-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.45) 0%,
+    rgba(255, 255, 255, 0.45) 40%,
+    rgba(255, 255, 255, 1) 50%,
+    rgba(255, 255, 255, 0.45) 60%,
+    rgba(255, 255, 255, 0.45) 100%
+  );
 }
 
 @utility aspect-media {

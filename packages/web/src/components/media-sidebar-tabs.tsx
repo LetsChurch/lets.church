@@ -2,6 +2,7 @@ import { useStore } from '@nanostores/react';
 import {
   IconListNumbers,
   IconSearch,
+  IconSparkles,
   IconTextCaption,
   IconX,
 } from '@tabler/icons-react';
@@ -21,6 +22,7 @@ import {
   resetSearch,
   type TranscriptLine,
 } from '@/stores/transcript-search';
+import { askVideoQuestion } from '@/stores/video-ask';
 
 type PlaylistItem = {
   id: string;
@@ -190,6 +192,26 @@ export function MediaSidebarTabs({
                 </>
               )}
             </div>
+
+            {/* Pinned "Ask AI" row — escalate the typed find to a question.
+                The answer renders in the main column (above the info tabs). */}
+            {isSearchActive && hasQuery ? (
+              <button
+                type="button"
+                onClick={() => askVideoQuestion(searchQuery)}
+                className="flex w-full shrink-0 items-center gap-2 border-zinc-200 border-b px-5 py-2.5 text-left text-primary text-sm transition-colors hover:bg-white/10 dark:border-zinc-800"
+              >
+                <IconSparkles
+                  size={16}
+                  className="shrink-0 text-indigo-500 dark:text-indigo-300"
+                  aria-hidden="true"
+                />
+                <span className="truncate">
+                  Ask AI about this video:{' '}
+                  <span className="text-secondary">“{searchQuery}”</span>
+                </span>
+              </button>
+            ) : null}
 
             {/* Transcript Content — search results take precedence over
                 the body view in both paragraph and legacy modes.

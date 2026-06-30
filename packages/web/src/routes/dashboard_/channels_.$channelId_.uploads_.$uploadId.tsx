@@ -45,6 +45,7 @@ import {
   IconStarFilled,
   IconTrash,
   IconUpload,
+  IconUsers,
   IconX,
 } from '@tabler/icons-react';
 import {
@@ -68,6 +69,7 @@ import { uploadFormSchema } from '@/schemas/dashboard';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { doMultipartUpload } from '@/util/multipart-upload';
 import { showFailure, showSuccess } from '../-mantine';
+import { SpeakerLabelingModal } from './-components/speaker-labeling-modal';
 import styles from './-styles.module.css';
 import {
   $deletedUploads,
@@ -227,6 +229,7 @@ function ChannelUploadPage() {
 
   const [newThumbnailFile, setNewThumbnailFile] = useState<File | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showSpeakerModal, setShowSpeakerModal] = useState(false);
   const [showDebugModal, setShowDebugModal] = useState(false);
   const [showReprocessModal, setShowReprocessModal] = useState(false);
   const [reprocessScope, setReprocessScope] = useState<
@@ -1047,6 +1050,18 @@ function ChannelUploadPage() {
               View Media Page
             </Button>
 
+            {/* Label speakers — available to admins once a transcript exists. */}
+            {isAdmin && upload.transcribingFinishedAt ? (
+              <Button
+                variant="light"
+                leftSection={<IconUsers size={16} />}
+                fullWidth
+                onClick={() => setShowSpeakerModal(true)}
+              >
+                Label Speakers
+              </Button>
+            ) : null}
+
             {/* Download the original uploaded file — same permission as the
                 uploads list (admins or members with download permission). */}
             {canDownload && upload.finalizedUploadKey ? (
@@ -1713,6 +1728,14 @@ function ChannelUploadPage() {
           </Group>
         </Stack>
       </Modal>
+
+      {/* Speaker labeling modal */}
+      <SpeakerLabelingModal
+        opened={showSpeakerModal}
+        onClose={() => setShowSpeakerModal(false)}
+        channelId={channelId}
+        uploadId={uploadId}
+      />
     </Container>
   );
 }

@@ -9,6 +9,7 @@ import {
   IconBrandFacebook,
   IconBrandX,
   IconCheck,
+  IconChevronDown,
   IconCode,
   IconDeviceTvOld,
   IconDownload,
@@ -16,23 +17,27 @@ import {
   IconFlag,
   IconFlagFilled,
   IconShare2,
+  IconSparkles,
   IconThumbDown,
   IconThumbDownFilled,
   IconThumbUp,
   IconThumbUpFilled,
   IconVolume,
 } from '@tabler/icons-react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import posthog from 'posthog-js';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import LcButton from '@/components/lc-button';
 import LcButtonGroup from '@/components/lc-button-group';
-import { LcMenu, MenuItemLink } from '@/components/lc-menu';
+import { LcMenu, MenuItemButton, MenuItemLink } from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { LcTooltip } from '@/components/lc-tooltip';
 import { useAbortController } from '@/hooks/use-abort-controller';
 import { $currentTime } from '@/stores/player';
+import { askVideoQuestion, openVideoAsk } from '@/stores/video-ask';
+import { useTRPC } from '@/trpc/react';
 import { abortableSetTimeout } from '@/util/abortable-timeout';
 import { cn } from '@/util/cn';
 
@@ -170,6 +175,22 @@ export function MediaActions({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showLeftFade, setShowLeftFade] = useState(false);
   const [showRightFade, setShowRightFade] = useState(false);
+
+  // Per-video suggested questions for the Ask dropdown. Generated server-side
+  // (gpt-5.4-nano) once and cached in Valkey, so this fires on mount —
+  // pre-generating as the page loads — and the menu has them ready with no delay.
+  const trpc = useTRPC();
+  const { data: suggestedQuestions = [], isLoading: isLoadingQuestions } =
+    useQuery({
+      ...trpc.media.getSuggestedQuestions.queryOptions({
+        mediaId: uploadId ?? '',
+      }),
+      enabled: Boolean(uploadId),
+      staleTime: Number.POSITIVE_INFINITY,
+    });
+  // Controlled so picking a question can close the menu (our custom MenuItemButton
+  // onClick overrides Base UI's default close-on-select).
+  const [askMenuOpen, setAskMenuOpen] = useState(false);
 
   // Format time as MM:SS or H:MM:SS
   const formatTime = useCallback((seconds: number) => {
@@ -531,6 +552,71 @@ export function MediaActions({
               )}
               {channelData.isFollowing ? 'Following' : 'Follow'}
             </LcButton>
+
+            {/* Ask — main segment focuses the transcript search; the caret opens
+                AI-generated, video-specific suggested questions. */}
+            <LcMenu.Root open={askMenuOpen} onOpenChange={setAskMenuOpen}>
+              <div className="isolate inline-flex shrink-0 overflow-clip rounded-full border-fancy-pants bg-gray-950/10 font-semibold text-primary/80 text-sm dark:bg-white/15">
+                <button
+                  type="button"
+                  onClick={openVideoAsk}
+                  className="inline-flex items-center gap-1 px-3 py-1.5"
+                >
+                  <IconSparkles size={16} />
+                  Ask
+                </button>
+                <LcMenu.Trigger
+                  render={(props) => (
+                    <button
+                      {...props}
+                      type="button"
+                      aria-label="Suggested questions"
+                      className="-ml-px inline-flex items-center border-gray-950/5 border-l px-1.5 py-1.5 dark:border-white/10"
+                    >
+                      <IconChevronDown size={16} />
+                    </button>
+                  )}
+                />
+              </div>
+              <LcMenu.Portal>
+                <LcMenu.Positioner sideOffset={8} align="end">
+                  <LcMenu.Popup className="max-w-[20rem]">
+                    <div className="px-3 pt-1.5 pb-1 font-medium text-secondary text-xs">
+                      Ask about this video
+                    </div>
+                    {suggestedQuestions.length > 0 ? (
+                      suggestedQuestions.map((q) => (
+                        <MenuItemButton
+                          key={q}
+                          onClick={() => {
+                            askVideoQuestion(q);
+                            setAskMenuOpen(false);
+                          }}
+                        >
+                          {/* Own layout (not the icon prop) so multi-line
+                              questions stay left-aligned with the icon at the
+                              first line, without fighting the menu item's
+                              default items-center. */}
+                          <span className="flex w-full items-start gap-2 text-left">
+                            <IconSparkles
+                              size={14}
+                              className="mt-0.5 shrink-0 text-brand"
+                            />
+                            {q}
+                          </span>
+                        </MenuItemButton>
+                      ))
+                    ) : (
+                      <div className="px-3 py-2 text-secondary text-sm">
+                        {isLoadingQuestions
+                          ? 'Thinking of questions…'
+                          : 'No suggestions for this video.'}
+                      </div>
+                    )}
+                  </LcMenu.Popup>
+                </LcMenu.Positioner>
+              </LcMenu.Portal>
+            </LcMenu.Root>
           </div>
 
           {/* Right fade shadow */}

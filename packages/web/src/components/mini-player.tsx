@@ -1,7 +1,6 @@
 import type { HlsVideoElement } from 'hls-video-element';
 import HlsVideo from 'hls-video-element/react';
 import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { formatTime } from '@/util/format';
 
 const PLAYER_WIDTH = 320;
@@ -12,22 +11,22 @@ type Props = {
   mediaSource: string | null;
   audioSource: string | null;
   thumbnailUrl: string | null;
-  videoWidth: number;
-  videoHeight: number;
   initialTimestamp: number;
-  mousePos: { x: number; y: number };
   currentTimeRef: React.MutableRefObject<number>;
+  /** Optional caption shown beneath the player (e.g. the cited media's title
+   * for answer footnotes). Omit for previews that don't need a label. */
+  title?: string | null;
 };
 
+// Position-agnostic preview player: renders just the player surface (fixed
+// width). Placement is handled by the caller (a Base UI PreviewCard popup).
 export function MiniPlayer({
   mediaSource,
   audioSource,
   thumbnailUrl,
-  videoWidth,
-  videoHeight,
   initialTimestamp,
-  mousePos,
   currentTimeRef,
+  title,
 }: Props) {
   const videoRef = useRef<HlsVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -35,25 +34,6 @@ export function MiniPlayer({
 
   const hasVideo = Boolean(mediaSource);
   const source = mediaSource ?? audioSource;
-
-  const playerHeight =
-    hasVideo && videoWidth > 0
-      ? Math.round(PLAYER_WIDTH * (videoHeight / videoWidth))
-      : AUDIO_PLAYER_HEIGHT;
-
-  const OFFSET_X = 20;
-  let left = mousePos.x + OFFSET_X;
-  let top = mousePos.y - Math.round(playerHeight / 2);
-
-  if (typeof window !== 'undefined') {
-    if (left + PLAYER_WIDTH > window.innerWidth - 8) {
-      left = mousePos.x - PLAYER_WIDTH - OFFSET_X;
-    }
-    if (top < 8) top = 8;
-    if (top + playerHeight > window.innerHeight - 8) {
-      top = window.innerHeight - playerHeight - 8;
-    }
-  }
 
   // Seek to initial timestamp and start playback
   useEffect(() => {
@@ -220,12 +200,12 @@ export function MiniPlayer({
     };
   }, [hasVideo]);
 
-  if (!source || typeof document === 'undefined') return null;
+  if (!source) return null;
 
-  const content = (
+  return (
     <div
-      className="pointer-events-none fixed z-[9999] overflow-hidden rounded-xl border border-white/10 shadow-2xl"
-      style={{ left, top, width: PLAYER_WIDTH }}
+      className="overflow-hidden rounded-xl border border-white/10 shadow-2xl"
+      style={{ width: PLAYER_WIDTH }}
     >
       {hasVideo ? (
         <div className="relative bg-black">
@@ -272,8 +252,13 @@ export function MiniPlayer({
           </div>
         </div>
       )}
+      {title ? (
+        <div className="bg-zinc-900 px-2.5 py-2">
+          <p className="line-clamp-2 font-medium text-white text-xs leading-snug">
+            {title}
+          </p>
+        </div>
+      ) : null}
     </div>
   );
-
-  return createPortal(content, document.body);
 }

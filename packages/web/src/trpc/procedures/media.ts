@@ -13,7 +13,7 @@ import {
   UploadViewSecond,
   UploadViewSource,
 } from '@letschurch/db';
-import { client } from '@letschurch/elasticsearch';
+import { osSearch } from '@letschurch/opensearch';
 import { getPublicUrlWithFilename } from '@letschurch/s3';
 import { publicS3 } from '@letschurch/s3/public';
 import { xxh64 } from '@node-rs/xxhash';
@@ -41,6 +41,7 @@ import {
 } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { ffprobeSchema } from '@/util/zod';
+import { generateSuggestedQuestions } from '../media/suggested-questions';
 import { authProcedure, publicProcedure } from '../trpc';
 
 const moduleLogger = logger.child({
@@ -177,6 +178,25 @@ const getRelatedMediaSchema = z.object({
 });
 
 export const mediaProcedures = {
+  // Starter questions for the media-page "ask about this video" dropdown.
+  // Generation is cached in Valkey (per upload), so it's fetched on page load
+  // (pre-generated) and returns instantly thereafter without per-view cost.
+  getSuggestedQuestions: publicProcedure
+    .input(z.object({ mediaId: IncomingIdSchema }))
+    .query(async ({ input }) => {
+      const media = await db.query.UploadRecord.findFirst({
+        columns: { id: true, title: true, description: true, summary: true },
+        where: (t, { eq: eqOp }) => eqOp(t.id, input.mediaId),
+      });
+      if (!media) return [];
+      return generateSuggestedQuestions(
+        media.id,
+        media.title,
+        media.description,
+        media.summary,
+      );
+    }),
+
   getMediaById: publicProcedure
     .input(getMediaByIdSchema)
     .query(async ({ input, ctx }) => {
@@ -1106,10 +1126,43 @@ export const mediaProcedures = {
         });
       }
 
-      return paragraphRows.map(({ id, ...rest }) => ({
-        ...rest,
-        annotations: annotationsByParagraphId.get(id) ?? [],
-      }));
+      // Resolve each paragraph's NAMED speaker: per-paragraph override label ??
+      // diarization label → speaker_attribution → Speaker.name. Lets the
+      // transcript surface a real name + a "more from this speaker" link; null
+      // when the voice isn't attributed to a (non-deleted) named speaker.
+      const paragraphIds = paragraphRows.map((p) => p.id);
+      const [overrideRows, attributionRows] = await Promise.all([
+        db.query.SpeakerParagraphLabel.findMany({
+          columns: { paragraphId: true, label: true },
+          where: (t, { inArray: inA }) => inA(t.paragraphId, paragraphIds),
+        }),
+        db.query.SpeakerAttribution.findMany({
+          columns: { speakerLabel: true },
+          where: (t, { eq }) => eq(t.uploadRecordId, input.mediaId),
+          with: { speaker: { columns: { name: true, deletedAt: true } } },
+        }),
+      ]);
+      const overrideByParagraph = new Map(
+        overrideRows.map((o) => [o.paragraphId, o.label]),
+      );
+      const nameByLabel = new Map<string, string>();
+      for (const a of attributionRows) {
+        if (a.speaker && a.speaker.deletedAt === null) {
+          nameByLabel.set(a.speakerLabel, a.speaker.name);
+        }
+      }
+
+      return paragraphRows.map(({ id, ...rest }) => {
+        const effectiveLabel = overrideByParagraph.get(id) ?? rest.speaker;
+        const speakerName = effectiveLabel
+          ? (nameByLabel.get(effectiveLabel) ?? null)
+          : null;
+        return {
+          ...rest,
+          speakerName,
+          annotations: annotationsByParagraphId.get(id) ?? [],
+        };
+      });
     }),
 
   rateMedia: authProcedure
@@ -1796,30 +1849,34 @@ export const mediaProcedures = {
       // Content"). Same access-control constraints + kNN params on both; only
       // the channel clause differs.
       const knnByChannel = (sameChannel: boolean) =>
-        client.search({
+        osSearch({
           index: 'lc_media_v1',
           _source: false,
           size: k,
-          knn: {
-            field: 'summaryEmbedding',
-            query_vector: queryVector,
-            k,
-            num_candidates: Math.max(k * 10, 100),
-            filter: {
-              bool: {
-                must: [
-                  { term: { visibility: 'PUBLIC' } },
-                  { term: { channelVisibility: 'PUBLIC' } },
-                  { exists: { field: 'channelApprovedAt' } },
-                  { exists: { field: 'transcodingFinishedAt' } },
-                  { exists: { field: 'transcribingFinishedAt' } },
-                  ...(sameChannel ? [{ term: { channelId } }] : []),
-                ],
-                // Same channel excludes the current upload; cross-channel
-                // excludes the whole channel (which excludes it too).
-                must_not: sameChannel
-                  ? [{ ids: { values: [mediaId] } }]
-                  : [{ term: { channelId } }],
+          // OpenSearch knn query: vector + k + an optional `filter` query that
+          // restricts which parent docs are eligible (efficient filtering).
+          query: {
+            knn: {
+              summaryEmbedding: {
+                vector: queryVector,
+                k,
+                filter: {
+                  bool: {
+                    must: [
+                      { term: { visibility: 'PUBLIC' } },
+                      { term: { channelVisibility: 'PUBLIC' } },
+                      { exists: { field: 'channelApprovedAt' } },
+                      { exists: { field: 'transcodingFinishedAt' } },
+                      { exists: { field: 'transcribingFinishedAt' } },
+                      ...(sameChannel ? [{ term: { channelId } }] : []),
+                    ],
+                    // Same channel excludes the current upload; cross-channel
+                    // excludes the whole channel (which excludes it too).
+                    must_not: sameChannel
+                      ? [{ ids: { values: [mediaId] } }]
+                      : [{ term: { channelId } }],
+                  },
+                },
               },
             },
           },
@@ -1830,8 +1887,11 @@ export const mediaProcedures = {
         knnByChannel(false),
       ]);
 
-      const hitIds = (res: typeof sameChannelRes) =>
-        res.hits.hits
+      const hitIds = (res: Record<string, unknown>) =>
+        (
+          (res as { hits?: { hits?: Array<{ _id?: string }> } }).hits?.hits ??
+          []
+        )
           .map((hit) => hit._id)
           .filter((id): id is string => Boolean(id));
 

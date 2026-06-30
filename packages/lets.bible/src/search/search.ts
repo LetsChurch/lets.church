@@ -1,4 +1,4 @@
-import { client, VERSE_INDEX } from './client';
+import { osCount, osSearch, VERSE_INDEX } from './client';
 
 export type VerseHit = {
   ref: string;
@@ -41,7 +41,7 @@ export async function searchVerses(params: {
     return [];
   }
 
-  const res = await client.search<VerseSource>({
+  const res = await osSearch<VerseSource>({
     index: VERSE_INDEX,
     from: params.from ?? 0,
     size: params.size ?? 20,
@@ -127,7 +127,7 @@ export async function countExactPhrase(params: {
   if (!trimmed) {
     return 0;
   }
-  const res = await client.count({
+  return osCount({
     index: VERSE_INDEX,
     query: {
       bool: {
@@ -136,7 +136,6 @@ export async function countExactPhrase(params: {
       },
     },
   });
-  return res.count;
 }
 
 // "Related passages" via Elasticsearch's more_like_this — lexical similarity
@@ -154,7 +153,7 @@ export async function relatedVerses(params: {
   if (!like) {
     return [];
   }
-  const res = await client.search<VerseSource>({
+  const res = await osSearch<VerseSource>({
     index: VERSE_INDEX,
     size: params.size ?? 6,
     query: {

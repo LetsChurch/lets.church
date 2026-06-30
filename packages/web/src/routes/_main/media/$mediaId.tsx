@@ -28,6 +28,7 @@ import { CommentsSection } from '@/components/comments-section';
 import LcButton from '@/components/lc-button';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import MainLayout from '@/components/main-layout';
+import { MediaAskAnswer } from '@/components/media-ask-answer';
 import { MediaCarousel } from '@/components/media-carousel';
 import { MediaHeader } from '@/components/media-header';
 import { MediaInfoTabs } from '@/components/media-info-tabs';
@@ -1066,6 +1067,8 @@ function RouteComponent() {
               publishedAt={media.publishedAt}
               lengthSeconds={media.lengthSeconds}
             />
+
+            <MediaAskAnswer mediaId={mediaIdShort} />
 
             <MediaInfoTabs
               descriptionHtml={media.descriptionHtml}

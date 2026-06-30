@@ -1146,6 +1146,21 @@ export async function triggerHistoricalImport(
   });
 }
 
+// Re-index a single upload's lc_media_v1 document (e.g. after a speaker
+// attribution/label change). Same `indexDocumentWorkflow` the media pipeline
+// runs at the end of processing; the workflow id dedupes concurrent requests
+// for the same upload (an in-flight run picks up the change via its signal
+// loop, but a fresh start is fine when none is running).
+export async function startIndexMediaDocument(uploadRecordId: string) {
+  return startBackground('indexDocumentWorkflow', {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_USER },
+    workflowId: `indexDocument:media:${uploadRecordId}`,
+    args: ['media', uploadRecordId],
+  });
+}
+
 // Reindex Workflow
 
 function makeReindexWorkflowId(kind: ReindexWorkflowParams['kind']) {

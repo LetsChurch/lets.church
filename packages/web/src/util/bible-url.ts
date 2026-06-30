@@ -125,10 +125,62 @@ export function bibleBookOrder(book: string): number {
   return BOOK_ORDER[book] ?? Number.MAX_SAFE_INTEGER;
 }
 
+// Human display name for an OSIS book id ("1Cor" → "1 Corinthians"). Falls back
+// to the raw id for an unknown book.
+export function bibleBookName(book: string): string {
+  return BOOKS[book]?.name ?? book;
+}
+
+// OSIS ids of the single-chapter books, which are cited by verse alone
+// ("Jude 2", never "Jude 1:2"). Callers that render a chapter:verse ref can use
+// this to drop the always-1 chapter for these books.
+const SINGLE_CHAPTER_BOOKS = new Set([
+  'Obad',
+  'Phlm',
+  '2John',
+  '3John',
+  'Jude',
+]);
+
+export function isSingleChapterBook(book: string): boolean {
+  return SINGLE_CHAPTER_BOOKS.has(book);
+}
+
 export function formatBibleRef(meta: BibleMetadata): string {
   const name = BOOKS[meta.book]?.name ?? meta.book;
   const rest = formatBibleRefShort(meta);
   return rest ? `${name} ${rest}` : name;
+}
+
+// Parse a doc-level verse facet token ("John.3.16", produced by the indexer in
+// @letschurch/temporal util/bible-refs) back into Bible metadata. Returns null
+// on a malformed token so a stray facet bucket degrades to "skip" rather than
+// throwing. OSIS book ids contain no dots, so splitting on '.' is unambiguous.
+export function parseVerseRef(token: string): BibleMetadata | null {
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  const [book, chapterStr, verseStr] = parts;
+  const chapter = Number(chapterStr);
+  const verse = Number(verseStr);
+  // Reject empty/non-positive parts — Number('') === 0 would otherwise pass the
+  // integer check and yield a bogus chapter/verse of 0.
+  if (
+    !book ||
+    !Number.isInteger(chapter) ||
+    chapter < 1 ||
+    !Number.isInteger(verse) ||
+    verse < 1
+  ) {
+    return null;
+  }
+  return { book, chapter, verse };
+}
+
+// Human label for a verse facet token ("John.3.16" → "John 3:16"). Falls back
+// to the raw token when it can't be parsed.
+export function formatVerseRef(token: string): string {
+  const meta = parseVerseRef(token);
+  return meta ? formatBibleRef(meta) : token;
 }
 
 // Reference without the book name (e.g. "3:5-7"). Used for per-occurrence

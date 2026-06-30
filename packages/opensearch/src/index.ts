@@ -1,24 +1,21 @@
-import { Client, type estypes, HttpConnection } from '@elastic/elasticsearch';
-import waitOn from 'wait-on';
 import { z } from 'zod';
 import { adjacentPairs, escapeDocument } from './utils';
 
 export { escapeDocument };
+// Client + transport wrappers live in ./client to avoid an index <-> media-search
+// import cycle (which triggered a Vite SSR TDZ error). Re-export them here so
+// existing `@letschurch/opensearch` imports keep working.
+export {
+  client,
+  type OsMsearchItem,
+  type OsQuery,
+  osMsearch,
+  osSearch,
+  waitForOpenSearch,
+} from './client';
+export * from './media-search';
 
-const { ELASTICSEARCH_URL } = z
-  .object({ ELASTICSEARCH_URL: z.string() })
-  .parse(process.env);
-
-export const client = new Client({
-  node: ELASTICSEARCH_URL,
-  Connection: HttpConnection, // Required for Bun
-});
-
-export async function waitForElasticsearch() {
-  return waitOn({
-    resources: [ELASTICSEARCH_URL],
-  });
-}
+import { client, type OsMsearchItem, type OsQuery } from './client';
 
 type PublishedAtRange = { gte?: string; lte?: string };
 type OrderBy = 'avg' | 'sum' | 'date' | 'dateDesc';
@@ -30,10 +27,10 @@ function makePostFilterSpread({
   channelIds?: Array<string> | null;
   publishedAt?: PublishedAtRange | undefined;
   orderBy?: OrderBy | undefined;
-}): Partial<estypes.SearchRequest> {
-  const res: Partial<estypes.SearchRequest> = {};
+}): Record<string, unknown> {
+  const res: Record<string, unknown> = {};
 
-  const must: Array<estypes.QueryDslQueryContainer> = [];
+  const must: Array<OsQuery> = [];
 
   if ((Array.isArray(channelIds) && channelIds.length > 0) || publishedAt) {
     res.post_filter = { bool: { must: [], should: [] } };
@@ -67,7 +64,7 @@ export function msearchUploads(
     publishedAt?: PublishedAtRange | undefined;
     orderBy?: OrderBy | undefined;
   },
-): [estypes.MsearchRequestItem, estypes.MsearchRequestItem] {
+): [OsMsearchItem, OsMsearchItem] {
   const trimmed = query.trim();
   const words = trimmed.split(/\s+/g);
 
@@ -152,7 +149,7 @@ export function msearchTranscripts(
     orderBy?: OrderBy | undefined;
     phrase?: boolean;
   },
-): [estypes.MsearchRequestItem, estypes.MsearchRequestItem] {
+): [OsMsearchItem, OsMsearchItem] {
   const trimmed = query.trim();
   const words = trimmed.split(/\s+/g);
 
@@ -204,18 +201,18 @@ export function msearchTranscripts(
                           },
                           // Match adjacent pairs of words within a certain proximity
                           ...(words.length > 1
-                            ? adjacentPairs(words as [string, ...string[]]).map(
-                                (pair) => ({
-                                  match_phrase: {
-                                    'segments.text': {
-                                      query: pair.join(' '),
-                                      slop: 2,
-                                      // Adjacent pair match, double score
-                                      boost: 2,
-                                    },
+                            ? adjacentPairs(
+                                words as [string, string, ...string[]],
+                              ).map((pair) => ({
+                                match_phrase: {
+                                  'segments.text': {
+                                    query: pair.join(' '),
+                                    slop: 2,
+                                    // Adjacent pair match, double score
+                                    boost: 2,
                                   },
-                                }),
-                              )
+                                },
+                              }))
                             : []),
                         ],
                       },
@@ -269,7 +266,7 @@ export function msearchChannels(
   query: string,
   from = 0,
   size = 0,
-): [estypes.MsearchRequestItem, estypes.MsearchRequestItem] {
+): [OsMsearchItem, OsMsearchItem] {
   return [
     { index: 'lc_channels' },
     {
@@ -304,7 +301,7 @@ export function msearchOrganizations(
     organization?: string | null;
     tags?: string[] | null;
   },
-): [estypes.MsearchRequestItem, estypes.MsearchRequestItem] {
+): [OsMsearchItem, OsMsearchItem] {
   const trimmed = query.trim();
 
   return [
@@ -502,32 +499,50 @@ export async function* listIds(
     | 'lc_channels'
     | 'lc_organizations',
 ) {
+  type ScrollBody = {
+    _scroll_id?: string;
+    hits: { hits: Array<{ _id?: string }> };
+  };
+
   const searchRes = await client.search({
     index,
     scroll: '10m',
-    size: 1000,
-    query: { match_all: {} },
+    body: { size: 1000, query: { match_all: {} } },
   });
 
-  let scrollId = searchRes._scroll_id;
-  let hits = searchRes.hits.hits;
+  let body = searchRes.body as ScrollBody;
+  let scrollId: string | undefined = body._scroll_id;
+  let hits: Array<{ _id?: string }> = body.hits.hits;
 
-  while (hits?.length && scrollId) {
-    for (const { _id: id } of hits) {
-      if (id) {
-        yield id;
+  try {
+    while (hits?.length && scrollId) {
+      for (const { _id: id } of hits) {
+        if (id) {
+          yield id;
+        }
       }
-    }
 
-    const scrollRes = await client.scroll({
-      scroll_id: scrollId,
-      scroll: '10m',
-    });
-    scrollId = scrollRes._scroll_id;
-    hits = scrollRes.hits.hits;
+      const scrollRes = await client.scroll({
+        body: { scroll_id: scrollId, scroll: '10m' },
+      });
+      body = scrollRes.body as ScrollBody;
+      scrollId = body._scroll_id;
+      hits = body.hits.hits;
+    }
+  } finally {
+    // Always release the server-side scroll context — on normal completion,
+    // on error, and when the consumer stops iterating early (which triggers
+    // this generator's `finally`). Best-effort: a failed cleanup shouldn't mask
+    // the original outcome.
+    if (scrollId) {
+      await client
+        .clearScroll({ body: { scroll_id: scrollId } })
+        .catch(() => {});
+    }
   }
 }
 
 export async function uploadExists(id: string): Promise<boolean> {
-  return client.exists({ index: 'lc_uploads_v2', id });
+  const res = await client.exists({ index: 'lc_uploads_v2', id });
+  return res.body;
 }

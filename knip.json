@@ -40,7 +40,7 @@
       ],
       "ignoreDependencies": ["@prisma/client"]
     },
-    "packages/elasticsearch": {},
+    "packages/opensearch": {},
     "packages/s3": {},
     "packages/util": {
       "entry": "src/index.ts",

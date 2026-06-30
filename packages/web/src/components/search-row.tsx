@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import type { PropsWithChildren } from 'react';
 import { Avatar } from '@/components/avatar';
 import { formatTime } from '@/util/format';
+import { joinAdjacentMarks } from '@/util/highlight';
 
 export type Props = PropsWithChildren<{
   id: string;
@@ -74,7 +75,9 @@ export function SearchRow({
               </div>
               <div
                 className="text-primary/80 text-sm"
-                dangerouslySetInnerHTML={{ __html: transcriptSegment.text }}
+                dangerouslySetInnerHTML={{
+                  __html: joinAdjacentMarks(transcriptSegment.text),
+                }}
               />
             </div>
           ) : null}
