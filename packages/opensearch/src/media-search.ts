@@ -46,6 +46,22 @@ const PARA_KNN = 'para_knn';
 // kNN candidate pool per sub-query.
 const KNN_K = 50;
 
+// TEMPORARY mitigation for the off-heap faiss OOM. faiss loads a knn_vector
+// field's HNSW graph into native (off-heap) memory the moment that field is
+// queried with kNN. The nested `paragraphs.embedding` graph is ~100GB resident
+// across the corpus and OOM-kills the OpenSearch pod (exit 137) on essentially
+// every hybrid search — even at a 24Gi container limit. While disabled, hybrid
+// search keeps the cheap doc-level summary kNN (one vector per upload) and BM25
+// paragraph snippets; it loses only the *semantic* paragraph-moment matching
+// (the `para_knn` inner_hits). The sub-query SLOT is preserved as `match_none`
+// so the 3-weight RRF normalization pipeline ([0.5, 0.25, 0.25]) stays valid
+// without a cluster-side pipeline migration.
+//
+// Default OFF (the mitigation is active). Re-enable with MEDIA_PARAGRAPH_KNN=true
+// once lc_media_v1 is reindexed with on_disk / byte (SQ) quantization, which cuts
+// the native footprint ~1/32 and lets the graph fit in memory.
+const PARAGRAPH_KNN_ENABLED = process.env.MEDIA_PARAGRAPH_KNN === 'true';
+
 // Speaker-suggestion confidence floor (0–100, in the cosine-derived match-%
 // the UI shows). faiss `cosinesimil` knn returns score = (1 + cosine)/2, so
 // cosine = 2*score - 1 and match% = round(cosine*100). Identities whose best
@@ -408,32 +424,44 @@ export function buildMediaHybridBody({
   // (3) paragraph-level nested kNN. The access/date filter lives in the parent
   // bool (the knn filter context inside `nested` only sees nested-doc fields).
   // `expand_nested_docs` returns multiple matching paragraphs per video.
-  const paragraphKnnQuery: OsQuery = {
-    bool: {
-      filter,
-      must: [
-        {
-          nested: {
-            path: 'paragraphs',
-            query: {
-              knn: {
-                'paragraphs.embedding': {
-                  vector: queryVector,
-                  k: KNN_K,
-                  expand_nested_docs: true,
-                  // Pre-filter the kNN to the requested speaker's paragraphs so
-                  // semantic matches are also speaker-scoped (no-op otherwise).
-                  ...(speakerNested ? { filter: speakerNested } : {}),
+  //
+  // Gated by PARAGRAPH_KNN_ENABLED: when off (the default, see above), this slot
+  // is `match_none` so the faiss `paragraphs.embedding` graph is never loaded —
+  // the slot stays present (the RRF pipeline expects three sub-queries) but
+  // contributes no score and no `para_knn` inner_hits.
+  const paragraphKnnQuery: OsQuery = PARAGRAPH_KNN_ENABLED
+    ? {
+        bool: {
+          filter,
+          must: [
+            {
+              nested: {
+                path: 'paragraphs',
+                query: {
+                  knn: {
+                    'paragraphs.embedding': {
+                      vector: queryVector,
+                      k: KNN_K,
+                      expand_nested_docs: true,
+                      // Pre-filter the kNN to the requested speaker's paragraphs
+                      // so semantic matches are also speaker-scoped (no-op
+                      // otherwise).
+                      ...(speakerNested ? { filter: speakerNested } : {}),
+                    },
+                  },
                 },
+                score_mode: 'max',
+                inner_hits: paragraphInnerHits(
+                  PARA_KNN,
+                  knnInnerHitsSize,
+                  false,
+                ),
               },
             },
-            score_mode: 'max',
-            inner_hits: paragraphInnerHits(PARA_KNN, knnInnerHitsSize, false),
-          },
+          ],
         },
-      ],
-    },
-  };
+      }
+    : { match_none: {} };
 
   return {
     from,
