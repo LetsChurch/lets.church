@@ -53,11 +53,69 @@ const KNN_K = 50;
 // matches surface. (The dashboard's one-click quick-assign uses a stricter 80%.)
 const SPEAKER_SUGGEST_MIN_MATCH_PERCENT = 70;
 
-// Verse facet `terms` size. The Protestant canon has ~31,102 verses, so this
-// ceiling returns every distinct cited verse — the facet never truncates. (The
-// agg only materializes buckets for verses that actually appear, so a high cap
-// is cheap on a single-shard index.)
-const VERSE_FACET_SIZE = 31200;
+// Verse facet `terms` size. The facet UI lists the most-cited verses as filter
+// chips; nobody scrolls thousands. Cap at a display-sized top-N (doc_count
+// order, most-cited first) instead of the full ~31k-verse canon — a giant
+// `size` forces global-ordinals fielddata + a huge per-shard priority queue on a
+// high-cardinality keyword field, and `buildMediaHybridBody` runs this agg on
+// every facet body. `execution_hint: 'map'` (below) keeps it scoped to the verses
+// actually in the matched set.
+const VERSE_FACET_SIZE = 100;
+// Speaker facet `terms` size — same display-chip rationale; bounded well under
+// the real speaker cardinality.
+const SPEAKER_FACET_SIZE = 200;
+
+// Which facet aggregations a hybrid body should compute. Aggregations are by far
+// the heaviest heap consumer on this path, so every caller asks for exactly the
+// facets it will read — the result query asks for none, and each leave-one-out
+// facet body asks for only its own.
+export type MediaFacetKey = 'channels' | 'speakers' | 'verses' | 'years';
+
+function facetAggs(facets: MediaFacetKey[]): Record<string, unknown> {
+  const aggs: Record<string, unknown> = {};
+  for (const facet of facets) {
+    switch (facet) {
+      case 'channels':
+        // `map` avoids loading global ordinals for the whole index — it counts
+        // only terms present in the matched set, which a filtered hybrid query
+        // keeps small.
+        aggs.channelIds = {
+          terms: { field: 'channelId', size: 100, execution_hint: 'map' },
+        };
+        break;
+      case 'speakers':
+        aggs.speakers = {
+          terms: {
+            field: 'speakers',
+            size: SPEAKER_FACET_SIZE,
+            execution_hint: 'map',
+          },
+        };
+        break;
+      case 'verses':
+        aggs.bibleRefs = {
+          terms: {
+            field: 'bibleRefs',
+            size: VERSE_FACET_SIZE,
+            execution_hint: 'map',
+          },
+        };
+        break;
+      case 'years':
+        aggs.publishedYears = {
+          date_histogram: {
+            field: 'publishedAt',
+            calendar_interval: 'year',
+            min_doc_count: 1,
+            format: 'yyyy',
+            order: { _key: 'desc' },
+          },
+        };
+        break;
+    }
+  }
+  return aggs;
+}
 
 // Access-control + readiness filter. Mirrors the related-media kNN in web's
 // media.ts: only public, approved, fully-processed uploads. Every sub-query
@@ -164,6 +222,13 @@ export type BuildMediaSearchArgs = {
    * snippets), so it passes `false` to skip the work and avoid mark-stripping.
    */
   highlight?: boolean;
+  /**
+   * Which facet aggregations to compute on this body. Aggregations are the
+   * heaviest heap consumer on this path, so the default is **none** — the result
+   * query reads zero facets (it has `runMediaFacets` for that), and each facet
+   * body requests only the one facet it's read for. See `facetAggs`.
+   */
+  facets?: MediaFacetKey[];
 };
 
 // nested inner_hits config shared by the BM25 and kNN paragraph sub-queries.
@@ -211,6 +276,7 @@ export function buildMediaHybridBody({
   innerHitsSize = 3,
   knnInnerHitsSize = innerHitsSize,
   highlight = true,
+  facets = [],
 }: BuildMediaSearchArgs): OsMsearchItem {
   const trimmed = lexicalText.trim();
   const filter = buildFilter(
@@ -382,25 +448,9 @@ export function buildMediaHybridBody({
         queries: [bm25Query, summaryKnnQuery, paragraphKnnQuery],
       },
     },
-    aggs: {
-      channelIds: { terms: { field: 'channelId', size: 100 } },
-      // Speaker facet: distinct resolved speaker names across the matching set.
-      speakers: { terms: { field: 'speakers', size: 1000 } },
-      // Verse facet: every distinct cited verse across the matching set
-      // (doc_count order). Sized to the full canon so nothing is truncated.
-      bibleRefs: { terms: { field: 'bibleRefs', size: VERSE_FACET_SIZE } },
-      // Year facet: real per-year counts over publishedAt (newest first),
-      // skipping empty years. `format: 'yyyy'` yields key_as_string = the year.
-      publishedYears: {
-        date_histogram: {
-          field: 'publishedAt',
-          calendar_interval: 'year',
-          min_doc_count: 1,
-          format: 'yyyy',
-          order: { _key: 'desc' },
-        },
-      },
-    },
+    // Only the requested facets (doc_count order). Empty → no `aggs` key at all,
+    // so the result query and later pages do zero aggregation work.
+    ...(facets.length > 0 ? { aggs: facetAggs(facets) } : {}),
     ...(sort ? { sort } : {}),
   };
 }
@@ -414,18 +464,18 @@ export async function runMediaHybridSearch(
 ): Promise<{
   hits: MediaHit[];
   total: number;
-  facetChannelIds: Array<{ key: string; doc_count: number }>;
 }> {
+  // The result query computes no aggregations — facets come from
+  // `runMediaFacets`, and the channel buckets this used to return were dead.
   const raw = await osSearch({
     index: MEDIA_INDEX,
     search_pipeline: RRF_PIPELINE,
-    ...buildMediaHybridBody(args),
+    ...buildMediaHybridBody({ ...args, facets: [] }),
   });
   const parsed = MediaSearchResponseSchema.parse(raw);
   return {
     hits: parsed.hits.hits,
     total: parsed.hits.total.value,
-    facetChannelIds: parsed.aggregations?.channelIds?.buckets ?? [],
   };
 }
 
@@ -471,19 +521,38 @@ export async function runMediaFacets(args: BuildMediaSearchArgs): Promise<{
   // Body 0 applies every active filter; each facet with an active selection of
   // its own adds a body that drops just that one. Facets without an active
   // selection read from body 0 (dropping nothing changes nothing) — so identical
-  // bodies are never issued twice.
-  const bodies: OsMsearchItem[] = [buildMediaHybridBody(base)];
+  // bodies are never issued twice. Each body computes ONLY the facet(s) it's read
+  // for: body 0 the un-selected facets, each leave-one-out body just its own. No
+  // body ever pays for an aggregation nobody reads.
+  const fullFacets: MediaFacetKey[] = [
+    ...(hasChannel ? [] : (['channels'] as const)),
+    ...(hasSpeaker ? [] : (['speakers'] as const)),
+    ...(hasScripture ? [] : (['verses'] as const)),
+    ...(hasDate ? [] : (['years'] as const)),
+  ];
+  const bodies: OsMsearchItem[] = [
+    buildMediaHybridBody({ ...base, facets: fullFacets }),
+  ];
   const fullIndex = 0;
-  const pushBody = (overrides: Partial<BuildMediaSearchArgs>): number => {
-    bodies.push(buildMediaHybridBody({ ...base, ...overrides }));
+  const pushBody = (
+    overrides: Partial<BuildMediaSearchArgs>,
+    facets: MediaFacetKey[],
+  ): number => {
+    bodies.push(buildMediaHybridBody({ ...base, ...overrides, facets }));
     return bodies.length - 1;
   };
-  const channelIndex = hasChannel ? pushBody({ channelIds: null }) : fullIndex;
-  const speakerIndex = hasSpeaker ? pushBody({ speakers: null }) : fullIndex;
-  const scriptureIndex = hasScripture
-    ? pushBody({ bibleRefs: null, bibleBooks: null })
+  const channelIndex = hasChannel
+    ? pushBody({ channelIds: null }, ['channels'])
     : fullIndex;
-  const yearIndex = hasDate ? pushBody({ publishedAt: null }) : fullIndex;
+  const speakerIndex = hasSpeaker
+    ? pushBody({ speakers: null }, ['speakers'])
+    : fullIndex;
+  const scriptureIndex = hasScripture
+    ? pushBody({ bibleRefs: null, bibleBooks: null }, ['verses'])
+    : fullIndex;
+  const yearIndex = hasDate
+    ? pushBody({ publishedAt: null }, ['years'])
+    : fullIndex;
 
   // Issued as separate `_search` requests in parallel rather than one `_msearch`
   // on purpose: a hybrid query needs the RRF normalization pipeline, and this
