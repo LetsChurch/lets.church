@@ -15,6 +15,10 @@
 // base for every translation — seed it once (under BSB); the API falls back to
 // the default translation for the OT.
 
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { gunzipSync } from 'node:zlib';
 import { and, eq, inArray } from 'drizzle-orm';
 import { findBook, NEW_TESTAMENT, OLD_TESTAMENT } from '../lib/canon';
 import { bibleSourceToken, db } from '.';
@@ -63,23 +67,24 @@ const FILES: SourceFile[] = [
   { name: 'TAHOT Isa-Mal', language: 'hebrew', books: OT.slice(22) },
 ];
 
-// Full file names differ in suffix ("CC-BY" for TAGNT, "CC BY" for TAHOT).
-function fileUrl(f: SourceFile): string {
-  const suffix =
-    f.language === 'greek'
-      ? `${f.name} - Translators Amalgamated Greek NT - STEPBible.org CC-BY.txt`
-      : `${f.name} - Translators Amalgamated Hebrew OT - STEPBible.org CC BY.txt`;
-  return `https://raw.githubusercontent.com/STEPBible/STEPBible-Data/master/Translators%20Amalgamated%20OT%2BNT/${encodeURIComponent(suffix)}`;
-}
+// The STEPBible files are committed (gzip-compressed) under seed/stepbible/ —
+// CC BY 4.0, see seed/stepbible/ATTRIBUTION.md — so seeding has no network
+// dependency. The slug matches the gzip filename derived from each file's name
+// ("TAGNT Mat-Jhn" → "tagnt-mat-jhn.txt.gz").
+const STEPBIBLE_DIR = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  'seed',
+  'stepbible',
+);
 
-async function loadFile(f: SourceFile): Promise<string> {
-  const res = await fetch(fileUrl(f));
-  if (!res.ok) {
-    throw new Error(
-      `Failed to fetch ${f.name}: ${res.status} ${res.statusText}`,
-    );
-  }
-  return res.text();
+function loadFile(f: SourceFile): string {
+  const path = join(
+    STEPBIBLE_DIR,
+    `${f.name.toLowerCase().replace(/\s+/g, '-')}.txt.gz`,
+  );
+  return gunzipSync(readFileSync(path)).toString('utf8');
 }
 
 // Disambiguated dStrongs ("G0025=…", "H1732|G1138«G1138", "{H7225G}") → a plain
@@ -251,8 +256,8 @@ async function main() {
 
   const parsed: Parsed[] = [];
   for (const f of files) {
-    console.log(`Fetching ${f.name}…`);
-    parsed.push(...parseFile(await loadFile(f), f.language, wantBooks));
+    console.log(`Reading ${f.name}…`);
+    parsed.push(...parseFile(loadFile(f), f.language, wantBooks));
   }
 
   // Group by verse, order by the original #NN, dedupe slots, reindex 0-based so

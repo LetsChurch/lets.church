@@ -10,6 +10,9 @@ storybook-static
 # committed.
 *.br
 *.gz
+# …except the vendored STEPBible interlinear data (CC BY 4.0), which IS committed
+# gzip-compressed so the seed has no deploy-time network dependency.
+!/seed/stepbible/*.gz
 
 # Generated client-side search + reading assets — built from the committed USX
 # seed (no DB) by `pnpm build` (runs build-flex-index.ts before `vite build`, so
