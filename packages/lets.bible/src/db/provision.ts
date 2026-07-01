@@ -13,8 +13,19 @@
 // The OpenSearch index is additionally guarded by a live doc-count check, so if
 // the cluster is wiped (but the DB marker persists) the index is rebuilt anyway.
 import { execFileSync } from 'node:child_process';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { createPool } from './pool';
+
+// Committed USX seed dirs, resolved from this file so they work regardless of the
+// child process's cwd. seed:bible defaults to BSB; MSB/WEB pass their own USX_DIR.
+const SEED_DIR = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  'seed',
+);
 
 const { LETS_BIBLE_DATABASE_URL, OPENSEARCH_URL } = z
   .object({
@@ -38,8 +49,34 @@ const VERSE_INDEX = 'lets_bible_verses_v2';
 // MSB/WEB → Byzantine/Majority. The OT falls back to BSB's Hebrew for all — it's
 // the same Masoretic base — so it's seeded once.
 const SEEDS: ReadonlyArray<{ script: string; env?: Record<string, string> }> = [
+  // All four translations first (seed:crossrefs/source FK to bible_translation):
+  // seed:bible defaults to BSB; MSB/WEB reuse it with their own USX + attribution
+  // (mirrors the `lb-seed-bible` recipe chain); KJV has its own seeder.
   { script: 'seed:bible' },
+  {
+    script: 'seed:bible',
+    env: {
+      TRANSLATION_ID: 'MSB',
+      TRANSLATION_NAME: 'Majority Standard Bible',
+      TRANSLATION_IS_DEFAULT: 'false',
+      TRANSLATION_ATTRIBUTION: 'Majority Standard Bible — Public Domain',
+      TRANSLATION_ATTRIBUTION_URL: 'https://berean.bible',
+      USX_DIR: join(SEED_DIR, 'msb', 'USX_1'),
+    },
+  },
   { script: 'seed:kjv' },
+  {
+    script: 'seed:bible',
+    env: {
+      TRANSLATION_ID: 'WEB',
+      TRANSLATION_NAME: 'World English Bible',
+      TRANSLATION_IS_DEFAULT: 'false',
+      TRANSLATION_ATTRIBUTION:
+        'World English Bible — Public Domain (trademark eBible.org)',
+      TRANSLATION_ATTRIBUTION_URL: 'https://ebible.org/web/',
+      USX_DIR: join(SEED_DIR, 'web', 'USX_1'),
+    },
+  },
   { script: 'seed:lexicon' },
   { script: 'seed:crossrefs' },
   { script: 'seed:commentaries' },
