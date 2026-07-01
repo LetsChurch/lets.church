@@ -156,7 +156,6 @@ export const Route = createFileRoute('/api/search-answer')({
           { SEARCH_AGENT_MODEL, agentModel },
           { runMediaKnnProbe },
           { recordLlmCall },
-          { getSession },
           { hydrateUploads },
           { db, SearchLogEntry, UploadRecord },
           { eq, sql },
@@ -171,7 +170,6 @@ export const Route = createFileRoute('/api/search-answer')({
           import('@/ai/model'),
           import('@letschurch/opensearch'),
           import('@letschurch/temporal/util/llm'),
-          import('@/util/auth'),
           import('@/trpc/search/hydrate'),
           import('@letschurch/db'),
           import('drizzle-orm'),
@@ -180,9 +178,6 @@ export const Route = createFileRoute('/api/search-answer')({
           import('@/trpc/search/channels'),
           import('ai'),
         ]);
-
-        const session = await getSession();
-        const resource = session?.appUserId ?? `anon:${parsed.resourceId}`;
 
         // Parse the query for intent + a reformulated question, concurrently with
         // the retrieval below (cached by query+day, so usually free). We use it to
@@ -264,20 +259,19 @@ export const Route = createFileRoute('/api/search-answer')({
             { headers: STREAM_HEADERS },
           );
 
-        // Answer cache (day-scoped TTL, like the parse). Keyed by the
-        // CONVERSATION (resource + thread) as well as the query/filters: the
-        // agent reads thread memory, so a follow-up ("what about his early
-        // ministry?") resolves against prior turns. Keying by query alone would
-        // replay one thread's context-dependent answer into another thread or
-        // user — wrong, and a cross-conversation bleed. The cost is losing
-        // cross-user dedup of identical queries; an identical query within the
-        // same conversation (re-render / refresh / back-nav) still hits.
-        const answerCacheKey = `search-answer:v1:${SEARCH_AGENT_MODEL}:${new Date()
+        // Answer cache (day-scoped TTL, like the parse). Keyed by (model, day,
+        // filters, query) only. Answers are single-turn and deterministic for a
+        // given query+filters — there is no conversation memory anymore (dropped
+        // with Mastra), so an answer never depends on who asked or in what
+        // "thread". Including resource/threadId (as the Mastra era did, to avoid
+        // cross-conversation bleed) only fragmented the cache: the client mints a
+        // fresh threadId per session, so a refresh missed and regenerated. Bump
+        // v1 -> v2 so old thread-scoped keys are ignored. Dropping them also
+        // dedups identical queries across users — a cost win with no downside
+        // (the answer is grounded in public content, not personalized).
+        const answerCacheKey = `search-answer:v2:${SEARCH_AGENT_MODEL}:${new Date()
           .toISOString()
-          .slice(
-            0,
-            10,
-          )}:${resource}:${parsed.threadId}:${filterSig}:${parsed.query.trim()}`;
+          .slice(0, 10)}:${filterSig}:${parsed.query.trim()}`;
         const cacheAnswer = (answerSources: AnswerSource[], answer: string) =>
           cacheSetJson(
             answerCacheKey,
