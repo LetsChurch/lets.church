@@ -1,6 +1,8 @@
 import { IconClockHour3, IconSparkles } from '@tabler/icons-react';
 import {
+  Component,
   type ComponentProps,
+  type ReactNode,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -310,6 +312,73 @@ const COLLAPSED_HEIGHT = 112;
 
 export type AnswerStatus = 'streaming' | 'done' | 'error';
 
+// The first (cache-miss) request streams while the server generates the answer;
+// on a flaky/slow connection that stream can drop even though the server finishes
+// and CACHES the answer (we saw a false decline that vanished on refresh). So
+// retry a couple times with backoff — a retry lands on the now-cached answer and
+// renders, instead of showing "couldn't generate". The backoff also gives the
+// server time to finish + cache before the retry.
+const ANSWER_MAX_ATTEMPTS = 3;
+const ANSWER_RETRY_MS = 1500;
+
+// POST the answer request and stream the response into `onText`, retrying on a
+// dropped/failed stream. Returns true once a response streamed to completion,
+// false if every attempt failed (→ the caller shows the decline). Aborts are not
+// failures. `onText` is reset to '' at the start of each attempt.
+async function streamAnswerWithRetry(
+  body: unknown,
+  signal: AbortSignal,
+  onText: (text: string) => void,
+): Promise<boolean> {
+  for (let attempt = 0; attempt < ANSWER_MAX_ATTEMPTS; attempt++) {
+    if (signal.aborted) return false;
+    onText('');
+    try {
+      const res = await fetch('/api/search-answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal,
+      });
+      if (res.ok && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let acc = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          acc += decoder.decode(value, { stream: true });
+          onText(acc);
+        }
+        return true;
+      }
+    } catch {
+      if (signal.aborted) return false;
+    }
+    if (attempt < ANSWER_MAX_ATTEMPTS - 1) {
+      await new Promise((r) => setTimeout(r, ANSWER_RETRY_MS * (attempt + 1)));
+    }
+  }
+  return false;
+}
+
+// Isolate the markdown renderer: Streamdown parses the answer as GFM, and a
+// markdown/regex edge case there must never take down the whole page (an older
+// iPad Safari hit exactly this). On a render throw, fall back to the raw answer
+// as plain text — the reader still gets the answer, just unformatted.
+class MarkdownBoundary extends Component<
+  { fallback: ReactNode; children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
+
 // Playful loading verbs for the shimmering "…" while the answer is being
 // generated. A random one is picked each time the card enters its loading state
 // so the wait feels a little less monotonous.
@@ -464,13 +533,21 @@ export function AnswerCard({
             }
             style={collapsed ? { maxHeight: COLLAPSED_HEIGHT } : undefined}
           >
-            <Streamdown
-              parseIncompleteMarkdown
-              components={components}
-              className="max-w-none text-sm text-white leading-relaxed [&>*+*]:mt-2.5!"
+            <MarkdownBoundary
+              fallback={
+                <p className="max-w-none whitespace-pre-wrap text-sm text-white leading-relaxed">
+                  {renderedAnswer}
+                </p>
+              }
             >
-              {renderedAnswer}
-            </Streamdown>
+              <Streamdown
+                parseIncompleteMarkdown
+                components={components}
+                className="max-w-none text-sm text-white leading-relaxed [&>*+*]:mt-2.5!"
+              >
+                {renderedAnswer}
+              </Streamdown>
+            </MarkdownBoundary>
           </div>
           {overflowing ? (
             <button
@@ -553,34 +630,18 @@ export function AnswerPanel({
     setStatus('streaming');
 
     (async () => {
-      try {
-        const res = await fetch('/api/search-answer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: q,
-            threadId: getThreadId(),
-            resourceId: getResourceId(),
-            searchLogId: searchLogIdRef.current ?? null,
-            filters: filtersRef.current ?? null,
-          }),
-          signal: controller.signal,
-        });
-        if (!res.ok || !res.body) {
-          setStatus('error');
-          return;
-        }
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          setText((prev) => prev + decoder.decode(value, { stream: true }));
-        }
-        setStatus('done');
-      } catch {
-        if (!controller.signal.aborted) setStatus('error');
-      }
+      const ok = await streamAnswerWithRetry(
+        {
+          query: q,
+          threadId: getThreadId(),
+          resourceId: getResourceId(),
+          searchLogId: searchLogIdRef.current ?? null,
+          filters: filtersRef.current ?? null,
+        },
+        controller.signal,
+        setText,
+      );
+      if (!controller.signal.aborted) setStatus(ok ? 'done' : 'error');
     })();
 
     return () => controller.abort();
@@ -628,33 +689,17 @@ export function VideoAnswerPanel({
     setStatus('streaming');
 
     (async () => {
-      try {
-        const res = await fetch('/api/search-answer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: question,
-            uploadId: mediaId,
-            threadId: getVideoThreadId(mediaId),
-            resourceId: getResourceId(),
-          }),
-          signal: controller.signal,
-        });
-        if (!res.ok || !res.body) {
-          setStatus('error');
-          return;
-        }
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          setText((prev) => prev + decoder.decode(value, { stream: true }));
-        }
-        setStatus('done');
-      } catch {
-        if (!controller.signal.aborted) setStatus('error');
-      }
+      const ok = await streamAnswerWithRetry(
+        {
+          query: question,
+          uploadId: mediaId,
+          threadId: getVideoThreadId(mediaId),
+          resourceId: getResourceId(),
+        },
+        controller.signal,
+        setText,
+      );
+      if (!controller.signal.aborted) setStatus(ok ? 'done' : 'error');
     })();
 
     return () => controller.abort();
