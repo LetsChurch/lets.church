@@ -27,6 +27,7 @@ import { WaveformBackground } from '@/components/waveform-background';
 import { $currentTime, $setPlayAt } from '@/stores/player';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
+import { stopMediaElement } from '@/util/stop-media-element';
 
 declare module 'react' {
   // biome-ignore lint/style/useConsistentTypeDefinitions: external interface
@@ -121,14 +122,15 @@ export function Player({
     }
   }, [mediaType]);
 
-  // Pause the underlying media element when the player unmounts, so a detached
-  // element can't keep emitting audio. Custom-element media players don't stop
-  // playback on disconnect, so a removed-but-still-playing <hls-video> would go
-  // on producing sound. Mirrors the mini-player's cleanup.
+  // Fully tear down the underlying media element when the player unmounts, so a
+  // detached element can't keep emitting audio. Custom-element media players
+  // don't stop playback on disconnect, and hls-video-element defers autoplay to
+  // hls.js's MANIFEST_PARSED — which can fire *after* a fast unmount and start a
+  // detached, unpausable stream. See stopMediaElement. Mirrors the mini-player.
   useEffect(() => {
     const el = videoRef.current;
     return () => {
-      el?.pause();
+      stopMediaElement(el);
     };
   }, []);
 

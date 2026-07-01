@@ -2,6 +2,7 @@ import type { HlsVideoElement } from 'hls-video-element';
 import HlsVideo from 'hls-video-element/react';
 import { useEffect, useRef, useState } from 'react';
 import { formatTime } from '@/util/format';
+import { stopMediaElement } from '@/util/stop-media-element';
 
 const PLAYER_WIDTH = 320;
 const AUDIO_PLAYER_HEIGHT = 88;
@@ -34,6 +35,18 @@ export function MiniPlayer({
 
   const hasVideo = Boolean(mediaSource);
   const source = mediaSource ?? audioSource;
+
+  // Fully tear down the media element on unmount so a detached <hls-video> can't
+  // keep emitting audio. The seek effect's pause() below only handles the live
+  // element (and re-runs on re-seek); this dedicated unmount-only teardown also
+  // kills hls.js and strips autoplay, defeating the deferred MANIFEST_PARSED
+  // autoplay that otherwise resurrects a detached element. See stopMediaElement.
+  useEffect(() => {
+    const el = videoRef.current;
+    return () => {
+      stopMediaElement(el);
+    };
+  }, []);
 
   // Seek to initial timestamp and start playback
   useEffect(() => {

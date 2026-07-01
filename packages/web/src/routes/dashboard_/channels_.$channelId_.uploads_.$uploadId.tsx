@@ -60,14 +60,16 @@ import {
   redirect,
   useNavigate,
 } from '@tanstack/react-router';
+import type { HlsVideoElement } from 'hls-video-element';
 import HlsVideo from 'hls-video-element/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import { useAppMantineForm } from '@/components/mantine';
 import { idTranslator } from '@/schemas/common';
 import { uploadFormSchema } from '@/schemas/dashboard';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { doMultipartUpload } from '@/util/multipart-upload';
+import { stopMediaElement } from '@/util/stop-media-element';
 import { showFailure, showSuccess } from '../-mantine';
 import { SpeakerLabelingModal } from './-components/speaker-labeling-modal';
 import styles from './-styles.module.css';
@@ -170,6 +172,17 @@ function ChannelUploadPage() {
   // TanStack Router navigate — typed via the route's generated tree, used
   // both for the post-delete redirect and for the LLM-eval admin shortcut.
   const navigate = useNavigate();
+
+  // Fully stop the preview <hls-video> on unmount. Custom-element media players
+  // don't stop on disconnect, so navigating away mid-playback would leave a
+  // detached element emitting audio. See stopMediaElement. A callback ref (that
+  // only records non-null elements) is used instead of capture-at-mount because
+  // the preview element mounts *late* — only once transcoding produces a source.
+  const previewVideoRef = useRef<HlsVideoElement | null>(null);
+  const setPreviewVideo = useCallback((el: HlsVideoElement | null) => {
+    if (el) previewVideoRef.current = el;
+  }, []);
+  useEffect(() => () => stopMediaElement(previewVideoRef.current), []);
   const queryClient = useQueryClient();
   const trpc = useTRPC();
 
@@ -1282,6 +1295,7 @@ function ChannelUploadPage() {
                 </>
               ) : upload.mediaSource ? (
                 <HlsVideo
+                  ref={setPreviewVideo}
                   src={upload.mediaSource}
                   className={styles.fullWidth}
                   playsInline
@@ -1289,6 +1303,7 @@ function ChannelUploadPage() {
                 />
               ) : upload.audioSource ? (
                 <HlsVideo
+                  ref={setPreviewVideo}
                   src={upload.audioSource}
                   className={styles.fullWidth}
                   controls
