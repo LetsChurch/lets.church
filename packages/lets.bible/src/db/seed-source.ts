@@ -6,10 +6,14 @@
 // text. Fetched at seed time (not committed), mirroring the BSB USX seed.
 //
 // Run: `just lb-seed-source` (defaults to John for BSB). Override with
-//   BOOKS=NT|OT|ALL|JHN,GEN,…  TRANSLATION_ID=BSB|MSB
-// Textual basis per translation: BSB → critical (NA27/28), MSB → Byzantine
-// (Majority text). Hebrew is the Masoretic (Leningrad) base for either — seed it
-// once (under BSB); the API falls back to the default translation for the OT.
+//   BOOKS=NT|OT|ALL|JHN,GEN,…  TRANSLATION_ID=BSB|MSB|WEB|KJV
+// Textual basis per translation (NT): BSB → critical (NA27/28), MSB/WEB →
+// Byzantine (Majority text), KJV → Textus Receptus (Scrivener 1894) — the Greek
+// the KJV was actually translated from, so its interlinear reflects the KJV's
+// own text (incl. TR-only readings like the Comma Johanneum, which the critical
+// text omits). Hebrew OT is the Masoretic (Leningrad)
+// base for every translation — seed it once (under BSB); the API falls back to
+// the default translation for the OT.
 
 import { and, eq, inArray } from 'drizzle-orm';
 import { findBook, NEW_TESTAMENT, OLD_TESTAMENT } from '../lib/canon';
@@ -32,11 +36,18 @@ function expandBooks(spec: string): string[] {
 }
 const BOOKS = expandBooks(process.env.BOOKS ?? 'JHN');
 
-// Which Greek editions count as a translation's textual basis (NT only). BSB
+// Which Greek edition counts as a translation's textual basis (NT only). BSB
 // follows the critical text (Nestlé-Aland); MSB and WEB the Byzantine/Majority
-// text (the WEB NT is translated from the Greek Majority Text).
+// text (the WEB NT is translated from the Greek Majority Text); KJV the Textus
+// Receptus (Scrivener 1894). STEPBible's editions column (col 6) tags each word
+// with the editions that contain it, e.g. `NA28+NA27+…+TR+Byz`; we keep only the
+// words present in this translation's edition.
 const GREEK_BASIS =
-  TRANSLATION_ID === 'MSB' || TRANSLATION_ID === 'WEB' ? 'Byz' : 'NA2';
+  TRANSLATION_ID === 'KJV'
+    ? 'TR'
+    : TRANSLATION_ID === 'MSB' || TRANSLATION_ID === 'WEB'
+      ? 'Byz'
+      : 'NA2';
 
 // The STEPBible source files and which books each covers. The book lists are
 // sliced from the canon (so the USFM codes are authoritative), matching each
