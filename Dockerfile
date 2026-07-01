@@ -89,7 +89,7 @@ RUN pnpm --filter @letschurch/temporal exec playwright install chromium
 # Lightweight dev image for the lets.bible app. It only needs node_modules and
 # the workspace metadata; the app source is bind-mounted in dev. We skip the
 # heavy `dev`/`build` layers (ffmpeg, playwright, web build) entirely.
-FROM base AS lets-bible-dev
+FROM base AS letsbible-dev
 COPY --chown=nodeapp:nodeapp --from=deps /usr/src/app/node_modules ./node_modules
 COPY --chown=nodeapp:nodeapp --from=deps /usr/src/app/packages/ ./packages/
 COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml tsconfig.json package.json ./

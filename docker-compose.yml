@@ -112,10 +112,10 @@ services:
   # provider in `web`. Exposed on host port 4001. Browser-facing OIDC URLs use
   # OIDC_ISSUER (http://localhost:4000); back-channel calls use the internal
   # service URL (http://web:3000).
-  lets-bible:
+  letsbible:
     build:
       context: .
-      target: lets-bible-dev
+      target: letsbible-dev
     command: pnpm --filter @letschurch/lets.bible run dev --host
     restart: unless-stopped
     depends_on:
@@ -146,10 +146,10 @@ services:
       - /usr/src/app/packages/lets.bible/node_modules
 
   # Storybook for the lets.bible component library + design language.
-  lets-bible-storybook:
+  letsbible-storybook:
     build:
       context: .
-      target: lets-bible-dev
+      target: letsbible-dev
     command: pnpm --filter @letschurch/lets.bible run storybook
     restart: unless-stopped
     ports:

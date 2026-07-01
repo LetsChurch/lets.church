@@ -100,34 +100,34 @@ db-reset:
 # Generate a lets.bible migration from schema.ts changes (diffs against the last
 # snapshot; produces the SQL + snapshot + _journal.json entry). Never hand-write.
 lets-bible-generate name:
-  docker compose exec lets-bible sh -c 'cd /usr/src/app/packages/lets.bible && pnpm exec drizzle-kit generate --name {{name}}'
+  docker compose exec letsbible sh -c 'cd /usr/src/app/packages/lets.bible && pnpm exec drizzle-kit generate --name {{name}}'
 
 # Apply lets.bible migrations
 lets-bible-migrate:
-  docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run db:migrate'
+  docker compose exec letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run db:migrate'
 
 # Create/update the lets.bible search index mappings (its own lets_bible_* indices)
 lets-bible-es-push:
-  docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:push-mappings'
+  docker compose exec letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:push-mappings'
 
 # Ingest the BSB Bible text (default translation; run after lets-bible-migrate)
 lets-bible-seed-bsb:
-  docker compose exec lets-bible sh -c 'cd /usr/src/app && TRANSLATION_ATTRIBUTION="Berean Standard Bible — Public Domain" TRANSLATION_ATTRIBUTION_URL="https://berean.bible" pnpm --filter @letschurch/lets.bible run seed:bible'
+  docker compose exec letsbible sh -c 'cd /usr/src/app && TRANSLATION_ATTRIBUTION="Berean Standard Bible — Public Domain" TRANSLATION_ATTRIBUTION_URL="https://berean.bible" pnpm --filter @letschurch/lets.bible run seed:bible'
 
 # Ingest the MSB Bible text (second translation)
 lets-bible-seed-msb:
-  docker compose exec lets-bible sh -c 'cd /usr/src/app && TRANSLATION_ID=MSB TRANSLATION_NAME="Majority Standard Bible" TRANSLATION_IS_DEFAULT=false TRANSLATION_ATTRIBUTION="Majority Standard Bible — Public Domain" TRANSLATION_ATTRIBUTION_URL="https://berean.bible" USX_DIR="$(pwd)/packages/lets.bible/seed/msb/USX_1" pnpm --filter @letschurch/lets.bible run seed:bible'
+  docker compose exec letsbible sh -c 'cd /usr/src/app && TRANSLATION_ID=MSB TRANSLATION_NAME="Majority Standard Bible" TRANSLATION_IS_DEFAULT=false TRANSLATION_ATTRIBUTION="Majority Standard Bible — Public Domain" TRANSLATION_ATTRIBUTION_URL="https://berean.bible" USX_DIR="$(pwd)/packages/lets.bible/seed/msb/USX_1" pnpm --filter @letschurch/lets.bible run seed:bible'
 
 # Ingest the King James Version (1769, with Strong's + morphology). Source JSON
 # committed under packages/lets.bible/seed/kjv (override the path with KJV_SOURCE).
 lets-bible-seed-kjv:
-  docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run seed:kjv'
+  docker compose exec letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run seed:kjv'
 
 # Ingest the World English Bible (public domain). Reading + footnotes + red-letter
 # only — Strong's are stripped on conversion (eBible's WEB tags are misaligned), so
 # no English word-study; the original-language interlinear comes from STEPBible.
 lets-bible-seed-web:
-  docker compose exec lets-bible sh -c 'cd /usr/src/app && TRANSLATION_ID=WEB TRANSLATION_NAME="World English Bible" TRANSLATION_IS_DEFAULT=false TRANSLATION_ATTRIBUTION="World English Bible — Public Domain (trademark eBible.org)" TRANSLATION_ATTRIBUTION_URL="https://ebible.org/web/" USX_DIR="$(pwd)/packages/lets.bible/seed/web/USX_1" pnpm --filter @letschurch/lets.bible run seed:bible'
+  docker compose exec letsbible sh -c 'cd /usr/src/app && TRANSLATION_ID=WEB TRANSLATION_NAME="World English Bible" TRANSLATION_IS_DEFAULT=false TRANSLATION_ATTRIBUTION="World English Bible — Public Domain (trademark eBible.org)" TRANSLATION_ATTRIBUTION_URL="https://ebible.org/web/" USX_DIR="$(pwd)/packages/lets.bible/seed/web/USX_1" pnpm --filter @letschurch/lets.bible run seed:bible'
 
 # Regenerate the committed WEB USX artifact (seed/web/USX_1) from eBible.org USFM.
 # HOST-only; downloads USFM to seed/.web-usfm (gitignored) and converts (strips the
@@ -140,13 +140,13 @@ lets-bible-seed-bible: lets-bible-seed-bsb lets-bible-seed-msb lets-bible-seed-k
 
 # Seed the Strong's lexicon (translation-agnostic)
 lets-bible-seed-lexicon:
-  docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run seed:lexicon'
+  docker compose exec letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run seed:lexicon'
 
 # Backfill bible_cross_reference for all translations from the committed artifact
 # (seed/overlays/cross-references.json) — the seed USX is overlay-pure (no cross-ref
 # notes), so this restores OT-quotation source links + study-panel cross-references.
 lets-bible-seed-crossrefs:
-  docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run seed:crossrefs'
+  docker compose exec letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run seed:crossrefs'
 
 # Regenerate the committed commentary artifacts from CrossWire SWORD modules.
 # HOST-only (needs `brew install sword`); downloads modules to seed/.sword
@@ -157,21 +157,21 @@ lets-bible-extract-commentaries:
 # Load the committed commentary artifacts (seed/commentaries/*.json) into
 # bible_commentary[_work]. Idempotent. Run after lets-bible-migrate.
 lets-bible-seed-commentaries:
-  docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run seed:commentaries'
+  docker compose exec letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run seed:commentaries'
 
 # Seed the original-language interlinear (STEPBible TAGNT Greek / TAHOT Hebrew,
 # fetched not committed). books = NT | OT | ALL | a comma list (default John);
 # translation BSB (critical) or MSB (Byzantine).
 lets-bible-seed-source books="JHN" translation="BSB":
-  docker compose exec lets-bible sh -c 'cd /usr/src/app && BOOKS={{books}} TRANSLATION_ID={{translation}} pnpm --filter @letschurch/lets.bible run seed:source'
+  docker compose exec letsbible sh -c 'cd /usr/src/app && BOOKS={{books}} TRANSLATION_ID={{translation}} pnpm --filter @letschurch/lets.bible run seed:source'
 
 # Index all verses into the lets.bible search index (after seed + es-push)
 lets-bible-index:
-  docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:index-verses'
+  docker compose exec letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:index-verses'
 
 # Build the client-side FlexSearch search assets per translation (public/search/*)
 lets-bible-flex:
-  docker compose exec lets-bible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run flex:build'
+  docker compose exec letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run flex:build'
 
 # Full lets.bible setup: migrate, push ES mappings, seed (bible/lexicon/cross-refs/commentaries), index, flex
 # (cross-refs + commentaries are separate tables — included here so they aren't empty after a DB reset).

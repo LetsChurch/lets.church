@@ -313,7 +313,7 @@ just lets-bible-up             # all of the above, in order
 - **Dev is client-rendered**: `curl` of a route returns only the shell. Verify
   rendered content in a real browser / Playwright, not via `curl` body.
 - After editing routes or server code, restart the container
-  (`docker compose restart lets-bible`) so the route tree / server bundle reloads.
+  (`docker compose restart letsbible`) so the route tree / server bundle reloads.
 - Selectors that are stable for automation: word runs carry `data-strong`;
   the selected verse carries `data-verse-selected="true"`; the search input has
   `placeholder^="Search a reference"`.
@@ -1003,6 +1003,6 @@ A fast pass to run after any change:
 14c. Header `Aα` toggle → `?view=interlinear`. **Original** (default): true source order — John 3 starts Ἦν δὲ ἄνθρωπος; toggle **Parsing** on → morph codes + decoded hover; Genesis 1 flows RTL (בְּרֵאשִׁית rightmost). **English (reverse)**: reading order (English over lemmas), Parsing chip inert. MSB John 3:16 includes αὐτοῦ (Byzantine); BSB omits it. Tapping a word opens the study panel (with a Parsing section) — rail desktop / drawer mobile.
 15. `tsc` + `biome` clean; no console errors on the main routes.
 ```
-docker compose exec lets-bible sh -c 'cd /usr/src/app/packages/lets.bible && pnpm exec tsc'
+docker compose exec letsbible sh -c 'cd /usr/src/app/packages/lets.bible && pnpm exec tsc'
 cd packages/lets.bible && pnpm exec biome check src
 ```
