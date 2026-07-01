@@ -104,6 +104,15 @@ const VERSE_FACET_SIZE = 100;
 // the real speaker cardinality.
 const SPEAKER_FACET_SIZE = 200;
 
+// Facets are computed over the top-N *scored* docs (a `sampler` agg), not the
+// whole broad lexical match set. Over the full set, count-based facets are
+// dominated by high-volume channels that merely contain a query word (e.g. any
+// channel with lots of "…principle…" content), so the chips don't reflect the
+// results. Sampling the top-scored ~100 docs makes the facet channels/speakers/
+// verses track the actually-relevant results. Small enough to stay relevant, big
+// enough for a useful chip list; too large and the big channels creep back in.
+const FACET_SAMPLE_SIZE = 100;
+
 // Which facet aggregations a facet body should compute. Each caller asks for
 // exactly the facets it will read (the leave-one-out scoping in runMediaFacets).
 export type MediaFacetKey = 'channels' | 'speakers' | 'verses' | 'years';
@@ -780,7 +789,15 @@ export function buildMediaFacetBody(args: BuildMediaSearchArgs): OsMsearchItem {
     size: 1,
     _source: false,
     query: { bool: { filter, should, minimum_should_match: 1 } },
-    aggs: facetAggs(args.facets ?? []),
+    // Facet over the top-scored (most relevant) docs via `sampler`, so counts
+    // reflect the results rather than the broad lexical match (see
+    // FACET_SAMPLE_SIZE).
+    aggs: {
+      sample: {
+        sampler: { shard_size: FACET_SAMPLE_SIZE },
+        aggs: facetAggs(args.facets ?? []),
+      },
+    },
   };
 }
 
@@ -867,14 +884,17 @@ export async function runMediaFacets(args: BuildMediaSearchArgs): Promise<{
     (raw) => MediaSearchResponseSchema.parse(raw).aggregations,
   );
 
+  // Facet buckets live under the `sample` sampler agg (see buildMediaFacetBody).
   return {
-    channels: aggs[channelIndex]?.channelIds?.buckets ?? [],
-    speakers: aggs[speakerIndex]?.speakers?.buckets ?? [],
-    verses: aggs[scriptureIndex]?.bibleRefs?.buckets ?? [],
-    years: (aggs[yearIndex]?.publishedYears?.buckets ?? []).map((b) => ({
-      year: b.key_as_string,
-      doc_count: b.doc_count,
-    })),
+    channels: aggs[channelIndex]?.sample?.channelIds?.buckets ?? [],
+    speakers: aggs[speakerIndex]?.sample?.speakers?.buckets ?? [],
+    verses: aggs[scriptureIndex]?.sample?.bibleRefs?.buckets ?? [],
+    years: (aggs[yearIndex]?.sample?.publishedYears?.buckets ?? []).map(
+      (b) => ({
+        year: b.key_as_string,
+        doc_count: b.doc_count,
+      }),
+    ),
   };
 }
 
@@ -1359,37 +1379,43 @@ export const MediaSearchResponseSchema = z.object({
     total: z.object({ value: z.number(), relation: z.string() }),
     hits: z.array(MediaHitSchema),
   }),
+  // Facet aggs are nested under a `sample` sampler agg (buildMediaFacetBody), so
+  // counts come from the top-scored docs, not the whole match set.
   aggregations: z
     .object({
-      channelIds: z
+      sample: z
         .object({
-          buckets: z.array(
-            z.object({ key: z.string(), doc_count: z.number() }),
-          ),
-        })
-        .optional(),
-      speakers: z
-        .object({
-          buckets: z.array(
-            z.object({ key: z.string(), doc_count: z.number() }),
-          ),
-        })
-        .optional(),
-      bibleRefs: z
-        .object({
-          buckets: z.array(
-            z.object({ key: z.string(), doc_count: z.number() }),
-          ),
-        })
-        .optional(),
-      publishedYears: z
-        .object({
-          buckets: z.array(
-            z.object({
-              key_as_string: z.string(),
-              doc_count: z.number(),
-            }),
-          ),
+          channelIds: z
+            .object({
+              buckets: z.array(
+                z.object({ key: z.string(), doc_count: z.number() }),
+              ),
+            })
+            .optional(),
+          speakers: z
+            .object({
+              buckets: z.array(
+                z.object({ key: z.string(), doc_count: z.number() }),
+              ),
+            })
+            .optional(),
+          bibleRefs: z
+            .object({
+              buckets: z.array(
+                z.object({ key: z.string(), doc_count: z.number() }),
+              ),
+            })
+            .optional(),
+          publishedYears: z
+            .object({
+              buckets: z.array(
+                z.object({
+                  key_as_string: z.string(),
+                  doc_count: z.number(),
+                }),
+              ),
+            })
+            .optional(),
         })
         .optional(),
     })
