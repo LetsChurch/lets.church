@@ -10,6 +10,11 @@
 const DB_NAME = 'lets-bible-cache';
 const STORE = 'kv';
 
+// Keys under this prefix are PUBLIC, rebuildable caches (not account data), so
+// they survive `kvClear` on sign-out — dropping them would force a needless
+// rebuild. The client-built FlexSearch index (search/index-cache.ts) uses it.
+export const SEARCH_INDEX_PREFIX = 'flex-index:';
+
 export function hasIndexedDb(): boolean {
   return typeof window !== 'undefined' && typeof indexedDB !== 'undefined';
 }
@@ -79,14 +84,21 @@ export async function kvDelete(key: string): Promise<void> {
   await tx('readwrite', (s) => s.delete(key));
 }
 
-// Wipe the entire offline cache (cached chapters / downloaded translations).
-// Used on sign-out so a previous account's downloaded content doesn't linger.
+// Wipe account-downloaded offline content on sign-out (cached chapters /
+// downloaded translations / commentaries) so a previous account's content
+// doesn't linger — preserving PUBLIC caches (SEARCH_INDEX_PREFIX), which aren't
+// account data and would only have to be rebuilt.
 export async function kvClear(): Promise<void> {
   if (!hasIndexedDb()) {
     return;
   }
   try {
-    await tx<undefined>('readwrite', (s) => s.clear());
+    const keys = await kvKeys();
+    await Promise.all(
+      keys
+        .filter((k) => !k.startsWith(SEARCH_INDEX_PREFIX))
+        .map((k) => kvDelete(k)),
+    );
   } catch {
     // best-effort wipe
   }

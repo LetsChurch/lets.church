@@ -309,6 +309,9 @@ importers:
 
   packages/lets.bible:
     dependencies:
+      '@ai-sdk/openai':
+        specifier: ^3.0.71
+        version: 3.0.71(zod@4.1.12)
       '@base-ui/react':
         specifier: 'catalog:'
         version: 1.6.0(@types/react@19.2.4)(date-fns@4.1.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -354,12 +357,18 @@ importers:
       '@trpc/tanstack-react-query':
         specifier: 'catalog:'
         version: 11.7.1(@tanstack/react-query@5.101.2(react@19.2.0))(@trpc/client@11.7.1(@trpc/server@11.7.1(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.7.1(typescript@5.9.3))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
+      ai:
+        specifier: ^6.0.197
+        version: 6.0.197(zod@4.1.12)
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.1(@opentelemetry/api@1.9.0)(@prisma/client@6.19.0(prisma@6.19.0(magicast@0.5.3)(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.15.5)(pg@8.20.0)(prisma@6.19.0(magicast@0.5.3)(typescript@5.9.3))
       flexsearch:
         specifier: ^0.8.212
         version: 0.8.212
+      ioredis:
+        specifier: ^5.11.1
+        version: 5.11.1
       jose:
         specifier: 'catalog:'
         version: 6.2.3

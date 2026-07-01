@@ -30,11 +30,14 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.71",
     "@base-ui/react": "catalog:",
     "@opensearch-project/opensearch": "^3.6.0",
     "@tailwindcss/vite": "catalog:",
+    "ai": "^6.0.197",
     "drizzle-orm": "catalog:",
     "flexsearch": "^0.8.212",
+    "ioredis": "^5.11.1",
     "pg": "catalog:",
     "@tanstack/db": "^0.6.9",
     "@tanstack/react-db": "^0.1.87",

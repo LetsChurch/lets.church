@@ -20,6 +20,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BibleIndexRouteImport } from './routes/bible.index'
 import { Route as TrpcSplatRouteImport } from './routes/trpc.$'
+import { Route as ApiAnswerRouteImport } from './routes/api/answer'
 import { Route as CompareBookChapterRouteImport } from './routes/compare.$book.$chapter'
 import { Route as BibleBookChapterRouteImport } from './routes/bible.$book.$chapter'
 
@@ -78,6 +79,11 @@ const TrpcSplatRoute = TrpcSplatRouteImport.update({
   path: '/trpc/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAnswerRoute = ApiAnswerRouteImport.update({
+  id: '/api/answer',
+  path: '/api/answer',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CompareBookChapterRoute = CompareBookChapterRouteImport.update({
   id: '/compare/$book/$chapter',
   path: '/compare/$book/$chapter',
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/logout': typeof LogoutRoute
   '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
+  '/api/answer': typeof ApiAnswerRoute
   '/trpc/$': typeof TrpcSplatRoute
   '/bible/': typeof BibleIndexRoute
   '/bible/$book/$chapter': typeof BibleBookChapterRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/logout': typeof LogoutRoute
   '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
+  '/api/answer': typeof ApiAnswerRoute
   '/trpc/$': typeof TrpcSplatRoute
   '/bible': typeof BibleIndexRoute
   '/bible/$book/$chapter': typeof BibleBookChapterRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/logout': typeof LogoutRoute
   '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
+  '/api/answer': typeof ApiAnswerRoute
   '/trpc/$': typeof TrpcSplatRoute
   '/bible/': typeof BibleIndexRoute
   '/bible/$book/$chapter': typeof BibleBookChapterRoute
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/logout'
     | '/search'
     | '/settings'
+    | '/api/answer'
     | '/trpc/$'
     | '/bible/'
     | '/bible/$book/$chapter'
@@ -162,6 +172,7 @@ export interface FileRouteTypes {
     | '/logout'
     | '/search'
     | '/settings'
+    | '/api/answer'
     | '/trpc/$'
     | '/bible'
     | '/bible/$book/$chapter'
@@ -177,6 +188,7 @@ export interface FileRouteTypes {
     | '/logout'
     | '/search'
     | '/settings'
+    | '/api/answer'
     | '/trpc/$'
     | '/bible/'
     | '/bible/$book/$chapter'
@@ -193,6 +205,7 @@ export interface RootRouteChildren {
   LogoutRoute: typeof LogoutRoute
   SearchRoute: typeof SearchRoute
   SettingsRoute: typeof SettingsRoute
+  ApiAnswerRoute: typeof ApiAnswerRoute
   TrpcSplatRoute: typeof TrpcSplatRoute
   BibleIndexRoute: typeof BibleIndexRoute
   BibleBookChapterRoute: typeof BibleBookChapterRoute
@@ -278,6 +291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TrpcSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/answer': {
+      id: '/api/answer'
+      path: '/api/answer'
+      fullPath: '/api/answer'
+      preLoaderRoute: typeof ApiAnswerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/compare/$book/$chapter': {
       id: '/compare/$book/$chapter'
       path: '/compare/$book/$chapter'
@@ -305,6 +325,7 @@ const rootRouteChildren: RootRouteChildren = {
   LogoutRoute: LogoutRoute,
   SearchRoute: SearchRoute,
   SettingsRoute: SettingsRoute,
+  ApiAnswerRoute: ApiAnswerRoute,
   TrpcSplatRoute: TrpcSplatRoute,
   BibleIndexRoute: BibleIndexRoute,
   BibleBookChapterRoute: BibleBookChapterRoute,

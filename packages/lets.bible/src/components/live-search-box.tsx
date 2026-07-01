@@ -12,6 +12,7 @@ import {
   prefetchStructure,
   prefetchTranslation,
   searchVersesSync,
+  subscribeIndexReady,
 } from '@/search/flex-client';
 import { useTRPC } from '@/trpc/react';
 import type { BookJumpModel } from './book-jump';
@@ -136,6 +137,7 @@ export function LiveSearchBox({
   showChips = true,
   placeholder,
   context,
+  initialQuery,
 }: {
   size?: 'lg' | 'md' | 'sm';
   // The example chips below the bar — hidden in compact/chrome placements.
@@ -145,9 +147,11 @@ export function LiveSearchBox({
   // that book's chapter grid (with the current chapter highlighted) — so the
   // header search bar doubles as the book/chapter picker.
   context?: { book: string; chapter: number };
+  // Pre-fill the box (e.g. the results page seeds it from the URL `?q=`).
+  initialQuery?: string;
 }) {
   const trpc = useTRPC();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery ?? '');
   const [, bump] = useReducer((x: number) => x + 1, 0);
 
   const { data: examples } = useSuspenseQuery(
@@ -169,8 +173,10 @@ export function LiveSearchBox({
     ? { id: selectedScope, label: selectedScope }
     : undefined;
 
-  // Load the index + structure for the active translation; re-render when ready
-  // so the synchronous searches start returning results.
+  // Load the text + structure for the active translation; re-render when the
+  // arrays are ready (exact/reference search works immediately). The fuzzy index
+  // builds in a worker afterwards — subscribeIndexReady re-renders again so
+  // results upgrade from exact-only to fuzzy once it lands.
   useEffect(() => {
     prefetchStructure()
       .then(() => bump())
@@ -180,6 +186,7 @@ export function LiveSearchBox({
         .then(() => bump())
         .catch(() => {});
     }
+    return subscribeIndexReady(() => bump());
   }, [selectedScope]);
 
   const recent = useRecent(2);

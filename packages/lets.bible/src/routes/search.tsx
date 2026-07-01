@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { AiAnswer } from '@/components/ai-answer';
 import { PageShell } from '@/components/chrome';
 import { LiveSearchBox } from '@/components/live-search-box';
 import { chapterLink } from '@/lib/reference';
@@ -27,7 +28,7 @@ function SearchResults() {
   return (
     <PageShell>
       <div className="mx-auto max-w-[680px] px-6 pt-12 pb-20">
-        <LiveSearchBox size="md" />
+        <LiveSearchBox size="md" initialQuery={q ?? ''} />
 
         <div className="mt-10">
           {!q?.trim() ? (
@@ -41,7 +42,7 @@ function SearchResults() {
               Something went wrong. Please try again.
             </p>
           ) : (
-            <Results query={q} data={data} />
+            <Results query={q} translation={translation} data={data} />
           )}
         </div>
       </div>
@@ -76,37 +77,6 @@ type SearchData = {
     text: string | null;
   }>;
 };
-
-// Labeled placeholder for the upcoming AI-assisted answer. The grounded,
-// cited-answer backend (query → verse retrieval + LLM synthesis) isn't built
-// yet, so this reserves its slot at the top of the results and sets expectations
-// rather than rendering anything generated. See docs/search-answer-abuse-mitigation.md
-// for the abuse controls that gate the real feature before it ships.
-function AiAnswerPlaceholder() {
-  return (
-    <section
-      aria-label="AI answer (coming soon)"
-      className="rounded-2xl border border-gold-soft/40 border-dashed bg-paper-raised px-5 py-4"
-    >
-      <div className="flex items-center gap-2">
-        <span aria-hidden="true" className="text-[15px] text-gold">
-          ✦
-        </span>
-        <span className="font-bold text-[11px] text-gold-soft uppercase tracking-[0.14em]">
-          AI answer
-        </span>
-        <span className="rounded-full border border-line-strong bg-paper px-[9px] py-[2px] font-semibold text-[10.5px] text-faint uppercase tracking-[0.08em]">
-          Coming soon
-        </span>
-      </div>
-      <p className="mt-2 text-[14px] text-muted leading-relaxed">
-        We're building grounded, cited answers drawn straight from Scripture.
-        Until then, the labeled results below cover exact text,
-        cross-references, and related passages.
-      </p>
-    </section>
-  );
-}
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -150,9 +120,11 @@ function VerseRow({ hit, html }: { hit: VerseHit; html?: boolean }) {
 
 function Results({
   query,
+  translation,
   data,
 }: {
   query: string;
+  translation?: string;
   data: SearchData | undefined;
 }) {
   if (!data) {
@@ -176,7 +148,7 @@ function Results({
 
   return (
     <div className="space-y-9">
-      <AiAnswerPlaceholder />
+      <AiAnswer q={query} translation={translation} />
 
       {reference ? (
         <Link
