@@ -37,6 +37,13 @@ const OUT = join(here, '..', '..', 'public', 'search');
 const READING_OUT = join(here, '..', '..', 'public', 'reading');
 const PUBLIC = join(here, '..', '..', 'public');
 
+// Common Crawl appearance count per USFM ref (distilled, non-existent verses
+// dropped). Translation-independent. Emitted per translation as an id-aligned
+// array so the client can fold popularity into its re-rank (flex-client score()).
+const popularity: Record<string, number> = JSON.parse(
+  readFileSync(join(seedDir, 'popularity.json'), 'utf8'),
+);
+
 // Translations to build. Each loads a USFM book code → parsed chapters map,
 // mirroring the `lets-bible-seed-*` recipes. USX-sourced translations (BSB/MSB)
 // read one file per book; the KJV reads its committed JSON once. Add a
@@ -172,6 +179,12 @@ for (const { id, load } of TRANSLATIONS) {
 
   writeFileSync(`${OUT}/${id}.index.json`, JSON.stringify(parts));
   writeFileSync(`${OUT}/${id}.verses.json`, JSON.stringify(verses));
+  // Id-aligned popularity (0 for verses with no data), consumed by the client
+  // re-rank in flex-client.ts.
+  writeFileSync(
+    `${OUT}/${id}.popularity.json`,
+    JSON.stringify(verses.map(([ref]) => popularity[ref] ?? 0)),
+  );
   structure[id] = perBook;
 
   console.log(`[${id}] ${verses.length} verses → index + verses + structure`);

@@ -19,6 +19,12 @@ export const verseProperties: Record<string, any> = {
   verse: { type: 'integer' },
   ref: { type: 'keyword' }, // canonical, e.g. JHN.3.16
   ordinal: { type: 'integer' }, // global canonical order
+  // Common Crawl appearance count (seed/popularity.json), as a `rank_feature`
+  // so a `rank_feature` query can add a bounded, saturating boost — a
+  // more-quoted verse edges out an equally-good text match. Omitted on verses
+  // with no popularity data (a rank_feature only boosts docs that have the
+  // field; those get no popularity boost).
+  popularity: { type: 'rank_feature' },
   text: {
     type: 'text',
     analyzer: 'english',

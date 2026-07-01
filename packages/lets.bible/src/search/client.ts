@@ -26,7 +26,7 @@ const {
 
 // Bumped (v1 → v2 …) whenever the mapping changes incompatibly; reindex into the
 // new name, then flip the alias/constant.
-export const VERSE_INDEX = 'lets_bible_verses_v1';
+export const VERSE_INDEX = 'lets_bible_verses_v2';
 
 export const client = new Client({
   node: OPENSEARCH_URL,

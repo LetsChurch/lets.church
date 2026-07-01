@@ -2,9 +2,22 @@
 // index. Idempotent: doc id is `${translationId}:${ref}`, so re-running upserts.
 // Run after `es:push-mappings` and after the DB is seeded.
 
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { bibleVerse, db } from '../db';
 import { findBook } from '../lib/canon';
 import { client, VERSE_INDEX, waitForOpenSearch } from './client';
+
+// Common Crawl appearance count per USFM ref (seed/popularity.json, distilled
+// from pop.txt — non-existent verses already dropped). Translation-independent,
+// so the same value applies to every translation's copy of the verse.
+const popularity: Record<string, number> = JSON.parse(
+  readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), '../../seed/popularity.json'),
+    'utf8',
+  ),
+);
 
 await waitForOpenSearch();
 
@@ -41,6 +54,9 @@ for (let i = 0; i < rows.length; i += BATCH) {
         ref: r.ref,
         ordinal: r.ordinal,
         text: r.text,
+        // Only set when we have data — a rank_feature must be a positive number,
+        // and omitting it simply means no popularity boost for that verse.
+        ...(popularity[r.ref] ? { popularity: popularity[r.ref] } : {}),
       },
     ];
   });

@@ -169,7 +169,11 @@ In scope (everything implemented to date):
   debounce) — an interactive book-jump widget (book → chapter → verse), exact
   phrase, re-ranked verse matches, topics & recent, with a per-translation scope
   dropdown — plus a results page (reference, full-text, cross-refs, related
-  passages) still backed by Elasticsearch.
+  passages) still backed by Elasticsearch. Both re-ranks fold in a **verse
+  popularity** signal (Common Crawl appearance counts, `seed/popularity.json`) as
+  a bounded tie-breaker so a more-quoted verse edges out an equally-good text
+  match — a `rank_feature` boost server-side, a log term in the FlexSearch
+  `score()` client-side.
 - Compare translations: side-by-side verse-aligned view (`/compare/$book/$chapter`),
   launched from the **version picker** (a Compare button on each non-current
   translation row) and from the study panel's verse view.
@@ -242,7 +246,7 @@ To re-run a single lets.bible step against a running stack:
 
 ```
 just lets-bible-migrate        # lets.bible schema (incl. oidc_session.id_token)
-just lets-bible-es-push        # create lets_bible_verses_v1 mappings
+just lets-bible-es-push        # create lets_bible_verses_v2 mappings (incl. `popularity` rank_feature)
 just lets-bible-seed-bsb       # BSB (default) — 66 books / 31,086 verses
 just lets-bible-seed-msb       # MSB (second translation) — 31,100 verses
 just lets-bible-seed-kjv       # KJV (1769, Strong's + morphology) — 31,102 verses / 790,868 tokens
@@ -255,7 +259,7 @@ just lets-bible-seed-source NT BSB   # true interlinear: BSB NT Greek (STEPBible
 just lets-bible-seed-source OT BSB   # BSB OT Hebrew (STEPBible TAHOT, Masoretic) — MSB/WEB OT fall back to this
 just lets-bible-seed-source NT MSB   # MSB NT Greek (Byzantine/Majority)
 just lets-bible-seed-source NT WEB   # WEB NT Greek (Byzantine/Majority — the WEB NT's text basis)
-just lets-bible-index          # index 124,389 verses into ES (BSB + MSB + KJV + WEB)
+just lets-bible-index          # index 124,389 verses into ES v2 (BSB + MSB + KJV + WEB) with popularity from seed/popularity.json
 just lets-bible-flex           # build client FlexSearch + reading assets + overlay index → public/{search,reading,overlays}/* (incl. KJV + WEB)
 just lets-bible-up             # all of the above, in order
 ```
@@ -283,7 +287,7 @@ just lets-bible-up             # all of the above, in order
 | WEB source tokens | `select language,count(*) from bible_source_token where translation_id='WEB' group by language` | greek (John, Byzantine) seeded; hebrew via OT fallback to the default translation |
 | Commentary works | `select count(*) from bible_commentary_work` | 5 (calvin, mhc, mhcc, geneva, wesley) |
 | Commentary entries | `select count(*) from bible_commentary` | ~52,125 (calvin 11,063 / mhc 5,360 / mhcc 4,059 / geneva 14,713 / wesley 16,930) |
-| ES docs | `GET lets_bible_verses_v1/_count` | 124,389 |
+| ES docs | `GET lets_bible_verses_v2/_count` | 124,389 |
 
 ### 2.4 Test accounts & inputs
 
@@ -539,6 +543,7 @@ seam — bar bottom corners square, menu top corners square + bottom rounded.
 | LB-AC-15 | After visiting chapters, focus the box | **Topics & recent** includes recent chapters (`↺`, "recent", up to 2) from local reading history; clicking one opens that chapter. |
 | LB-AC-16 | With 2+ translations installed, open the scope dropdown (`BSB ▾`) and pick `MSB` | The trigger updates to `MSB ▾`; subsequent suggestions + the Enter→`/search` query are scoped to MSB (`translation=MSB`). With only one translation the dropdown is hidden and the `⌘K` hint shows. |
 | LB-AC-17 | Open the dropdown (any state) | The footer shows the "Press Enter to search everything…" line **and** a second muted line "✦ AI-assisted answers coming to results." (affordance for the upcoming AI answer; see LB-SR-10). |
+| LB-AC-17b | Popularity tie-breaker | Type a topical word that hits many verses (e.g. `faith`); among the verse suggestions, well-known verses (high Common Crawl count) tend to rank above obscure equally-matching ones. Client `score()` adds `log10(1+popularity)*8` (loaded from `/search/<id>.popularity.json`, id-aligned to `<id>.verses.json`); it's small vs the phrase/coverage tiers so it only nudges near-ties. Regression guard: `<id>.popularity.json` length == `<id>.verses.json` length. |
 | LB-AC-18 | Type a query that yields suggestions | The dropdown is **flush-connected** to the bar: same left edge + width as the bar, **no gap** (`sideOffset=0`), no top border, and the bar's bottom corners square off while the menu rounds only its bottom — one continuous control (design "Search behavior & states"). Regression guard: measure `bar.getBoundingClientRect()` vs the popup — `x`/`width` match and `popup.top - bar.bottom ≈ 0–1px`. |
 
 ### Book-jump widget (Smart Autocomplete design)
@@ -575,6 +580,7 @@ the stage and clicking fills the input or navigates.
 | LB-SR-08 | XSS safety | A query that would inject HTML cannot break out: highlight uses `encoder:'html'` (verse text escaped, only `<mark>` injected). |
 | LB-SR-09 | `/search` with no `q` | Prompt to "Search a reference, phrase, topic, or idea." (no query fired). |
 | LB-SR-10 | Any query **with** results, e.g. `/search?q=fruit of the Spirit` | An **AI answer** card (`aria-label="AI answer (coming soon)"`, ✦ + "AI answer" + **Coming soon** pill + "We're building grounded, cited answers…") renders **first**, above the reference/cross-refs/verses. It is a placeholder only — no generated text, no network/LLM call. |
+| LB-SR-11 | Popularity ranking | `/search?q=the word was god` — the decisive text match **John 1:1 ranks first**, but among the weaker matches a well-known verse (e.g. Luke 1:37) outranks an obscure one (e.g. 1 Kings 12:22); the obscure verse is displaced from the top. Popularity is a bounded `rank_feature` boost (pivot 2000, boost 4) — it reorders similar matches, never lifts a non-match or overrides a strong text match (John 1:1 still #1). Requires the v2 index populated with `popularity` (§2.2). |
 | LB-SR-11 | A query with **no** results (`/search?q=<gibberish>`) | The AI placeholder is **not** shown — only the "No results…" empty state (the card lives in the results branch, not the empty branch). |
 
 ---

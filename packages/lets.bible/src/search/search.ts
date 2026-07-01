@@ -1,5 +1,13 @@
 import { osCount, osSearch, VERSE_INDEX } from './client';
 
+// Popularity `rank_feature` tuning (see mappings.ts `popularity`). `saturation`
+// contribution is `boost * pop / (pop + pivot)`, capped at `boost`. Pivot is set
+// near the median distilled count so mid-popularity verses get ~half the boost;
+// boost sits below the top text boosts (5/3/2) so popularity reorders similar
+// matches without overriding a decisively better text match.
+const POPULARITY_PIVOT = 2000;
+const POPULARITY_BOOST = 4;
+
 export type VerseHit = {
   ref: string;
   book: string; // USFM
@@ -48,25 +56,52 @@ export async function searchVerses(params: {
     query: {
       bool: {
         filter: [{ term: { translationId: params.translationId } }],
-        minimum_should_match: 1,
-        should: [
-          { match_phrase: { 'text.exact': { query: trimmed, boost: 5 } } },
-          { match_phrase: { text: { query: trimmed, slop: 2, boost: 2 } } },
+        // A text match is REQUIRED (the inner bool); popularity is a pure
+        // scoring boost in the outer `should` — it must never make a verse match
+        // on its own, or every popular verse would surface for any query.
+        must: [
           {
-            // Coverage bonus: "2<75%" requires ALL terms when the query has ≤2
-            // (so "fruit of the Spirit" → both "fruit" and "spirit" after
-            // stopword removal), and ≥75% beyond that. ES rounds percentages
-            // down, so a plain "75%" would collapse to 1 term for a 2-term query
-            // — hence the combination form.
-            match: {
-              text: {
-                query: trimmed,
-                minimum_should_match: '2<75%',
-                boost: 3,
-              },
+            bool: {
+              minimum_should_match: 1,
+              should: [
+                {
+                  match_phrase: { 'text.exact': { query: trimmed, boost: 5 } },
+                },
+                {
+                  match_phrase: { text: { query: trimmed, slop: 2, boost: 2 } },
+                },
+                {
+                  // Coverage bonus: "2<75%" requires ALL terms when the query has
+                  // ≤2 (so "fruit of the Spirit" → both "fruit" and "spirit"
+                  // after stopword removal), and ≥75% beyond that. ES rounds
+                  // percentages down, so a plain "75%" would collapse to 1 term
+                  // for a 2-term query — hence the combination form.
+                  match: {
+                    text: {
+                      query: trimmed,
+                      minimum_should_match: '2<75%',
+                      boost: 3,
+                    },
+                  },
+                },
+                { match: { text: { query: trimmed } } },
+              ],
             },
           },
-          { match: { text: { query: trimmed } } },
+        ],
+        // Bounded, saturating boost by Common Crawl popularity. `saturation`
+        // caps the contribution at `boost` (unlike `log`, which the power-law
+        // tail would let dominate); with pivot 2000 a mid-popularity verse gets
+        // ~half of it and the most-quoted verses ~all of it. Sits alongside the
+        // text boosts (5/3/2) as a tie-breaker, not an override.
+        should: [
+          {
+            rank_feature: {
+              field: 'popularity',
+              saturation: { pivot: POPULARITY_PIVOT },
+              boost: POPULARITY_BOOST,
+            },
+          },
         ],
       },
     },

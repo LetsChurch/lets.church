@@ -27,7 +27,14 @@ type Loaded = {
   vNorm: string[];
   vWords: string[][];
   byRef: Map<string, number>;
+  pop: number[]; // id-aligned Common Crawl popularity (0 when absent)
 };
+
+// Weight of the popularity tie-breaker in score(). Applied as
+// `log10(1 + count) * POP_WEIGHT` (≈0..47), small vs the phrase/coverage tiers
+// (1000/150) so it reorders near-ties toward more-quoted verses without lifting
+// a weak match over a strong one.
+const POP_WEIGHT = 8;
 
 const norm = (s: string) =>
   s
@@ -50,15 +57,20 @@ const cache = new Map<string, Loaded>();
 const inflight = new Map<string, Promise<Loaded>>();
 
 async function loadTranslation(id: string): Promise<Loaded> {
-  const [partsRes, versesRes] = await Promise.all([
+  const [partsRes, versesRes, popRes] = await Promise.all([
     fetch(`/search/${id}.index.json`),
     fetch(`/search/${id}.verses.json`),
+    // Tolerate a missing popularity asset (older deploy) — fall back to zeros.
+    fetch(`/search/${id}.popularity.json`).catch(() => null),
   ]);
   if (!partsRes.ok || !versesRes.ok) {
     throw new Error(`Failed to load search assets for ${id}`);
   }
   const parts = (await partsRes.json()) as Record<string, string>;
   const pairs = (await versesRes.json()) as [string, string][];
+  const pop: number[] = popRes?.ok
+    ? ((await popRes.json()) as number[])
+    : pairs.map(() => 0);
 
   const index = newIndex();
   for (const [key, data] of Object.entries(parts)) {
@@ -80,7 +92,7 @@ async function loadTranslation(id: string): Promise<Loaded> {
     byRef.set(ref, i);
   }
 
-  const loaded = { index, refs, texts, vNorm, vWords, byRef };
+  const loaded = { index, refs, texts, vNorm, vWords, byRef, pop };
   cache.set(id, loaded);
   inflight.delete(id);
   return loaded;
@@ -159,6 +171,8 @@ function score(qN: string, qT: string[], t: Loaded, i: number): number {
     s += Math.max(0, 120 - 15 * (win - qT.length));
   }
   s += matched * 2 - 0.02 * w.length;
+  // Popularity tie-breaker: nudge more-quoted verses up among similar matches.
+  s += Math.log10(1 + (t.pop[i] ?? 0)) * POP_WEIGHT;
   return s;
 }
 
