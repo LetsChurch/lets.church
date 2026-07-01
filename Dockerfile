@@ -139,7 +139,7 @@ CMD ["pnpm", "run", "start"]
 
 # lets.bible app (TanStack Start). `prod` already carries its built `.output`
 # (the recursive `pnpm run -r build` above builds it) + prod node_modules.
-FROM prod AS lets-bible
+FROM prod AS letsbible
 WORKDIR /usr/src/app/packages/lets.bible
 CMD ["pnpm", "run", "start"]
 
