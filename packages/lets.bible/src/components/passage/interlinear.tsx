@@ -42,8 +42,10 @@ function isFunctionWord(w: InterlinearRow): boolean {
 }
 
 const segBase = 'rounded-[7px] px-3.5 py-1.5 text-[13px] outline-none';
+// Layout + focus only; each chip state sets its own token-based colors so it
+// adapts to dark mode (the old hardcoded cream bg / gray text washed out).
 const chipBase =
-  'rounded-full border border-[#e0d8c6] bg-[#efe9da] px-[11px] py-[5px] font-semibold text-[12px] outline-none transition focus-visible:ring-2 focus-visible:ring-gold/40';
+  'rounded-full border px-[11px] py-[5px] font-semibold text-[12px] outline-none transition focus-visible:ring-2 focus-visible:ring-gold/40';
 
 // The full-width controls bar — a second sticky header under the reader chrome.
 // Word-order segmented toggle on the left; line toggles on the right. "Original ·
@@ -78,15 +80,15 @@ export function InterlinearControls({
     <div className="sticky top-15 z-20 flex min-h-14 flex-shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 border-line border-b bg-paper-soft/95 px-4 py-2.5 backdrop-blur-sm sm:px-[26px] lg:h-15 lg:flex-nowrap">
       {reverseAvailable ? (
         <div className="flex items-center gap-2.5">
-          <span className="text-[12px] text-faint">Word order</span>
+          <span className="text-[12px] text-muted">Word order</span>
           <div className="inline-flex gap-0.5 rounded-[10px] border border-line-strong bg-paper p-[3px]">
             <button
               type="button"
               onClick={() => set({ englishFirst: false })}
               className={`${segBase} ${
                 englishFirst
-                  ? 'font-medium text-muted-2'
-                  : 'bg-paper-raised font-semibold text-ink shadow-sm'
+                  ? 'font-medium text-muted hover:text-ink'
+                  : 'bg-paper-raised font-semibold text-ink-strong shadow-sm'
               }`}
             >
               Original
@@ -96,8 +98,8 @@ export function InterlinearControls({
               onClick={() => set({ englishFirst: true })}
               className={`${segBase} ${
                 englishFirst
-                  ? 'bg-paper-raised font-semibold text-ink shadow-sm'
-                  : 'font-medium text-muted-2'
+                  ? 'bg-paper-raised font-semibold text-ink-strong shadow-sm'
+                  : 'font-medium text-muted hover:text-ink'
               }`}
             >
               English (reverse)
@@ -111,10 +113,10 @@ export function InterlinearControls({
         <div />
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="mr-0.5 text-[12px] text-faint">Lines</span>
+        <span className="mr-0.5 text-[12px] text-muted">Lines</span>
         <span
           title="The Greek/Hebrew word is always shown"
-          className={`${chipBase} cursor-default text-[#9a9384] opacity-70`}
+          className={`${chipBase} cursor-default border-line-strong border-dashed bg-transparent text-muted-2`}
         >
           Greek/Hebrew · locked
         </span>
@@ -142,7 +144,7 @@ export function InterlinearControls({
         ) : (
           <span
             title="Parsing isn’t available for this passage yet"
-            className={`${chipBase} cursor-default text-[#9a9384] opacity-70`}
+            className={`${chipBase} cursor-default border-line-strong border-dashed bg-transparent text-muted-2`}
           >
             Parsing
           </span>
@@ -167,7 +169,9 @@ function LineChip({
       aria-pressed={on}
       onClick={onToggle}
       className={`${chipBase} ${
-        on ? 'text-[#3f3c34]' : 'border-line-strong bg-transparent text-faint'
+        on
+          ? 'border-gold-soft/60 bg-gold/15 text-ink-strong'
+          : 'border-line-strong bg-transparent text-muted hover:border-gold-soft/50 hover:text-ink'
       }`}
     >
       {label}
