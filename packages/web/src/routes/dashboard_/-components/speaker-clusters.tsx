@@ -11,6 +11,11 @@ import {
 } from '@mantine/core';
 import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
+import {
+  MediaPreviewGroup,
+  MediaPreviewScope,
+  MediaPreviewTarget,
+} from '@/components/media-preview-link';
 import { SpeakerPicker } from './speaker-picker';
 import { usePaged } from './use-paged';
 
@@ -123,43 +128,52 @@ function ClusterCard({
         </Group>
       </Group>
 
-      <Stack gap={6} mb="md">
-        {cluster.members.map((m) => {
-          const key = memberKey(m);
-          return (
-            <Group key={key} gap="xs" wrap="nowrap" align="flex-start">
-              <Checkbox
-                checked={checked.has(key)}
-                onChange={() => toggle(key)}
-                mt={2}
-              />
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <Group gap={6} wrap="nowrap">
-                  <Link
-                    to="/dashboard/channels/$channelId/uploads/$uploadId"
-                    params={{
-                      channelId: cluster.channelId,
-                      uploadId: m.uploadId,
-                    }}
-                    style={{ textDecoration: 'none' }}
-                  >
-                    <Text size="sm" c="blue" span>
-                      {m.uploadTitle ?? 'Untitled'}
+      <MediaPreviewScope side="right" sideOffset={12}>
+        <Stack gap={6} mb="md">
+          {cluster.members.map((m) => {
+            const key = memberKey(m);
+            return (
+              <Group key={key} gap="xs" wrap="nowrap" align="flex-start">
+                <Checkbox
+                  checked={checked.has(key)}
+                  onChange={() => toggle(key)}
+                  mt={2}
+                />
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <Group gap={6} wrap="nowrap">
+                    <Link
+                      to="/dashboard/channels/$channelId/uploads/$uploadId"
+                      params={{
+                        channelId: cluster.channelId,
+                        uploadId: m.uploadId,
+                      }}
+                      style={{ textDecoration: 'none' }}
+                    >
+                      <Text size="sm" c="blue" span>
+                        {m.uploadTitle ?? 'Untitled'}
+                      </Text>
+                    </Link>
+                    <Text size="xs" c="dimmed">
+                      {prettyLabel(m.speakerLabel)} · {m.paragraphCount} paras ·{' '}
+                      {formatTimestamp(m.startSeconds)}
                     </Text>
-                  </Link>
-                  <Text size="xs" c="dimmed">
-                    {prettyLabel(m.speakerLabel)} · {m.paragraphCount} paras ·{' '}
-                    {formatTimestamp(m.startSeconds)}
-                  </Text>
-                </Group>
-                <Text size="xs" c="dimmed" lineClamp={1}>
-                  {m.sampleText}
-                </Text>
-              </div>
-            </Group>
-          );
-        })}
-      </Stack>
+                  </Group>
+                  <MediaPreviewTarget
+                    mediaId={m.uploadId}
+                    startSeconds={m.startSeconds}
+                    title={m.uploadTitle}
+                    className="block text-inherit no-underline"
+                  >
+                    <Text size="xs" c="dimmed" lineClamp={1}>
+                      {m.sampleText}
+                    </Text>
+                  </MediaPreviewTarget>
+                </div>
+              </Group>
+            );
+          })}
+        </Stack>
+      </MediaPreviewScope>
 
       {onAssignExisting ? (
         selected.length === 0 ? (
@@ -246,31 +260,33 @@ export function SpeakerClusters({
   }
 
   return (
-    <Stack gap="lg">
-      {paged.slice.map((c) => (
-        <ClusterCard
-          key={`${c.channelId}:${c.members[0]?.uploadId}:${c.members[0]?.speakerLabel}`}
-          cluster={c}
-          onCreate={onCreate}
-          onAssignExisting={onAssignExisting}
-          isWorking={isWorking}
-          isAssigning={isAssigning}
-          showChannel={showChannel}
-        />
-      ))}
-      {paged.pageCount > 1 ? (
-        <Group justify="space-between" align="center">
-          <Text size="xs" c="dimmed">
-            {clusters.length} groups
-          </Text>
-          <Pagination
-            total={paged.pageCount}
-            value={paged.page}
-            onChange={paged.setPage}
-            size="sm"
+    <MediaPreviewGroup>
+      <Stack gap="lg">
+        {paged.slice.map((c) => (
+          <ClusterCard
+            key={`${c.channelId}:${c.members[0]?.uploadId}:${c.members[0]?.speakerLabel}`}
+            cluster={c}
+            onCreate={onCreate}
+            onAssignExisting={onAssignExisting}
+            isWorking={isWorking}
+            isAssigning={isAssigning}
+            showChannel={showChannel}
           />
-        </Group>
-      ) : null}
-    </Stack>
+        ))}
+        {paged.pageCount > 1 ? (
+          <Group justify="space-between" align="center">
+            <Text size="xs" c="dimmed">
+              {clusters.length} groups
+            </Text>
+            <Pagination
+              total={paged.pageCount}
+              value={paged.page}
+              onChange={paged.setPage}
+              size="sm"
+            />
+          </Group>
+        ) : null}
+      </Stack>
+    </MediaPreviewGroup>
   );
 }

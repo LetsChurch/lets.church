@@ -13,6 +13,11 @@ import {
 import { IconChevronDown, IconWand } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
+import {
+  MediaPreviewGroup,
+  MediaPreviewScope,
+  MediaPreviewTarget,
+} from '@/components/media-preview-link';
 import { usePaged } from './use-paged';
 
 const PAGE_SIZE = 25;
@@ -141,112 +146,123 @@ export function SpeakerLabelingQueue({
         </Button>
       </Group>
 
-      <Table verticalSpacing="sm" highlightOnHover>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th w={80}>Match</Table.Th>
-            <Table.Th>Speaker</Table.Th>
-            <Table.Th>Upload</Table.Th>
-            <Table.Th>Segment</Table.Th>
-            <Table.Th w={150}>Action</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {paged.slice.map((r) => (
-            <Table.Tr key={`${r.uploadId}:${r.speakerLabel}`}>
-              <Table.Td>
-                <Badge
-                  color={confidenceColor(r.topMatch.matchPercent)}
-                  variant="light"
-                >
-                  {r.topMatch.matchPercent}%
-                </Badge>
-              </Table.Td>
-              <Table.Td>
-                <Text size="sm" fw={500}>
-                  {r.topMatch.name}
-                </Text>
-                {showChannel ? (
-                  <Text size="xs" c="dimmed">
-                    {r.topMatch.channelName}
-                  </Text>
-                ) : null}
-              </Table.Td>
-              <Table.Td>
-                <Link
-                  to="/dashboard/channels/$channelId/uploads/$uploadId"
-                  params={{ channelId: r.channelId, uploadId: r.uploadId }}
-                  style={{ textDecoration: 'none' }}
-                >
-                  <Text size="sm" c="blue" span>
-                    {r.uploadTitle ?? 'Untitled'}
-                  </Text>
-                </Link>
-                {showChannel ? (
-                  <Text size="xs" c="dimmed">
-                    {r.channelName}
-                  </Text>
-                ) : null}
-              </Table.Td>
-              <Table.Td>
-                <Text size="xs" c="dimmed">
-                  {prettyLabel(r.speakerLabel)} · {r.paragraphCount} paras ·{' '}
-                  {formatTimestamp(r.startSeconds)}
-                </Text>
-                <Text size="sm" lineClamp={2} maw={420}>
-                  {r.sampleText}
-                </Text>
-              </Table.Td>
-              <Table.Td>
-                <Group gap={4} wrap="nowrap">
-                  <Button
-                    size="compact-sm"
-                    variant="light"
-                    disabled={isAssigning}
-                    onClick={() => assignTop([r])}
-                  >
-                    Assign
-                  </Button>
-                  {r.alternatives.length > 0 ? (
-                    <Menu position="bottom-end" withinPortal shadow="md">
-                      <Menu.Target>
-                        <ActionIcon
-                          variant="subtle"
-                          color="gray"
-                          disabled={isAssigning}
-                          aria-label="Other matches"
-                        >
-                          <IconChevronDown size={16} />
-                        </ActionIcon>
-                      </Menu.Target>
-                      <Menu.Dropdown>
-                        <Menu.Label>Assign a different match</Menu.Label>
-                        {r.alternatives.map((alt) => (
-                          <Menu.Item
-                            key={alt.speakerId}
-                            onClick={() =>
-                              onAssign([
-                                {
-                                  uploadId: r.uploadId,
-                                  speakerLabel: r.speakerLabel,
-                                  speakerId: alt.speakerId,
-                                },
-                              ])
-                            }
-                          >
-                            {alt.name} · {alt.matchPercent}%
-                            {showChannel ? ` (${alt.channelName})` : ''}
-                          </Menu.Item>
-                        ))}
-                      </Menu.Dropdown>
-                    </Menu>
-                  ) : null}
-                </Group>
-              </Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
+      <MediaPreviewGroup>
+        <MediaPreviewScope side="right" sideOffset={12}>
+          <Table verticalSpacing="sm" highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th w={80}>Match</Table.Th>
+                <Table.Th>Speaker</Table.Th>
+                <Table.Th>Upload</Table.Th>
+                <Table.Th>Segment</Table.Th>
+                <Table.Th w={150}>Action</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {paged.slice.map((r) => (
+                <Table.Tr key={`${r.uploadId}:${r.speakerLabel}`}>
+                  <Table.Td>
+                    <Badge
+                      color={confidenceColor(r.topMatch.matchPercent)}
+                      variant="light"
+                    >
+                      {r.topMatch.matchPercent}%
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="sm" fw={500}>
+                      {r.topMatch.name}
+                    </Text>
+                    {showChannel ? (
+                      <Text size="xs" c="dimmed">
+                        {r.topMatch.channelName}
+                      </Text>
+                    ) : null}
+                  </Table.Td>
+                  <Table.Td>
+                    <Link
+                      to="/dashboard/channels/$channelId/uploads/$uploadId"
+                      params={{ channelId: r.channelId, uploadId: r.uploadId }}
+                      style={{ textDecoration: 'none' }}
+                    >
+                      <Text size="sm" c="blue" span>
+                        {r.uploadTitle ?? 'Untitled'}
+                      </Text>
+                    </Link>
+                    {showChannel ? (
+                      <Text size="xs" c="dimmed">
+                        {r.channelName}
+                      </Text>
+                    ) : null}
+                  </Table.Td>
+                  <Table.Td>
+                    <MediaPreviewTarget
+                      mediaId={r.uploadId}
+                      startSeconds={r.startSeconds}
+                      title={r.uploadTitle}
+                      className="block text-inherit no-underline"
+                    >
+                      <Text size="xs" c="dimmed">
+                        {prettyLabel(r.speakerLabel)} · {r.paragraphCount} paras
+                        · {formatTimestamp(r.startSeconds)}
+                      </Text>
+                      <Text size="sm" lineClamp={2} maw={420}>
+                        {r.sampleText}
+                      </Text>
+                    </MediaPreviewTarget>
+                  </Table.Td>
+                  <Table.Td>
+                    <Group gap={4} wrap="nowrap">
+                      <Button
+                        size="compact-sm"
+                        variant="light"
+                        disabled={isAssigning}
+                        onClick={() => assignTop([r])}
+                      >
+                        Assign
+                      </Button>
+                      {r.alternatives.length > 0 ? (
+                        <Menu position="bottom-end" withinPortal shadow="md">
+                          <Menu.Target>
+                            <ActionIcon
+                              variant="subtle"
+                              color="gray"
+                              disabled={isAssigning}
+                              aria-label="Other matches"
+                            >
+                              <IconChevronDown size={16} />
+                            </ActionIcon>
+                          </Menu.Target>
+                          <Menu.Dropdown>
+                            <Menu.Label>Assign a different match</Menu.Label>
+                            {r.alternatives.map((alt) => (
+                              <Menu.Item
+                                key={alt.speakerId}
+                                onClick={() =>
+                                  onAssign([
+                                    {
+                                      uploadId: r.uploadId,
+                                      speakerLabel: r.speakerLabel,
+                                      speakerId: alt.speakerId,
+                                    },
+                                  ])
+                                }
+                              >
+                                {alt.name} · {alt.matchPercent}%
+                                {showChannel ? ` (${alt.channelName})` : ''}
+                              </Menu.Item>
+                            ))}
+                          </Menu.Dropdown>
+                        </Menu>
+                      ) : null}
+                    </Group>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </MediaPreviewScope>
+      </MediaPreviewGroup>
 
       {paged.pageCount > 1 ? (
         <Group justify="space-between" align="center">

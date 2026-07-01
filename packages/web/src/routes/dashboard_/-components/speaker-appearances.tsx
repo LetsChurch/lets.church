@@ -9,6 +9,11 @@ import {
   Title,
 } from '@mantine/core';
 import { Link } from '@tanstack/react-router';
+import {
+  MediaPreviewGroup,
+  MediaPreviewScope,
+  MediaPreviewTarget,
+} from '@/components/media-preview-link';
 import { usePaged } from './use-paged';
 
 const PAGE_SIZE = 25;
@@ -85,99 +90,114 @@ export function SpeakerAppearances({
   }
 
   return (
-    <Stack gap="xl">
-      {[...bySpeaker.values()].map((rows) => {
-        const first = rows[0] as AppearanceRow;
-        return (
-          <div key={first.speakerId}>
-            <Title order={4} mb="xs">
-              {first.speakerName}
-            </Title>
-            <Table verticalSpacing="sm" highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th w={80}>Match</Table.Th>
-                  <Table.Th>Channel</Table.Th>
-                  <Table.Th>Upload</Table.Th>
-                  <Table.Th>Segment</Table.Th>
-                  <Table.Th w={160}>Action</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {rows.map((a) => (
-                  <Table.Tr key={`${a.uploadId}:${a.speakerLabel}`}>
-                    <Table.Td>
-                      <Badge
-                        color={confidenceColor(a.matchPercent)}
-                        variant="light"
-                      >
-                        {a.matchPercent}%
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{a.channelName}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Link
-                        to="/dashboard/channels/$channelId/uploads/$uploadId"
-                        params={{
-                          channelId: a.channelId,
-                          uploadId: a.uploadId,
-                        }}
-                        style={{ textDecoration: 'none' }}
-                      >
-                        <Text size="sm" c="blue" span>
-                          {a.uploadTitle ?? 'Untitled'}
-                        </Text>
-                      </Link>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="xs" c="dimmed">
-                        {prettyLabel(a.speakerLabel)} ·{' '}
-                        {formatTimestamp(a.startSeconds)}
-                      </Text>
-                      <Text size="sm" lineClamp={1} maw={360}>
-                        {a.sampleText}
-                      </Text>
-                    </Table.Td>
-                    <Table.Td>
-                      {a.requested ? (
-                        <Badge variant="light" color="gray">
-                          Requested
-                        </Badge>
-                      ) : (
-                        <Button
-                          size="compact-sm"
-                          variant="light"
-                          disabled={isRequesting}
-                          onClick={() =>
-                            onRequest(a.speakerId, a.uploadId, a.speakerLabel)
-                          }
-                        >
-                          Request tagging
-                        </Button>
-                      )}
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </div>
-        );
-      })}
-      {paged.pageCount > 1 ? (
-        <Group justify="space-between" align="center">
-          <Text size="xs" c="dimmed">
-            {appearances.length} appearances
-          </Text>
-          <Pagination
-            total={paged.pageCount}
-            value={paged.page}
-            onChange={paged.setPage}
-            size="sm"
-          />
-        </Group>
-      ) : null}
-    </Stack>
+    <MediaPreviewGroup>
+      <Stack gap="xl">
+        {[...bySpeaker.values()].map((rows) => {
+          const first = rows[0] as AppearanceRow;
+          return (
+            <div key={first.speakerId}>
+              <Title order={4} mb="xs">
+                {first.speakerName}
+              </Title>
+              <MediaPreviewScope side="right" sideOffset={12}>
+                <Table verticalSpacing="sm" highlightOnHover>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th w={80}>Match</Table.Th>
+                      <Table.Th>Channel</Table.Th>
+                      <Table.Th>Upload</Table.Th>
+                      <Table.Th>Segment</Table.Th>
+                      <Table.Th w={160}>Action</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {rows.map((a) => (
+                      <Table.Tr key={`${a.uploadId}:${a.speakerLabel}`}>
+                        <Table.Td>
+                          <Badge
+                            color={confidenceColor(a.matchPercent)}
+                            variant="light"
+                          >
+                            {a.matchPercent}%
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Text size="sm">{a.channelName}</Text>
+                        </Table.Td>
+                        <Table.Td>
+                          <Link
+                            to="/dashboard/channels/$channelId/uploads/$uploadId"
+                            params={{
+                              channelId: a.channelId,
+                              uploadId: a.uploadId,
+                            }}
+                            style={{ textDecoration: 'none' }}
+                          >
+                            <Text size="sm" c="blue" span>
+                              {a.uploadTitle ?? 'Untitled'}
+                            </Text>
+                          </Link>
+                        </Table.Td>
+                        <Table.Td>
+                          <MediaPreviewTarget
+                            mediaId={a.uploadId}
+                            startSeconds={a.startSeconds}
+                            title={a.uploadTitle}
+                            className="block text-inherit no-underline"
+                          >
+                            <Text size="xs" c="dimmed">
+                              {prettyLabel(a.speakerLabel)} ·{' '}
+                              {formatTimestamp(a.startSeconds)}
+                            </Text>
+                            <Text size="sm" lineClamp={1} maw={360}>
+                              {a.sampleText}
+                            </Text>
+                          </MediaPreviewTarget>
+                        </Table.Td>
+                        <Table.Td>
+                          {a.requested ? (
+                            <Badge variant="light" color="gray">
+                              Requested
+                            </Badge>
+                          ) : (
+                            <Button
+                              size="compact-sm"
+                              variant="light"
+                              disabled={isRequesting}
+                              onClick={() =>
+                                onRequest(
+                                  a.speakerId,
+                                  a.uploadId,
+                                  a.speakerLabel,
+                                )
+                              }
+                            >
+                              Request tagging
+                            </Button>
+                          )}
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              </MediaPreviewScope>
+            </div>
+          );
+        })}
+        {paged.pageCount > 1 ? (
+          <Group justify="space-between" align="center">
+            <Text size="xs" c="dimmed">
+              {appearances.length} appearances
+            </Text>
+            <Pagination
+              total={paged.pageCount}
+              value={paged.page}
+              onChange={paged.setPage}
+              size="sm"
+            />
+          </Group>
+        ) : null}
+      </Stack>
+    </MediaPreviewGroup>
   );
 }
