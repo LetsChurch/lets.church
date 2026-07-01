@@ -6,7 +6,7 @@ import {
 import {
   type BibleMetadata,
   bibleBookOrder,
-  buildBibleHubUrl,
+  buildLetsBibleUrl,
   formatBibleRef,
   formatBibleRefShort,
   parseBibleMetadata,
@@ -133,7 +133,7 @@ export function buildScriptureIndex(
       if (annotation.kind !== 'BIBLE') continue;
       const meta = parseBibleMetadata(annotation.metadata);
       if (!meta) continue;
-      const url = buildBibleHubUrl(meta);
+      const url = buildLetsBibleUrl(meta);
       if (!url) continue;
 
       const key = bibleKey(meta);
@@ -226,7 +226,7 @@ function groupEntries(
   const flush = () => {
     if (!current) return;
     current.occurrences.sort((a, b) => a.seconds - b.seconds);
-    const url = buildBibleHubUrl(current.meta);
+    const url = buildLetsBibleUrl(current.meta);
     if (url) {
       groups.push({
         key: bibleKey(current.meta),

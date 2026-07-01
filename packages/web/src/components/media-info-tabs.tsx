@@ -283,7 +283,7 @@ export function MediaInfoTabs({
         {scriptureIndex.length > 0 ? (
           // Back-of-the-book scripture index: every Bible reference cited
           // in the transcript (from BIBLE annotations), deduped and ordered
-          // canonically. The reference links to BibleHub; each timestamp
+          // canonically. The reference links to Let’s Bible; each timestamp
           // chip seeks the player to where it's cited via the same store
           // the chapter list and description links use.
           <div className="border-zinc-200 border-t px-5 py-4 dark:border-zinc-800">
@@ -297,7 +297,7 @@ export function MediaInfoTabs({
                     href={group.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label={`${group.ref} on BibleHub (opens in a new tab)`}
+                    aria-label={`${group.ref} on Let’s Bible (opens in a new tab)`}
                     className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
                   >
                     {group.ref}

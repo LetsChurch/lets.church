@@ -26,7 +26,7 @@ import {
 import { LcTooltip } from '@/components/lc-tooltip';
 import { $currentTime, $setPlayAt } from '@/stores/player';
 import {
-  buildBibleHubUrl,
+  buildLetsBibleUrl,
   formatBibleRef,
   parseBibleMetadata,
 } from '@/util/bible-url';
@@ -201,7 +201,7 @@ function indexParagraph(paragraph: TranscriptParagraph): {
     if (!c.annotation || !c.key || seen.has(c.key)) continue;
     if (c.annotation.kind === 'BIBLE') {
       const meta = parseBibleMetadata(c.annotation.metadata);
-      const url = meta ? buildBibleHubUrl(meta) : null;
+      const url = meta ? buildLetsBibleUrl(meta) : null;
       if (!meta || !url) continue;
       pills.push({ kind: 'BIBLE', key: c.key, ref: formatBibleRef(meta), url });
       seen.add(c.key);
@@ -612,7 +612,7 @@ const ParagraphView = memo(function ParagraphView({
             // Reference rail. One pill per unique annotation in this
             // paragraph. Hovering a pill highlights every chunk that
             // shares its key in the body above; clicking opens the
-            // canonical destination (BibleHub for scripture, site
+            // canonical destination (Let’s Bible for scripture, site
             // search for keywords).
             <div className="mt-2 flex flex-wrap gap-1.5">
               {pills.map((pill) =>
@@ -622,7 +622,7 @@ const ParagraphView = memo(function ParagraphView({
                     href={pill.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label={`${pill.ref} on BibleHub (opens in a new tab)`}
+                    aria-label={`${pill.ref} on Let’s Bible (opens in a new tab)`}
                     onMouseEnter={() => setHoveredPillKey(pill.key)}
                     onMouseLeave={() => setHoveredPillKey(null)}
                     onFocus={() => setHoveredPillKey(pill.key)}

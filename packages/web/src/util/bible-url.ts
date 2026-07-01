@@ -1,11 +1,19 @@
 import { z } from 'zod';
 
-// OSIS book id → BibleHub URL slug + human display name. The 66-book
+// Base URL for lets.bible (our own scripture reader). Env-driven (Vite inlines
+// VITE_* in both the client and SSR bundles); dev falls back to the lets.bible
+// dev port. Prod sets VITE_LETS_BIBLE_URL=https://lets.bible.
+const LETS_BIBLE_URL =
+  (import.meta.env as Record<string, string | undefined>).VITE_LETS_BIBLE_URL ??
+  'http://localhost:4001';
+
+// OSIS book id → display name. The lets.bible slug is derived from the name
+// (lowercased, spaces → hyphens): "1 Corinthians" → "1-corinthians", "Psalm" →
+// "psalm", "Song of Solomon" → "song-of-solomon" — matching
+// packages/lets.bible/src/lib/canon.ts. The `slug` field is the legacy BibleHub
+// slug, kept only so any other reader of it doesn't break. The 66-book
 // Protestant canon; matches the OSIS abbreviations the LLM emits in
-// `annotate-transcript.ts`. Slugs follow BibleHub's URL convention
-// (lowercase, underscores for separated words, ordinal-prefixed books
-// keep the digit) — `https://biblehub.com/<slug>/<chapter>-<verse>.htm`
-// shows a parallel view across translations rather than locking to one.
+// `annotate-transcript.ts`.
 const BOOKS: Record<string, { slug: string; name: string }> = {
   Gen: { slug: 'genesis', name: 'Genesis' },
   Exod: { slug: 'exodus', name: 'Exodus' },
@@ -98,7 +106,7 @@ export function parseBibleMetadata(
   return result.success ? result.data : null;
 }
 
-export function buildBibleHubUrl(meta: BibleMetadata): string | null {
+export function buildLetsBibleUrl(meta: BibleMetadata): string | null {
   // The annotate prompt enumerates the 66 OSIS abbreviations and the
   // canonical-only rule maps apocryphal works to `#keyword`, so the
   // book should always be in the table. Returning null on a miss
@@ -106,17 +114,18 @@ export function buildBibleHubUrl(meta: BibleMetadata): string | null {
   // whole transcript render — the caller renders the words unannotated.
   const entry = BOOKS[meta.book];
   if (!entry) return null;
-  const base = `https://biblehub.com/${entry.slug}`;
-  if (meta.chapter == null) return `${base}/`;
-  if (meta.verse == null) return `${base}/${meta.chapter}.htm`;
-  // BibleHub has no native range URL; link to the start verse.
-  return `${base}/${meta.chapter}-${meta.verse}.htm`;
+  const slug = entry.name.toLowerCase().replace(/\s+/g, '-');
+  const base = `${LETS_BIBLE_URL}/bible/${slug}`;
+  if (meta.chapter == null) return base;
+  if (meta.verse == null) return `${base}/${meta.chapter}`;
+  // lets.bible focuses a verse with `?v=`; ranges link to the start verse.
+  return `${base}/${meta.chapter}?v=${meta.verse}`;
 }
 
 // Canonical (Genesis → Revelation) sort index for an OSIS book id.
 // `BOOKS` is declared in canonical order, so its key order is the
 // ordering we want; books absent from the table sort last (stable
-// fallback for the same bogus-row case `buildBibleHubUrl` guards).
+// fallback for the same bogus-row case `buildLetsBibleUrl` guards).
 const BOOK_ORDER: Record<string, number> = Object.fromEntries(
   Object.keys(BOOKS).map((book, i) => [book, i]),
 );
