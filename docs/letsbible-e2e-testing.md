@@ -159,10 +159,16 @@ In scope (everything implemented to date):
   **Parsing** line decodes the morphology (e.g. `V-AAI-3S` → "Verb · Aorist
   Active Indicative · 3rd person · Singular"). **English (reverse)** = the
   reading-order layer (`bible.interlinear`, English order with dictionary
-  lemmas). Per-translation textual basis (BSB → critical, MSB → Byzantine);
-  Hebrew tokens flow right-to-left. Books without source tokens fall back to the
-  reading-order layer with the Parsing chip inert. Tapping a word opens the
-  study panel (which shows the decoded parsing). Each verse is a row with the
+  lemmas). Per-translation textual basis (BSB → critical/NA, MSB/WEB →
+  Byzantine/Majority, KJV → Textus Receptus — so the KJV interlinear carries
+  TR-only readings the critical text omits, e.g. the Comma Johanneum at 1 John
+  5:7); the shared Masoretic OT Hebrew flows right-to-left. The whole Bible is
+  seeded (provision + `lb-up`), so the fall-back to the reading-order layer (with
+  the Parsing chip inert) only applies before source tokens exist. When a
+  translation has ONLY the original view (no per-word Strong's, e.g. WEB) the
+  Word-order toggle is hidden entirely; the always-on original-language line
+  reads "Greek/Hebrew · locked". Tapping a word opens the study panel (which
+  shows the decoded parsing). Each verse is a row with the
   verse number in a fixed left gutter; the serif "Chapter N" title is omitted
   (the header + controls bar give context). (Suite R.)
 - Search: live typed autocomplete powered **client-side by FlexSearch** (no
@@ -259,6 +265,8 @@ just lb-seed-source NT BSB   # true interlinear: BSB NT Greek (STEPBible TAGNT, 
 just lb-seed-source OT BSB   # BSB OT Hebrew (STEPBible TAHOT, Masoretic) — MSB/WEB OT fall back to this
 just lb-seed-source NT MSB   # MSB NT Greek (Byzantine/Majority)
 just lb-seed-source NT WEB   # WEB NT Greek (Byzantine/Majority — the WEB NT's text basis)
+just lb-seed-source NT KJV   # KJV NT Greek (STEPBible TAGNT, Textus Receptus — TR-only readings incl. the Comma Johanneum)
+# `just lb-up` runs the whole set (BSB ALL + KJV/MSB/WEB NT); prod provision seeds the same.
 just lb-index          # index 124,389 verses into ES v2 (BSB + MSB + KJV + WEB) with popularity from seed/popularity.json
 just lb-flex           # build client FlexSearch + reading assets + overlay index → public/{search,reading,overlays}/* (incl. KJV + WEB)
 just lb-up             # all of the above, in order
@@ -284,7 +292,8 @@ just lb-up             # all of the above, in order
 | KJV red-letter | `select count(distinct (chapter,verse)) from bible_token where translation_id='KJV' and words_of_jesus` | 2,050 verses (~41,412 tokens; projected from MSB's 2,056) |
 | Lexemes | `select count(*) from bible_lexeme` | 14,197 |
 | Cross-refs | `select count(*) from bible_cross_reference` | ~2,062 (BSB + MSB + 516 KJV + 516 WEB, both projected from MSB) |
-| WEB source tokens | `select language,count(*) from bible_source_token where translation_id='WEB' group by language` | greek (John, Byzantine) seeded; hebrew via OT fallback to the default translation |
+| WEB source tokens | `select language,count(*) from bible_source_token where translation_id='WEB' group by language` | greek (whole NT, Byzantine) seeded; hebrew via OT fallback to the default translation |
+| KJV source tokens (Textus Receptus) | `select count(*) from bible_source_token where translation_id='KJV' and book='1JN' and chapter=5 and verse=7` | > 5 (the Comma Johanneum is present — TR-only, absent from the BSB/critical set) |
 | Commentary works | `select count(*) from bible_commentary_work` | 5 (calvin, mhc, mhcc, geneva, wesley) |
 | Commentary entries | `select count(*) from bible_commentary` | ~52,125 (calvin 11,063 / mhc 5,360 / mhcc 4,059 / geneva 14,713 / wesley 16,930) |
 | ES docs | `GET lets_bible_verses_v2/_count` | 124,389 |
@@ -950,16 +959,19 @@ normalization.)
 
 | ID | Steps | Expected |
 | --- | --- | --- |
-| LB-IL-01 [E2E: interlinear] | Open `/bible/john/1?view=interlinear` | Borderless token cells (`button[data-strong]`) stack Greek lemma (`lang="el"`, e.g. λόγος) / transliteration ("lógos") / English gloss / Strong's ("G3056"). The version trigger shows the `Aα` interlinear indicator. |
+| LB-IL-01 [E2E: interlinear] | Open `/bible/john/1?view=interlinear` | Defaults to the **Original** (forward) view: borderless token cells (`button[data-strong]`) in Greek word order stack the inflected surface form (`lang="el"`, e.g. λόγος) / transliteration / contextual English / Strong's ("G3056"). The version trigger shows the `Aα` interlinear indicator. |
 | LB-IL-02 [E2E: interlinear] | Tap an interlinear word ("God", G2316) | The study panel opens (word view) with the lemma, "G2316", "Greek", and the verse it came from as context; the cell highlights. |
 | LB-IL-10 [E2E: interlinear] | Select an interlinear word | The selected cell highlights via **background tint + inset ring + color only** — its size does **not** change (no font-weight change on the lemma/gloss), so selecting a word does not shift the surrounding layout. |
-| LB-IL-03 [E2E: interlinear] | Open `/bible/genesis/1?view=interlinear` | Hebrew words render an `lang="he" dir="rtl"` lemma; the cell shows the English surface ("In the beginning"). |
+| LB-IL-03 [E2E: interlinear] | Open `/bible/genesis/1?view=interlinear` | Hebrew words render an `lang="he" dir="rtl"` inflected surface form, right-to-left; the cell shows its transliteration + English gloss ("In the beginning"). |
 | LB-IL-04 [E2E: interlinear] | From `/bible/john/1`, open the version picker → the BSB row's `Aα`; then re-open and pick the translation name | The `Aα` button sets `?view=interlinear` (token cells appear); picking the translation name clears it (back to reading). |
 | LB-IL-09 [E2E: interlinear] | In interlinear, toggle the "Strong's" Lines chip | The full-width controls bar shows "Word order" + "Lines"; toggling Strong's hides the per-token Strong's numbers (`data-strong` cells lose the visible `G####`). |
 | LB-IL-05 | Interlinear with `Verse numbers` preference off | The inline gold verse-number badges are hidden (the token cells still render). |
 | LB-IL-06 | Words-of-Christ verse in interlinear with red-letter on | The English surface of those words renders in red. |
 | LB-IL-07 | A word whose Strong's isn't in the lexicon | The cell still shows the surface + Strong's; no lemma/translit/gloss lines (no error). |
 | LB-IL-08 | Switch translation while in interlinear | Stays in interlinear (`?view` preserved); the words reload for the chosen translation. |
+| LB-IL-11 [E2E: interlinear] | Open `/bible/1-john/5?translation=KJV&view=interlinear` (Original) | Verse 7 renders the **Textus Receptus** Comma Johanneum — Greek surface tokens including οὐρανῷ ("heaven"), πατήρ ("Father"), λόγος ("Word"), ἅγιον πνεῦμα ("Holy Spirit") — matching the KJV reading text. (The BSB/critical source omits it; the KJV interlinear uses the TR basis.) |
+| LB-IL-12 [E2E: interlinear] | Open `/bible/john/1?translation=WEB&view=interlinear` | WEB has no per-word Strong's, so there is **only** the original-language view: the "Word order" control is **absent** (no Original / English (reverse) toggle and no static chip); the Lines controls remain, right-aligned. |
+| LB-IL-13 [E2E: interlinear] | Inspect the Lines controls (any translation) | The always-on original-language line chip reads **"Greek/Hebrew · locked"** — "Original" now labels only the Word-order mode, not this line. |
 | LB-IL-11 | Open `/bible/john/3?view=interlinear` (default Original) | TRUE Greek order: the words render in original word order, **not** English order — e.g. John 3:1 starts Ἦν δὲ ἄνθρωπος ("was now a man"), and 3:16 starts οὕτως γὰρ ἠγάπησεν ὁ θεός (the verb ἠγάπησεν is 3rd, the subject θεός follows). The big token line is the **inflected** form (ἠγάπησεν, not the lemma ἀγαπάω). |
 | LB-IL-12 | In interlinear, switch Word order to **English (reverse)** | Re-renders the reading-order layer (`bible.interlinear`): English order with dictionary lemmas below (e.g. "Now / there was / a man" over δέ / εἰμί / ἄνθρωπος). Switch back to **Original** → true source order returns. |
 | LB-IL-13 | In Original mode, toggle the **Parsing** Lines chip on | Each token gains a parsing line showing the raw morph code (e.g. `V-AAI-3S`, `T-NSM`, `PREP`); hovering it shows the decoded grammar in the `title` (e.g. "Verb · Aorist Active Indicative · 3rd person · Singular"). |
