@@ -1,3 +1,4 @@
+import { Tabs } from '@base-ui/react/tabs';
 import {
   IconBrandApplePodcast,
   IconBrandFacebook,
@@ -21,9 +22,9 @@ import {
 } from '@tanstack/react-query';
 import { createFileRoute, Link, notFound } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar } from '@/components/avatar';
-import ChannelTabs from '@/components/channel-tabs';
+import ChannelTabs, { type ChannelTab } from '@/components/channel-tabs';
 import { EmptyState } from '@/components/empty-state';
 import { FollowButton } from '@/components/follow-button';
 import Header from '@/components/header';
@@ -294,9 +295,54 @@ function RouteComponent() {
   const [isTogglingFollow, setIsTogglingFollow] = useState(false);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<
-    'videos' | 'playlists' | 'series' | 'links'
-  >('videos');
+  const [activeTab, setActiveTab] = useState<ChannelTab>('videos');
+
+  // Which tabs are actually visible (mirrors ChannelTabs). Used to reject
+  // deep-links to a tab that isn't shown (e.g. #series when there are none).
+  const visibleTabs = useMemo(
+    () =>
+      new Set<ChannelTab>([
+        'videos',
+        ...(playlists.length > 0 ? (['playlists'] as const) : []),
+        ...(series.length > 0 ? (['series'] as const) : []),
+        'links',
+      ]),
+    [playlists.length, series.length],
+  );
+
+  // Sync the active tab with the URL hash so a tab is bookmarkable and
+  // shareable (e.g. /channel/foo#series links straight to the Series tab).
+  // Done in an effect (not a lazy initializer) to avoid an SSR/hydration
+  // mismatch, since the server has no access to the hash.
+  useEffect(() => {
+    const applyHash = () => {
+      const hash = window.location.hash.replace(/^#/, '');
+      if (
+        hash === 'videos' ||
+        hash === 'playlists' ||
+        hash === 'series' ||
+        hash === 'links'
+      ) {
+        if (visibleTabs.has(hash)) {
+          setActiveTab(hash);
+        }
+      }
+    };
+    applyHash();
+    window.addEventListener('hashchange', applyHash);
+    return () => window.removeEventListener('hashchange', applyHash);
+  }, [visibleTabs]);
+
+  const handleTabChange = (tab: ChannelTab) => {
+    setActiveTab(tab);
+    // Reflect the tab in the URL hash so it can be copied/bookmarked. Use
+    // replaceState to avoid polluting history or re-running route loaders.
+    const url =
+      tab === 'videos'
+        ? window.location.pathname + window.location.search
+        : `#${tab}`;
+    window.history.replaceState(null, '', url);
+  };
 
   useSetBackgroundImage(channel.defaultThumbnailUrl ?? undefined);
 
@@ -495,21 +541,27 @@ function RouteComponent() {
         ) : null}
 
         {/* Tabs */}
-        <div className="mb-8">
-          <ChannelTabs
-            activeTab={activeTab}
-            videoCount={channel.uploadCount}
-            playlistCount={playlists.length}
-            seriesCount={series.length}
-            onTabChange={setActiveTab}
-          />
-        </div>
+        <Tabs.Root
+          value={activeTab}
+          onValueChange={(value, details) => {
+            // Only react to user-initiated changes (clicks/keyboard). Base UI
+            // also fires onValueChange for automatic 'initial'/'missing'
+            // selections, which would otherwise clobber the URL hash on mount.
+            if (details.reason !== 'none') return;
+            handleTabChange(value as ChannelTab);
+          }}
+        >
+          <div className="mb-8">
+            <ChannelTabs
+              videoCount={channel.uploadCount}
+              playlistCount={playlists.length}
+              seriesCount={series.length}
+            />
+          </div>
 
-        {/* Tab Content */}
-        <div className="space-y-8">
           {/* Videos Tab */}
-          {activeTab === 'videos' ? (
-            hasMedia ? (
+          <Tabs.Panel value="videos" className="space-y-8">
+            {hasMedia ? (
               <>
                 <MediaGrid>
                   {mediaItems.map((upload) => (
@@ -553,12 +605,12 @@ function RouteComponent() {
                 emptyCta="Browse Content"
                 emptyCtaHref="/"
               />
-            )
-          ) : null}
+            )}
+          </Tabs.Panel>
 
           {/* Playlists Tab */}
-          {activeTab === 'playlists' ? (
-            playlists && playlists.length > 0 ? (
+          <Tabs.Panel value="playlists">
+            {playlists && playlists.length > 0 ? (
               <MediaGrid>
                 {playlists.map((playlist) => {
                   return (
@@ -612,12 +664,12 @@ function RouteComponent() {
                 emptyCta="Browse Content"
                 emptyCtaHref="/"
               />
-            )
-          ) : null}
+            )}
+          </Tabs.Panel>
 
           {/* Series Tab */}
-          {activeTab === 'series' ? (
-            series && series.length > 0 ? (
+          <Tabs.Panel value="series">
+            {series && series.length > 0 ? (
               <MediaGrid>
                 {series.map((seriesItem) => {
                   return (
@@ -671,12 +723,12 @@ function RouteComponent() {
                 emptyCta="Browse Content"
                 emptyCtaHref="/"
               />
-            )
-          ) : null}
+            )}
+          </Tabs.Panel>
 
           {/* Links Tab */}
-          {activeTab === 'links' ? (
-            churches.length > 0 || hasSocialLinks ? (
+          <Tabs.Panel value="links">
+            {churches.length > 0 || hasSocialLinks ? (
               <div className="mx-auto max-w-4xl space-y-8">
                 {/* Associated Churches */}
                 {churches && churches.length > 0 ? (
@@ -905,9 +957,9 @@ function RouteComponent() {
                 emptyTitle="No links available"
                 emptyBody="This channel has no associated churches or social links."
               />
-            )
-          ) : null}
-        </div>
+            )}
+          </Tabs.Panel>
+        </Tabs.Root>
       </div>
     </div>
   );

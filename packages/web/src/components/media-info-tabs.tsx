@@ -104,14 +104,14 @@ export function MediaInfoTabs({
     >
       {/* Tabs */}
       <Tabs.List className="relative top-0 flex gap-4 border-zinc-200 border-b px-5 dark:border-zinc-800">
-        <Tabs.Tab value="details" className="relative pt-1.5 pb-2">
-          <span className="font-medium text-primary/70 text-sm data-selected:text-primary data-selected:opacity-100">
+        <Tabs.Tab value="details" className="group relative pt-1.5 pb-2">
+          <span className="font-medium text-primary/70 text-sm group-data-[active]:text-primary group-data-[active]:opacity-100">
             Details
           </span>
         </Tabs.Tab>
         {summary ? (
-          <Tabs.Tab value="summary" className="relative pt-1.5 pb-2">
-            <span className="inline-flex items-center gap-1 font-medium text-primary/70 text-sm data-selected:text-primary data-selected:opacity-100">
+          <Tabs.Tab value="summary" className="group relative pt-1.5 pb-2">
+            <span className="inline-flex items-center gap-1 font-medium text-primary/70 text-sm group-data-[active]:text-primary group-data-[active]:opacity-100">
               <IconSparkles size={14} aria-hidden="true" />
               Overview
             </span>
@@ -125,12 +125,12 @@ export function MediaInfoTabs({
             render={
               <Tabs.Tab
                 value="summary"
-                className="relative pt-1.5 pb-2"
+                className="group relative pt-1.5 pb-2"
                 disabled
               />
             }
           >
-            <span className="inline-flex items-center gap-1 font-medium text-primary/30 text-sm data-selected:text-primary data-selected:opacity-100">
+            <span className="inline-flex items-center gap-1 font-medium text-primary/30 text-sm group-data-[active]:text-primary group-data-[active]:opacity-100">
               <IconSparkles size={14} aria-hidden="true" />
               Overview
             </span>
@@ -171,7 +171,7 @@ export function MediaInfoTabs({
           </button>
         ) : null}
         <Tabs.Indicator
-          className="glow-md absolute h-0.5 rounded-t-sm bg-brand backdrop-blur-sm"
+          className="glow-md absolute h-0.5 rounded-t-sm bg-brand backdrop-blur-sm transition-all duration-200"
           style={{
             left: 'var(--active-tab-left)',
             bottom: 0,

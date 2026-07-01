@@ -1,21 +1,24 @@
+import { Tabs } from '@base-ui/react/tabs';
 import { cn } from '@/util/cn';
 
+export type ChannelTab = 'videos' | 'playlists' | 'series' | 'links';
+
 type ChannelTabsProps = {
-  activeTab?: 'videos' | 'playlists' | 'series' | 'links';
   videoCount?: number;
   playlistCount?: number;
   seriesCount?: number;
   className?: string;
-  onTabChange?: (tab: 'videos' | 'playlists' | 'series' | 'links') => void;
 };
 
+// Renders the tab bar for the channel page. This is a Base UI `Tabs.List`, so
+// it must live inside a `Tabs.Root` (owned by the channel route, which also
+// renders the matching `Tabs.Panel`s and controls selection). The visual
+// design is unchanged from the previous hand-rolled version.
 export default function ChannelTabs({
-  activeTab = 'videos',
   videoCount,
   playlistCount,
   seriesCount,
   className,
-  onTabChange,
 }: ChannelTabsProps) {
   const tabs = [
     { id: 'videos' as const, label: 'Videos', count: videoCount },
@@ -29,26 +32,20 @@ export default function ChannelTabs({
   ];
 
   return (
-    <div
+    <Tabs.List
       className={cn(
         'relative flex items-start gap-4 border-zinc-900 border-b',
         className,
       )}
     >
       {tabs.map((tab) => (
-        <button
+        <Tabs.Tab
           key={tab.id}
-          type="button"
-          onClick={() => onTabChange?.(tab.id)}
-          className="relative flex h-10 items-center gap-1 pt-1.5 pb-2"
+          value={tab.id}
+          className="group relative flex h-10 items-center gap-1 pt-1.5 pb-2"
         >
           <div className="flex items-center gap-2 pb-px">
-            <span
-              className={cn(
-                'overflow-hidden overflow-ellipsis whitespace-nowrap font-medium text-sm leading-none',
-                activeTab === tab.id ? 'text-primary' : 'text-primary/70',
-              )}
-            >
+            <span className="overflow-hidden overflow-ellipsis whitespace-nowrap font-medium text-primary/70 text-sm leading-none group-data-[active]:text-primary">
               {tab.label}
             </span>
           </div>
@@ -57,11 +54,17 @@ export default function ChannelTabs({
               {tab.count > 99 ? '99+' : tab.count}
             </div>
           ) : null}
-          {activeTab === tab.id ? (
-            <div className="absolute right-0 bottom-0 left-0 h-[2px] rounded-tl-[1px] rounded-tr-[1px] bg-brand shadow-[0px_2px_12px_0px_#6366f1] backdrop-blur-sm" />
-          ) : null}
-        </button>
+        </Tabs.Tab>
       ))}
-    </div>
+      {/* Sliding active-tab underline. Base UI positions it via CSS vars set on
+          the indicator; the styling matches the previous per-tab underline. */}
+      <Tabs.Indicator
+        className="absolute bottom-0 h-[2px] rounded-tl-[1px] rounded-tr-[1px] bg-brand shadow-[0px_2px_12px_0px_#6366f1] backdrop-blur-sm transition-all duration-200"
+        style={{
+          left: 'var(--active-tab-left)',
+          width: 'var(--active-tab-width)',
+        }}
+      />
+    </Tabs.List>
   );
 }

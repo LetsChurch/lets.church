@@ -1,3 +1,4 @@
+import { Tabs } from '@base-ui/react/tabs';
 import { useStore } from '@nanostores/react';
 import {
   IconListNumbers,
@@ -6,7 +7,7 @@ import {
   IconTextCaption,
   IconX,
 } from '@tabler/icons-react';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { PlaylistSidebar } from '@/components/playlist-sidebar';
 import { Transcript } from '@/components/transcript';
 import {
@@ -61,9 +62,6 @@ export function MediaSidebarTabs({
 }: MediaSidebarTabsProps) {
   const useParagraphs = Boolean(paragraphs && paragraphs.length > 0);
   const hasPlaylist = Boolean(playlistContext);
-  const [activeTab, setActiveTab] = useState<'transcript' | 'playlist'>(
-    hasPlaylist ? 'playlist' : 'transcript',
-  );
 
   const isSearchActive = useStore($isSearchActive);
   const searchQuery = useStore($searchQuery);
@@ -112,143 +110,149 @@ export function MediaSidebarTabs({
 
   return (
     <div className="h-full">
-      <div className="sticky top-4 bottom-4 isolate flex h-[calc(100vh-6rem)] flex-col overflow-hidden rounded-2xl border-fancy-pants bg-zinc-100 dark:bg-zinc-900">
+      <Tabs.Root
+        defaultValue={hasPlaylist ? 'playlist' : 'transcript'}
+        className="sticky top-4 bottom-4 isolate flex h-[calc(100vh-6rem)] flex-col overflow-hidden rounded-2xl border-fancy-pants bg-zinc-100 dark:bg-zinc-900"
+      >
         {/* Tabs Header */}
         {hasPlaylist ? (
-          <div className="flex border-zinc-200 border-b dark:border-zinc-800">
-            <button
-              type="button"
-              onClick={() => setActiveTab('playlist')}
-              className={`flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-sm transition-colors ${
-                activeTab === 'playlist'
-                  ? 'border-brand border-b-2 text-brand'
-                  : 'text-secondary hover:text-primary'
-              }`}
+          <Tabs.List className="relative flex border-zinc-200 border-b dark:border-zinc-800">
+            <Tabs.Tab
+              value="playlist"
+              className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-secondary text-sm transition-colors hover:text-primary data-[active]:text-primary"
             >
               <IconListNumbers size={16} />
               <span>
                 {playlistContext?.listType === 'series' ? 'Series' : 'Playlist'}
               </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('transcript')}
-              className={`flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-sm transition-colors ${
-                activeTab === 'transcript'
-                  ? 'border-brand border-b-2 text-brand'
-                  : 'text-secondary hover:text-primary'
-              }`}
+            </Tabs.Tab>
+            <Tabs.Tab
+              value="transcript"
+              className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-secondary text-sm transition-colors hover:text-primary data-[active]:text-primary"
             >
               <IconTextCaption size={16} />
               <span>Transcript</span>
-            </button>
-          </div>
+            </Tabs.Tab>
+            {/* Sliding active-tab underline (replaces the previous static
+                per-tab border) so switching tabs animates like elsewhere. */}
+            <Tabs.Indicator
+              className="absolute bottom-0 h-[2px] bg-brand transition-all duration-200"
+              style={{
+                left: 'var(--active-tab-left)',
+                width: 'var(--active-tab-width)',
+              }}
+            />
+          </Tabs.List>
         ) : null}
 
-        {/* Tab Content */}
-        {activeTab === 'transcript' ? (
-          <>
-            {/* Transcript Header */}
-            <div className="flex items-center gap-2 border-zinc-200 border-b px-5 py-2.5 dark:border-zinc-800">
-              {isSearchActive ? (
-                <>
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={handleSearchChange}
-                      placeholder="Search transcript..."
-                      className="w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1.5 pr-8 text-primary text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-800"
-                      // biome-ignore lint/a11y/noAutofocus: this is rendered by user interaction
-                      autoFocus
-                    />
-                    {hasQuery ? (
-                      <div className="-translate-y-1/2 absolute top-1/2 right-2 text-gray-400 text-xs">
-                        {searchResults.length}
-                      </div>
-                    ) : null}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleCloseSearch}
-                    className="rounded-lg p-2 hover:bg-white/10"
-                    aria-label="Close search"
-                  >
-                    <IconX size={16} className="text-primary/80" />
-                  </button>
-                </>
-              ) : (
-                <>
-                  <h3 className="flex-1 font-medium text-primary text-sm">
-                    Transcript
-                  </h3>
-                  <button
-                    type="button"
-                    className="rounded-lg p-2 hover:bg-white/10"
-                    onClick={handleSearchClick}
-                  >
-                    <IconSearch size={16} className="text-primary/80" />
-                  </button>
-                </>
-              )}
-            </div>
+        {/* Transcript Panel */}
+        <Tabs.Panel
+          value="transcript"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden"
+        >
+          {/* Transcript Header */}
+          <div className="flex items-center gap-2 border-zinc-200 border-b px-5 py-2.5 dark:border-zinc-800">
+            {isSearchActive ? (
+              <>
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    placeholder="Search transcript..."
+                    className="w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1.5 pr-8 text-primary text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-800"
+                    // biome-ignore lint/a11y/noAutofocus: this is rendered by user interaction
+                    autoFocus
+                  />
+                  {hasQuery ? (
+                    <div className="-translate-y-1/2 absolute top-1/2 right-2 text-gray-400 text-xs">
+                      {searchResults.length}
+                    </div>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCloseSearch}
+                  className="rounded-lg p-2 hover:bg-white/10"
+                  aria-label="Close search"
+                >
+                  <IconX size={16} className="text-primary/80" />
+                </button>
+              </>
+            ) : (
+              <>
+                <h3 className="flex-1 font-medium text-primary text-sm">
+                  Transcript
+                </h3>
+                <button
+                  type="button"
+                  className="rounded-lg p-2 hover:bg-white/10"
+                  onClick={handleSearchClick}
+                >
+                  <IconSearch size={16} className="text-primary/80" />
+                </button>
+              </>
+            )}
+          </div>
 
-            {/* Pinned "Ask AI" row — escalate the typed find to a question.
+          {/* Pinned "Ask AI" row — escalate the typed find to a question.
                 The answer renders in the main column (above the info tabs). */}
-            {isSearchActive && hasQuery ? (
-              <button
-                type="button"
-                onClick={() => askVideoQuestion(searchQuery)}
-                className="flex w-full shrink-0 items-center gap-2 border-zinc-200 border-b px-5 py-2.5 text-left text-primary text-sm transition-colors hover:bg-white/10 dark:border-zinc-800"
-              >
-                <IconSparkles
-                  size={16}
-                  className="shrink-0 text-indigo-500 dark:text-indigo-300"
-                  aria-hidden="true"
-                />
-                <span className="truncate">
-                  Ask AI about this video:{' '}
-                  <span className="text-secondary">“{searchQuery}”</span>
-                </span>
-              </button>
-            ) : null}
+          {isSearchActive && hasQuery ? (
+            <button
+              type="button"
+              onClick={() => askVideoQuestion(searchQuery)}
+              className="flex w-full shrink-0 items-center gap-2 border-zinc-200 border-b px-5 py-2.5 text-left text-primary text-sm transition-colors hover:bg-white/10 dark:border-zinc-800"
+            >
+              <IconSparkles
+                size={16}
+                className="shrink-0 text-indigo-500 dark:text-indigo-300"
+                aria-hidden="true"
+              />
+              <span className="truncate">
+                Ask AI about this video:{' '}
+                <span className="text-secondary">“{searchQuery}”</span>
+              </span>
+            </button>
+          ) : null}
 
-            {/* Transcript Content — search results take precedence over
+          {/* Transcript Content — search results take precedence over
                 the body view in both paragraph and legacy modes.
                 `TranscriptSearchResults` owns the empty-state copy for
                 both modes; in paragraph mode we delegate to it when
                 there are no matches rather than duplicating the
                 "No results found" text. */}
-            <div className="fade-bottom flex-1 overflow-hidden">
-              {isSearchActive && hasQuery ? (
-                useParagraphs &&
-                matchedParagraphs &&
-                matchedParagraphs.length > 0 ? (
-                  <TranscriptParagraphs
-                    paragraphs={matchedParagraphs}
-                    isTranscriptProcessing={isTranscriptProcessing}
-                    highlightQuery={searchQuery}
-                  />
-                ) : (
-                  <TranscriptSearchResults />
-                )
-              ) : useParagraphs ? (
+          <div className="fade-bottom flex-1 overflow-hidden">
+            {isSearchActive && hasQuery ? (
+              useParagraphs &&
+              matchedParagraphs &&
+              matchedParagraphs.length > 0 ? (
                 <TranscriptParagraphs
-                  paragraphs={paragraphs ?? []}
+                  paragraphs={matchedParagraphs}
                   isTranscriptProcessing={isTranscriptProcessing}
+                  highlightQuery={searchQuery}
                 />
               ) : (
-                <Transcript
-                  transcript={transcript}
-                  isTranscriptProcessing={isTranscriptProcessing}
-                />
-              )}
-            </div>
-          </>
-        ) : null}
+                <TranscriptSearchResults />
+              )
+            ) : useParagraphs ? (
+              <TranscriptParagraphs
+                paragraphs={paragraphs ?? []}
+                isTranscriptProcessing={isTranscriptProcessing}
+              />
+            ) : (
+              <Transcript
+                transcript={transcript}
+                isTranscriptProcessing={isTranscriptProcessing}
+              />
+            )}
+          </div>
+        </Tabs.Panel>
 
-        {activeTab === 'playlist' && playlistContext ? (
-          <div className="fade-bottom flex flex-1 flex-col overflow-hidden">
+        {playlistContext ? (
+          <Tabs.Panel
+            value="playlist"
+            className="fade-bottom flex min-h-0 flex-1 flex-col overflow-hidden"
+          >
             <PlaylistSidebar
               key={`${playlistContext.listId}-${playlistContext.currentMediaId}`}
               listId={playlistContext.listId}
@@ -257,9 +261,9 @@ export function MediaSidebarTabs({
               items={playlistContext.items}
               currentMediaId={playlistContext.currentMediaId}
             />
-          </div>
+          </Tabs.Panel>
         ) : null}
-      </div>
+      </Tabs.Root>
     </div>
   );
 }
