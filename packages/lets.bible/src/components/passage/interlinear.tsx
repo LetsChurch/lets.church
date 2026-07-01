@@ -48,9 +48,10 @@ const chipBase =
   'rounded-full border px-[11px] py-[5px] font-semibold text-[12px] outline-none transition focus-visible:ring-2 focus-visible:ring-gold/40';
 
 // The full-width controls bar — a second sticky header under the reader chrome.
-// Word-order segmented toggle on the left; line toggles on the right. "Original ·
-// locked" is inert (the original line can't be hidden); "Parsing" is a live
-// toggle when the passage has morphology (`parsingAvailable`), else inert.
+// Word-order segmented toggle on the left; line toggles on the right (the
+// original-language line itself is always shown, so it isn't a toggle).
+// "Parsing" is a live toggle when the passage has morphology
+// (`parsingAvailable`), else inert.
 export function InterlinearControls({
   options,
   onChange,
@@ -114,12 +115,6 @@ export function InterlinearControls({
       )}
       <div className="flex flex-wrap items-center gap-2">
         <span className="mr-0.5 text-[12px] text-muted">Lines</span>
-        <span
-          title="The Greek/Hebrew word is always shown"
-          className={`${chipBase} cursor-default border-line-strong border-dashed bg-transparent text-muted-2`}
-        >
-          Greek/Hebrew · locked
-        </span>
         <LineChip
           label="Translit"
           on={showTranslit}

@@ -166,8 +166,8 @@ In scope (everything implemented to date):
   seeded (provision + `lb-up`), so the fall-back to the reading-order layer (with
   the Parsing chip inert) only applies before source tokens exist. When a
   translation has ONLY the original view (no per-word Strong's, e.g. WEB) the
-  Word-order toggle is hidden entirely; the always-on original-language line
-  reads "Greek/Hebrew · locked". Tapping a word opens the study panel (which
+  Word-order toggle is hidden entirely. The original-language line is always
+  shown (it isn't a toggle). Tapping a word opens the study panel (which
   shows the decoded parsing). Each verse is a row with the
   verse number in a fixed left gutter; the serif "Chapter N" title is omitted
   (the header + controls bar give context). (Suite R.)
@@ -932,7 +932,7 @@ render as borderless **centered stacks** — original-language lemma on top
 transliteration, English gloss, and Strong's; articles (G3588 / "the") render
 faded; gold verse-number badges sit inline. A **full-width controls bar** (a
 second sticky header under the reader chrome) holds the Word-order toggle and
-Lines chips (Translit / Gloss / Strong's; "Original · locked" is inert).
+Lines chips (Translit / Gloss / Strong's / Parsing).
 
 The Word-order toggle switches between two real layers (not just a stack flip):
 - **Original** — a TRUE morphological interlinear from `bible.sourceInterlinear`
@@ -969,9 +969,6 @@ normalization.)
 | LB-IL-06 | Words-of-Christ verse in interlinear with red-letter on | The English surface of those words renders in red. |
 | LB-IL-07 | A word whose Strong's isn't in the lexicon | The cell still shows the surface + Strong's; no lemma/translit/gloss lines (no error). |
 | LB-IL-08 | Switch translation while in interlinear | Stays in interlinear (`?view` preserved); the words reload for the chosen translation. |
-| LB-IL-11 [E2E: interlinear] | Open `/bible/1-john/5?translation=KJV&view=interlinear` (Original) | Verse 7 renders the **Textus Receptus** Comma Johanneum — Greek surface tokens including οὐρανῷ ("heaven"), πατήρ ("Father"), λόγος ("Word"), ἅγιον πνεῦμα ("Holy Spirit") — matching the KJV reading text. (The BSB/critical source omits it; the KJV interlinear uses the TR basis.) |
-| LB-IL-12 [E2E: interlinear] | Open `/bible/john/1?translation=WEB&view=interlinear` | WEB has no per-word Strong's, so there is **only** the original-language view: the "Word order" control is **absent** (no Original / English (reverse) toggle and no static chip); the Lines controls remain, right-aligned. |
-| LB-IL-13 [E2E: interlinear] | Inspect the Lines controls (any translation) | The always-on original-language line chip reads **"Greek/Hebrew · locked"** — "Original" now labels only the Word-order mode, not this line. |
 | LB-IL-11 | Open `/bible/john/3?view=interlinear` (default Original) | TRUE Greek order: the words render in original word order, **not** English order — e.g. John 3:1 starts Ἦν δὲ ἄνθρωπος ("was now a man"), and 3:16 starts οὕτως γὰρ ἠγάπησεν ὁ θεός (the verb ἠγάπησεν is 3rd, the subject θεός follows). The big token line is the **inflected** form (ἠγάπησεν, not the lemma ἀγαπάω). |
 | LB-IL-12 | In interlinear, switch Word order to **English (reverse)** | Re-renders the reading-order layer (`bible.interlinear`): English order with dictionary lemmas below (e.g. "Now / there was / a man" over δέ / εἰμί / ἄνθρωπος). Switch back to **Original** → true source order returns. |
 | LB-IL-13 | In Original mode, toggle the **Parsing** Lines chip on | Each token gains a parsing line showing the raw morph code (e.g. `V-AAI-3S`, `T-NSM`, `PREP`); hovering it shows the decoded grammar in the `title` (e.g. "Verb · Aorist Active Indicative · 3rd person · Singular"). |
@@ -981,8 +978,9 @@ normalization.)
 | LB-IL-17 | Open `/bible/genesis/1?view=interlinear&translation=MSB` | Hebrew renders (via the OT fallback to the default translation's source tokens — MSB OT is not seeded separately; same Masoretic text). |
 | LB-IL-18 | Tap a word in the true (Original) interlinear | The study panel's word view shows a **Parsing** section at the top — decoded grammar (e.g. "Adjective · Accusative · Singular · Masculine") with the raw code beneath — above the lexicon entry. |
 | LB-IL-19 | Open an unseeded book's interlinear (if any remain) | Falls back to the reading-order layer; the Parsing chip is inert; no console error. |
-| LB-IL-20 | Open `/bible/john/3?view=interlinear&translation=WEB` | WEB has **no English token layer**, so the controls bar's "Word order" is a **static "Original" label, not a toggle** — there is **no "English (reverse)" button** (`reverseAvailable=false`). The view shows the TRUE Greek-order interlinear (Byzantine basis, like MSB): John 3:1 starts Ἦν δὲ ἄνθρωπος; tokens carry transliteration/English/Strong's and open word study on tap. (The `Aα` affordance shows for WEB because it has `bible_source_token` rows.) |
-| LB-IL-21 | Open `/bible/genesis/1?view=interlinear&translation=WEB` | WEB OT interlinear renders **Hebrew RTL** via the OT fallback (WEB has no Hebrew of its own; falls back to the default translation's source tokens — same Masoretic text): בְּרֵאשִׁית "in beginning" H7225 is the rightmost/first word. Word order stays the static "Original" label (no reverse toggle). |
+| LB-IL-20 | Open `/bible/john/3?view=interlinear&translation=WEB` | WEB has **no English token layer**, so the "Word order" control is **hidden entirely** — no Original / English (reverse) toggle and no static chip (`reverseAvailable=false`); the Lines controls stay right-aligned. The view shows the TRUE Greek-order interlinear (Byzantine basis, like MSB): John 3:1 starts Ἦν δὲ ἄνθρωπος; tokens carry transliteration/English/Strong's and open word study on tap. (The `Aα` affordance shows for WEB because it has `bible_source_token` rows.) |
+| LB-IL-21 | Open `/bible/genesis/1?view=interlinear&translation=WEB` | WEB OT interlinear renders **Hebrew RTL** via the OT fallback (WEB has no Hebrew of its own; falls back to the default translation's source tokens — same Masoretic text): בְּרֵאשִׁית "in beginning" H7225 is the rightmost/first word. The Word-order control is hidden (no toggle/chip — only the original view exists). |
+| LB-IL-22 [E2E: interlinear] | Open `/bible/1-john/5?translation=KJV&view=interlinear` (Original) | KJV uses the **Textus Receptus** basis, so verse 7 renders the Comma Johanneum — Greek surface tokens incl. οὐρανῷ ("heaven"), πατήρ ("Father"), λόγος ("Word"), ἅγιον πνεῦμα ("Holy Spirit") — matching the KJV reading text. (The BSB/critical source omits it.) |
 
 ---
 
