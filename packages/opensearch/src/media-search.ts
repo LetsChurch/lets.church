@@ -104,14 +104,25 @@ const VERSE_FACET_SIZE = 100;
 // the real speaker cardinality.
 const SPEAKER_FACET_SIZE = 200;
 
-// Facets are computed over the top-N *scored* docs (a `sampler` agg), not the
-// whole broad lexical match set. Over the full set, count-based facets are
-// dominated by high-volume channels that merely contain a query word (e.g. any
-// channel with lots of "…principle…" content), so the chips don't reflect the
-// results. Sampling the top-scored ~100 docs makes the facet channels/speakers/
-// verses track the actually-relevant results. Small enough to stay relevant, big
-// enough for a useful chip list; too large and the big channels creep back in.
-const FACET_SAMPLE_SIZE = 100;
+// Facets are computed over the top-*scored* docs, not the whole broad lexical
+// match set. Over the full set, count-based facets are dominated by high-volume
+// channels that merely contain a query word (e.g. any channel with lots of
+// "…principle…" content), so the chips don't reflect the results.
+//
+// The cutoff is a `min_score` floor RELATIVE to the query's own top score
+// (FACET_MIN_SCORE_FRACTION × max_score), which makes the effective sample size
+// adapt to the query: a narrow query ("what is the dorean principle?") keeps only
+// its ~dozens of strong matches (→ The Dorean Principle / Selling Jesus / AD
+// Robles), while a broad one ("the doctrine of election") keeps hundreds. A fixed
+// doc count can't do that — too small starves broad queries; too large backfills
+// narrow ones with weak single-term matches and the big channels creep back.
+// (0.35 was too loose — Sovereign Grace returned to #1; 0.5 tracks the results.)
+//
+// `min_score` is absolute, so runMediaFacets probes for max_score first, then
+// floors the facet queries. FACET_SAMPLE_CAP is the sampler bound that keeps the
+// aggregation cheap when a very broad query clears the floor with thousands.
+const FACET_MIN_SCORE_FRACTION = 0.5;
+const FACET_SAMPLE_CAP = 300;
 
 // Which facet aggregations a facet body should compute. Each caller asks for
 // exactly the facets it will read (the leave-one-out scoping in runMediaFacets).
@@ -757,8 +768,15 @@ export async function runMediaHybridSearch(
  * neighbours (an acceptable approximation for counts). No kNN, no nested
  * inner_hits, no phrase boosts (they change scoring, not the matched set), no
  * pipeline — run as a plain `_search`.
+ *
+ * `minScore` (a relative floor derived by runMediaFacets from the query's own
+ * max_score) drops the weakly-matching tail so the facets track the results; see
+ * FACET_MIN_SCORE_FRACTION. Omitted for the max_score probe.
  */
-export function buildMediaFacetBody(args: BuildMediaSearchArgs): OsMsearchItem {
+export function buildMediaFacetBody(
+  args: BuildMediaSearchArgs,
+  minScore?: number,
+): OsMsearchItem {
   const trimmed = args.lexicalText.trim();
   const { filter, scopeToSpeaker } = resolveFilter(args);
   const should: OsQuery[] = [
@@ -785,19 +803,29 @@ export function buildMediaFacetBody(args: BuildMediaSearchArgs): OsMsearchItem {
       },
     },
   ];
+  const facets = args.facets ?? [];
   return {
     size: 1,
     _source: false,
+    // Relative-score floor: drop the weakly-matching tail so facets track the
+    // results (adaptive per query — see FACET_MIN_SCORE_FRACTION).
+    ...(minScore != null ? { min_score: minScore } : {}),
     query: { bool: { filter, should, minimum_should_match: 1 } },
     // Facet over the top-scored (most relevant) docs via `sampler`, so counts
-    // reflect the results rather than the broad lexical match (see
-    // FACET_SAMPLE_SIZE).
-    aggs: {
-      sample: {
-        sampler: { shard_size: FACET_SAMPLE_SIZE },
-        aggs: facetAggs(args.facets ?? []),
-      },
-    },
+    // reflect the results rather than the broad lexical match; FACET_SAMPLE_CAP
+    // bounds it when a broad query clears the floor with many docs. A `sampler`
+    // requires sub-aggs, so with no facets (the max_score probe, or the rare
+    // all-filters-active body 0 nobody reads) emit a query-only body.
+    ...(facets.length > 0
+      ? {
+          aggs: {
+            sample: {
+              sampler: { shard_size: FACET_SAMPLE_CAP },
+              aggs: facetAggs(facets),
+            },
+          },
+        }
+      : {}),
   };
 }
 
@@ -827,6 +855,21 @@ export async function runMediaFacets(args: BuildMediaSearchArgs): Promise<{
 }> {
   const base = { ...args, from: 0, size: 1, highlight: false };
 
+  // Probe for the query's top score so the facet floor can be relative to it
+  // (FACET_MIN_SCORE_FRACTION). A query-only body (empty facet aggs) — one cheap
+  // extra round-trip before the facet bodies, which then drop everything below
+  // the floor. `min_score` is absolute, so this max_score can't be known upfront.
+  const probeRaw = await osSearch({
+    index: MEDIA_INDEX,
+    ...buildMediaFacetBody({ ...base, facets: [] }),
+  });
+  const maxScore = (probeRaw as { hits?: { max_score?: number | null } }).hits
+    ?.max_score;
+  const minScore =
+    typeof maxScore === 'number'
+      ? maxScore * FACET_MIN_SCORE_FRACTION
+      : undefined;
+
   const hasChannel = Boolean(args.channelIds && args.channelIds.length > 0);
   const hasSpeaker = Boolean(args.speakers && args.speakers.length > 0);
   // Verse + book are one "scripture" dimension: the verse facet drops both.
@@ -851,14 +894,16 @@ export async function runMediaFacets(args: BuildMediaSearchArgs): Promise<{
     ...(hasDate ? [] : (['years'] as const)),
   ];
   const bodies: OsMsearchItem[] = [
-    buildMediaFacetBody({ ...base, facets: fullFacets }),
+    buildMediaFacetBody({ ...base, facets: fullFacets }, minScore),
   ];
   const fullIndex = 0;
   const pushBody = (
     overrides: Partial<BuildMediaSearchArgs>,
     facets: MediaFacetKey[],
   ): number => {
-    bodies.push(buildMediaFacetBody({ ...base, ...overrides, facets }));
+    bodies.push(
+      buildMediaFacetBody({ ...base, ...overrides, facets }, minScore),
+    );
     return bodies.length - 1;
   };
   const channelIndex = hasChannel
