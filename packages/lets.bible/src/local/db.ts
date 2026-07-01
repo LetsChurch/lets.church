@@ -7,7 +7,7 @@
 // Browser-only: every call no-ops / rejects gracefully when there's no
 // IndexedDB (SSR), so callers can use it without extra guards.
 
-const DB_NAME = 'lets-bible-cache';
+const DB_NAME = 'letsbible-cache';
 const STORE = 'kv';
 
 // Keys under this prefix are PUBLIC, rebuildable caches (not account data), so

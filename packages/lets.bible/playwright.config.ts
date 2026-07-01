@@ -1,9 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// E2E tests run against the already-running dev server (the `lets-bible`
+// E2E tests run against the already-running dev server (the `letsbible`
 // container, published on the host at :4001). They don't start their own
 // server — `just up` / the dev stack must be running, with the Bible + lexicon
-// seeded and the search index built. See docs/lets-bible-e2e-testing.md.
+// seeded and the search index built. See docs/letsbible-e2e-testing.md.
 //
 // Each test gets a fresh browser context (isolated localStorage/IndexedDB), so
 // the local-first state from one test never leaks into another.

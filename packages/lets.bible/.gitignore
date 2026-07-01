@@ -13,7 +13,7 @@ storybook-static
 
 # Generated client-side search + reading assets — built from the committed USX
 # seed (no DB) by `pnpm build` (runs build-flex-index.ts before `vite build`, so
-# they ship in the image); regenerate for dev with `just lets-bible-flex`.
+# they ship in the image); regenerate for dev with `just lb-flex`.
 /public/search/
 /public/reading/
 /public/overlays/

@@ -8,7 +8,7 @@
 // translation-agnostic (anchored to the canonical book/chapter/verse, KJV
 // versification), so no per-translation duplication.
 //
-// Run in the lets-bible container: `just lets-bible-seed-commentaries`
+// Run in the letsbible container: `just lb-seed-commentaries`
 
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

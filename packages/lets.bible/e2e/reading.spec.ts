@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-// Suite B — Reading experience. See docs/lets-bible-e2e-testing.md §5.
+// Suite B — Reading experience. See docs/letsbible-e2e-testing.md §5.
 
 test('LB-READ-01 John 1 opens with verse 1 text', async ({ page }) => {
   await page.goto('/bible/john/1');

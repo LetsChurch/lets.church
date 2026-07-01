@@ -11,7 +11,7 @@
 //   TRANSLATION_IS_DEFAULT=false USX_DIR=/abs/path/to/msb/USX_1 \
 //   pnpm --filter @letschurch/lets.bible run seed:bible
 //
-// Run in the lets-bible container: `just bible-seed`
+// Run in the letsbible container: `just bible-seed`
 // (or on the host with LETS_BIBLE_DATABASE_URL pointed at the published port).
 
 import { readFileSync } from 'node:fs';

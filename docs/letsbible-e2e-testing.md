@@ -51,8 +51,8 @@ In scope (everything implemented to date):
 - **World English Bible (WEB)** — a fourth translation (public domain, trademark
   eBible.org). Sourced from eBible.org's WEB **USFM** and converted to USX 3.0 by
   `scripts/web/build-web-usx.ts` (committed output under `seed/web/USX_1`,
-  regenerated via `just lets-bible-build-web-usx`), then ingested by the shared
-  `seed-bible.ts` (`just lets-bible-seed-web`). WEB keeps its **paragraphing,
+  regenerated via `just lb-build-web-usx`), then ingested by the shared
+  `seed-bible.ts` (`just lb-seed-web`). WEB keeps its **paragraphing,
   poetry, headings, translator footnotes, and red-letter** (words of Jesus), uses
   `org` versification, and projects **cross-references from MSB** (like KJV). It is
   the first translation with **no per-word Strong's**: eBible's `\w …strong="…"`
@@ -147,7 +147,7 @@ In scope (everything implemented to date):
   removed the USX `<note style="x">` cross-references, so they're committed in
   `seed/overlays/cross-references.json` (BSB 514 / MSB 516, extracted from the baked
   USX) and seeded into `bible_cross_reference` — by `seed-bible`/`seed-kjv` on a full
-  seed, or the narrow `just lets-bible-seed-crossrefs` backfill. KJV (no markup of
+  seed, or the narrow `just lb-seed-crossrefs` backfill. KJV (no markup of
   its own) projects MSB's set. These power the **OT-quotation hover-card source
   link** (e.g. John 1:23 → "Quoting Isaiah 40:3" → `/bible/isaiah/40?v=3`) and the
   study panel's cross-references, via the `bible.chapterCrossReferences` tRPC.
@@ -233,7 +233,7 @@ is lexical (`more_like_this`), not vector embeddings.
 ### 2.2 One-time data setup
 
 `just up` starts the stack and sets up **both** web and lets.bible — it runs
-`lets-bible-up`, which migrates + pushes ES mappings + seeds (BSB, MSB, KJV,
+`lb-up`, which migrates + pushes ES mappings + seeds (BSB, MSB, KJV,
 lexicon, cross-references, commentaries) + indexes. (Requires the enhanced USX seed under
 `packages/lets.bible/seed/{bsb,msb}/USX_1` and the committed KJV source under
 `packages/lets.bible/seed/kjv/kjv_strongs.json`.)
@@ -245,23 +245,23 @@ just up                     # stack + web DB/seed + full lets.bible setup
 To re-run a single lets.bible step against a running stack:
 
 ```
-just lets-bible-migrate        # lets.bible schema (incl. oidc_session.id_token)
-just lets-bible-es-push        # create lets_bible_verses_v2 mappings (incl. `popularity` rank_feature)
-just lets-bible-seed-bsb       # BSB (default) — 66 books / 31,086 verses
-just lets-bible-seed-msb       # MSB (second translation) — 31,100 verses
-just lets-bible-seed-kjv       # KJV (1769, Strong's + morphology) — 31,102 verses / 790,868 tokens
-just lets-bible-build-web-usx  # HOST-only: download eBible WEB USFM → convert to seed/web/USX_1 (committed; only needed to regenerate)
-just lets-bible-seed-web       # WEB (World English Bible, public domain) — 31,101 verses / 0 tokens (Strong's stripped)
-just lets-bible-seed-crossrefs # backfill bible_cross_reference from the committed artifact (BSB 514 / MSB 516 / KJV 516 / WEB 516)
-just lets-bible-seed-commentaries # load bible_commentary[_work] from committed seed/commentaries/*.json (Calvin/MHC/MHCC/Geneva/Wesley — ~52k entries)
-just lets-bible-seed-lexicon   # 14,197 Greek+Hebrew Strong's entries
-just lets-bible-seed-source NT BSB   # true interlinear: BSB NT Greek (STEPBible TAGNT, critical/NA)
-just lets-bible-seed-source OT BSB   # BSB OT Hebrew (STEPBible TAHOT, Masoretic) — MSB/WEB OT fall back to this
-just lets-bible-seed-source NT MSB   # MSB NT Greek (Byzantine/Majority)
-just lets-bible-seed-source NT WEB   # WEB NT Greek (Byzantine/Majority — the WEB NT's text basis)
-just lets-bible-index          # index 124,389 verses into ES v2 (BSB + MSB + KJV + WEB) with popularity from seed/popularity.json
-just lets-bible-flex           # build client FlexSearch + reading assets + overlay index → public/{search,reading,overlays}/* (incl. KJV + WEB)
-just lets-bible-up             # all of the above, in order
+just lb-migrate        # lets.bible schema (incl. oidc_session.id_token)
+just lb-es-push        # create lets_bible_verses_v2 mappings (incl. `popularity` rank_feature)
+just lb-seed-bsb       # BSB (default) — 66 books / 31,086 verses
+just lb-seed-msb       # MSB (second translation) — 31,100 verses
+just lb-seed-kjv       # KJV (1769, Strong's + morphology) — 31,102 verses / 790,868 tokens
+just lb-build-web-usx  # HOST-only: download eBible WEB USFM → convert to seed/web/USX_1 (committed; only needed to regenerate)
+just lb-seed-web       # WEB (World English Bible, public domain) — 31,101 verses / 0 tokens (Strong's stripped)
+just lb-seed-crossrefs # backfill bible_cross_reference from the committed artifact (BSB 514 / MSB 516 / KJV 516 / WEB 516)
+just lb-seed-commentaries # load bible_commentary[_work] from committed seed/commentaries/*.json (Calvin/MHC/MHCC/Geneva/Wesley — ~52k entries)
+just lb-seed-lexicon   # 14,197 Greek+Hebrew Strong's entries
+just lb-seed-source NT BSB   # true interlinear: BSB NT Greek (STEPBible TAGNT, critical/NA)
+just lb-seed-source OT BSB   # BSB OT Hebrew (STEPBible TAHOT, Masoretic) — MSB/WEB OT fall back to this
+just lb-seed-source NT MSB   # MSB NT Greek (Byzantine/Majority)
+just lb-seed-source NT WEB   # WEB NT Greek (Byzantine/Majority — the WEB NT's text basis)
+just lb-index          # index 124,389 verses into ES v2 (BSB + MSB + KJV + WEB) with popularity from seed/popularity.json
+just lb-flex           # build client FlexSearch + reading assets + overlay index → public/{search,reading,overlays}/* (incl. KJV + WEB)
+just lb-up             # all of the above, in order
 ```
 
 > **Autocomplete prerequisite:** the client autocomplete + book-jump widget read
@@ -269,9 +269,9 @@ just lets-bible-up             # all of the above, in order
 > (git-ignored). These are built from the **committed USX seed** (no DB) by
 > `build-flex-index.ts`: in **production** `pnpm build` runs it before `vite build`
 > so they ship in the image automatically; for **dev** (which runs `vite dev`, not
-> a build) generate them with `just lets-bible-flex`. Without them, focus/typing
+> a build) generate them with `just lb-flex`. Without them, focus/typing
 > logs a fetch failure and the widget's verse grids/results stay empty. Re-run
-> `lets-bible-flex` for dev after changing the USX seed.
+> `lb-flex` for dev after changing the USX seed.
 
 ### 2.3 Data integrity preflight (run before a full pass)
 
@@ -698,7 +698,7 @@ in the study panel's verse view.
 | LB-LIB-14 [E2E: library-local] | — | Open any chapter | Every highlight palette token (`--color-gold/sage/slate/rose/sky/plum`) resolves to a non-empty value in light mode. (Guard: highlights render via inline `var(--color-<key>)`, invisible to Tailwind's scanner; a palette color in `@theme` with no static `bg-*/text-*` usage gets tree-shaken and renders transparent — this silently broke `sage`. The accents live in a plain `:root` block to stay emitted.) |
 | LB-LIB-15 [E2E: library-local] | **Anonymous** user; a highlight already in `localStorage` (`lb-highlights`), pre-seeded before page load — not created this session | Cold-load the chapter (no click) | The verse renders highlighted. An anonymous user's marks live only in `localStorage` (per-device), so they **can't be server-rendered**. To avoid the mark "flashing in" a frame or two after the chapter paints (the TanStack DB collection hydrates asynchronously), `useCollectionRows` seeds its read snapshot **synchronously** from the same `localStorage` blob (`readLocalRows`) on the first client render, so the mark is in the first painted client frame; the collection then takes over once it loads. The not-yet-loaded (empty) collection can't clobber the seed (deletions are tombstones, so a loaded collection is never empty while rows exist). (Signed-in users get the marks from the server-rendered loader instead — LB-LIB-16.) |
 | LB-LIB-16 (manual — needs a signed-in session) | **Signed-in** user with a highlight on a verse stored server-side (`user_highlight` row) | Cold-load that chapter (or load it on a **different device** / cleared `localStorage`) | The highlight is in the **SSR HTML** — view source / `fetch(url)` shows the verse span with `class="… verse-highlight"` and `style="--hl:var(--color-<color>)"` before any JS runs. No flash, and it appears even with empty local storage (cross-device), because `library.chapterMarks` is fetched in the loader and returned in the SSR payload. Verified manually: signed in as the dev `admin`/`password` user, highlighted John 3:16, confirmed the server HTML carries `--hl:var(--color-sage)` on `data-verse="16"`. |
-| LB-LIB-12 [E2E: library-local] | Was signed in (`lb-was-signed-in=1`) with local library data, then signed out | Load the app signed-out | **All** on-device data is wiped (`lb-highlights`/`lb-notes`/`lb-progress`/`lb-translations` cleared, the IndexedDB `lets-bible-cache` cleared, `lb-merged` + `lb-was-signed-in` removed) so the account's library can't leak to the next user on a shared device. A never-signed-in visitor (no `lb-was-signed-in`) keeps their own local data. Two layers wipe: (a) the account menu's **"Log out"** click calls `clearLocalData()` before navigating to `/logout` (belt), and (b) this **load-based** detection on the next signed-out load (suspenders — also covers session expiry / other sign-outs). This case tests layer (b); layer (a) is the same `clearLocalData()` and isn't separately automated (it needs a signed-in session to render the menu). |
+| LB-LIB-12 [E2E: library-local] | Was signed in (`lb-was-signed-in=1`) with local library data, then signed out | Load the app signed-out | **All** on-device data is wiped (`lb-highlights`/`lb-notes`/`lb-progress`/`lb-translations` cleared, the IndexedDB `letsbible-cache` cleared, `lb-merged` + `lb-was-signed-in` removed) so the account's library can't leak to the next user on a shared device. A never-signed-in visitor (no `lb-was-signed-in`) keeps their own local data. Two layers wipe: (a) the account menu's **"Log out"** click calls `clearLocalData()` before navigating to `/logout` (belt), and (b) this **load-based** detection on the next signed-out load (suspenders — also covers session expiry / other sign-outs). This case tests layer (b); layer (a) is the same `clearLocalData()` and isn't separately automated (it needs a signed-in session to render the menu). |
 | LB-LIB-02 | Verse selected | Verse view → "Add note" → type → Save | A ✎ marker shows on the verse; reopening shows "Edit note" with the saved body; Delete removes it. |
 | LB-LIB-03 | Anyone | Verse view → "Copy" / "Share" | Copy puts `verse text (Ref)` on the clipboard; Share puts the deep link `…/bible/<book>/<ch>?v=<v>`. Buttons flash "Copied"/"Link copied". |
 | LB-LIB-04 | Verse selected | Verse view → "Study a word" | Opens the word view for the verse's first studyable word. |
@@ -834,7 +834,7 @@ precache-on-install is a possible later upgrade.)
 > the cache only kicks in offline). So LB-OFF-08..10 can be checked against the
 > **dev** server (Playwright `context.setOffline(true)` on :4001) — and against a
 > prod build for the cache-optimised strategies: `docker compose run --rm -d -p
-> 4090:3000 lets-bible sh -lc "pnpm --filter @letschurch/lets.bible run build &&
+> 4090:3000 letsbible sh -lc "pnpm --filter @letschurch/lets.bible run build &&
 > pnpm --filter @letschurch/lets.bible run start"`, then a Playwright run with
 > `LETS_BIBLE_E2E_URL=http://localhost:4090`. (Both verified working 2026-06-22.)
 
@@ -852,12 +852,12 @@ precache-on-install is a possible later upgrade.)
 
 ### Offline commentaries (download + manage)
 
-Unlike reading/search (auto-cached), commentaries are **opt-in downloads** managed per commentator on the Library page, stored in IndexedDB (`lets-bible-cache`/`kv`, keys `commentary:*`). Online is unchanged; the study panel falls back to the downloaded copy only when the server call fails. See `src/local/offline-commentaries.ts`.
+Unlike reading/search (auto-cached), commentaries are **opt-in downloads** managed per commentator on the Library page, stored in IndexedDB (`letsbible-cache`/`kv`, keys `commentary:*`). Online is unchanged; the study panel falls back to the downloaded copy only when the server call fails. See `src/local/offline-commentaries.ts`.
 
 | ID | Steps | Expected |
 | --- | --- | --- |
 | LB-OFF-CM-01 [E2E: commentaries] | As a guest (signed out), click **Library** in the header (shown for anonymous users alongside Sign in; signed-in users reach it via the account menu) | Lands on `/library` (no redirect). An **Offline commentaries** section lists all 5 works (Calvin, Matthew Henry ×2, Geneva, Wesley) with author + size in MB (from `bible.commentaryWorksWithSize`), each with a **Download** button. |
-| LB-OFF-CM-02 | Click **Download** on a work (e.g. Geneva ~4.4 MB) | Button shows **%** progress (per-book loop), then flips to **Remove**. IndexedDB `lets-bible-cache`/`kv` gains `commentary:works`, `commentary:meta` (with the workId), and one `commentary:<workId>:<USFM>` key per covered book (Geneva = 63). |
+| LB-OFF-CM-02 | Click **Download** on a work (e.g. Geneva ~4.4 MB) | Button shows **%** progress (per-book loop), then flips to **Remove**. IndexedDB `letsbible-cache`/`kv` gains `commentary:works`, `commentary:meta` (with the workId), and one `commentary:<workId>:<USFM>` key per covered book (Geneva = 63). |
 | LB-OFF-CM-03 | Reload `/library` | The downloaded work still shows **Remove** (status hydrated from `commentary:meta`); others show **Download**. No hydration mismatch (server + first client paint render Download). |
 | LB-OFF-CM-04 | With a work downloaded, simulate offline (DevTools offline, or fail `/trpc/`), open a verse it covers (e.g. Geneva on John 3:16), Commentaries tab | The panel lists **only downloaded works** (Geneva), assembled from IndexedDB, with the body rendered. Non-downloaded works do **not** appear offline. Online (no failure) is unchanged — all works show. |
 | LB-OFF-CM-05 | Library → **Remove** the work | Its `commentary:<workId>:*` keys are deleted and it's pruned from `commentary:meta`; button returns to **Download**. Offline, that work no longer appears in the panel. Removing mid-download aborts the loop and cleans up. |
@@ -984,8 +984,8 @@ A fast pass to run after any change:
 2b. **WEB** (`?translation=WEB`): John 3 renders with paragraphs + translator footnotes (a–d hover cards) + red-letter; v16 "…his only born Son…". Two-clicking a word does **not** open word study (no `bible_token`). `Aα` interlinear shows **Original only** (no "English (reverse)" toggle): John 3 Greek (Byzantine), Genesis 1 Hebrew RTL (OT fallback). Compare WEB↔KJV works. Attribution line at the reader bottom + on `/about`.
 3. Double-click "God" in John 1 → study panel shows θεός / G2316.
 4. One study panel: reading column is centered while idle; select a verse → verse view (highlight/copy/share/compare/note); click a word twice (or press-and-hold on touch) → word view with the verse as context, single highlight. Selecting a word clears the verse and vice-versa (mutually exclusive).
-4b. Commentaries tab: select John 3:16 → verse view has **Verse**/**Commentaries** tabs; Commentaries tab lists Calvin, Matthew Henry (×2, "on vv. 1–21"), Geneva, Wesley; click Calvin → detail (body + Source + back). Click verse 17 → still on Commentaries tab, still following Calvin (his note on v.17) — tab + work persist. (Requires `just lets-bible-seed-commentaries`.)
-5. Autocomplete (client-side FlexSearch, no debounce): `john` → book-jump widget (21-chapter grid); `john 3` → 36-verse grid; `john 3:16` → verse 16 + preview; click chapter fills bar, click verse navigates. `for God so loved the world` → JHN.3.16 ranked first in **Verses**; `in the beginning` → **Exact phrase** pill + **Creation** topic; scope dropdown switches BSB↔MSB. (Requires `public/search/*` from `just lets-bible-flex`.)
+4b. Commentaries tab: select John 3:16 → verse view has **Verse**/**Commentaries** tabs; Commentaries tab lists Calvin, Matthew Henry (×2, "on vv. 1–21"), Geneva, Wesley; click Calvin → detail (body + Source + back). Click verse 17 → still on Commentaries tab, still following Calvin (his note on v.17) — tab + work persist. (Requires `just lb-seed-commentaries`.)
+5. Autocomplete (client-side FlexSearch, no debounce): `john` → book-jump widget (21-chapter grid); `john 3` → 36-verse grid; `john 3:16` → verse 16 + preview; click chapter fills bar, click verse navigates. `for God so loved the world` → JHN.3.16 ranked first in **Verses**; `in the beginning` → **Exact phrase** pill + **Creation** topic; scope dropdown switches BSB↔MSB. (Requires `public/search/*` from `just lb-flex`.)
 6. `/search?q=fruit of the Spirit` → Galatians 5:22 first, highlighted.
 7. `/search?q=Matthew 1:23` → cross-reference Isaiah 7:14 + related passages.
 8. Genesis 2: "LORD" has a dotted underline + "Literally YHWH" hover card; set Divine name = Yahweh → "that Yahweh God" (article dropped); toggle Source-text overlays off → underlines gone.

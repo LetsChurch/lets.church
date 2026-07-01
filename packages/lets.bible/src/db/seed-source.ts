@@ -5,7 +5,7 @@
 // Both CC BY 4.0, whose English gloss is itself BSB-based so it aligns with our
 // text. Fetched at seed time (not committed), mirroring the BSB USX seed.
 //
-// Run: `just lets-bible-seed-source` (defaults to John for BSB). Override with
+// Run: `just lb-seed-source` (defaults to John for BSB). Override with
 //   BOOKS=NT|OT|ALL|JHN,GEN,…  TRANSLATION_ID=BSB|MSB
 // Textual basis per translation: BSB → critical (NA27/28), MSB → Byzantine
 // (Majority text). Hebrew is the Masoretic (Leningrad) base for either — seed it

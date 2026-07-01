@@ -26,7 +26,7 @@
 // features (Compare, highlights, notes) align by ref and so may diverge from
 // BSB/MSB at exactly those verses — an accepted limitation of adding the KJV.
 //
-// Run in the lets-bible container: `just lets-bible-seed-kjv`
+// Run in the letsbible container: `just lb-seed-kjv`
 
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';

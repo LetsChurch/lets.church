@@ -3,7 +3,7 @@
 // ingests) and parses it with `parseUsxBook` — it does NOT touch Postgres, so it
 // runs during the Docker image build (`pnpm build` → this, then `vite build`,
 // which copies `public/` into `.output/public/`). Run standalone for dev via
-// `pnpm flex:build` / `just lets-bible-flex`.
+// `pnpm flex:build` / `just lb-flex`.
 //
 // Writes to public/ (git-ignored — regenerated from the seed):
 //   search/<id>.verses.json  — id-aligned [ref, text, popularity][] for search +
@@ -43,7 +43,7 @@ const popularity: Record<string, number> = JSON.parse(
 );
 
 // Translations to build. Each loads a USFM book code → parsed chapters map,
-// mirroring the `lets-bible-seed-*` recipes. USX-sourced translations (BSB/MSB)
+// mirroring the `lb-seed-*` recipes. USX-sourced translations (BSB/MSB)
 // read one file per book; the KJV reads its committed JSON once. Add a
 // translation here when one is added to the seed.
 type ChaptersByBook = Map<string, Record<string, ParsedChapter>>;

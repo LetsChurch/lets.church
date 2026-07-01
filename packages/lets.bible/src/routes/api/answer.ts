@@ -69,7 +69,7 @@ export const Route = createFileRoute('/api/answer')({
         // Cache hit: replay the stored answer (skips retrieval + generation).
         // Keyed by (model, day, translation, query) — the answer depends on
         // nothing else.
-        const cacheKey = `lets-bible-answer:v1:${ANSWER_MODEL}:${new Date()
+        const cacheKey = `letsbible-answer:v1:${ANSWER_MODEL}:${new Date()
           .toISOString()
           .slice(0, 10)}:${parsed.translation}:${parsed.q}`;
         const cached = await cacheGet(cacheKey);

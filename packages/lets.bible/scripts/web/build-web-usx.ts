@@ -10,7 +10,7 @@
 // keep `\wj` (red-letter) and `\f` (translator footnotes), and DROP `\x` inline
 // cross-refs because cross-references are projected from MSB (seed-cross-references).
 //
-// Run: `just lets-bible-build-web-usx` (downloads the zip + converts). Input dir
+// Run: `just lb-build-web-usx` (downloads the zip + converts). Input dir
 // override: WEB_USFM_DIR=/abs/path/to/usfm (one *.usfm per book, eBible naming).
 
 import {
@@ -438,7 +438,7 @@ function renderSpan(
 function main() {
   if (!existsSync(usfmDir)) {
     throw new Error(
-      `WEB USFM dir not found: ${usfmDir}. Run the download step first (just lets-bible-build-web-usx) or set WEB_USFM_DIR.`,
+      `WEB USFM dir not found: ${usfmDir}. Run the download step first (just lb-build-web-usx) or set WEB_USFM_DIR.`,
     );
   }
   // Map USFM book code → file by reading each file's \id line.

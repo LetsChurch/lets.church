@@ -1,5 +1,5 @@
 // Create (if missing) and update the lets.bible search index mappings. Mirrors
-// the DB-migration step but for OpenSearch. Run via `just lets-bible-es-push`
+// the DB-migration step but for OpenSearch. Run via `just lb-es-push`
 // (or `pnpm run es:push-mappings`).
 
 import { client, VERSE_INDEX, waitForOpenSearch } from './client';

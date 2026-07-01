@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-// Suite A — Smoke / health. See docs/lets-bible-e2e-testing.md §4.
+// Suite A — Smoke / health. See docs/letsbible-e2e-testing.md §4.
 
 test('LB-SMOKE-01 home renders', async ({ page }) => {
   await page.goto('/');

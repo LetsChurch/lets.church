@@ -9,7 +9,7 @@ Output: packages/lets.bible/seed/popularity.json — { "JHN.3.16": 753286, ... }
 
 Drops: non-ASCII garbage, chapter/verse 0, unmappable books, and any verse that
 does not exist in ANY translation's versification (public/search/structure.json,
-so run `just lets-bible-flex` first if that file is stale). Regenerate with:
+so run `just lb-flex` first if that file is stale). Regenerate with:
 
     python3 packages/lets.bible/scripts/distill-popularity.py /path/to/pop.txt
 """

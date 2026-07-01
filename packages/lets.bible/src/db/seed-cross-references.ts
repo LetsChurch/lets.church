@@ -6,7 +6,7 @@
 // artifact. BSB/MSB use their own set; the KJV (no markup of its own) projects MSB's.
 // Idempotent: replaces each translation's rows.
 //
-// Run in the lets-bible container: `just lets-bible-seed-crossrefs`
+// Run in the letsbible container: `just lb-seed-crossrefs`
 
 import { eq } from 'drizzle-orm';
 import { loadCrossRefs } from '../server/overlays';
