@@ -1,5 +1,5 @@
 import { buildMediaLexicalRequest, osSearch } from '@letschurch/opensearch';
-import { createTool } from '@mastra/core/tools';
+import { tool } from 'ai';
 import { z } from 'zod';
 import { OutgoingIdSchema } from '@/schemas/common';
 import { resolveChannelNames } from '@/trpc/search/channels';
@@ -50,8 +50,7 @@ function toMatch(
   };
 }
 
-export const aggregateMediaTool = createTool({
-  id: 'aggregateMedia',
+export const aggregateMediaTool = tool({
   description:
     'Count how many videos match a topic and find the earliest and latest matches. Use for "how many times", "when was the first/last time someone preached on X", and similar quantitative/temporal questions. Lexical match over titles, descriptions, summaries, and transcripts. Speaker identity is not filterable — include any speaker name in the query text.',
   inputSchema: z.object({
@@ -65,11 +64,6 @@ export const aggregateMediaTool = createTool({
     channelNames: z.array(z.string()).optional(),
     dateGte: z.string().optional(),
     dateLte: z.string().optional(),
-  }),
-  outputSchema: z.object({
-    count: z.number(),
-    earliest: MatchSchema.nullable(),
-    latest: MatchSchema.nullable(),
   }),
   execute: async ({ query, quotes, channelNames, dateGte, dateLte }) => {
     const channelIds =

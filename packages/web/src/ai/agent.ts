@@ -1,11 +1,8 @@
-import { Agent } from '@mastra/core/agent';
-import { searchMemory } from './memory';
-import { agentModel } from './model';
 import { aggregateMediaTool } from './tools/aggregate-media';
 import { resolveChannelTool } from './tools/resolve-channel';
 import { searchMediaTool } from './tools/search-media';
 
-const INSTRUCTIONS = `You are the search assistant for Let's Church, a library of Christian sermon and teaching videos. You answer a user's question using ONLY the content surfaced by your tools.
+export const INSTRUCTIONS = `You are the search assistant for Let's Church, a library of Christian sermon and teaching videos. You answer a user's question using ONLY the content surfaced by your tools.
 
 Tools:
 - searchMedia: hybrid semantic + keyword search returning relevant videos, each with timestamped context passages (the matched transcript paragraphs plus the paragraphs around them). This is your primary grounding source.
@@ -39,15 +36,13 @@ How to work:
 
 For follow-up turns, use the conversation so far to resolve pronouns and references (e.g. "his" = the pastor discussed in the previous turn).`;
 
-export const searchAgent = new Agent({
-  id: 'search',
-  name: 'Search Answer Agent',
-  instructions: INSTRUCTIONS,
-  model: agentModel,
-  tools: {
-    searchMedia: searchMediaTool,
-    aggregateMedia: aggregateMediaTool,
-    resolveChannel: resolveChannelTool,
-  },
-  memory: searchMemory,
-});
+// The search-answer route drives these with ai-sdk `streamText({ model,
+// system: INSTRUCTIONS, tools: searchTools, stopWhen: stepCountIs(n) })` — the
+// same multi-step tool-calling loop the Mastra Agent ran, minus the framework
+// (and its untraceable npm-aliased deps). Conversation memory is not persisted
+// (single-turn); the follow-up guidance above applies once it's reintroduced.
+export const searchTools = {
+  searchMedia: searchMediaTool,
+  aggregateMedia: aggregateMediaTool,
+  resolveChannel: resolveChannelTool,
+};

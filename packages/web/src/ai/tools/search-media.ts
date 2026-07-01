@@ -15,7 +15,7 @@ import {
   createEmbeddingsTracked,
   EMBED_MODEL,
 } from '@letschurch/temporal/util/llm';
-import { createTool } from '@mastra/core/tools';
+import { tool } from 'ai';
 import { and, eq, gte, isNull, lte, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { OutgoingIdSchema } from '@/schemas/common';
@@ -385,8 +385,7 @@ export async function runAgentMediaSearch({
   return { results, total: hybrid.total, queryVector };
 }
 
-export const searchMediaTool = createTool({
-  id: 'searchMedia',
+export const searchMediaTool = tool({
   description:
     'Hybrid semantic + keyword search over the sermon/teaching video library. Returns the most relevant videos, each with context passages (the matched transcript paragraphs plus the paragraphs immediately around them), a timestamp in seconds, and — when the diarized voice has been attributed — the name of the speaker for that passage. Use this to ground every answer; call it multiple times with different queries when comparing sources or tracking a topic over time. To answer "what did <person> say about …" or focus on one speaker, pass their name in `speakerNames` to restrict to paragraphs they actually spoke (this works only for speakers labeled in the library; if it returns nothing, retry without it and match the name in the query text). The `speaker` field on each returned passage gives the attributed name for citation, and is null when the voice is unattributed. When looking for an exact wording, pass it in `quotes` for a verbatim phrase boost.',
   inputSchema: z.object({
@@ -418,28 +417,6 @@ export const searchMediaTool = createTool({
       .optional()
       .describe('Latest publish date, inclusive (YYYY-MM-DD).'),
     limit: z.number().min(1).max(15).optional(),
-  }),
-  outputSchema: z.object({
-    results: z.array(
-      z.object({
-        uploadId: z.string(),
-        title: z.string().nullable(),
-        channelName: z.string().nullable(),
-        publishedAt: z.string().nullable(),
-        context: z.array(
-          z.object({
-            // Ready-made citation token — copy verbatim after a supported claim.
-            cite: z.string(),
-            startSeconds: z.number(),
-            text: z.string(),
-            // Named speaker for this passage when known (null if the diarized
-            // voice isn't attributed). Use it to attribute who said what.
-            speaker: z.string().nullable(),
-          }),
-        ),
-      }),
-    ),
-    total: z.number(),
   }),
   execute: async ({
     query,

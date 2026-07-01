@@ -147,13 +147,13 @@ export const Route = createFileRoute('/api/search-answer')({
           u: internalUploadId ?? null,
         });
 
-        // Server-only deps loaded lazily so Mastra / pg never enter the client
-        // bundle (this route file is part of the shared route tree).
+        // Server-only deps loaded lazily so pg / opensearch / db never enter the
+        // client bundle (this route file is part of the shared route tree).
         const [
-          { searchAgent },
+          { searchTools, INSTRUCTIONS },
           { runAgentMediaSearch },
           { classifyAnswerMode },
-          { SEARCH_AGENT_MODEL },
+          { SEARCH_AGENT_MODEL, agentModel },
           { runMediaKnnProbe },
           { recordLlmCall },
           { getSession },
@@ -163,6 +163,7 @@ export const Route = createFileRoute('/api/search-answer')({
           { cacheGetJson, cacheSetJson },
           { parseSearchQuery },
           { resolveChannelSlugs },
+          { streamText, stepCountIs },
         ] = await Promise.all([
           import('@/ai/agent'),
           import('@/ai/tools/search-media'),
@@ -177,6 +178,7 @@ export const Route = createFileRoute('/api/search-answer')({
           import('@/util/cache'),
           import('@/trpc/search/parse-query'),
           import('@/trpc/search/channels'),
+          import('ai'),
         ]);
 
         const session = await getSession();
@@ -553,17 +555,32 @@ Sources:
 ${sourcesBlock}`;
 
           const genStart = Date.now();
-          const result = await searchAgent.stream(prompt, {
-            memory: { thread: parsed.threadId, resource },
+          const result = streamText({
+            model: agentModel,
+            system: INSTRUCTIONS,
+            prompt,
+            tools: searchTools,
             // Allow several tool calls per answer (multi-source synthesis).
-            maxSteps: 8,
+            stopWhen: stepCountIs(8),
+            // Surface a generation error instead of silently ending the stream;
+            // the catch below records the decline and the card shows the error.
+            onError: ({ error }) => {
+              moduleLogger.error(
+                {
+                  context: {
+                    error:
+                      error instanceof Error ? error.message : String(error),
+                  },
+                },
+                'streamText error during answer generation',
+              );
+            },
           });
 
-          // Bridge Mastra's text stream into a DOM byte stream for the Response.
-          // Mastra's textStream does NOT reliably emit `done` (it stays open
-          // after generation), so we drive completion off result.finishReason
-          // (resolves when the run actually ends). Without this the response
-          // hangs forever ("thinking…").
+          // Bridge ai-sdk's text stream into a DOM byte stream for the Response.
+          // We drive completion off result.finishReason (resolves when the run
+          // ends) and an idle timer, so a pause during a tool call doesn't look
+          // like completion and a late final delta isn't dropped.
           const reader = result.textStream.getReader();
           let generationDone = false;
           void Promise.resolve(result.finishReason)
@@ -647,9 +664,9 @@ ${sourcesBlock}`;
               controller.close();
               void reader.cancel();
 
-              // Record the agent generation in `llm_call`. Mastra owns the
-              // actual OpenRouter request (so the tracked wrappers don't see
-              // it) — log it manually from the resolved usage/finishReason.
+              // Record the agent generation in `llm_call`. `streamText` makes
+              // the OpenAI request directly (the tracked wrappers don't see it),
+              // so log it manually from the resolved usage/finishReason.
               try {
                 const usage = (await Promise.resolve(
                   result.usage as unknown,
