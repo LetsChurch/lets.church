@@ -94,7 +94,9 @@ CREATE TABLE "bible_translation" (
 	"language" text DEFAULT 'en' NOT NULL,
 	"direction" text DEFAULT 'ltr' NOT NULL,
 	"versification" text DEFAULT 'org' NOT NULL,
-	"is_default" boolean DEFAULT false NOT NULL
+	"is_default" boolean DEFAULT false NOT NULL,
+	"attribution" text,
+	"attribution_url" text
 );
 --> statement-breakpoint
 CREATE TABLE "bible_verse" (

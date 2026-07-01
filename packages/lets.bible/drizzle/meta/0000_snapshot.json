@@ -1,5 +1,5 @@
 {
-  "id": "5d0033df-8a5e-4640-8a32-fe1c8cb0de72",
+  "id": "56f69209-f402-4baa-9fca-b2e6273e6cbe",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -829,6 +829,18 @@
           "primaryKey": false,
           "notNull": true,
           "default": false
+        },
+        "attribution": {
+          "name": "attribution",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attribution_url": {
+          "name": "attribution_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
