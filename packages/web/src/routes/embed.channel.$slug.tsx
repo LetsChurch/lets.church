@@ -401,6 +401,26 @@ function RecentUploads({ channelSlug }: { channelSlug: string }) {
   );
 }
 
+// Placeholder rows shown while the first page of results loads, so a fresh
+// search (or a re-query when the terms change) shows motion instead of flashing
+// the empty state or freezing on the previous results.
+function SearchResultsSkeleton() {
+  return (
+    <div className="space-y-4" aria-hidden="true">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="flex gap-4 rounded-lg p-2">
+          <div className="h-[90px] w-40 shrink-0 animate-pulse rounded-md bg-gray-200" />
+          <div className="min-w-0 flex-1 space-y-2 py-1">
+            <div className="h-4 w-2/3 animate-pulse rounded bg-gray-200" />
+            <div className="h-3 w-1/3 animate-pulse rounded bg-gray-200" />
+            <div className="h-12 w-full animate-pulse rounded bg-gray-200" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function SearchResults({ q, channelSlug }: { q: string; channelSlug: string }) {
   const search = Route.useSearch();
   const trpc = useTRPC();
@@ -411,6 +431,7 @@ function SearchResults({ q, channelSlug }: { q: string; channelSlug: string }) {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isPending,
   } = useInfiniteQuery({
     ...trpc.search.hybridSearch.infiniteQueryOptions({
       q,
@@ -493,7 +514,9 @@ function SearchResults({ q, channelSlug }: { q: string; channelSlug: string }) {
 
   return (
     <div className="space-y-6">
-      {items.length > 0 ? (
+      {isPending ? (
+        <SearchResultsSkeleton />
+      ) : items.length > 0 ? (
         <div className="space-y-4">
           {items.map((item) => (
             <Result key={item.id} item={item} />
