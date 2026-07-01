@@ -28,20 +28,37 @@ const FORCE = process.env.LETS_BIBLE_FORCE_RESEED === 'true';
 const LOCK_KEY = 728_401_553;
 // Must match search/client.ts VERSE_INDEX.
 const VERSE_INDEX = 'lets_bible_verses_v2';
-// Order matters: bible text first, then dependent data.
-const SEEDS = [
-  'seed:bible',
-  'seed:kjv',
-  'seed:lexicon',
-  'seed:crossrefs',
-  'seed:commentaries',
-  'seed:source',
-] as const;
+// Order matters: bible text first, then dependent data. seed:source defaults to
+// John only (dev convenience); in prod we seed the WHOLE Bible so the
+// original-language interlinear ("Original" mode) covers every book. Seed BSB
+// with the whole Bible (NT critical Greek + the shared Masoretic OT Hebrew),
+// then each other translation's NT under its OWN Greek basis so every
+// translation's interlinear matches its own text: KJV → Textus Receptus (incl.
+// TR-only readings like the Comma Johanneum, which the critical text omits),
+// MSB/WEB → Byzantine/Majority. The OT falls back to BSB's Hebrew for all — it's
+// the same Masoretic base — so it's seeded once.
+const SEEDS: ReadonlyArray<{ script: string; env?: Record<string, string> }> = [
+  { script: 'seed:bible' },
+  { script: 'seed:kjv' },
+  { script: 'seed:lexicon' },
+  { script: 'seed:crossrefs' },
+  { script: 'seed:commentaries' },
+  { script: 'seed:source', env: { BOOKS: 'ALL', TRANSLATION_ID: 'BSB' } },
+  { script: 'seed:source', env: { BOOKS: 'NT', TRANSLATION_ID: 'KJV' } },
+  { script: 'seed:source', env: { BOOKS: 'NT', TRANSLATION_ID: 'MSB' } },
+  { script: 'seed:source', env: { BOOKS: 'NT', TRANSLATION_ID: 'WEB' } },
+];
 
-function run(script: string): void {
-  console.log(`[provision] pnpm run ${script}`);
+function run(script: string, env?: Record<string, string>): void {
+  const suffix = env
+    ? ` (${Object.entries(env)
+        .map(([k, v]) => `${k}=${v}`)
+        .join(' ')})`
+    : '';
+  console.log(`[provision] pnpm run ${script}${suffix}`);
   execFileSync('pnpm', ['--filter', '@letschurch/lets.bible', 'run', script], {
     stdio: 'inherit',
+    env: env ? { ...process.env, ...env } : process.env,
   });
 }
 
@@ -82,7 +99,7 @@ try {
       console.log(
         FORCE ? '[provision] FORCE re-seed…' : '[provision] seeding…',
       );
-      for (const s of SEEDS) run(s);
+      for (const s of SEEDS) run(s.script, s.env);
       await pool.query(
         `INSERT INTO lets_bible_provisioning (id, seeded_at) VALUES (1, now())
            ON CONFLICT (id) DO UPDATE SET seeded_at = now()`,

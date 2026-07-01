@@ -173,9 +173,14 @@ lb-index:
 lb-flex:
   docker compose exec letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run flex:build'
 
-# Full lets.bible setup: migrate, push ES mappings, seed (bible/lexicon/cross-refs/commentaries), index, flex
-# (cross-refs + commentaries are separate tables — included here so they aren't empty after a DB reset).
-lb-up: lb-migrate lb-es-push lb-seed-bible lb-seed-lexicon lb-seed-crossrefs lb-seed-commentaries lb-index lb-flex
+# Full lets.bible setup: migrate, push ES mappings, seed (bible/lexicon/cross-refs/
+# commentaries/original-language source tokens), index, flex. (cross-refs,
+# commentaries, and source tokens are separate tables — included here so they aren't
+# empty after a DB reset. Source tokens = the whole-Bible "Original" interlinear:
+# BSB (NT critical Greek + shared Masoretic OT), then each translation's NT under
+# its own Greek basis — KJV=Textus Receptus, MSB/WEB=Byzantine — matching what the
+# prod provision init container seeds.)
+lb-up: lb-migrate lb-es-push lb-seed-bible lb-seed-lexicon lb-seed-crossrefs lb-seed-commentaries (lb-seed-source "ALL" "BSB") (lb-seed-source "NT" "KJV") (lb-seed-source "NT" "MSB") (lb-seed-source "NT" "WEB") lb-index lb-flex
 
 os-push-mappings:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/opensearch run push-mappings'
