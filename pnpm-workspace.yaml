@@ -59,3 +59,5 @@ catalog:
   "wait-on": "^9.0.1"
   "xss": "^1.0.15"
   "zod": "^4.1.12"
+patchedDependencies:
+  mdast-util-gfm-autolink-literal@2.0.1: patches/mdast-util-gfm-autolink-literal@2.0.1.patch

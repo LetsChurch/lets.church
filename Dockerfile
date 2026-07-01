@@ -35,6 +35,9 @@ USER nodeapp
 
 FROM base AS package-json
 COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+# Patched dependencies (pnpm-workspace.yaml `patchedDependencies`) — the patch
+# files must be present for `pnpm install --frozen-lockfile` to apply them.
+COPY --chown=nodeapp:nodeapp patches ./patches/
 COPY --chown=nodeapp:nodeapp packages/util/package.json ./packages/util/
 COPY --chown=nodeapp:nodeapp packages/s3/package.json ./packages/s3/
 COPY --chown=nodeapp:nodeapp packages/db/package.json ./packages/db/
