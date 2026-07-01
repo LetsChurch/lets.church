@@ -105,21 +105,18 @@ export function InterlinearControls({
           </div>
         </div>
       ) : (
-        // No per-word Strong's in this translation — only the original-language
-        // interlinear is available, so show a static label instead of the toggle.
-        <div className="flex items-center gap-2.5">
-          <span className="text-[12px] text-faint">Word order</span>
-          <span className={`${chipBase} cursor-default text-muted-2`}>
-            Original
-          </span>
-        </div>
+        // No per-word Strong's in this translation (e.g. WEB) — there's only the
+        // original-language interlinear, so a word-order control is meaningless.
+        // Hide it entirely; the empty spacer keeps the Lines controls right-aligned.
+        <div />
       )}
       <div className="flex flex-wrap items-center gap-2">
         <span className="mr-0.5 text-[12px] text-faint">Lines</span>
         <span
+          title="The Greek/Hebrew word is always shown"
           className={`${chipBase} cursor-default text-[#9a9384] opacity-70`}
         >
-          Original · locked
+          Greek/Hebrew · locked
         </span>
         <LineChip
           label="Translit"
@@ -281,11 +278,12 @@ function Token({
   );
 }
 
-// Interlinear reading: the chapter's words as stacked tokens (display options
-// come from the controls bar). Tapping a word opens the study panel. Our seed
-// carries reading order + dictionary lemmas (no inflected original text, original
-// word order, or parsing), so this is the design's interlinear styling over
-// reading-order data — not a Greek-order morphological interlinear.
+// Reverse interlinear: the chapter's words in ENGLISH reading order, each shown
+// with its Strong's dictionary lemma/translit/gloss (from bible_token + the
+// bible_lexeme join). Tapping a word opens the study panel. This is the
+// English-anchored view; the Greek/Hebrew-order morphological interlinear
+// (inflected surface forms in original word order + parsing) is SourceInterlinear
+// below, driven by bible_source_token.
 export function Interlinear({
   rows,
   options,
