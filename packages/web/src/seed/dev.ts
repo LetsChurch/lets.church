@@ -1322,9 +1322,6 @@ for (const { id } of uploadRecordData) {
   });
 
   nextRank += 1;
-
-  await indexDocument('transcript', id, `${id}/transcript.vtt`);
-  await indexDocument('upload', id);
 }
 
 const doreanPrincipleUploadId = '00000000-0000-4000-8000-100000000000';
@@ -1357,13 +1354,6 @@ await db.insert(UploadRecord).values({
   score: 0,
   updatedAt: new Date(),
 });
-
-await indexDocument(
-  'transcript',
-  doreanPrincipleUploadId,
-  `${doreanPrincipleUploadId}/transcript.vtt`,
-);
-await indexDocument('upload', doreanPrincipleUploadId);
 
 const prayerPitchUploadId = '00000000-0000-4000-8000-100000000001';
 
@@ -1398,13 +1388,6 @@ await db.insert(UploadRecord).values({
   updatedAt: new Date(),
 });
 
-await indexDocument(
-  'transcript',
-  prayerPitchUploadId,
-  `${prayerPitchUploadId}/transcript.vtt`,
-);
-await indexDocument('upload', prayerPitchUploadId);
-
 const christianBooksPitchUploadId = '00000000-0000-4000-8000-100000000002';
 
 await db.insert(UploadRecord).values({
@@ -1437,13 +1420,6 @@ await db.insert(UploadRecord).values({
   score: 0,
   updatedAt: new Date(),
 });
-
-await indexDocument(
-  'transcript',
-  christianBooksPitchUploadId,
-  `${christianBooksPitchUploadId}/transcript.vtt`,
-);
-await indexDocument('upload', christianBooksPitchUploadId);
 
 const foreignMissionsUploadId = '00000000-0000-4000-8000-100000000003';
 
@@ -1478,13 +1454,6 @@ await db.insert(UploadRecord).values({
   updatedAt: new Date(),
 });
 
-await indexDocument(
-  'transcript',
-  foreignMissionsUploadId,
-  `${foreignMissionsUploadId}/transcript.vtt`,
-);
-await indexDocument('upload', foreignMissionsUploadId);
-
 const copyrightUploadId = '00000000-0000-4000-8000-100000000004';
 
 await db.insert(UploadRecord).values({
@@ -1517,13 +1486,6 @@ await db.insert(UploadRecord).values({
   score: 0,
   updatedAt: new Date(),
 });
-
-await indexDocument(
-  'transcript',
-  copyrightUploadId,
-  `${copyrightUploadId}/transcript.vtt`,
-);
-await indexDocument('upload', copyrightUploadId);
 
 const biblicalCounselingUploadId = '00000000-0000-4000-8000-100000000005';
 
@@ -1558,13 +1520,6 @@ await db.insert(UploadRecord).values({
   updatedAt: new Date(),
 });
 
-await indexDocument(
-  'transcript',
-  biblicalCounselingUploadId,
-  `${biblicalCounselingUploadId}/transcript.vtt`,
-);
-await indexDocument('upload', biblicalCounselingUploadId);
-
 const lordsSupperUploadId = '00000000-0000-4000-8000-100000000006';
 
 await db.insert(UploadRecord).values({
@@ -1597,13 +1552,6 @@ await db.insert(UploadRecord).values({
   score: 0,
   updatedAt: new Date(),
 });
-
-await indexDocument(
-  'transcript',
-  lordsSupperUploadId,
-  `${lordsSupperUploadId}/transcript.vtt`,
-);
-await indexDocument('upload', lordsSupperUploadId);
 
 // Seed featured uploads
 await db.insert(FeaturedUpload).values([

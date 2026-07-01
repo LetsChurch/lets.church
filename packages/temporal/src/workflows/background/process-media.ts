@@ -127,17 +127,6 @@ export async function processMediaWorkflow(
     if (transcribePromise) {
       const res = await transcribePromise;
 
-      setCurrentDetails('Indexing transcript');
-      await executeChild(indexDocumentWorkflow, {
-        workflowId: `transcript:${s3UploadKey}`,
-        args: ['transcript', targetId, res.transcriptKey],
-        taskQueue: BACKGROUND_QUEUE,
-        priority: { priorityKey: PRIORITY_USER },
-        typedSearchAttributes: childSearchAttrs,
-        ...staticMeta({ summary: 'Index transcript', links }),
-        retry: { maximumAttempts: 2 },
-      });
-
       await storeTranscriptParagraphs(targetId, res.transcriptJsonKey);
 
       // LLM post-processing. Summary and annotation pipelines run as
@@ -206,14 +195,17 @@ export async function processMediaWorkflow(
       }
     }
 
-    setCurrentDetails('Indexing upload');
+    // Final (re)index of the searchable media doc (lc_media_v1). On the
+    // transcribe path summarize already indexed it; this keeps the non-transcribe
+    // path covered and is a no-op until the upload has a summary embedding.
+    setCurrentDetails('Indexing media');
     await executeChild(indexDocumentWorkflow, {
-      workflowId: `upload:${s3UploadKey}`,
-      args: ['upload', targetId],
+      workflowId: `media:${s3UploadKey}`,
+      args: ['media', targetId],
       taskQueue: BACKGROUND_QUEUE,
       priority: { priorityKey: PRIORITY_USER },
       typedSearchAttributes: childSearchAttrs,
-      ...staticMeta({ summary: 'Index upload', links }),
+      ...staticMeta({ summary: 'Index media', links }),
       retry: { maximumAttempts: 2 },
     });
   } catch (err) {

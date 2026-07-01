@@ -14,14 +14,9 @@ import { syncSpeakerVectors } from './sync-speaker-vectors';
 // `media` → lc_media_v1 (the unified search index; also re-syncs the upload's
 // speaker vectors as a side effect). `speaker` → lc_speaker_vectors only (for
 // uploads with attributions but no summary embedding, which the media pass
-// skips). The other four are the legacy per-entity indices.
-export type ReindexKind =
-  | 'upload'
-  | 'transcript'
-  | 'channel'
-  | 'organization'
-  | 'media'
-  | 'speaker';
+// skips). `channel`/`organization` index the standalone lc_channels /
+// lc_organizations.
+export type ReindexKind = 'channel' | 'organization' | 'media' | 'speaker';
 
 export type ReindexBatchResult = {
   indexed: number;
@@ -35,17 +30,6 @@ const moduleLogger = logger.child({
 export async function getReindexCount(kind: ReindexKind): Promise<number> {
   const countCol = sql<string>`count(*)`;
   switch (kind) {
-    case 'upload': {
-      const r = await db.select({ count: countCol }).from(UploadRecord);
-      return Number(r[0]?.count ?? 0);
-    }
-    case 'transcript': {
-      const r = await db
-        .select({ count: countCol })
-        .from(UploadRecord)
-        .where(isNotNull(UploadRecord.transcribingFinishedAt));
-      return Number(r[0]?.count ?? 0);
-    }
     case 'channel': {
       const r = await db.select({ count: countCol }).from(Channel);
       return Number(r[0]?.count ?? 0);
@@ -79,34 +63,10 @@ export async function reindexBatch(
   offset: number,
   batchSize: number,
 ): Promise<ReindexBatchResult> {
-  type Row = { id: string; s3Key?: string };
+  type Row = { id: string };
   let rows: Row[] = [];
 
   switch (kind) {
-    case 'upload': {
-      const r = await db
-        .select({ id: UploadRecord.id })
-        .from(UploadRecord)
-        .orderBy(asc(UploadRecord.id))
-        .limit(batchSize)
-        .offset(offset);
-      rows = r.map((x) => ({ id: x.id }));
-      break;
-    }
-    case 'transcript': {
-      const r = await db
-        .select({ id: UploadRecord.id })
-        .from(UploadRecord)
-        .where(isNotNull(UploadRecord.transcribingFinishedAt))
-        .orderBy(asc(UploadRecord.id))
-        .limit(batchSize)
-        .offset(offset);
-      rows = r.map((x) => ({
-        id: x.id,
-        s3Key: `${x.id}/transcript.vtt`,
-      }));
-      break;
-    }
     case 'channel': {
       const r = await db
         .select({ id: Channel.id })
@@ -152,13 +112,13 @@ export async function reindexBatch(
   }
 
   let indexed = 0;
-  for (const { id, s3Key } of rows) {
+  for (const { id } of rows) {
     try {
       if (kind === 'speaker') {
         await syncSpeakerVectors(id);
       } else {
         // `kind` is narrowed to a DocumentKind here ('speaker' handled above).
-        await indexDocument(kind, id, s3Key);
+        await indexDocument(kind, id);
       }
       indexed++;
     } catch (err) {

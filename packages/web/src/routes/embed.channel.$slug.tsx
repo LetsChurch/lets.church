@@ -1,14 +1,13 @@
 import { Autocomplete } from '@base-ui/react/autocomplete';
 import { IconSearch, IconX } from '@tabler/icons-react';
 import { useInfiniteQuery, useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute, notFound, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, notFound } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
 import type { FormEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import { EmptyState } from '@/components/empty-state';
 import { SearchRow } from '@/components/search-row';
-import SearchTabs from '@/components/search-tabs';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 import { formatTime } from '@/util/format';
@@ -50,7 +49,6 @@ export const Route = createFileRoute('/embed/channel/$slug')({
   ),
   validateSearch: z.object({
     q: z.string().optional(),
-    focus: z.enum(['media', 'transcripts']).catch('media'),
     sort: z.enum(['relevance', 'date-asc', 'date-desc']).optional(),
     dateRange: z
       .enum(['all-time', 'today', 'this-week', 'this-month', 'this-year'])
@@ -58,7 +56,6 @@ export const Route = createFileRoute('/embed/channel/$slug')({
   }),
   loaderDeps: ({ search }) => ({
     q: search.q,
-    focus: search.focus,
     sort: search.sort,
     dateRange: search.dateRange,
   }),
@@ -82,9 +79,8 @@ export const Route = createFileRoute('/embed/channel/$slug')({
     if (deps.q) {
       // Prefetch search results
       const searchPromise = context.queryClient.prefetchInfiniteQuery(
-        context.trpc.search.performSearch.infiniteQueryOptions({
+        context.trpc.search.hybridSearch.infiniteQueryOptions({
           q: deps.q,
-          focus: deps.focus as 'media' | 'transcripts',
           channelSlugs: [slug],
           limit: 20,
           sort: deps.sort,
@@ -206,7 +202,6 @@ function EmbedSearchBar({
       // Update URL with search params
       const url = new URL(window.location.href);
       url.searchParams.set('q', searchQuery);
-      url.searchParams.set('focus', 'media');
       window.history.pushState({}, '', url.toString());
       setQuery(searchQuery);
       // Trigger a re-render by dispatching a custom event
@@ -217,7 +212,6 @@ function EmbedSearchBar({
   const handleClear = () => {
     const url = new URL(window.location.href);
     url.searchParams.delete('q');
-    url.searchParams.delete('focus');
     url.searchParams.delete('sort');
     url.searchParams.delete('dateRange');
     window.history.pushState({}, '', url.toString());
@@ -409,7 +403,6 @@ function RecentUploads({ channelSlug }: { channelSlug: string }) {
 
 function SearchResults({ q, channelSlug }: { q: string; channelSlug: string }) {
   const search = Route.useSearch();
-  const navigate = useNavigate({ from: Route.fullPath });
   const trpc = useTRPC();
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -419,9 +412,8 @@ function SearchResults({ q, channelSlug }: { q: string; channelSlug: string }) {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    ...trpc.search.performSearch.infiniteQueryOptions({
+    ...trpc.search.hybridSearch.infiniteQueryOptions({
       q,
-      focus: search.focus,
       channelSlugs: [channelSlug],
       limit: 20,
       sort: search.sort,
@@ -491,10 +483,6 @@ function SearchResults({ q, channelSlug }: { q: string; channelSlug: string }) {
     };
   }, []);
 
-  const firstPage = searchData?.pages[0];
-  const mediaCount = firstPage?.mediaCount ?? 0;
-  const transcriptCount = firstPage?.transcriptCount ?? 0;
-
   const items: SearchResultItem[] =
     searchData?.pages.flatMap((page) => {
       if (page && typeof page === 'object' && 'items' in page) {
@@ -503,36 +491,12 @@ function SearchResults({ q, channelSlug }: { q: string; channelSlug: string }) {
       return [];
     }) ?? [];
 
-  const handleTabChange = (newFocus: 'media' | 'transcripts') => {
-    navigate({
-      search: (prev: {
-        q?: string;
-        focus: 'media' | 'transcripts';
-        sort?: 'relevance' | 'date-asc' | 'date-desc';
-        dateRange?:
-          | 'all-time'
-          | 'today'
-          | 'this-week'
-          | 'this-month'
-          | 'this-year';
-      }) => ({ ...prev, focus: newFocus }),
-    });
-  };
-
   return (
     <div className="space-y-6">
-      <SearchTabs
-        activeTab={search.focus === 'transcripts' ? 'transcripts' : 'media'}
-        mediaCount={mediaCount}
-        transcriptCount={transcriptCount}
-        onTabChange={handleTabChange}
-        className="border-gray-200"
-      />
-
       {items.length > 0 ? (
         <div className="space-y-4">
           {items.map((item) => (
-            <Result key={item.id} item={item} focus={search.focus} />
+            <Result key={item.id} item={item} />
           ))}
         </div>
       ) : (
@@ -556,13 +520,7 @@ function SearchResults({ q, channelSlug }: { q: string; channelSlug: string }) {
   );
 }
 
-function Result({
-  item,
-  focus,
-}: {
-  item: SearchResultItem;
-  focus: 'media' | 'transcripts' | undefined;
-}) {
+function Result({ item }: { item: SearchResultItem }) {
   const [showAllSegments, setShowAllSegments] = useState(false);
   const segments = item.segments ?? [];
   const hasMultipleSegments = segments.length > 1;
@@ -586,7 +544,7 @@ function Result({
         item.lengthSeconds ? formatTime(item.lengthSeconds * 1000) : undefined
       }
     >
-      {focus === 'transcripts' && segments.length > 0 ? (
+      {segments.length > 0 ? (
         <div className="mt-2 space-y-2">
           {displayedSegments.map((segment, index) => (
             <a

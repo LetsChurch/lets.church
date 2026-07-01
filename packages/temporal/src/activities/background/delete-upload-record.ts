@@ -1,5 +1,9 @@
 import { db, UploadRecord } from '@letschurch/db';
-import { client as esClient } from '@letschurch/opensearch';
+import {
+  client as esClient,
+  MEDIA_INDEX,
+  SPEAKER_VECTOR_INDEX,
+} from '@letschurch/opensearch';
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { Context } from '@temporalio/activity';
@@ -40,11 +44,16 @@ export async function deleteUploadRecordSearch(id: string) {
     context: { id },
   });
 
-  for (const index of ['lc_uploads_v2', 'lc_transcripts'] as const) {
-    activityLogger.info(`Deleting from index ${index}`);
-    await esClient.delete({ index, id }, { ignore: [404] });
-    activityLogger.info('Done!');
-  }
+  // Remove the unified search doc (lc_media_v1; its _id is the upload id) and the
+  // upload's speaker vectors (lc_speaker_vectors; keyed by the uploadRecordId
+  // field, one doc per attributed label).
+  activityLogger.info(`Deleting from index ${MEDIA_INDEX}`);
+  await esClient.delete({ index: MEDIA_INDEX, id }, { ignore: [404] });
+  await esClient.deleteByQuery({
+    index: SPEAKER_VECTOR_INDEX,
+    body: { query: { term: { uploadRecordId: id } } },
+  });
+  activityLogger.info('Done!');
 
   return true;
 }

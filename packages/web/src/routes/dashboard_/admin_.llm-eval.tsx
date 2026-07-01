@@ -165,18 +165,16 @@ function LlmEvalPage() {
   const [uploadSearch, setUploadSearch] = useState('');
   const [debouncedUploadSearch] = useDebounce(uploadSearch, 200);
 
-  // Upload picker — reuse the same `search.performSearch` ES-backed
-  // procedure the featured-uploads page uses. The hits come back with
-  // base58-encoded upload ids; we decode them to UUIDs before storing
-  // so the page's URL search param stays UUID-shaped (the dashboard
-  // convention).
+  // Upload picker — reuse the `search.hybridSearch` (lc_media_v1) procedure the
+  // main search page uses. The hits come back with base58-encoded upload ids; we
+  // decode them to UUIDs before storing so the page's URL search param stays
+  // UUID-shaped (the dashboard convention).
   // User-driven query: fires only when the admin types in the picker.
   // Disable automatic refresh — once results land, refocusing the
   // window or reconnecting shouldn't re-issue the same search.
   const uploadSearchQuery = useQuery({
-    ...trpc.search.performSearch.queryOptions({
+    ...trpc.search.hybridSearch.queryOptions({
       q: debouncedUploadSearch,
-      focus: 'media',
       limit: 20,
     }),
     enabled: debouncedUploadSearch.length >= 2,
@@ -209,7 +207,7 @@ function LlmEvalPage() {
       channel?: { name?: string | null } | null;
     }>;
     const fromSearch = items.map((u) => ({
-      // search.performSearch ids are base58-encoded; decode so the
+      // search.hybridSearch ids are base58-encoded; decode so the
       // Select's value (and the URL search param it backs) is UUID.
       value: idTranslator.validate(u.id) ? idTranslator.toUUID(u.id) : u.id,
       label: u.title

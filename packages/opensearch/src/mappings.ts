@@ -68,84 +68,10 @@ const targetMappings: Record<
       },
     },
   },
-  lc_uploads_v2: {
-    settings: {
-      number_of_replicas: 0,
-    },
-    properties: {
-      channelId: {
-        type: 'keyword',
-      },
-      title: {
-        type: 'text',
-      },
-      description: {
-        type: 'text',
-      },
-      tags: {
-        type: 'text',
-      },
-      publishedAt: {
-        type: 'date',
-      },
-      visibility: {
-        type: 'keyword',
-      },
-      channelVisibility: {
-        type: 'keyword',
-      },
-      transcodingFinishedAt: {
-        type: 'date',
-      },
-      transcribingFinishedAt: {
-        type: 'date',
-      },
-    },
-  },
-  lc_transcripts: {
-    settings: {
-      number_of_replicas: 0,
-    },
-    properties: {
-      channelId: {
-        type: 'keyword',
-      },
-      publishedAt: {
-        type: 'date',
-      },
-      visibility: {
-        type: 'keyword',
-      },
-      channelVisibility: {
-        type: 'keyword',
-      },
-      segments: {
-        type: 'nested',
-        properties: {
-          start: {
-            type: 'integer',
-          },
-          end: {
-            type: 'integer',
-          },
-          text: {
-            type: 'text',
-          },
-        },
-      },
-      transcodingFinishedAt: {
-        type: 'date',
-      },
-      transcribingFinishedAt: {
-        type: 'date',
-      },
-    },
-  },
-  // Unified upload + transcript index for the new RRF-style search. One doc
-  // per upload with nested paragraphs (preserves `inner_hits` so future search
-  // can show + jump to the matched paragraph, mirroring lc_transcripts). The
-  // existing lc_uploads_v2 and lc_transcripts stay populated for current
-  // search; this index is additive.
+  // Unified upload + transcript index for the RRF-style search. One doc per
+  // upload with nested paragraphs (preserves `inner_hits` so search can show +
+  // jump to the matched paragraph). The sole media search index now that the
+  // legacy per-entity lc_uploads_v2 / lc_transcripts have been retired.
   lc_media_v1: {
     settings: {
       number_of_replicas: 0,

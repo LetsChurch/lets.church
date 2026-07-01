@@ -37,14 +37,6 @@ export const Route = createFileRoute('/dashboard_/admin_/reindex')({
 
 const KIND_LABELS: Record<ReindexKind, { label: string; description: string }> =
   {
-    upload: {
-      label: 'Uploads',
-      description: 'Title, description, and metadata for all upload records',
-    },
-    transcript: {
-      label: 'Transcripts',
-      description: 'Full-text transcript content for transcribed uploads',
-    },
     channel: {
       label: 'Channels',
       description: 'Channel names and visibility',
@@ -65,14 +57,7 @@ const KIND_LABELS: Record<ReindexKind, { label: string; description: string }> =
     },
   };
 
-const KINDS: ReindexKind[] = [
-  'upload',
-  'transcript',
-  'channel',
-  'organization',
-  'media',
-  'speaker',
-];
+const KINDS: ReindexKind[] = ['channel', 'organization', 'media', 'speaker'];
 
 function statusBadge(status: string | undefined) {
   if (!status) return <Badge color="gray">Idle</Badge>;

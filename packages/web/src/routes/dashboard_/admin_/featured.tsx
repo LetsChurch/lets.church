@@ -67,9 +67,8 @@ function FeaturedUploadsPage() {
 
   // Search for uploads to add (search across all public uploads)
   const { data: searchData } = useQuery({
-    ...trpc.search.performSearch.queryOptions({
+    ...trpc.search.hybridSearch.queryOptions({
       q: debouncedSearchValue,
-      focus: 'media',
       limit: 20,
     }),
     enabled: debouncedSearchValue.length >= 2,

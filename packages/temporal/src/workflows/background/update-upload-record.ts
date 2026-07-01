@@ -34,8 +34,10 @@ export async function updateUploadRecordWorkflow(uploadRecordId: string) {
       }
     }
     // Skip the reindex when every batched update opted out (e.g. progress ticks).
+    // Re-index the searchable media doc (lc_media_v1); a no-op until the upload
+    // has a summary embedding.
     if (shouldIndex) {
-      await indexDocument('upload', uploadRecordId);
+      await indexDocument('media', uploadRecordId);
     }
   }
 }

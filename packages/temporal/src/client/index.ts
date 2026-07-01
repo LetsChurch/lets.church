@@ -128,16 +128,12 @@ export async function updateUploadRecord(
   });
 }
 
-export async function indexDocument(
-  kind: DocumentKind,
-  uploadId: string,
-  uploadKey?: string,
-) {
+export async function indexDocument(kind: DocumentKind, uploadId: string) {
   return (await client).workflow.signalWithStart(indexDocumentWorkflow, {
     taskQueue: BACKGROUND_QUEUE,
     ...staticMeta({ summary: `Index document (${kind})` }),
     workflowId: makeIndexDocumentWorkflowId(kind, uploadId),
-    args: [kind, uploadId, uploadKey],
+    args: [kind, uploadId],
     signal: emptySignal,
     signalArgs: [],
     typedSearchAttributes: [{ key: UPLOAD_ID_KEY, value: uploadId }],
