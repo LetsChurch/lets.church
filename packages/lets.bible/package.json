@@ -16,6 +16,7 @@
     "build:storybook": "storybook build",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
+    "provision": "tsx src/db/provision.ts",
     "db:studio": "drizzle-kit studio",
     "seed:bible": "tsx src/db/seed-bible.ts",
     "seed:kjv": "tsx src/db/seed-kjv.ts",
