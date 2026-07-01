@@ -41,6 +41,25 @@ from .vtt import segments_to_plaintext, segments_to_vtt
 logger = logging.getLogger(__name__)
 
 
+async def _blocking_with_heartbeat(fn, *, detail: str, interval_s: float = 30.0):
+    """Run a blocking, zero-arg `fn` in a worker thread while heartbeating.
+
+    The heavy stages here (S3 download, ffmpeg decode, GPU inference) don't
+    yield to the event loop, so a single `activity.heartbeat()` before the call
+    doesn't survive a long run — the activity's 600s heartbeat timeout fires
+    mid-stage on large/long media (see the 5h 4K upload that failed here).
+    Running the work off-thread lets the activity coroutine keep emitting a
+    heartbeat every `interval_s` seconds until the work completes. The final
+    heartbeat fires on completion; `fut.result()` re-raises anything `fn` threw.
+    """
+    fut = asyncio.create_task(asyncio.to_thread(fn))
+    while True:
+        done, _ = await asyncio.wait({fut}, timeout=interval_s)
+        activity.heartbeat(detail)
+        if fut in done:
+            return fut.result()
+
+
 class ThrottledProgressUpdater:
     """Coalesces progress signals so we don't spam Temporal."""
 
@@ -115,14 +134,18 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
 
     try:
         work_dir.mkdir(parents=True, exist_ok=True)
-        activity.heartbeat("downloading media")
-        ingest_s3.download_file(s3_ingest_bucket, s3_upload_key, str(download_path))
+        await _blocking_with_heartbeat(
+            lambda: ingest_s3.download_file(s3_ingest_bucket, s3_upload_key, str(download_path)),
+            detail="downloading media",
+        )
         size_mb = download_path.stat().st_size / (1024 * 1024)
         activity.logger.info(f"downloaded {size_mb:.2f} MB")
         await progress.update(0.05)
 
-        activity.heartbeat("converting to wav")
-        convert_to_wav(download_path, wav_path)
+        await _blocking_with_heartbeat(
+            lambda: convert_to_wav(download_path, wav_path),
+            detail="converting to wav",
+        )
         download_path.unlink(missing_ok=True)
         await progress.update(0.10)
 
@@ -145,6 +168,11 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
         for seg in iter_whisper_segments(segments_iter):
             segments.append(seg)
             frac = min(seg["end"] / duration, 1.0)
+            # faster-whisper transcribes lazily as this iterator is drained, so
+            # each `next()` is real work — heartbeat per segment (unlike the
+            # throttled progress signal, this keeps the 600s timeout at bay for
+            # multi-hour audio).
+            activity.heartbeat(f"transcribing {frac:.0%}")
             await progress.update(round(0.15 + frac * 0.40, 4))
 
         await progress.update(0.55, force=True)
@@ -154,20 +182,28 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
         )
 
         # Load the audio once for the GPU-side stages below (alignment + diarization).
-        audio = load_audio(str(wav_path))
+        # ffmpeg decodes the entire (multi-hour) file here, so heartbeat through it.
+        audio = await _blocking_with_heartbeat(
+            lambda: load_audio(str(wav_path)),
+            detail="loading audio",
+        )
 
         # 2. CTC forced alignment refines whisper's word_timestamps to true
         # frame ranges (much tighter for word-level highlighting). Skipped via
         # ALIGN_ENABLED=false; falls back per-segment on internal errors.
         if models.align is not None:
-            activity.heartbeat("aligning")
-            segments = align_segments(audio, segments, models.align)
+            segments = await _blocking_with_heartbeat(
+                lambda: align_segments(audio, segments, models.align),
+                detail="aligning",
+            )
             activity.logger.info("alignment done")
         await progress.update(0.65, force=True)
 
         # 3. Diarize with titanet (speaker labels + speaker vectors).
-        activity.heartbeat("diarizing")
-        per_segment_labels, speaker_vectors = models.diarizer.diarize(audio, segments)
+        per_segment_labels, speaker_vectors = await _blocking_with_heartbeat(
+            lambda: models.diarizer.diarize(audio, segments),
+            detail="diarizing",
+        )
         for seg, label in zip(segments, per_segment_labels, strict=True):
             seg["speaker"] = label
         assign_word_speakers(segments)
@@ -177,14 +213,16 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
         )
 
         # 4. Re-segment + restore terminal punctuation via wtpsplit per speaker turn.
-        activity.heartbeat("segmenting sentences")
         before = len(segments)
-        segments = process_speaker_segments(
-            segments,
-            models.sat,
-            threshold=sentence_threshold,
-            paragraph_threshold=paragraph_threshold,
-            paragraph_target_chars=paragraph_target_chars,
+        segments = await _blocking_with_heartbeat(
+            lambda: process_speaker_segments(
+                segments,
+                models.sat,
+                threshold=sentence_threshold,
+                paragraph_threshold=paragraph_threshold,
+                paragraph_target_chars=paragraph_target_chars,
+            ),
+            detail="segmenting sentences",
         )
         paragraph_count = sum(1 for s in segments if s.get("is_paragraph_start"))
         activity.logger.info(
