@@ -1,24 +1,26 @@
 import { z } from 'zod';
 import { type OsMsearchItem, type OsQuery, osSearch } from './client';
 
-// Hybrid search over the unified `lc_media_v1` index. Fuses three signals with
-// OpenSearch's `hybrid` query + the score-normalization search pipeline:
+// Hybrid search over the unified `lc_media_v1` index. Two stages:
 //
+// STAGE 1 — retrieve a candidate pool with OpenSearch's `hybrid` query + the
+// score-normalization pipeline, fusing two signals:
 //   1. BM25 lexical — title/description/summary/channelName + nested
 //      `paragraphs.text` (the latter surfaces matched paragraphs via inner_hits
 //      `para_bm25`, with <mark> highlighting, mirroring lc_transcripts).
 //   2. Document-level kNN over `searchSummaryEmbedding` (whole-video semantic
 //      match — "is this video about the thing you asked for").
-//   3. Paragraph-level kNN over the nested `paragraphs.embedding` knn_vector
-//      (which moment in the video matches — surfaced via inner_hits `para_knn`,
-//      with `expand_nested_docs` so multiple paragraphs per video come back).
+//   (A third `match_none` slot is kept so the 3-weight pipeline stays valid.)
 //
-// The three sub-query score lists are fused in the `RRF_PIPELINE` search pipeline
-// (created in mappings.ts) — min_max normalization + a weighted mean that favors
-// the lexical signal, so a hit that only the paragraph-kNN found still ranks,
-// while a decisive lexical/phrase match isn't flattened away (it replaced plain
-// RRF, which fused by rank and discarded magnitude). See
-// docs/search-ranking-tuning.md.
+// STAGE 2 — rerank the pool by each doc's best-paragraph EXACT cosine, RRF-fused
+// with the stage-1 order. This replaced approximate nested paragraph kNN, which
+// forced faiss to load a ~100GB HNSW graph off-heap and OOM-killed the pod: exact
+// cosine is a `script_score` that reads raw vectors and never loads the graph.
+// See runMediaHybridSearch + docs/search-paragraph-rerank.md.
+//
+// Stage-1 sub-query scores are fused in the `RRF_PIPELINE` search pipeline
+// (created in mappings.ts) — min_max normalization + a weighted mean favoring the
+// lexical signal. See docs/search-ranking-tuning.md.
 //
 // The query vector is a single request-time embedding of the user query with
 // the same model the index was built with (text-embedding-3-small, 1536 dims).
@@ -58,21 +60,33 @@ const KNN_K = 50;
 // clauses (multi_match + nested match), not the phrase boosts.
 const LEXICAL_QUERY_ANALYZER = 'stop';
 
-// TEMPORARY mitigation for the off-heap faiss OOM. faiss loads a knn_vector
-// field's HNSW graph into native (off-heap) memory the moment that field is
-// queried with kNN. The nested `paragraphs.embedding` graph is ~100GB resident
-// across the corpus and OOM-kills the OpenSearch pod (exit 137) on essentially
-// every hybrid search — even at a 24Gi container limit. While disabled, hybrid
-// search keeps the cheap doc-level summary kNN (one vector per upload) and BM25
-// paragraph snippets; it loses only the *semantic* paragraph-moment matching
-// (the `para_knn` inner_hits). The sub-query SLOT is preserved as `match_none`
-// so the 3-weight RRF normalization pipeline ([0.5, 0.25, 0.25]) stays valid
-// without a cluster-side pipeline migration.
+// Paragraph-level semantic signal via EXACT cosine, not ANN kNN. Approximate
+// nested `paragraphs.embedding` kNN forced faiss to load a ~100GB HNSW graph
+// into off-heap memory and OOM-killed the pod (exit 137) on every query. Instead
+// we retrieve a candidate pool with the cheap stage-1 hybrid (BM25 + doc-summary
+// kNN), then rerank the pool by each doc's best paragraph's exact cosine computed
+// in a `script_score` — which reads raw vectors and NEVER loads the HNSW graph,
+// so it cannot OOM. Bounded by the pool size, not the corpus.
 //
-// Default OFF (the mitigation is active). Re-enable with MEDIA_PARAGRAPH_KNN=true
-// once lc_media_v1 is reindexed with on_disk / byte (SQ) quantization, which cuts
-// the native footprint ~1/32 and lets the graph fit in memory.
-const PARAGRAPH_KNN_ENABLED = process.env.MEDIA_PARAGRAPH_KNN === 'true';
+// Params from offline eval (LLM-judged nDCG@5 over 16 queries × query types):
+// baseline (stage-1 only) 0.67 → 0.735 fusing paragraph cosine at stage1:para =
+// 1:2. Doc-summary exact-rescore and title embeddings were evaluated and did NOT
+// help (≈ baseline / slightly worse), so neither is used — and titles need no
+// reindex. See docs/search-paragraph-rerank.md.
+const RERANK_POOL = 60;
+// Skip paragraphs shorter than this — degenerate one-word turns ("Grace.") score
+// perfect cosine but are useless as ranking evidence / snippets. `start`/`end`
+// are seconds.
+const RERANK_MIN_PARAGRAPH_SECONDS = 5;
+const RERANK_RRF_K = 60;
+const RERANK_W_STAGE1 = 1;
+const RERANK_W_PARAGRAPH = 2;
+// Painless: 0 for paragraphs with no vector or below the min duration, else
+// cosine + 1 (faiss cosinesimil convention keeps the score positive). Used for
+// both the rerank scoring and the semantic snippet selection.
+const PARAGRAPH_COSINE_SCRIPT =
+  "doc['paragraphs.embedding'].size()==0 || doc['paragraphs.start'].size()==0 || " +
+  "doc['paragraphs.end'].size()==0 || (doc['paragraphs.end'].value - doc['paragraphs.start'].value) < params.mindur ? 0.0 : cosineSimilarity(params.qv, doc['paragraphs.embedding']) + 1.0";
 
 // Speaker-suggestion confidence floor (0–100, in the cosine-derived match-%
 // the UI shows). faiss `cosinesimil` knn returns score = (1 + cosine)/2, so
@@ -356,13 +370,12 @@ export function buildMediaHybridBody({
   size = 20,
   sort,
   innerHitsSize = 3,
-  knnInnerHitsSize = innerHitsSize,
   highlight = true,
   facets = [],
   withInnerHits = true,
 }: BuildMediaSearchArgs): OsMsearchItem {
   const trimmed = lexicalText.trim();
-  const { filter, speakerNested, scopeToSpeaker } = resolveFilter({
+  const { filter, scopeToSpeaker } = resolveFilter({
     channelIds,
     publishedAt,
     bibleRefs,
@@ -471,51 +484,13 @@ export function buildMediaHybridBody({
     },
   };
 
-  // (3) paragraph-level nested kNN. The access/date filter lives in the parent
-  // bool (the knn filter context inside `nested` only sees nested-doc fields).
-  // `expand_nested_docs` returns multiple matching paragraphs per video.
-  //
-  // Gated by PARAGRAPH_KNN_ENABLED: when off (the default, see above), this slot
-  // is `match_none` so the faiss `paragraphs.embedding` graph is never loaded —
-  // the slot stays present (the RRF pipeline expects three sub-queries) but
-  // contributes no score and no `para_knn` inner_hits.
-  const paragraphKnnQuery: OsQuery = PARAGRAPH_KNN_ENABLED
-    ? {
-        bool: {
-          filter,
-          must: [
-            {
-              nested: {
-                path: 'paragraphs',
-                query: {
-                  knn: {
-                    'paragraphs.embedding': {
-                      vector: queryVector,
-                      k: KNN_K,
-                      expand_nested_docs: true,
-                      // Pre-filter the kNN to the requested speaker's paragraphs
-                      // so semantic matches are also speaker-scoped (no-op
-                      // otherwise).
-                      ...(speakerNested ? { filter: speakerNested } : {}),
-                    },
-                  },
-                },
-                score_mode: 'max',
-                ...(withInnerHits
-                  ? {
-                      inner_hits: paragraphInnerHits(
-                        PARA_KNN,
-                        knnInnerHitsSize,
-                        false,
-                      ),
-                    }
-                  : {}),
-              },
-            },
-          ],
-        },
-      }
-    : { match_none: {} };
+  // (3) Empty slot. This used to be an approximate nested paragraph kNN, but that
+  // loaded the ~100GB faiss HNSW graph off-heap and OOM-killed the pod. Paragraph
+  // semantics now come from exact-cosine reranking in `runMediaHybridSearch`
+  // instead. The slot stays present as `match_none` so the RRF normalization
+  // pipeline (which expects three sub-queries, weights [0.5, 0.25, 0.25]) stays
+  // valid without a cluster-side pipeline migration.
+  const paragraphKnnQuery: OsQuery = { match_none: {} };
 
   return {
     from,
@@ -557,6 +532,7 @@ export function buildMediaSnippetBody(
   const { speakerNested, scopeToSpeaker } = resolveFilter(args);
 
   const should: OsQuery[] = [
+    // Lexical snippet: the best keyword-matching paragraph, `<mark>`-highlighted.
     {
       nested: {
         path: 'paragraphs',
@@ -573,26 +549,30 @@ export function buildMediaSnippetBody(
         inner_hits: paragraphInnerHits(PARA_BM25, innerHitsSize, highlight),
       },
     },
-  ];
-  if (PARAGRAPH_KNN_ENABLED) {
-    should.push({
+    // Semantic snippet: the best paragraph by exact cosine (script_score, never
+    // loads the HNSW graph — see PARAGRAPH_COSINE_SCRIPT). Surfaces the relevant
+    // moment for docs the reranker pulled in on meaning with no keyword overlap.
+    // Scoped to the page's uploadIds, so it only scores those docs' paragraphs.
+    {
       nested: {
         path: 'paragraphs',
         query: {
-          knn: {
-            'paragraphs.embedding': {
-              vector: args.queryVector,
-              k: KNN_K,
-              expand_nested_docs: true,
-              ...(speakerNested ? { filter: speakerNested } : {}),
+          script_score: {
+            query: speakerNested ?? { match_all: {} },
+            script: {
+              source: PARAGRAPH_COSINE_SCRIPT,
+              params: {
+                qv: args.queryVector,
+                mindur: RERANK_MIN_PARAGRAPH_SECONDS,
+              },
             },
           },
         },
         score_mode: 'max',
         inner_hits: paragraphInnerHits(PARA_KNN, knnInnerHitsSize, false),
       },
-    });
-  }
+    },
+  ];
 
   return {
     size: uploadIds.length,
@@ -602,12 +582,86 @@ export function buildMediaSnippetBody(
 }
 
 /**
- * Execute the hybrid search and return the (already paginated) hits + total.
- * RRF fusion happens in the search pipeline. Snippets (`inner_hits`) are NOT
- * computed inline — that costs ~10x because the hybrid spans the whole
- * `pagination_depth` window — but fetched in a cheap second query scoped to the
- * returned page and attached, so callers (and `mergeParagraphSnippets`) see the
- * same shape.
+ * Body that scores each candidate upload by its best (≥ min-duration) paragraph's
+ * exact cosine to the query — a `script_score`, so it reads raw vectors and never
+ * loads the faiss HNSW graph (cannot OOM). Scoped to `uploadIds` (the retrieved
+ * pool), so cost is bounded by the pool, not the corpus. `_score - 1` is the
+ * cosine. Feeds the RRF rerank in `runMediaHybridSearch`.
+ */
+export function buildParagraphCosineBody(
+  queryVector: number[],
+  uploadIds: string[],
+): OsMsearchItem {
+  return {
+    size: uploadIds.length,
+    _source: false,
+    query: {
+      bool: {
+        filter: [{ ids: { values: uploadIds } }],
+        must: [
+          {
+            nested: {
+              path: 'paragraphs',
+              score_mode: 'max',
+              query: {
+                script_score: {
+                  query: { match_all: {} },
+                  script: {
+                    source: PARAGRAPH_COSINE_SCRIPT,
+                    params: {
+                      qv: queryVector,
+                      mindur: RERANK_MIN_PARAGRAPH_SECONDS,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * RRF-fuse the stage-1 hybrid order (candidate index) with the paragraph-cosine
+ * order, weighted `RERANK_W_STAGE1 : RERANK_W_PARAGRAPH` (1:2 from eval). Returns
+ * the candidates reordered.
+ */
+function rerankByParagraphCosine(
+  candidates: MediaHit[],
+  cosineById: Map<string, number>,
+): MediaHit[] {
+  const byCosine = [...candidates].sort(
+    (a, b) => (cosineById.get(b._id) ?? 0) - (cosineById.get(a._id) ?? 0),
+  );
+  const paragraphRank = new Map(byCosine.map((h, i) => [h._id, i]));
+  return candidates
+    .map((hit, stage1Rank) => {
+      const pRank = paragraphRank.get(hit._id) ?? candidates.length;
+      const score =
+        RERANK_W_STAGE1 / (RERANK_RRF_K + stage1Rank) +
+        RERANK_W_PARAGRAPH / (RERANK_RRF_K + pRank);
+      return { hit, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .map((s) => s.hit);
+}
+
+/**
+ * Execute the hybrid search and return the paginated hits + total. Pipeline:
+ *
+ *   1. Retrieve a candidate POOL with the stage-1 hybrid (BM25 + doc-summary
+ *      kNN, fused by the RRF pipeline). No aggregations, no inner_hits.
+ *   2. Rerank the pool by each doc's best-paragraph exact cosine (memory-safe
+ *      script_score — never loads the HNSW graph), RRF-fused with the stage-1
+ *      order at 1:2. Skipped for a field sort (date) — there, order is the field.
+ *   3. Snippets for the returned page only (lexical `<mark>` + semantic), fetched
+ *      in a cheap scoped query and attached, so callers / mergeParagraphSnippets
+ *      see the usual `inner_hits` shape.
+ *
+ * Reranking covers the first `RERANK_POOL` results; deeper pages fall back to the
+ * stage-1 order (rare, and less relevance-sensitive).
  */
 export async function runMediaHybridSearch(
   args: BuildMediaSearchArgs,
@@ -615,22 +669,59 @@ export async function runMediaHybridSearch(
   hits: MediaHit[];
   total: number;
 }> {
-  // The result query computes no aggregations (facets come from
-  // `runMediaFacets`) and no inner_hits (fetched separately below).
+  const from = args.from ?? 0;
+  const size = args.size ?? 20;
+  // Rerank only for relevance order, and only when the page is within the pool.
+  const rerankable = !args.sort && from + size <= RERANK_POOL;
+  const fetchSize = rerankable ? RERANK_POOL : from + size;
+
+  // Stage 1: retrieve the candidate pool (no aggregations / inner_hits).
   const raw = await osSearch({
     index: MEDIA_INDEX,
     search_pipeline: RRF_PIPELINE,
-    ...buildMediaHybridBody({ ...args, facets: [], withInnerHits: false }),
+    ...buildMediaHybridBody({
+      ...args,
+      from: 0,
+      size: fetchSize,
+      facets: [],
+      withInnerHits: false,
+    }),
   });
   const parsed = MediaSearchResponseSchema.parse(raw);
-  const hits = parsed.hits.hits;
+  const total = parsed.hits.total.value;
+  const candidates = parsed.hits.hits;
 
-  if (hits.length > 0) {
+  // Stage 2: exact-cosine paragraph rerank over the pool, then take the page.
+  let pageHits: MediaHit[];
+  if (rerankable && candidates.length > 0) {
+    const cosineRaw = await osSearch({
+      index: MEDIA_INDEX,
+      ...buildParagraphCosineBody(
+        args.queryVector,
+        candidates.map((h) => h._id),
+      ),
+    });
+    const cosineById = new Map(
+      MediaSearchResponseSchema.parse(cosineRaw).hits.hits.map((h) => [
+        h._id,
+        (h._score ?? 1) - 1,
+      ]),
+    );
+    pageHits = rerankByParagraphCosine(candidates, cosineById).slice(
+      from,
+      from + size,
+    );
+  } else {
+    pageHits = candidates.slice(from, from + size);
+  }
+
+  // Stage 3: snippets for the page only.
+  if (pageHits.length > 0) {
     const snippetRaw = await osSearch({
       index: MEDIA_INDEX,
       ...buildMediaSnippetBody(
         args,
-        hits.map((h) => h._id),
+        pageHits.map((h) => h._id),
       ),
     });
     const byId = new Map(
@@ -639,12 +730,12 @@ export async function runMediaHybridSearch(
         h.inner_hits,
       ]),
     );
-    for (const hit of hits) {
+    for (const hit of pageHits) {
       hit.inner_hits = byId.get(hit._id);
     }
   }
 
-  return { hits, total: parsed.hits.total.value };
+  return { hits: pageHits, total };
 }
 
 /**
