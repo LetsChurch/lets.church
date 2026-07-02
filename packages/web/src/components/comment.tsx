@@ -26,17 +26,21 @@ function renderWithTimestamps(
   const nodes: ReactNode[] = [];
   let last = 0;
 
-  TIMESTAMP_RE.lastIndex = 0;
-  let m = TIMESTAMP_RE.exec(text);
-  while (m !== null) {
+  // matchAll owns its own iterator, so an out-of-range timestamp (skipped via
+  // `continue`) can't stall the loop the way a manual exec()+continue does — a
+  // comment timestamp exceeding the media length previously spun an infinite
+  // loop and froze every viewer's tab. Out-of-range timestamps are left in
+  // place (last is not advanced), so they render as plain text.
+  for (const m of text.matchAll(TIMESTAMP_RE)) {
+    const index = m.index;
     const seconds = tsToSeconds(m[0]);
     if (lengthSeconds != null && seconds > lengthSeconds) continue;
-    if (m.index > last) nodes.push(text.slice(last, m.index));
+    if (index > last) nodes.push(text.slice(last, index));
     const ts = m[0];
     const s = seconds;
     nodes.push(
       <a
-        key={m.index}
+        key={index}
         href={`#t=${s}`}
         onClick={(e) => {
           e.preventDefault();
@@ -47,8 +51,7 @@ function renderWithTimestamps(
         {ts}
       </a>,
     );
-    last = m.index + m[0].length;
-    m = TIMESTAMP_RE.exec(text);
+    last = index + m[0].length;
   }
 
   if (nodes.length === 0) return [text];
