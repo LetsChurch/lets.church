@@ -1576,7 +1576,7 @@ export const adminRouter = router({
           columns: { id: true, username: true },
           with: {
             emails: {
-              columns: { email: true, key: true },
+              columns: { email: true },
               limit: 1,
             },
           },
@@ -1598,10 +1598,9 @@ export const adminRouter = router({
           });
         }
 
-        const { text, html } = generateResetPasswordEmail(
+        const { text, html } = await generateResetPasswordEmail(
           user.id,
           user.username,
-          emailRecord.key,
         );
 
         await resetPassword(user.id, user.id, emailRecord.email, text, html);

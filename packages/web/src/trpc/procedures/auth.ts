@@ -10,7 +10,7 @@ import {
   resetPassword,
 } from '@/temporal';
 import { login } from '@/util/auth';
-import { createSessionJwt } from '@/util/jwt';
+import { createSessionJwt, parsePasswordResetJwt } from '@/util/jwt';
 import logger from '@/util/logger';
 import { getClientIpAddress } from '@/util/request-ip';
 import { generateResetPasswordEmail } from '@/util/reset-password-email';
@@ -221,7 +221,7 @@ export const authProcedures = {
               columns: { id: true, username: true },
               with: {
                 emails: {
-                  columns: { email: true, key: true },
+                  columns: { email: true },
                   limit: 1,
                 },
               },
@@ -230,7 +230,7 @@ export const authProcedures = {
           const lookupByEmail = () =>
             db.query.AppUserEmail.findFirst({
               where: (t, { eq }) => eq(t.email, input.identifier),
-              columns: { appUserId: true, email: true, key: true },
+              columns: { appUserId: true, email: true },
             }).then(async (emailRecord) => {
               if (!emailRecord) return null;
               const u = await db.query.AppUser.findFirst({
@@ -240,7 +240,7 @@ export const authProcedures = {
               if (!u) return null;
               return {
                 ...u,
-                emails: [{ email: emailRecord.email, key: emailRecord.key }],
+                emails: [{ email: emailRecord.email }],
               };
             });
 
@@ -259,10 +259,9 @@ export const authProcedures = {
             const emailRecord = user.emails[0];
 
             if (emailRecord) {
-              const { text, html } = generateResetPasswordEmail(
+              const { text, html } = await generateResetPasswordEmail(
                 user.id,
                 user.username,
-                emailRecord.key,
               );
 
               await resetPassword(
@@ -327,31 +326,42 @@ export const authProcedures = {
   completeResetPassword: anonProcedure
     .input(
       z.object({
-        userId: z.string(),
-        key: z.string().min(1),
+        token: z.string().min(1),
         password: z.string().min(6).max(1024),
       }),
     )
-    .mutation(async ({ input: { userId, key, password } }) => {
+    .mutation(async ({ input: { token, password } }) => {
       const _clientIp = getClientIpAddress(getRequest().headers);
 
       moduleLogger.info('Complete password reset attempt');
 
       try {
-        // Validate the emailed reset key server-side before doing any expensive
-        // work or touching the account. Without this, an attacker who knows a
-        // victim's user id (exposed in public author/comment responses) could
-        // signal the reset workflow and take over the account without ever
-        // receiving the reset email. The key is the random AppUserEmail.key
-        // value that is only delivered in the reset email.
-        const emailRecord = await db.query.AppUserEmail.findFirst({
-          where: (t, { and, eq }) =>
-            and(eq(t.appUserId, userId), eq(t.key, key)),
-          columns: { email: true },
+        // Authorize the reset from the signed, purpose-scoped token that was only
+        // ever minted in `forgotPassword` and only delivered in the reset email.
+        // This must NOT accept the raw AppUserEmail.key: that value is also
+        // embedded in the email-verification link, so accepting it here would let
+        // anyone who saw a victim's verification link take over the account. The
+        // token is signature-verified, expires in 15 minutes, and its `purpose`
+        // literal rejects tokens minted for any other flow (session, verification).
+        const claims = await parsePasswordResetJwt(token);
+
+        if (!claims) {
+          moduleLogger.warn('Password reset failed - invalid or expired token');
+          return {
+            error: 'Invalid or expired password reset link.',
+          };
+        }
+
+        const userId = claims.sub;
+
+        // Confirm the user still exists before signaling the reset workflow.
+        const user = await db.query.AppUser.findFirst({
+          where: (t, { eq }) => eq(t.id, userId),
+          columns: { id: true },
         });
 
-        if (!emailRecord) {
-          moduleLogger.warn('Password reset failed - invalid reset key');
+        if (!user) {
+          moduleLogger.warn('Password reset failed - user not found');
           return {
             error: 'Invalid or expired password reset link.',
           };

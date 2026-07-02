@@ -61,3 +61,19 @@ export const { create: createSessionJwt, parse: parseSessionJwt } = jwtFactory(
   sessionJwtSchema,
   `${SESSION_EXPIRATION_SECONDS}s`,
 );
+
+// Password-reset links carry a signed, single-purpose, short-lived token instead
+// of a long-lived database secret. The `purpose` literal keeps a token minted for
+// one flow (e.g. email verification or a session) from being replayed against the
+// reset endpoint: `parsePasswordResetJwt` only accepts payloads that carry
+// exactly this purpose. The 15m expiry matches the resetPasswordWorkflow signal
+// window and the "expires in 15 minutes" copy in the reset email.
+const passwordResetJwtSchema = z.object({
+  sub: z.uuid(),
+  purpose: z.literal('password-reset'),
+});
+
+export const PASSWORD_RESET_EXPIRATION = '15m';
+
+export const { create: createPasswordResetJwt, parse: parsePasswordResetJwt } =
+  jwtFactory(passwordResetJwtSchema, PASSWORD_RESET_EXPIRATION);

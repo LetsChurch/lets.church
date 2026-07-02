@@ -6,11 +6,9 @@ import { useState } from 'react';
 import { z } from 'zod';
 import { useAppMantineForm } from '@/components/mantine';
 import { useTRPC } from '@/trpc/react';
-import { uuidTranslator } from '@/util/uuid';
 
 const resetPasswordSearchSchema = z.object({
-  userId: z.string(),
-  key: z.string(),
+  token: z.string(),
 });
 
 export const Route = createFileRoute('/auth_/reset-password')({
@@ -34,7 +32,7 @@ export const Route = createFileRoute('/auth_/reset-password')({
 });
 
 function ResetPasswordRoute() {
-  const { userId, key } = Route.useSearch();
+  const { token } = Route.useSearch();
   const [error, setError] = useState<string | false>(false);
   const [success, setSuccess] = useState(false);
   const trpc = useTRPC();
@@ -75,11 +73,8 @@ function ResetPasswordRoute() {
         }),
     },
     onSubmit: async ({ value }) => {
-      const fullUserId = uuidTranslator.toUUID(userId);
-      const fullKey = uuidTranslator.toUUID(key);
       resetPasswordMutation.mutate({
-        userId: fullUserId,
-        key: fullKey,
+        token,
         password: value.password,
       });
     },

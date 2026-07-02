@@ -1,18 +1,23 @@
 import { emailHtml, sanitizeForHtml } from '@letschurch/temporal/util/email';
 import { stripIndent } from 'proper-tags';
 import { z } from 'zod';
-import { uuidTranslator } from './uuid';
+import { createPasswordResetJwt } from './jwt';
 
 const { WEB_URL } = z.object({ WEB_URL: z.string() }).parse(process.env);
 
-export function generateResetPasswordEmail(
+export async function generateResetPasswordEmail(
   userId: string,
   username: string,
-  emailKey: string,
 ) {
+  // The link carries a signed, purpose-scoped, 15-minute token — never the raw
+  // AppUserEmail.key. This keeps the reset credential out of any other flow's
+  // URL (e.g. the email-verification link) so it can't be leaked and replayed.
+  const token = await createPasswordResetJwt({
+    sub: userId,
+    purpose: 'password-reset',
+  });
   const resetUrl = `${WEB_URL}/auth/reset-password?${new URLSearchParams({
-    userId: uuidTranslator.fromUUID(userId),
-    key: uuidTranslator.fromUUID(emailKey),
+    token,
   })}`;
 
   const text = stripIndent`
