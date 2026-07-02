@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { bibleVerse, db } from '@/db';
 import { findBook } from '@/lib/canon';
+import { TOPICS } from '@/lib/topics';
 import { epochDay, VOTD_REFS, votdRefForDay } from '@/lib/votd';
 import { parseCookies } from '@/server/oidc';
 import { resolveTranslation } from '@/server/translation';
@@ -89,12 +90,33 @@ const SUGGESTIONS = [
   { icon: '↺', label: 'Psalm 23', meta: 'recent' },
 ];
 
-const CHIPS = [
-  'the steadfast love of the Lord',
-  'John 3:16',
-  'fruit of the Spirit',
-  'do not be anxious',
-];
+// The pool of example searches shown as the tappable chips under the search box
+// — we rotate a random handful each load (see `sample`) so the homepage feels
+// fresh and hints at the breadth of what search handles. Built ENTIRELY from our
+// hand-curated data so every chip is readily answerable and topics are only ever
+// ones we've curated:
+//   • topic searches — each curated topic's tuned `query` (TOPICS), which is
+//     written to surface good verses via the normal full-text search;
+//   • reference chips — the curated verse-of-the-day list (VOTD_REFS), known
+//     references that resolve in the corpus, formatted "Book C:V".
+// (~100+ options between the two; deduped.)
+const CHIP_POOL: readonly string[] = Array.from(
+  new Set<string>([...TOPICS.map((t) => t.query), ...VOTD_REFS.map(refLabel)]),
+);
+
+const CHIP_COUNT = 4;
+
+// Random sample of `n` distinct items (Fisher–Yates, no dependency). Server-side
+// tRPC, so `Math.random` is fine; the homepage query is fetched once per load,
+// so the chosen chips stay stable through SSR + hydration for that page view.
+function sample<T>(pool: readonly T[], n: number): T[] {
+  const copy = [...pool];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy.slice(0, n);
+}
 
 export const homeProcedures = {
   verseOfTheDay: publicProcedure.query(async ({ ctx }) => {
@@ -126,7 +148,8 @@ export const homeProcedures = {
         : SUGGESTIONS;
       return {
         suggestions: (filtered.length ? filtered : SUGGESTIONS).slice(0, 5),
-        chips: CHIPS,
+        // A fresh random handful of example searches each load.
+        chips: sample(CHIP_POOL, CHIP_COUNT),
       };
     }),
 };

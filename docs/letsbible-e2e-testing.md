@@ -582,7 +582,7 @@ seam — bar bottom corners square, menu top corners square + bottom rounded.
 
 | ID | Steps | Expected |
 | --- | --- | --- |
-| LB-AC-01 | Focus the box (empty) | Dropdown shows recent chapters (if any) + example chips; footer "Press Enter to search everything…". |
+| LB-AC-01 | Focus the box (empty) | Dropdown shows recent chapters (if any) + example chips; footer "Press Enter to search everything…". The chips are a **random handful (4)** that **rotates each page load** (`home.ts` `searchSuggestions`), drawn entirely from **curated, readily-answerable** sources — the curated `TOPICS` taxonomy's tuned queries + the curated verse-of-the-day references (`VOTD_REFS`, formatted "Book C:V"). No hand-invented/uncurated topics; every chip returns real results. |
 | LB-AC-02 [E2E: search] | Type `john 3` | The **book-jump widget** appears (LB-AC-20) plus the catch-all **Search "john 3"** (`↵`). Verse text rows are suppressed while the widget is shown. |
 | LB-AC-03 | Type `galat` | The book-jump widget resolves to **Galatians** + the catch-all. |
 | LB-AC-04 | Type `psalm 23` | Book-jump widget = **Psalms**, chapter 23 selected (verse grid) + catch-all. |
@@ -645,7 +645,7 @@ the stage and clicking fills the input or navigates.
 
 | ID | Preconditions | Steps | Expected |
 | --- | --- | --- | --- |
-| LB-HOME-01 | Anonymous | Open `/` | Signed-out hero: wordmark **directly above** the search box (no subtitle paragraph between them), chips, "Verse of the day", **only a "Sign in"** action in the header (no About link — About is in the footer), footer "lets.church" → web host. |
+| LB-HOME-01 | Anonymous | Open `/` | Signed-out hero: wordmark **directly above** the search box (no subtitle paragraph between them), chips (a rotating random set — LB-AC-01), "Verse of the day", **only a "Sign in"** action in the header (no About link — About is in the footer), footer **"Powered by lets.church · About"** (a single centered line; the "Powered by lets.church" link → web host). |
 | LB-HOME-02 | Signed in | Open `/` | Returning view: "Good morning/afternoon/evening, admin." greeting; avatar menu; search; cards. |
 | LB-HOME-03 [E2E: home] | — | Verse of the day | Shows a **real verse** from a curated list (`src/lib/votd.ts`), text pulled from the DB (`bible_verse`) — not a hardcoded string. The reference (e.g. "Psalm 19:14") is a link into the reader at that passage (`/bible/psalm/19?v=14`), and the translation tag matches the resolved translation. |
 | LB-HOME-03a | — | Same day, reload | The verse is **stable across the day** (keyed by UTC day) and identical in SSR + client (no hydration mismatch). |
