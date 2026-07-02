@@ -199,7 +199,7 @@ export const commonProcedures = {
           moduleLogger.info(
             {
               context: {
-                token,
+                invitationId: orgInvitation.id,
                 status: orgInvitation.status,
               },
             },
@@ -216,7 +216,7 @@ export const commonProcedures = {
           moduleLogger.info(
             {
               context: {
-                token,
+                invitationId: orgInvitation.id,
                 expiresAt: orgInvitation.expiresAt,
               },
             },
@@ -276,7 +276,7 @@ export const commonProcedures = {
         moduleLogger.info(
           {
             context: {
-              token,
+              invitationId: channelInvitation.id,
               status: channelInvitation.status,
             },
           },
@@ -290,7 +290,7 @@ export const commonProcedures = {
         moduleLogger.info(
           {
             context: {
-              token,
+              invitationId: channelInvitation.id,
               expiresAt: channelInvitation.expiresAt,
             },
           },
@@ -491,7 +491,7 @@ export const commonProcedures = {
       moduleLogger.info(
         {
           context: {
-            token,
+            // The raw token is a bearer credential — never log it.
             accept,
             hasSession: Boolean(ctx.session),
           },
@@ -666,7 +666,7 @@ export const commonProcedures = {
       moduleLogger.info(
         {
           context: {
-            token,
+            // The raw token is a bearer credential — never log it.
             accept,
             hasSession: Boolean(ctx.session),
           },
