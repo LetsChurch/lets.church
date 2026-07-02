@@ -336,6 +336,7 @@ export const organizationRouter = router({
           })
         : null;
 
+      // Member email addresses are admin-only; ordinary members can call this too.
       const membershipsWithAvatarUrl = sortedMemberships.map((membership) => {
         const { avatarPath: userAvatarPath, ...userWithoutPath } =
           membership.appUser;
@@ -349,6 +350,7 @@ export const organizationRouter = router({
           ...membership,
           appUser: {
             ...userWithoutPath,
+            emails: ctx.canAdmin ? userWithoutPath.emails : [],
             avatarUrl: userAvatarUrl,
           },
         };

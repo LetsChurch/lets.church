@@ -635,8 +635,19 @@ export const channelRouter = router({
         })
       : null;
 
+    // Member email addresses are admin-only. Ordinary members (canUpload/
+    // canDownload-only) can call this endpoint too, so strip co-members' emails
+    // unless the caller is a channel/site admin (parity with getChannelMembers).
+    const memberships = ctx.canAdmin
+      ? channelWithoutPath.memberships
+      : channelWithoutPath.memberships.map((m) => ({
+          ...m,
+          appUser: { ...m.appUser, emails: [] },
+        }));
+
     return {
       ...channelWithoutPath,
+      memberships,
       _count: {
         uploadRecords: uploadRecordCount,
         subscribers: subscriberCount,

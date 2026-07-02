@@ -414,6 +414,8 @@ export const churchRouter = router({
         })
       : null;
 
+    // Member email addresses are admin-only; ordinary members can call this too.
+    const canSeeMemberEmails = ctx.isSiteAdmin || !!ctx.membership?.isAdmin;
     const membershipsWithAvatarUrl = sortedMemberships.map((membership) => {
       const { avatarPath: userAvatarPath, ...userWithoutPath } =
         membership.appUser;
@@ -427,6 +429,7 @@ export const churchRouter = router({
         ...membership,
         appUser: {
           ...userWithoutPath,
+          emails: canSeeMemberEmails ? userWithoutPath.emails : [],
           avatarUrl: userAvatarUrl,
         },
       };
