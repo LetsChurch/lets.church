@@ -37,6 +37,6 @@ export async function resetPasswordWorkflow(
   if (await condition(() => Boolean(newHash), '15 minutes')) {
     invariant(newHash, 'New password hash is required');
     await updateUser(userId, { password: newHash });
-    await verifyUserEmail(userId);
+    await verifyUserEmail(userId, email);
   }
 }
