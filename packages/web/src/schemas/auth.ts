@@ -18,7 +18,10 @@ export const loginSchema = z.object({
 export const registerSchema = z.object({
   email: z.email('Invalid email address'),
   username: usernameSchema,
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .max(1024, 'Password is too long'),
   fullName: z.string(),
   agreeToTheology: z
     .boolean()
