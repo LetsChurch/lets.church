@@ -3,6 +3,11 @@ import { IncomingIdSchema } from '../common';
 
 export const organizationIdSchema = IncomingIdSchema;
 
+// Restrict URL fields to http(s) so a stored `javascript:`/`data:` URI can't be
+// persisted and later rendered as a clickable link (stored XSS). Mirrors the
+// hardened church schema (schemas/dashboard/church.ts).
+const httpUrl = () => z.url({ protocol: /^https?$/, message: 'Invalid URL' });
+
 export const organizationQuerySchema = z.object({
   orgId: organizationIdSchema,
 });
@@ -62,20 +67,20 @@ export const organizationFormSchema = z.object({
   name: z.string().min(1, 'Organization name is required'),
   slug: z.string().optional(),
   description: z.string().optional(),
-  websiteUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  websiteUrl: httpUrl().optional().or(z.literal('')),
   primaryEmail: z.email('Invalid email').optional().or(z.literal('')),
   primaryPhoneNumber: z.string().optional().or(z.literal('')),
   tags: z.array(z.string()).optional(),
-  facebookUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  instagramUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  xUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  youtubeUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  tiktokUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  linkedinUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  threadsUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  applePodcastsUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  spotifyUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  rssUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  facebookUrl: httpUrl().optional().or(z.literal('')),
+  instagramUrl: httpUrl().optional().or(z.literal('')),
+  xUrl: httpUrl().optional().or(z.literal('')),
+  youtubeUrl: httpUrl().optional().or(z.literal('')),
+  tiktokUrl: httpUrl().optional().or(z.literal('')),
+  linkedinUrl: httpUrl().optional().or(z.literal('')),
+  threadsUrl: httpUrl().optional().or(z.literal('')),
+  applePodcastsUrl: httpUrl().optional().or(z.literal('')),
+  spotifyUrl: httpUrl().optional().or(z.literal('')),
+  rssUrl: httpUrl().optional().or(z.literal('')),
 });
 
 export const createOrganizationSchema = organizationFormSchema;
