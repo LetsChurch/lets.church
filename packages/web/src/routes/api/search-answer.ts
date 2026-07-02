@@ -41,6 +41,11 @@ const bodySchema = z.object({
   // (the media-page "ask about this video" entry point). Scopes retrieval +
   // the relevance probe to that upload's paragraphs. Omitted for library search.
   uploadId: z.string().nullish(),
+  // Facet-only browse: `query` is a synthesized description of the active facet
+  // (e.g. a verse label), not a user question. The facet already establishes
+  // topical relevance, so skip the relevance-floor decline and always give an
+  // overview of the (facet-scoped) sources rather than gating them off.
+  facetOnly: z.boolean().optional(),
   // Filters pre-filled on the search URL when this query loaded (e.g. a channel
   // slug when searching from a channel page). The answer's grounding retrieval
   // is scoped to them so it reflects the same corpus as the results. The client
@@ -426,65 +431,75 @@ export const Route = createFileRoute('/api/search-answer')({
           //           rather than pivoting to unrelated material.
           let mode: 'answer' | 'overview' | 'decline' = 'answer';
 
-          // 1. Absolute kNN cosine floor (cheap, no LLM): if nothing in the
-          //    library is even semantically close, decline outright — there's
-          //    nothing worth overviewing.
-          if (queryVector) {
-            try {
-              const score = await runMediaKnnProbe({
-                queryVector,
-                uploadIds: internalUploadId ? [internalUploadId] : undefined,
-              });
-              const cosine = score == null ? null : 2 * score - 1;
-              moduleLogger.info(
-                { context: { query: parsed.query, score, cosine } },
-                'Answer relevance probe',
-              );
-              if (cosine != null && cosine < RELEVANCE_COSINE_FLOOR) {
-                mode = 'decline';
-              }
-            } catch (err) {
-              // Probe failure shouldn't downgrade a possibly-good answer.
-              moduleLogger.warn(
-                {
-                  context: {
-                    error: err instanceof Error ? err.message : String(err),
-                  },
-                },
-                'Relevance probe failed; skipping cosine gate',
-              );
-            }
-          }
-
-          // 2. Cheap nano classifier: answer vs overview vs decline. Only the
-          //    nano gate can tell "on-topic but no direct answer" (overview)
-          //    from "retrieval missed / off-topic" (decline) — the latter is
-          //    what produces awkward "we don't cover that, but here's unrelated
-          //    material" pivots, so it declines instead.
-          if (mode !== 'decline') {
-            mode = await classifyAnswerMode(framingQuestion, sourcesBlock);
-          }
-
-          if (mode === 'decline') {
-            moduleLogger.info(
-              { context: { query: parsed.query, reason: 'gate' } },
-              'Answer gated off',
-            );
-            return declineResponse();
-          }
-
-          // Intent override. The gate still owns the decline decision above
-          // (off-topic / retrieval miss); these only adjust answer↔overview:
-          // - A real question should always ATTEMPT a direct answer. "On-topic
-          //   but indirect" must not downgrade a question to a passive overview
-          //   of related material (e.g. answering "who is X" with a summary of
-          //   X's book) — answer it directly from what's on point instead.
-          // - A browse/topic query (no question) reads as a grounded overview of
-          //   what the matches cover, never a definitive "answer".
-          if (isAnswerWorthy && mode === 'overview') {
-            mode = 'answer';
-          } else if (!isAnswerWorthy && mode === 'answer') {
+          // Facet-only browse: the user filtered to an explicit facet (e.g. a
+          // verse), so the retrieved sources are on-topic by construction. Force
+          // an overview and skip the relevance-floor + nano gates entirely — the
+          // synthesized `query` (a verse label) would otherwise often fall below
+          // the cosine floor and be gated off even though the facet clearly
+          // matched real media. (`sources.length === 0` already declined above.)
+          if (parsed.facetOnly) {
             mode = 'overview';
+          } else {
+            // 1. Absolute kNN cosine floor (cheap, no LLM): if nothing in the
+            //    library is even semantically close, decline outright — there's
+            //    nothing worth overviewing.
+            if (queryVector) {
+              try {
+                const score = await runMediaKnnProbe({
+                  queryVector,
+                  uploadIds: internalUploadId ? [internalUploadId] : undefined,
+                });
+                const cosine = score == null ? null : 2 * score - 1;
+                moduleLogger.info(
+                  { context: { query: parsed.query, score, cosine } },
+                  'Answer relevance probe',
+                );
+                if (cosine != null && cosine < RELEVANCE_COSINE_FLOOR) {
+                  mode = 'decline';
+                }
+              } catch (err) {
+                // Probe failure shouldn't downgrade a possibly-good answer.
+                moduleLogger.warn(
+                  {
+                    context: {
+                      error: err instanceof Error ? err.message : String(err),
+                    },
+                  },
+                  'Relevance probe failed; skipping cosine gate',
+                );
+              }
+            }
+
+            // 2. Cheap nano classifier: answer vs overview vs decline. Only the
+            //    nano gate can tell "on-topic but no direct answer" (overview)
+            //    from "retrieval missed / off-topic" (decline) — the latter is
+            //    what produces awkward "we don't cover that, but here's unrelated
+            //    material" pivots, so it declines instead.
+            if (mode !== 'decline') {
+              mode = await classifyAnswerMode(framingQuestion, sourcesBlock);
+            }
+
+            if (mode === 'decline') {
+              moduleLogger.info(
+                { context: { query: parsed.query, reason: 'gate' } },
+                'Answer gated off',
+              );
+              return declineResponse();
+            }
+
+            // Intent override. The gate still owns the decline decision above
+            // (off-topic / retrieval miss); these only adjust answer↔overview:
+            // - A real question should always ATTEMPT a direct answer. "On-topic
+            //   but indirect" must not downgrade a question to a passive overview
+            //   of related material (e.g. answering "who is X" with a summary of
+            //   X's book) — answer it directly from what's on point instead.
+            // - A browse/topic query (no question) reads as a grounded overview
+            //   of what the matches cover, never a definitive "answer".
+            if (isAnswerWorthy && mode === 'overview') {
+              mode = 'answer';
+            } else if (!isAnswerWorthy && mode === 'answer') {
+              mode = 'overview';
+            }
           }
 
           if (mode === 'overview') {

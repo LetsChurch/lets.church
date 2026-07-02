@@ -10,7 +10,7 @@
 
 import { useSyncExternalStore } from 'react';
 
-export type StudyTab = 'verse' | 'commentaries';
+export type StudyTab = 'verse' | 'commentaries' | 'media';
 
 let activeTab: StudyTab = 'verse';
 let commentaryWorkId: string | null = null;

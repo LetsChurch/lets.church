@@ -7,6 +7,7 @@ import {
   msearchChannels,
   osMsearch,
   runMediaFacets,
+  runMediaFilterSearch,
   runMediaHybridSearch,
   runMediaKnnProbe,
   suggestMediaPalette,
@@ -27,6 +28,7 @@ import logger from '@/util/logger';
 import { isChannelRoutable } from '@/util/media-visibility';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
+import { getVerseParagraphsByUpload } from '@/util/verse-paragraphs';
 import { hydrateUploads } from '../search/hydrate';
 import { extractQuotedPhrases, parseSearchQuery } from '../search/parse-query';
 import {
@@ -67,7 +69,9 @@ const isoDateString = z
   });
 
 const hybridSearchSchema = z.object({
-  q: z.string().min(1),
+  // Empty is allowed: a facet-only browse (e.g. a `/search?bibleRefs=[...]`
+  // link with no free text) runs a filter-only query instead of a hybrid one.
+  q: z.string().default(''),
   channelIds: z.array(IncomingIdSchema).optional().nullable(),
   channelSlugs: z.array(z.string()).optional().nullable(),
   // Verbatim phrases (from the parser's `quotes`) to boost as phrase matches.
@@ -347,6 +351,99 @@ export const searchProcedures = {
           : sort === 'date-desc'
             ? [{ publishedAt: 'desc' }]
             : undefined;
+
+      // ── Facet-only browse ──────────────────────────────────────────────────
+      // No free-text query, but at least one filter is set (e.g. the study
+      // panel's "Search this verse on lets.church" link → `?bibleRefs=[...]`).
+      // Run a plain filtered query — no embedding, RRF, relevance gate, or
+      // channel carousel — so the facet actually applies. Newest-first by
+      // default (relevance is undefined without a query); the UI date sort still
+      // wins. Facets are computed over the filtered set so the sidebar works.
+      if (q.trim().length === 0) {
+        const hasFilter = Boolean(
+          channelIds ||
+            bibleRefs ||
+            bibleBooks ||
+            speakers ||
+            (publishedAt && (publishedAt.gte || publishedAt.lte)),
+        );
+        if (!hasFilter) {
+          // Nothing to search on (the UI shows trending here); guard defensively.
+          return {
+            items: [],
+            mediaCount: 0,
+            channels: [],
+            facetedChannels: [],
+            facetedSpeakers: [],
+            facetedVerses: [],
+            facetedYears: [],
+            nextCursor: null,
+            searchLogId: null,
+          };
+        }
+
+        const [filtered, facets] = await Promise.all([
+          runMediaFilterSearch({
+            channelIds,
+            publishedAt,
+            bibleRefs,
+            bibleBooks,
+            speakers,
+            from: cursor,
+            size: limit,
+            sort: hybridSort ?? [{ publishedAt: 'desc' }],
+          }),
+          cursor === 0
+            ? runMediaFacets({
+                lexicalText: '',
+                channelIds,
+                publishedAt,
+                bibleRefs,
+                bibleBooks,
+                speakers,
+                // Unused for a filter-only facet body; satisfies the arg type.
+                queryVector: [],
+              }).catch(() => null)
+            : Promise.resolve(null),
+        ]);
+
+        const uploadIds = filtered.hits.map((h) => h._id);
+        // For a verse facet, surface the transcript paragraphs that actually
+        // cite the verse (the "why this matched" grounding — OpenSearch can't
+        // produce these since `bibleRefs` is a doc-level rollup).
+        const segmentsByUploadId = bibleRefs
+          ? await getVerseParagraphsByUpload(uploadIds, bibleRefs)
+          : undefined;
+        const [items, facetedChannels] = await Promise.all([
+          hydrateUploads(uploadIds, segmentsByUploadId),
+          hydrateChannelsForDisplay((facets?.channels ?? []).map((b) => b.key)),
+        ]);
+
+        const nextCursor = items.length === limit ? cursor + limit : null;
+
+        return {
+          items,
+          mediaCount: filtered.total,
+          // No query text → no channel-name carousel.
+          channels: [],
+          facetedChannels,
+          facetedSpeakers: (facets?.speakers ?? []).map((b) => ({
+            name: b.key,
+            count: b.doc_count,
+          })),
+          facetedVerses: (facets?.verses ?? []).map((b) => ({
+            ref: b.key,
+            label: formatVerseRef(b.key),
+            count: b.doc_count,
+          })),
+          facetedYears: (facets?.years ?? []).map((b) => ({
+            year: b.year,
+            count: b.doc_count,
+          })),
+          nextCursor,
+          searchLogId: null,
+        };
+      }
 
       // Embed the query once with the model the index was built with. The
       // structured LLM parse + related-search generation are NOT on this path —

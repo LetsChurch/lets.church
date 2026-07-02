@@ -34,6 +34,7 @@ import {
   useRecentSearches,
 } from '@/hooks/use-recent-searches';
 import { useTRPC } from '@/trpc/react';
+import { bibleBookName, formatVerseRef } from '@/util/bible-url';
 import { formatTime } from '@/util/format';
 import { joinAdjacentMarks } from '@/util/highlight';
 
@@ -99,10 +100,20 @@ export const Route = createFileRoute('/_main/search')({
     skipLogging: search.skipLogging,
   }),
   loader: async ({ context, deps }) => {
-    if (deps.q) {
+    // Run the search when there's a query OR any facet (a facet-only browse,
+    // e.g. a `?bibleRefs=[...]` link with no `q`, still returns results).
+    const hasFacets =
+      (deps.channelSlugs?.length ?? 0) > 0 ||
+      (deps.bibleRefs?.length ?? 0) > 0 ||
+      (deps.bibleBooks?.length ?? 0) > 0 ||
+      (deps.speakers?.length ?? 0) > 0 ||
+      (deps.dateRange != null && deps.dateRange !== 'all-time') ||
+      deps.dateStart != null ||
+      deps.dateEnd != null;
+    if (deps.q || hasFacets) {
       const searchOptions =
         context.trpc.search.hybridSearch.infiniteQueryOptions({
-          q: deps.q,
+          q: deps.q ?? '',
           channelSlugs: deps.channelSlugs,
           bibleRefs: deps.bibleRefs,
           bibleBooks: deps.bibleBooks,
@@ -253,7 +264,18 @@ export const Route = createFileRoute('/_main/search')({
 });
 
 function RouteComponent() {
-  const { q } = Route.useSearch();
+  const search = Route.useSearch();
+  const { q } = search;
+  // A facet-only browse (e.g. a `?bibleRefs=[...]` link with no free text) shows
+  // results too, not the empty/trending state.
+  const hasFacets =
+    (search.channelSlugs?.length ?? 0) > 0 ||
+    (search.bibleRefs?.length ?? 0) > 0 ||
+    (search.bibleBooks?.length ?? 0) > 0 ||
+    (search.speakers?.length ?? 0) > 0 ||
+    (search.dateRange != null && search.dateRange !== 'all-time') ||
+    search.dateStart != null ||
+    search.dateEnd != null;
 
   return (
     <MainLayout
@@ -265,7 +287,7 @@ function RouteComponent() {
         </div>
       }
     >
-      {q ? <SearchResults q={q} /> : <NoSearch />}
+      {q || hasFacets ? <SearchResults q={q ?? ''} /> : <NoSearch />}
     </MainLayout>
   );
 }
@@ -321,6 +343,32 @@ function SearchResults({ q }: { q: string }) {
   } = Route.useSearch();
   const trpc = useTRPC();
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  // A facet-only browse (empty `q`, at least one filter) still shows results and
+  // facets — but skips the query-only affordances (AI answer, related searches).
+  const hasFacets =
+    (channelSlugs?.length ?? 0) > 0 ||
+    (bibleRefs?.length ?? 0) > 0 ||
+    (bibleBooks?.length ?? 0) > 0 ||
+    (speakers?.length ?? 0) > 0 ||
+    (dateRange != null && dateRange !== 'all-time') ||
+    dateStart != null ||
+    dateEnd != null;
+
+  // Query the AI overview + related-searches on. With free text it's the query
+  // itself; for a facet-only browse we synthesize a human description of the
+  // active facets (e.g. "Matthew 10:8", a speaker, a book) so the overview still
+  // renders — grounded in the same facet-filtered media (the answer's retrieval
+  // is scoped by `filters` below). Empty → no overview (e.g. a bare date facet).
+  const answerQuery =
+    q.trim().length > 0
+      ? q
+      : [
+          ...(bibleRefs ?? []).map(formatVerseRef),
+          ...(bibleBooks ?? []).map(bibleBookName),
+          ...(speakers ?? []),
+        ]
+          .join(', ')
+          .trim();
 
   const {
     data: searchData,
@@ -393,7 +441,7 @@ function SearchResults({ q }: { q: string }) {
   // answer panel a previous query's question.
   const { data: meta } = useQuery({
     ...trpc.search.searchMeta.queryOptions({
-      q,
+      q: answerQuery,
       searchLogId,
       // Ground the parser's channel suggestion in the channels that actually
       // matched (the facet set), so it only ever suggests a real, useful filter.
@@ -405,7 +453,9 @@ function SearchResults({ q }: { q: string }) {
       // matched, so a parsed name only ever suggests a real, filterable facet.
       facetSpeakers: facetedSpeakers.map((s) => s.name),
     }),
-    enabled: firstPage != null,
+    // Needs a query to parse/relate — the free-text one, or the synthesized
+    // facet description for a facet-only browse. Skip only when neither exists.
+    enabled: firstPage != null && answerQuery.length > 0,
     // Keep the previous parse/related on screen across FILTER changes (same q,
     // new log id) so the sidebar doesn't flash — but NOT across a new query, or
     // the previous query's parse/recommendations would leak into the new one.
@@ -413,7 +463,7 @@ function SearchResults({ q }: { q: string }) {
       const prevQ = (
         prevQuery?.queryKey?.[1] as { input?: { q?: string } } | undefined
       )?.input?.q;
-      return prevQ === q ? prev : undefined;
+      return prevQ === answerQuery ? prev : undefined;
     },
   });
   // Meta is "loading" once retrieval is in (so it's enabled) but hasn't returned
@@ -550,7 +600,7 @@ function SearchResults({ q }: { q: string }) {
       return [];
     }) ?? [];
 
-  if (!q) {
+  if (!q && !hasFacets) {
     return <NoSearch />;
   }
 
@@ -583,24 +633,35 @@ function SearchResults({ q }: { q: string }) {
               fetch until THIS query's page 0 has settled (not a kept-previous
               placeholder), so it answers — and logs to — the current query, not
               the last one. Keyed by q to stream fresh per query. */}
-          <AnswerPanel
-            key={q}
-            q={q}
-            searchLogId={searchLogId}
-            ready={firstPage != null && !loadingResults}
-            // Scope the answer to whatever filters were pre-filled on the URL
-            // (e.g. a channel slug when searching from a channel page). Captured
-            // once when the query loads — changing a filter won't regenerate it.
-            filters={{
-              channelSlugs,
-              speakers,
-              bibleRefs,
-              bibleBooks,
-              dateRange,
-              dateStart,
-              dateEnd,
-            }}
-          />
+          {/* The AI card: a direct answer for a free-text query, or a grounded
+              overview of the facet-matched media for a facet-only browse (the
+              synthesized `answerQuery` describes the active facets; retrieval is
+              scoped by `filters` below). Omitted only when neither exists. */}
+          {answerQuery.length > 0 ? (
+            <AnswerPanel
+              key={answerQuery}
+              q={answerQuery}
+              searchLogId={searchLogId}
+              // Facet-only browse (no free text): the query is synthesized from
+              // the facet, so let the server produce an overview rather than
+              // gating it off as an off-topic phrase.
+              facetOnly={q.trim().length === 0}
+              ready={firstPage != null && !loadingResults}
+              // Scope the answer to whatever filters were pre-filled on the URL
+              // (e.g. a channel slug when searching from a channel page).
+              // Captured once when the query loads — changing a filter won't
+              // regenerate it.
+              filters={{
+                channelSlugs,
+                speakers,
+                bibleRefs,
+                bibleBooks,
+                dateRange,
+                dateStart,
+                dateEnd,
+              }}
+            />
+          ) : null}
 
           {mediaCount > 0 ? (
             <p className="text-muted text-sm">

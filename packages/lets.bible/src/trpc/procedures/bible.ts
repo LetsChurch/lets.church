@@ -14,6 +14,7 @@ import {
   db,
 } from '@/db';
 import { bookBySlug } from '@/lib/canon';
+import { osisBookId } from '@/lib/osis';
 import { parseReference } from '@/lib/reference';
 import { relatedVerses, searchVerses } from '@/search/search';
 import {
@@ -27,6 +28,40 @@ import { publicProcedure } from '../trpc';
 function usfmOf(book: string): string {
   return bookBySlug(book)?.code ?? book.toUpperCase();
 }
+
+// web's internal media-for-verse endpoint (server-to-server, shared secret).
+// WEB_INTERNAL_URL is the back-channel origin (dev http://web:3000, prod the
+// public web origin); it falls back to the OIDC back-channel URL, which is the
+// same host. Both must be set for the Media tab to return anything — when
+// unset the procedure degrades to "no media" rather than erroring.
+const WEB_INTERNAL_URL = (
+  process.env.WEB_INTERNAL_URL ??
+  process.env.OIDC_INTERNAL_URL ??
+  ''
+).replace(/\/+$/, '');
+const INTERNAL_API_TOKEN = process.env.INTERNAL_API_TOKEN ?? '';
+
+// Shape returned by web's /api/internal/media-for-verse. Parsed defensively so a
+// change on the web side degrades to "no media" instead of throwing.
+const mediaForVerseSchema = z.object({
+  items: z.array(
+    z.object({
+      id: z.string(),
+      title: z.string().nullable(),
+      channelName: z.string().nullable(),
+      channelSlug: z.string().nullable(),
+      thumbnailUrl: z.string().nullable(),
+      lengthSeconds: z.number().nullable(),
+      publishedAt: z.string(),
+      viewCount: z.number(),
+      seconds: z.number().nullable(),
+      url: z.string(),
+    }),
+  ),
+  searchUrl: z.string().nullable(),
+});
+
+export type RelatedMedia = z.infer<typeof mediaForVerseSchema>;
 
 // Outgoing cross-references for a verse, with the target verse text, deduped and
 // resolved to display labels + reader links. `toBook` is stored as a canon slug.
@@ -802,5 +837,52 @@ export const bibleProcedures = {
             eq(bibleCrossReference.fromVerse, input.verse),
           ),
         );
+    }),
+
+  // Media from the lets.church catalog that teaches this verse, for the study
+  // panel's "Media" tab. lets.bible can't read web's Postgres (view counts,
+  // thumbnails, annotation timestamps), so it proxies to web's internal
+  // endpoint server-to-server. The reader passes a book slug; we translate it
+  // to the OSIS id the endpoint (and the `bibleRefs` facet) speak.
+  relatedMedia: publicProcedure
+    .input(
+      z.object({
+        book: z.string(),
+        chapter: z.number().int().positive(),
+        verse: z.number().int().positive(),
+        limit: z.number().int().min(1).max(12).optional(),
+      }),
+    )
+    .query(async ({ input }): Promise<RelatedMedia> => {
+      const empty: RelatedMedia = { items: [], searchUrl: null };
+      const osis = osisBookId(usfmOf(input.book));
+      if (!osis || !WEB_INTERNAL_URL || !INTERNAL_API_TOKEN) {
+        return empty;
+      }
+      try {
+        const res = await fetch(
+          `${WEB_INTERNAL_URL}/api/internal/media-for-verse`,
+          {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              authorization: `Bearer ${INTERNAL_API_TOKEN}`,
+            },
+            body: JSON.stringify({
+              book: osis,
+              chapter: input.chapter,
+              verse: input.verse,
+              ...(input.limit ? { limit: input.limit } : {}),
+            }),
+          },
+        );
+        if (!res.ok) {
+          return empty;
+        }
+        return mediaForVerseSchema.parse(await res.json());
+      } catch {
+        // Network error / bad payload → degrade to "no media".
+        return empty;
+      }
     }),
 };

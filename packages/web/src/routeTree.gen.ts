@@ -87,6 +87,7 @@ import { Route as DashboardAccountProfileRouteImport } from './routes/dashboard_
 import { Route as DashboardAccountNewsletterRouteImport } from './routes/dashboard_/account_.newsletter'
 import { Route as ChannelSlugRssDotxmlRouteImport } from './routes/channel.$slug.rss[.]xml'
 import { Route as ChannelSlugPodcastDotxmlRouteImport } from './routes/channel.$slug.podcast[.]xml'
+import { Route as ApiInternalMediaForVerseRouteImport } from './routes/api/internal/media-for-verse'
 import { Route as MainSeriesSeriesIdRouteImport } from './routes/_main/series.$seriesId'
 import { Route as MainPlaylistPlaylistIdRouteImport } from './routes/_main/playlist.$playlistId'
 import { Route as MainMediaMediaIdRouteImport } from './routes/_main/media/$mediaId'
@@ -528,6 +529,12 @@ const ChannelSlugPodcastDotxmlRoute =
     path: '/channel/$slug/podcast.xml',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiInternalMediaForVerseRoute =
+  ApiInternalMediaForVerseRouteImport.update({
+    id: '/api/internal/media-for-verse',
+    path: '/api/internal/media-for-verse',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const MainSeriesSeriesIdRoute = MainSeriesSeriesIdRouteImport.update({
   id: '/series/$seriesId',
   path: '/series/$seriesId',
@@ -730,6 +737,7 @@ export interface FileRoutesByFullPath {
   '/media/$mediaId': typeof MainMediaMediaIdRoute
   '/playlist/$playlistId': typeof MainPlaylistPlaylistIdRoute
   '/series/$seriesId': typeof MainSeriesSeriesIdRoute
+  '/api/internal/media-for-verse': typeof ApiInternalMediaForVerseRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
   '/dashboard/account/newsletter': typeof DashboardAccountNewsletterRoute
@@ -834,6 +842,7 @@ export interface FileRoutesByTo {
   '/media/$mediaId': typeof MainMediaMediaIdRoute
   '/playlist/$playlistId': typeof MainPlaylistPlaylistIdRoute
   '/series/$seriesId': typeof MainSeriesSeriesIdRoute
+  '/api/internal/media-for-verse': typeof ApiInternalMediaForVerseRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
   '/dashboard/account/newsletter': typeof DashboardAccountNewsletterRoute
@@ -942,6 +951,7 @@ export interface FileRoutesById {
   '/_main/media/$mediaId': typeof MainMediaMediaIdRoute
   '/_main/playlist/$playlistId': typeof MainPlaylistPlaylistIdRoute
   '/_main/series/$seriesId': typeof MainSeriesSeriesIdRoute
+  '/api/internal/media-for-verse': typeof ApiInternalMediaForVerseRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
   '/dashboard_/account_/newsletter': typeof DashboardAccountNewsletterRoute
@@ -1050,6 +1060,7 @@ export interface FileRouteTypes {
     | '/media/$mediaId'
     | '/playlist/$playlistId'
     | '/series/$seriesId'
+    | '/api/internal/media-for-verse'
     | '/channel/$slug/podcast.xml'
     | '/channel/$slug/rss.xml'
     | '/dashboard/account/newsletter'
@@ -1154,6 +1165,7 @@ export interface FileRouteTypes {
     | '/media/$mediaId'
     | '/playlist/$playlistId'
     | '/series/$seriesId'
+    | '/api/internal/media-for-verse'
     | '/channel/$slug/podcast.xml'
     | '/channel/$slug/rss.xml'
     | '/dashboard/account/newsletter'
@@ -1261,6 +1273,7 @@ export interface FileRouteTypes {
     | '/_main/media/$mediaId'
     | '/_main/playlist/$playlistId'
     | '/_main/series/$seriesId'
+    | '/api/internal/media-for-verse'
     | '/channel/$slug/podcast.xml'
     | '/channel/$slug/rss.xml'
     | '/dashboard_/account_/newsletter'
@@ -1335,6 +1348,7 @@ export interface RootRouteChildren {
   OidcTokenRoute: typeof OidcTokenRoute
   OidcUserinfoRoute: typeof OidcUserinfoRoute
   TrpcSplatRoute: typeof TrpcSplatRoute
+  ApiInternalMediaForVerseRoute: typeof ApiInternalMediaForVerseRoute
   ChannelSlugPodcastDotxmlRoute: typeof ChannelSlugPodcastDotxmlRoute
   ChannelSlugRssDotxmlRoute: typeof ChannelSlugRssDotxmlRoute
   EmbedChannelSlugRoute: typeof EmbedChannelSlugRoute
@@ -1891,6 +1905,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChannelSlugPodcastDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/media-for-verse': {
+      id: '/api/internal/media-for-verse'
+      path: '/api/internal/media-for-verse'
+      fullPath: '/api/internal/media-for-verse'
+      preLoaderRoute: typeof ApiInternalMediaForVerseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_main/series/$seriesId': {
       id: '/_main/series/$seriesId'
       path: '/series/$seriesId'
@@ -2311,6 +2332,7 @@ const rootRouteChildren: RootRouteChildren = {
   OidcTokenRoute: OidcTokenRoute,
   OidcUserinfoRoute: OidcUserinfoRoute,
   TrpcSplatRoute: TrpcSplatRoute,
+  ApiInternalMediaForVerseRoute: ApiInternalMediaForVerseRoute,
   ChannelSlugPodcastDotxmlRoute: ChannelSlugPodcastDotxmlRoute,
   ChannelSlugRssDotxmlRoute: ChannelSlugRssDotxmlRoute,
   EmbedChannelSlugRoute: EmbedChannelSlugRoute,

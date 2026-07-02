@@ -139,11 +139,9 @@ export function Footer() {
   const { data: authHost } = useQuery(trpc.common.authHost.queryOptions());
   return (
     <footer className="flex flex-shrink-0 flex-wrap items-center justify-center gap-[18px] p-6 text-[12.5px] text-faint">
-      <span>Ad-free</span>
+      <a href={authHost ?? undefined}>Powered by lets.church</a>
       <Dot />
       <Link to="/about">About</Link>
-      <Dot />
-      <a href={authHost ?? undefined}>lets.church</a>
     </footer>
   );
 }

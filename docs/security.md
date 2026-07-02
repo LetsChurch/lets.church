@@ -87,6 +87,38 @@ files; run `pnpm --filter @letschurch/web test` / `--filter @letschurch/temporal
 
 ---
 
+## Internal service endpoints
+
+`web` exposes one server-to-server endpoint consumed by the sibling **lets.bible**
+app: `POST /api/internal/media-for-verse`
+(`packages/web/src/routes/api/internal/media-for-verse.ts`), which returns media
+that teaches a given Bible verse for lets.bible's study-panel Media tab. It is
+**not** a browser endpoint (no CORS is configured on `web`), and it applies every
+principle above:
+
+- **Auth (a shared secret, not a session):** a `Bearer` token compared with
+  `crypto.timingSafeEqual` (constant-time, length-checked first) against the
+  `INTERNAL_API_TOKEN` env shared by `web` and `letsbible`. Returns `503` when the
+  secret isn't configured and `401` on any mismatch. The token is never logged
+  (principle 5). This is the only cross-service auth primitive; if another internal
+  endpoint is added, reuse this shared-secret bearer check rather than forking it
+  (principle 8) — or graduate both to a signed short-lived JWT.
+- **Authorization (principle 4):** results reuse the canonical media
+  access-control filter (`accessControlFilter` in `@letschurch/opensearch`
+  `media-search.ts`) — PUBLIC visibility + approved channel + finished
+  transcode/transcribe — and `hydrateUploads` re-checks channel visibility from
+  Postgres. Nothing derives visibility from a client-supplied id; the only client
+  inputs are a validated OSIS book + integer chapter/verse.
+- **Input + bounds (principles 1, 6):** the book is allow-listed by shape (OSIS
+  token, no dots), chapter/verse are positive ints, and `limit` is capped
+  (default 6, max 12). The verse token is assembled server-side, so it can't
+  inject into the OpenSearch `terms` filter.
+
+lets.bible's caller (`bible.relatedMedia`) fails closed — a non-2xx, network
+error, or unparseable payload degrades to an empty result, never a thrown error.
+
+---
+
 ## Known limitations
 
 Documented so contributors don't assume coverage that isn't there:

@@ -309,6 +309,9 @@ function VerseView({
           <Tabs.Tab value="commentaries" className={tabClass}>
             Commentaries
           </Tabs.Tab>
+          <Tabs.Tab value="media" className={tabClass}>
+            Media
+          </Tabs.Tab>
           <Tabs.Indicator
             className="absolute bottom-0 h-0.5 rounded-t-sm bg-gold transition-all duration-200"
             style={{
@@ -428,6 +431,18 @@ function VerseView({
           className="min-h-0 flex-1 overflow-y-auto px-5 py-5"
         >
           <CommentariesTab
+            book={book}
+            chapter={chapter}
+            verse={verse}
+            reference={reference}
+          />
+        </Tabs.Panel>
+
+        <Tabs.Panel
+          value="media"
+          className="min-h-0 flex-1 overflow-y-auto px-5 py-5"
+        >
+          <RelatedMediaTab
             book={book}
             chapter={chapter}
             verse={verse}
@@ -738,6 +753,144 @@ function CommentariesTab({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// Format a duration in seconds as M:SS / H:MM:SS (web's util/format formatTime
+// isn't shared with lets.bible).
+function formatDuration(seconds: number | null): string | null {
+  if (seconds == null || !Number.isFinite(seconds) || seconds <= 0) return null;
+  const total = Math.round(seconds);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const mm = h > 0 ? String(m).padStart(2, '0') : String(m);
+  return `${h > 0 ? `${h}:` : ''}${mm}:${String(s).padStart(2, '0')}`;
+}
+
+// Compact view count: 1234 → "1.2K", 1_200_000 → "1.2M".
+function formatViews(n: number): string {
+  if (n >= 1_000_000)
+    return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+  return String(n);
+}
+
+// Media from the lets.church catalog that teaches this verse. Fetched from
+// lets.bible's `bible.relatedMedia` proxy (→ web's internal endpoint), ranked by
+// views + recency, each card deep-linked to the timestamp where the verse is
+// discussed. The "Search this verse" link goes to the full faceted search.
+function RelatedMediaTab({
+  book,
+  chapter,
+  verse,
+  reference,
+}: {
+  book: string;
+  chapter: number;
+  verse: number;
+  reference: string;
+}) {
+  const trpc = useTRPC();
+  const { data, isLoading } = useQuery(
+    trpc.bible.relatedMedia.queryOptions({ book, chapter, verse }),
+  );
+  // The lets.church origin, for the "Powered by" attribution (same source the
+  // site footer uses).
+  const { data: authHost } = useQuery(trpc.common.authHost.queryOptions());
+
+  const searchLink =
+    data?.searchUrl != null ? (
+      <a
+        href={data.searchUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-block font-semibold text-[12px] text-gold hover:underline"
+      >
+        Search {reference} on lets.church →
+      </a>
+    ) : null;
+
+  // Attribution: this catalog is lets.church's, surfaced here.
+  const poweredBy = (
+    <p className="text-[11px] text-faint">
+      Powered by{' '}
+      <a
+        href={authHost ?? undefined}
+        target="_blank"
+        rel="noreferrer"
+        className="font-semibold text-gold-soft hover:underline"
+      >
+        lets.church
+      </a>
+    </p>
+  );
+
+  if (isLoading) {
+    return <p className="text-[13px] text-muted-2">Loading media…</p>;
+  }
+
+  const items = data?.items ?? [];
+
+  if (items.length === 0) {
+    return (
+      <div className="space-y-3">
+        <p className="text-[13px] text-muted-2">
+          No media references this verse yet.
+        </p>
+        {searchLink}
+        {poweredBy}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Flush, full-bleed list — the panel supplies the px-5 gutter. */}
+      <div className="-mx-5 flex flex-col divide-y divide-line">
+        {items.map((item) => {
+          const duration = formatDuration(item.lengthSeconds);
+          return (
+            <a
+              key={item.id}
+              href={item.url}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-start gap-3 px-5 py-3 hover:bg-paper-soft"
+            >
+              <div className="relative aspect-video w-28 shrink-0 overflow-hidden rounded-md bg-paper-soft ring-1 ring-line">
+                {item.thumbnailUrl ? (
+                  <img
+                    src={item.thumbnailUrl}
+                    alt=""
+                    loading="lazy"
+                    className="size-full object-cover"
+                  />
+                ) : null}
+                {duration ? (
+                  <span className="absolute right-1 bottom-1 rounded bg-black/75 px-1 py-0.5 font-mono text-[10px] text-white tabular-nums">
+                    {duration}
+                  </span>
+                ) : null}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="line-clamp-2 font-semibold text-[13px] text-ink leading-snug">
+                  {item.title ?? 'Untitled'}
+                </div>
+                <div className="mt-0.5 text-[11.5px] text-muted-2">
+                  {item.channelName ?? 'Unknown'}
+                  {` · ${formatViews(item.viewCount)} view${item.viewCount === 1 ? '' : 's'}`}
+                </div>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+      <div className="mt-4 space-y-1.5">
+        {searchLink}
+        {poweredBy}
+      </div>
     </div>
   );
 }

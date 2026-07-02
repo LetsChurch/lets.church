@@ -594,6 +594,7 @@ export function AnswerPanel({
   searchLogId,
   ready = true,
   filters,
+  facetOnly = false,
 }: {
   q: string;
   searchLogId?: string | null;
@@ -608,6 +609,11 @@ export function AnswerPanel({
   // selecting a NEW filter afterward updates the results but does NOT regenerate
   // the answer — it stays bound to the filters present when the query loaded.
   filters?: AnswerFilters;
+  // Facet-only browse: `q` is a synthesized description of the active facet
+  // (e.g. a verse label), not a user question. The facet already guarantees
+  // grounded, on-topic sources, so the server skips its relevance-floor decline
+  // and always produces an overview of the facet-matched media.
+  facetOnly?: boolean;
 }) {
   const [text, setText] = useState('');
   const [status, setStatus] = useState<AnswerStatus>('streaming');
@@ -637,6 +643,7 @@ export function AnswerPanel({
           resourceId: getResourceId(),
           searchLogId: searchLogIdRef.current ?? null,
           filters: filtersRef.current ?? null,
+          facetOnly,
         },
         controller.signal,
         setText,
@@ -645,7 +652,7 @@ export function AnswerPanel({
     })();
 
     return () => controller.abort();
-  }, [q, ready]);
+  }, [q, ready, facetOnly]);
 
   const { answer, sources } = parseStream(text);
 

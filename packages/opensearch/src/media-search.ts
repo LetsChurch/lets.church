@@ -168,7 +168,11 @@ function facetAggs(facets: MediaFacetKey[]): Record<string, unknown> {
 // Access-control + readiness filter. Mirrors the related-media kNN in web's
 // media.ts: only public, approved, fully-processed uploads. Every sub-query
 // carries this so no signal can leak private/unapproved content.
-function accessControlFilter(): OsQuery[] {
+//
+// Exported so out-of-band media queries (e.g. web's internal
+// media-for-verse endpoint, which lets.bible calls) reuse the exact same
+// gate rather than re-declaring a parallel filter that can drift.
+export function accessControlFilter(): OsQuery[] {
   return [
     { term: { visibility: 'PUBLIC' } },
     { term: { channelVisibility: 'PUBLIC' } },
@@ -759,6 +763,46 @@ export async function runMediaHybridSearch(
 }
 
 /**
+ * Filter-only browse over lc_media_v1: no free-text query, so no BM25 / kNN /
+ * RRF / rerank — just the access-control + facet filters, ordered newest-first
+ * (or the caller's `sort`). Powers the facet-only search path (a
+ * `/search?bibleRefs=[...]` link with no `q`, e.g. the study panel's "search
+ * this verse" link), where relevance is meaningless and applying the facet is
+ * the whole point. Returns the same `{ hits, total }` shape as
+ * `runMediaHybridSearch` — hits carry `_id`; there are no snippet inner_hits.
+ */
+export async function runMediaFilterSearch(
+  args: Pick<
+    BuildMediaSearchArgs,
+    | 'channelIds'
+    | 'publishedAt'
+    | 'bibleRefs'
+    | 'bibleBooks'
+    | 'speakers'
+    | 'uploadIds'
+    | 'paragraphSpeakers'
+    | 'from'
+    | 'size'
+    | 'sort'
+  >,
+): Promise<{ hits: MediaHit[]; total: number }> {
+  const from = args.from ?? 0;
+  const size = args.size ?? 20;
+  const { filter } = resolveFilter(args);
+  const raw = await osSearch({
+    index: MEDIA_INDEX,
+    from,
+    size,
+    _source: false,
+    query: { bool: { filter } },
+    // Newest-first by default; the caller can override (e.g. a UI date sort).
+    sort: args.sort ?? [{ publishedAt: 'desc' }],
+  });
+  const parsed = MediaSearchResponseSchema.parse(raw);
+  return { hits: parsed.hits.hits, total: parsed.hits.total.value };
+}
+
+/**
  * Build a CHEAP aggregation-only body for facet counts. Critically, this does
  * NOT use the `hybrid` query or the RRF pipeline: aggregating on top of a
  * `hybrid` query is pathologically slow (~12s vs ~15ms here — ~800x) because the
@@ -779,6 +823,31 @@ export function buildMediaFacetBody(
 ): OsMsearchItem {
   const trimmed = args.lexicalText.trim();
   const { filter, scopeToSpeaker } = resolveFilter(args);
+  const facetsList = args.facets ?? [];
+  const facetAggsPart =
+    facetsList.length > 0
+      ? {
+          aggs: {
+            sample: {
+              sampler: { shard_size: FACET_SAMPLE_CAP },
+              aggs: facetAggs(facetsList),
+            },
+          },
+        }
+      : {};
+
+  // Filter-only browse (no free-text query — e.g. a `/search?bibleRefs=[...]`
+  // link with no `q`): aggregate over the filtered set (match_all), with no
+  // lexical `should` and no relative score floor (there's nothing to score).
+  if (!trimmed) {
+    return {
+      size: 1,
+      _source: false,
+      query: { bool: { filter } },
+      ...facetAggsPart,
+    };
+  }
+
   const should: OsQuery[] = [
     {
       multi_match: {
@@ -803,7 +872,6 @@ export function buildMediaFacetBody(
       },
     },
   ];
-  const facets = args.facets ?? [];
   return {
     size: 1,
     _source: false,
@@ -816,16 +884,7 @@ export function buildMediaFacetBody(
     // bounds it when a broad query clears the floor with many docs. A `sampler`
     // requires sub-aggs, so with no facets (the max_score probe, or the rare
     // all-filters-active body 0 nobody reads) emit a query-only body.
-    ...(facets.length > 0
-      ? {
-          aggs: {
-            sample: {
-              sampler: { shard_size: FACET_SAMPLE_CAP },
-              aggs: facetAggs(facets),
-            },
-          },
-        }
-      : {}),
+    ...facetAggsPart,
   };
 }
 
@@ -854,21 +913,27 @@ export async function runMediaFacets(args: BuildMediaSearchArgs): Promise<{
   years: Array<{ year: string; doc_count: number }>;
 }> {
   const base = { ...args, from: 0, size: 1, highlight: false };
+  const hasQuery = base.lexicalText.trim().length > 0;
 
   // Probe for the query's top score so the facet floor can be relative to it
   // (FACET_MIN_SCORE_FRACTION). A query-only body (empty facet aggs) — one cheap
   // extra round-trip before the facet bodies, which then drop everything below
   // the floor. `min_score` is absolute, so this max_score can't be known upfront.
-  const probeRaw = await osSearch({
-    index: MEDIA_INDEX,
-    ...buildMediaFacetBody({ ...base, facets: [] }),
-  });
-  const maxScore = (probeRaw as { hits?: { max_score?: number | null } }).hits
-    ?.max_score;
-  const minScore =
-    typeof maxScore === 'number'
-      ? maxScore * FACET_MIN_SCORE_FRACTION
-      : undefined;
+  // Skipped for filter-only browse (no query → nothing to score, and the
+  // filter-only facet body applies no score floor anyway).
+  let minScore: number | undefined;
+  if (hasQuery) {
+    const probeRaw = await osSearch({
+      index: MEDIA_INDEX,
+      ...buildMediaFacetBody({ ...base, facets: [] }),
+    });
+    const maxScore = (probeRaw as { hits?: { max_score?: number | null } }).hits
+      ?.max_score;
+    minScore =
+      typeof maxScore === 'number'
+        ? maxScore * FACET_MIN_SCORE_FRACTION
+        : undefined;
+  }
 
   const hasChannel = Boolean(args.channelIds && args.channelIds.length > 0);
   const hasSpeaker = Boolean(args.speakers && args.speakers.length > 0);
