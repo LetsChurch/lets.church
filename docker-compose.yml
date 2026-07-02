@@ -64,9 +64,6 @@ services:
       WEB_URL: ${HOST_WEB_URL}
       # Base URL for linking scripture refs into lets.bible (Vite inlines VITE_*).
       VITE_LETS_BIBLE_URL: ${VITE_LETS_BIBLE_URL:-http://localhost:4001}
-      # Shared secret guarding the internal media-for-verse API that lets.bible
-      # calls server-to-server (routes/api/internal/media-for-verse.ts).
-      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
       ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
       # Embedded OIDC provider (lets.church as identity provider for first-party
       # satellite sites). Signing key is asymmetric (ES256) and separate from
@@ -138,11 +135,10 @@ services:
       OPENSEARCH_URL: http://opensearch:9200
       OIDC_ISSUER: ${OIDC_ISSUER:-${HOST_WEB_URL}}
       OIDC_INTERNAL_URL: http://web:3000
-      # Back-channel origin + shared secret for web's internal media-for-verse
-      # API (the study panel's "Media" tab). Same web service as the OIDC
-      # back-channel; kept as its own var so prod can point it independently.
+      # Back-channel origin for web's media-for-verse API (the study panel's
+      # "Media" tab). Same web service as the OIDC back-channel; kept as its own
+      # var so prod can point it independently.
       WEB_INTERNAL_URL: http://web:3000
-      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
       OIDC_CLIENT_ID: lets.bible
       OIDC_REDIRECT_URI: ${OIDC_LETS_BIBLE_REDIRECT_URI}
       OIDC_POST_LOGOUT_REDIRECT_URI: ${OIDC_LETS_BIBLE_POST_LOGOUT_URI}

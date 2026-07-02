@@ -7,24 +7,22 @@ const moduleLogger = logger.child({
   module: 'routes/api/internal/media-for-verse',
 });
 
-// Internal API: media that teaches a specific Bible verse, for the lets.bible
-// study panel's "Media" tab. lets.bible calls this server-to-server (no CORS is
-// configured on web, and this keeps the shared secret off the browser). It owns
-// the heavy joins — Postgres view counts + imgproxy thumbnails + annotation
+// Media that teaches a specific Bible verse, for the lets.bible study panel's
+// "Media" tab. lets.bible calls this server-to-server (in-cluster). It owns the
+// heavy joins — Postgres view counts + imgproxy thumbnails + annotation
 // timestamps — that lets.bible can't produce from OpenSearch alone.
 //
-// Auth: a shared `INTERNAL_API_TOKEN` bearer (constant-time compared). The
-// payload is only ever public, already-approved media, so this guards against
-// the endpoint becoming an open, uncredited data tap rather than protecting
-// secrets. See docs/security.md.
+// Auth: none. The payload is only ever PUBLIC, already-approved media
+// (accessControlFilter + hydrateUploads enforce PUBLIC visibility below), so
+// there is no secret to protect and the endpoint is intentionally open. The
+// only client inputs are a shape-validated OSIS book + integer chapter/verse
+// (assembled into the terms token server-side, so no injection) and a bounded
+// `limit`. See docs/security.md.
 
 // Env is read INSIDE the handler (not at module scope): this route file is part
 // of the shared route tree and its module body runs in the client bundle too, so
 // a top-level `process.env` parse would throw there. Mirrors search-answer.ts.
 const envSchema = z.object({
-  // Shared secret injected into both `web` and `letsbible` (docker-compose /
-  // prod env). Absent in envs that don't run lets.bible → the endpoint 503s.
-  INTERNAL_API_TOKEN: z.string().min(1).optional(),
   // Public web origin, for building absolute media/search links the caller
   // renders verbatim (e.g. https://lets.church). Same env session cookies +
   // password-reset emails use.
@@ -65,25 +63,7 @@ export const Route = createFileRoute('/api/internal/media-for-verse')({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const { INTERNAL_API_TOKEN, WEB_URL } = envSchema.parse(process.env);
-        if (!INTERNAL_API_TOKEN) {
-          return new Response('Internal API not configured', { status: 503 });
-        }
-
-        // Constant-time bearer check (node:crypto lazily, so it doesn't enter
-        // the shared client bundle via this route file).
-        const { timingSafeEqual } = await import('node:crypto');
-        const header = request.headers.get('authorization');
-        const authed = (() => {
-          if (!header?.startsWith('Bearer ')) return false;
-          const provided = Buffer.from(header.slice('Bearer '.length));
-          const expected = Buffer.from(INTERNAL_API_TOKEN);
-          if (provided.length !== expected.length) return false;
-          return timingSafeEqual(provided, expected);
-        })();
-        if (!authed) {
-          return new Response('Unauthorized', { status: 401 });
-        }
+        const { WEB_URL } = envSchema.parse(process.env);
 
         let input: z.infer<typeof bodySchema>;
         try {

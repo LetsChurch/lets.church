@@ -29,17 +29,16 @@ function usfmOf(book: string): string {
   return bookBySlug(book)?.code ?? book.toUpperCase();
 }
 
-// web's internal media-for-verse endpoint (server-to-server, shared secret).
-// WEB_INTERNAL_URL is the back-channel origin (dev http://web:3000, prod the
-// public web origin); it falls back to the OIDC back-channel URL, which is the
-// same host. Both must be set for the Media tab to return anything — when
-// unset the procedure degrades to "no media" rather than erroring.
+// web's media-for-verse endpoint (server-to-server, unauthenticated — it only
+// returns public, already-approved media). WEB_INTERNAL_URL is the back-channel
+// origin (dev http://web:3000, prod the in-cluster http://web); it falls back to
+// the OIDC back-channel URL, which is the same host. When unset the procedure
+// degrades to "no media" rather than erroring.
 const WEB_INTERNAL_URL = (
   process.env.WEB_INTERNAL_URL ??
   process.env.OIDC_INTERNAL_URL ??
   ''
 ).replace(/\/+$/, '');
-const INTERNAL_API_TOKEN = process.env.INTERNAL_API_TOKEN ?? '';
 
 // Shape returned by web's /api/internal/media-for-verse. Parsed defensively so a
 // change on the web side degrades to "no media" instead of throwing.
@@ -856,7 +855,7 @@ export const bibleProcedures = {
     .query(async ({ input }): Promise<RelatedMedia> => {
       const empty: RelatedMedia = { items: [], searchUrl: null };
       const osis = osisBookId(usfmOf(input.book));
-      if (!osis || !WEB_INTERNAL_URL || !INTERNAL_API_TOKEN) {
+      if (!osis || !WEB_INTERNAL_URL) {
         return empty;
       }
       try {
@@ -866,7 +865,6 @@ export const bibleProcedures = {
             method: 'POST',
             headers: {
               'content-type': 'application/json',
-              authorization: `Bearer ${INTERNAL_API_TOKEN}`,
             },
             body: JSON.stringify({
               book: osis,

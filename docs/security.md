@@ -92,17 +92,19 @@ files; run `pnpm --filter @letschurch/web test` / `--filter @letschurch/temporal
 `web` exposes one server-to-server endpoint consumed by the sibling **lets.bible**
 app: `POST /api/internal/media-for-verse`
 (`packages/web/src/routes/api/internal/media-for-verse.ts`), which returns media
-that teaches a given Bible verse for lets.bible's study-panel Media tab. It is
-**not** a browser endpoint (no CORS is configured on `web`), and it applies every
-principle above:
+that teaches a given Bible verse for lets.bible's study-panel Media tab.
+lets.bible calls it in-cluster; it applies every principle above:
 
-- **Auth (a shared secret, not a session):** a `Bearer` token compared with
-  `crypto.timingSafeEqual` (constant-time, length-checked first) against the
-  `INTERNAL_API_TOKEN` env shared by `web` and `letsbible`. Returns `503` when the
-  secret isn't configured and `401` on any mismatch. The token is never logged
-  (principle 5). This is the only cross-service auth primitive; if another internal
-  endpoint is added, reuse this shared-secret bearer check rather than forking it
-  (principle 8) — or graduate both to a signed short-lived JWT.
+- **Auth: none, intentionally.** The response is only ever PUBLIC, already-
+  approved media — the same rows anyone can reach through the public `/search`
+  UI — so there is no secret to protect and no per-principal authorization to
+  make. The endpoint is deliberately open rather than gated by a shared token
+  that would guard nothing. (An earlier revision used an `INTERNAL_API_TOKEN`
+  bearer; it was dropped because the payload carries no confidential data and
+  the token only added an operational failure mode — a missing/stale secret
+  silently emptied the Media tab.) If a future internal endpoint returns
+  non-public data, do **not** copy this "open" posture — add real auth (a signed
+  short-lived JWT) at that point.
 - **Authorization (principle 4):** results reuse the canonical media
   access-control filter (`accessControlFilter` in `@letschurch/opensearch`
   `media-search.ts`) — PUBLIC visibility + approved channel + finished

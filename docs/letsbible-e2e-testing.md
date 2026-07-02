@@ -130,7 +130,7 @@ In scope (everything implemented to date):
   full faceted search for that verse (`/search?bibleRefs=<OSIS token>`). lets.bible
   can't read web's Postgres (view counts, imgproxy thumbnails, annotation
   timestamps), so `bible.relatedMedia` **proxies server-to-server** to web's
-  internal endpoint (`/api/internal/media-for-verse`, shared-secret bearer);
+  `/api/internal/media-for-verse` (unauthenticated — public media only);
   membership + access control come from the `lc_media_v1` `bibleRefs` facet.
   Fetched **on demand** when the Media tab is opened (the Base UI panel unmounts
   inactive tabs); a network/API failure or an env-unconfigured deployment degrades
@@ -249,12 +249,12 @@ vector embeddings.
 | elasticsearch | localhost:${HOST_ES_PORT} | shared cluster; lets.bible owns `lets_bible_*` indices |
 
 > **Media tab prerequisite:** the study panel's Media tab (Suite E) calls web's
-> internal `/api/internal/media-for-verse` server-to-server. It needs the **web**
-> app's `lc_media_v1` index populated with public/approved uploads that
-> BIBLE-annotate at least one verse, and the shared `INTERNAL_API_TOKEN` set on
-> **both** `web` and `letsbible` (with `WEB_INTERNAL_URL` on `letsbible`, default
-> `http://web:3000`). Both come from `.envrc`/docker-compose defaults; when unset
-> the tab degrades to its empty state (not a bug).
+> `/api/internal/media-for-verse` server-to-server (unauthenticated — it only
+> returns public media). It needs the **web** app's `lc_media_v1` index populated
+> with public/approved uploads that BIBLE-annotate at least one verse, and
+> `WEB_INTERNAL_URL` on `letsbible` (default `http://web:3000`, falls back to
+> `OIDC_INTERNAL_URL`). That comes from the `.envrc`/docker-compose defaults; when
+> web is unreachable the tab degrades to its empty state (not a bug).
 
 > The Bash shell used for `docker compose` must have direnv loaded first:
 > `eval "$(direnv export bash)"`. Otherwise the container is recreated with blank
@@ -495,12 +495,12 @@ persist in a session store (`src/lib/study-session.ts`).
 
 Media from the lets.church catalog that teaches the selected verse.
 lets.bible's `bible.relatedMedia` proxies server-to-server to web's
-`/api/internal/media-for-verse` (shared-secret bearer); web resolves membership
-from the `lc_media_v1` `bibleRefs` facet, enriches from Postgres (view counts,
-imgproxy thumbnails), ranks by **views + recency**, and deep-links each card to
-the verse's timestamp. **Prereq:** web's dev corpus has ≥1 public/approved upload
-whose transcript BIBLE-annotates the test verse (see §2.2), and both apps share
-`INTERNAL_API_TOKEN` (`WEB_INTERNAL_URL` on lets.bible). Pick the test verse from
+`/api/internal/media-for-verse` (unauthenticated — public media only); web
+resolves membership from the `lc_media_v1` `bibleRefs` facet, enriches from
+Postgres (view counts, imgproxy thumbnails), ranks by **views + recency**, and
+deep-links each card to the verse's timestamp. **Prereq:** web's dev corpus has
+≥1 public/approved upload whose transcript BIBLE-annotates the test verse (see
+§2.2), and `WEB_INTERNAL_URL` points lets.bible at web. Pick the test verse from
 the current corpus via the data preflight.
 
 | ID | Preconditions | Steps | Expected |
@@ -510,8 +510,8 @@ the current corpus via the data preflight.
 | LB-MEDIA-03 | LB-MEDIA-02 | Click a card | Opens the lets.church media page in a **new tab**, seeked to the timestamp where the verse is discussed (`/media/<id>#t=<seconds>`; the full-UUID form 301s to the base58 canonical URL). |
 | LB-MEDIA-04 | LB-MEDIA-02 | Click **"Search {ref} on lets.church →"** | Opens the faceted search pre-filtered to that verse in a new tab. The `bibleRefs` param is a **JSON-encoded array** (web's `/search` validates it as `z.array(...)` via TanStack Router's default serializer), e.g. `/search?bibleRefs=%5B%22John.3.16%22%5D` — **not** a bare `?bibleRefs=John.3.16` (which 400s the route). The page renders the media matching that verse **even with no free-text `q`** (web runs a filter-only search for a facet-only browse, newest-first), facets populated, no error boundary. Each result surfaces the **transcript paragraph(s) that cite the verse** as its snippet/segments (resolved from the BIBLE annotations in Postgres — OpenSearch's `bibleRefs` is only a doc-level rollup), each linking into the media at that timestamp. An **AI overview** also renders, grounded in the facet-matched media: web synthesizes a query from the active facet (the verse label, e.g. "John 3:16") and sends `facetOnly` so the answer route skips its relevance-floor decline and always overviews the facet-scoped sources (never the "I couldn't find anything" card, given the facet matched). |
 | LB-MEDIA-05 | A verse no upload teaches | Open the **Media** tab | Empty state: **"No media references this verse yet."** with the search link still shown. No error. |
-| LB-MEDIA-06 | `INTERNAL_API_TOKEN`/`WEB_INTERNAL_URL` unset, or web unreachable | Open the **Media** tab | Degrades to the empty state; the reader and other tabs keep working (the query is not in the SSR/loader path). |
-| LB-MEDIA-07 | — | `curl` `POST ${WEB_INTERNAL_URL}/api/internal/media-for-verse` **without** the bearer (and with a wrong one) | `401 Unauthorized`. With the correct bearer + `{book,chapter,verse}` → `200` `{ items, searchUrl }`. |
+| LB-MEDIA-06 | `WEB_INTERNAL_URL` (and `OIDC_INTERNAL_URL`) unset, or web unreachable | Open the **Media** tab | Degrades to the empty state; the reader and other tabs keep working (the query is not in the SSR/loader path). |
+| LB-MEDIA-07 | — | `curl` `POST ${WEB_INTERNAL_URL}/api/internal/media-for-verse` with `{book,chapter,verse}` (no auth header) | `200` `{ items, searchUrl }` — the endpoint is unauthenticated (public media only). A malformed body → `400`. |
 | LB-MEDIA-08 | Access control | Confirm a non-PUBLIC / unapproved / still-processing upload citing the verse | Does **not** appear in the Media tab (the `lc_media_v1` access-control filter + Postgres visibility re-check). |
 
 ---
@@ -1042,7 +1042,7 @@ A fast pass to run after any change:
 3. Double-click "God" in John 1 → study panel shows θεός / G2316.
 4. One study panel: reading column is centered while idle; select a verse → verse view (highlight/copy/share/compare/note); click a word twice (or press-and-hold on touch) → word view with the verse as context, single highlight. Selecting a word clears the verse and vice-versa (mutually exclusive).
 4b. Commentaries tab: select John 3:16 → verse view has **Verse**/**Commentaries**/**Media** tabs; Commentaries tab lists Calvin, Matthew Henry (×2, "on vv. 1–21"), Geneva, Wesley; click Calvin → detail (body + Source + back). Click verse 17 → still on Commentaries tab, still following Calvin (his note on v.17) — tab + work persist. (Requires `just lb-seed-commentaries`.)
-4c. Media tab: select a verse the web corpus teaches (pick via preflight) → **Media** tab shows thumbnailed cards (title / channel · views / duration) ranked by views+recency; a card opens the lets.church media page at the verse's timestamp (`#t=`); "Search {ref} on lets.church →" opens `/search?bibleRefs=<token>`. A verse with none → empty state + search link. (Requires web `lc_media_v1` + `INTERNAL_API_TOKEN`; degrades gracefully when unset.)
+4c. Media tab: select a verse the web corpus teaches (pick via preflight) → **Media** tab shows thumbnailed cards (title / channel · views / duration) ranked by views+recency; a card opens the lets.church media page at the verse's timestamp (`#t=`); "Search {ref} on lets.church →" opens `/search?bibleRefs=<token>`. A verse with none → empty state + search link. (Requires web `lc_media_v1` + `WEB_INTERNAL_URL`; degrades gracefully when web is unreachable.)
 5. Autocomplete (client-side FlexSearch, no debounce): `john` → book-jump widget (21-chapter grid); `john 3` → 36-verse grid; `john 3:16` → verse 16 + preview; click chapter fills bar, click verse navigates. `for God so loved the world` → JHN.3.16 ranked first in **Verses**; `in the beginning` → **Exact phrase** pill + **Creation** topic; scope dropdown switches BSB↔MSB. (Requires `public/search/*` from `just lb-flex`.)
 6. `/search?q=fruit of the Spirit` → Galatians 5:22 first, highlighted.
 7. `/search?q=Matthew 1:23` → cross-reference Isaiah 7:14 + related passages.
