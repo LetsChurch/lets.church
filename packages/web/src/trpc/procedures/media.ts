@@ -183,7 +183,14 @@ export const mediaProcedures = {
   // (pre-generated) and returns instantly thereafter without per-view cost.
   getSuggestedQuestions: publicProcedure
     .input(z.object({ mediaId: IncomingIdSchema }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      // Gate on the same visibility rules as every other media read: without
+      // this, an anonymous caller who knows a PRIVATE/unapproved/deleted upload
+      // id could read its title/description/summary (echoed in the generated
+      // questions) and drive a paid LLM generation for media they can't view.
+      if (!(await canViewMediaById(input.mediaId, ctx))) {
+        return [];
+      }
       const media = await db.query.UploadRecord.findFirst({
         columns: { id: true, title: true, description: true, summary: true },
         where: (t, { eq: eqOp }) => eqOp(t.id, input.mediaId),
@@ -848,7 +855,9 @@ export const mediaProcedures = {
     .input(
       z.object({
         uploadRecordId: IncomingIdSchema,
-        viewHash: z.string(),
+        // Accepted for backward compatibility with the player, but IGNORED: the
+        // dedup hash is derived server-side below, never trusted from the client.
+        viewHash: z.string().optional(),
         ranges: z
           .array(
             z.object({
@@ -862,7 +871,9 @@ export const mediaProcedures = {
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const { uploadRecordId, viewHash, ranges } = input;
+      const { uploadRecordId, ranges } = input;
+      const clientIp = getClientIpAddress(getRequest().headers);
+      const clientUserAgent = getRequest().headers.get('user-agent');
 
       moduleLogger.info(
         {
@@ -877,6 +888,25 @@ export const mediaProcedures = {
       if (!(await canViewMediaById(uploadRecordId, ctx))) {
         return { success: false, secondsRecorded: 0 };
       }
+
+      // Derive the view hash server-side from the authenticated principal (or
+      // ip+user-agent) and the current daily salt. NEVER trust a client-supplied
+      // viewHash: that would let a caller forge arbitrary dedup keys to inflate
+      // the public view count and amplify UploadViewSecond inserts. This mirrors
+      // createUploadView exactly, so the derived hash matches the parent
+      // UploadView row for the same viewer/day.
+      const trackingSalt = await db.query.TrackingSalt.findFirst({
+        orderBy: (t, { desc }) => [desc(t.id)],
+      });
+      if (!trackingSalt || !clientUserAgent) {
+        return { success: false, secondsRecorded: 0 };
+      }
+      const viewHashBigInt = u64ToSigned(
+        xxh64(
+          ctx.session?.appUserId ?? `${clientIp ?? ''}${clientUserAgent}`,
+          BigInt(trackingSalt.salt),
+        ),
+      );
 
       // Cap the total number of expanded seconds so a few very large ranges
       // can't allocate an unbounded Set / insert batch (24h of seconds is far
@@ -901,8 +931,6 @@ export const mediaProcedures = {
           break;
         }
       }
-
-      const viewHashBigInt = BigInt(viewHash);
 
       // Create records for each second
       const creates = Array.from(seconds).map((second) => ({
