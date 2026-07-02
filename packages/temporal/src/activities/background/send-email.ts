@@ -6,7 +6,7 @@ export type EmailArgs = SendMailOptions;
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/send-email',
-  temporalActivity: 'importMedia',
+  temporalActivity: 'sendEmail',
 });
 
 let transport: ReturnType<typeof createTransport> | null = null;
