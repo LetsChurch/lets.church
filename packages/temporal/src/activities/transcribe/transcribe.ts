@@ -71,10 +71,8 @@ export default async function transcribe(
     );
 
     const downloadStart = Date.now();
-    await ingestS3.streamObjectToFile(
-      s3UploadKey,
-      downloadPath,
-      () => () => Context.current().heartbeat('download'),
+    await ingestS3.streamObjectToFile(s3UploadKey, downloadPath, () =>
+      Context.current().heartbeat('download'),
     );
 
     const downloadedSize = (await stat(downloadPath)).size;
