@@ -7,12 +7,12 @@ src/routes
 ├── __root.tsx
 ├── _main
 │   ├── index.tsx
+│   ├── dashboard
+│   │   └── index.tsx
+│   ├── dashboard.tsx
 │   └── media
 │       └── index.tsx
-├── _main.tsx
-├── dashboard_
-│   └── index.tsx
-└── dashboard_.tsx
+└── _main.tsx
 ```
 
 - `__root.tsx`: Wraps all routes
@@ -20,6 +20,10 @@ src/routes
   - `_main/index.tsx` renders at `/`
   - `_main/media/index.tsx` renders at `/media`
   - etc
-- `dashboard_` is a [Non-Nested Route](https://tanstack.com/router/latest/docs/framework/react/routing/routing-concepts#non-nested-routes), which essentially means that it is not nested in the `_main.tsx` layout
-  - `dashboard_.tsx` wraps everything in `dashboard_/`
-  - `dashboard_/index.tsx` renders at `/dashboard`
+- `_main/dashboard.tsx` is the dashboard layout; it nests inside `_main` (so it
+  shares the main app's chrome/design language) and wraps everything in
+  `_main/dashboard/`.
+  - `_main/dashboard/index.tsx` renders at `/dashboard`
+  - `_main/dashboard/admin_.organizations.tsx` renders at
+    `/dashboard/admin/organizations` (trailing `_` segments opt individual
+    sub-trees out of intermediate layout nesting, not out of `_main`)

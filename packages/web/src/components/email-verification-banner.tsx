@@ -1,7 +1,7 @@
-import { Alert, Button, Group, Text } from '@mantine/core';
 import { IconAlertCircle } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
+import { Alert, Button, Text } from '@/components/ui';
 import { useTRPC } from '@/trpc/react';
 
 export default function EmailVerificationBanner() {
@@ -41,16 +41,9 @@ export default function EmailVerificationBanner() {
     <Alert
       color="orange"
       icon={<IconAlertCircle />}
-      styles={{
-        root: {
-          borderRadius: 0,
-          borderLeft: 'none',
-          borderRight: 'none',
-          borderTop: 'none',
-        },
-      }}
+      className="rounded-none border-x-0 border-t-0"
     >
-      <Group justify="space-between" wrap="nowrap">
+      <div className="flex flex-nowrap items-center justify-between gap-4">
         <Text size="sm">
           {resendSuccess ? (
             <span>
@@ -74,7 +67,7 @@ export default function EmailVerificationBanner() {
         >
           {resendSuccess ? 'Email Sent' : 'Resend Email'}
         </Button>
-      </Group>
+      </div>
     </Alert>
   );
 }

@@ -1,4 +1,4 @@
-import { Box, Button, Grid, Group, Stack, Text } from '@mantine/core';
+import { Button, Text } from '@/components/ui';
 import { AddressAutocomplete } from './address-autocomplete';
 
 type AddressFieldsProps = {
@@ -11,8 +11,8 @@ export function AddressFields({ form }: AddressFieldsProps) {
     <form.AppField name="addresses" mode="array">
       {/* biome-ignore lint/suspicious/noExplicitAny: Field type is determined by form library */}
       {(addressesField: any) => (
-        <Stack gap="md">
-          <Group justify="space-between">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <Text fw={500} size="sm">
               Addresses
             </Text>
@@ -35,25 +35,21 @@ export function AddressFields({ form }: AddressFieldsProps) {
             >
               Add Address
             </Button>
-          </Group>
+          </div>
           {addressesField.state.value.length === 0 ? (
             <Text size="sm" c="dimmed">
               No addresses added yet
             </Text>
           ) : (
-            <Stack gap="md">
+            <div className="flex flex-col gap-4">
               {/* biome-ignore lint/suspicious/noExplicitAny: Address type is determined by form data */}
               {addressesField.state.value.map((address: any, index: number) => (
-                <Box
+                <div
                   key={`address-${address.type}-${index}`}
-                  p="md"
-                  style={{
-                    border: '1px solid var(--mantine-color-gray-3)',
-                    borderRadius: 'var(--mantine-radius-md)',
-                  }}
+                  className="rounded-lg border border-gray-300 p-4 dark:border-zinc-700"
                 >
-                  <Stack gap="sm">
-                    <Group justify="space-between">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
                       <Text fw={500} size="sm">
                         Address {index + 1}
                       </Text>
@@ -66,10 +62,10 @@ export function AddressFields({ form }: AddressFieldsProps) {
                       >
                         Remove
                       </Button>
-                    </Group>
+                    </div>
 
-                    <Grid gutter="xs">
-                      <Grid.Col span={{ base: 12, sm: 6 }}>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <div>
                         <form.AppField name={`addresses[${index}].type`}>
                           {/* biome-ignore lint/suspicious/noExplicitAny: Field type is determined by form library */}
                           {(field: any) => (
@@ -94,8 +90,8 @@ export function AddressFields({ form }: AddressFieldsProps) {
                             />
                           )}
                         </form.AppField>
-                      </Grid.Col>
-                      <Grid.Col span={{ base: 12, sm: 6 }}>
+                      </div>
+                      <div>
                         <form.AppField name={`addresses[${index}].name`}>
                           {/* biome-ignore lint/suspicious/noExplicitAny: Field type is determined by form library */}
                           {(field: any) => (
@@ -105,8 +101,8 @@ export function AddressFields({ form }: AddressFieldsProps) {
                             />
                           )}
                         </form.AppField>
-                      </Grid.Col>
-                      <Grid.Col span={12}>
+                      </div>
+                      <div className="sm:col-span-2">
                         <form.AppField
                           name={`addresses[${index}].streetAddress`}
                         >
@@ -144,8 +140,8 @@ export function AddressFields({ form }: AddressFieldsProps) {
                             />
                           )}
                         </form.AppField>
-                      </Grid.Col>
-                      <Grid.Col span={{ base: 12, sm: 6 }}>
+                      </div>
+                      <div>
                         <form.AppField name={`addresses[${index}].locality`}>
                           {/* biome-ignore lint/suspicious/noExplicitAny: Field type is determined by form library */}
                           {(field: any) => (
@@ -155,8 +151,8 @@ export function AddressFields({ form }: AddressFieldsProps) {
                             />
                           )}
                         </form.AppField>
-                      </Grid.Col>
-                      <Grid.Col span={{ base: 12, sm: 6 }}>
+                      </div>
+                      <div>
                         <form.AppField name={`addresses[${index}].region`}>
                           {/* biome-ignore lint/suspicious/noExplicitAny: Field type is determined by form library */}
                           {(field: any) => (
@@ -166,8 +162,8 @@ export function AddressFields({ form }: AddressFieldsProps) {
                             />
                           )}
                         </form.AppField>
-                      </Grid.Col>
-                      <Grid.Col span={{ base: 12, sm: 6 }}>
+                      </div>
+                      <div>
                         <form.AppField name={`addresses[${index}].postalCode`}>
                           {/* biome-ignore lint/suspicious/noExplicitAny: Field type is determined by form library */}
                           {(field: any) => (
@@ -177,8 +173,8 @@ export function AddressFields({ form }: AddressFieldsProps) {
                             />
                           )}
                         </form.AppField>
-                      </Grid.Col>
-                      <Grid.Col span={{ base: 12, sm: 6 }}>
+                      </div>
+                      <div>
                         <form.AppField name={`addresses[${index}].country`}>
                           {/* biome-ignore lint/suspicious/noExplicitAny: Field type is determined by form library */}
                           {(field: any) => (
@@ -188,8 +184,8 @@ export function AddressFields({ form }: AddressFieldsProps) {
                             />
                           )}
                         </form.AppField>
-                      </Grid.Col>
-                      <Grid.Col span={12}>
+                      </div>
+                      <div className="sm:col-span-2">
                         <form.AppField
                           name={`addresses[${index}].postOfficeBoxNumber`}
                         >
@@ -201,14 +197,14 @@ export function AddressFields({ form }: AddressFieldsProps) {
                             />
                           )}
                         </form.AppField>
-                      </Grid.Col>
-                    </Grid>
-                  </Stack>
-                </Box>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </Stack>
+            </div>
           )}
-        </Stack>
+        </div>
       )}
     </form.AppField>
   );

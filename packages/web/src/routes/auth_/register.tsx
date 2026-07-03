@@ -1,4 +1,3 @@
-import { Alert, Paper, Stack, Text } from '@mantine/core';
 import { IconInfoCircle } from '@tabler/icons-react';
 import {
   useMutation,
@@ -13,7 +12,8 @@ import {
 } from '@tanstack/react-router';
 import { useState } from 'react';
 import { z } from 'zod';
-import { useAppMantineForm } from '@/components/mantine';
+import { Alert, Text } from '@/components/ui';
+import { useAppForm } from '@/components/ui/form';
 import { registerSchema } from '@/schemas/auth';
 import { useTRPC } from '@/trpc/react';
 
@@ -78,7 +78,7 @@ function RouteComponent() {
     }),
   );
 
-  const form = useAppMantineForm({
+  const form = useAppForm({
     defaultValues: {
       email: search.email || '',
       username: '',
@@ -98,16 +98,7 @@ function RouteComponent() {
   });
 
   return (
-    <Paper
-      radius="md"
-      p="lg"
-      mt="xl"
-      maw="28rem"
-      w="100%"
-      ml="auto"
-      mr="auto"
-      withBorder
-    >
+    <div className="rounded-lg border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900">
       <Text size="lg" fw={500}>
         Register for an account
       </Text>
@@ -117,10 +108,9 @@ function RouteComponent() {
           title="Error"
           icon={<IconInfoCircle />}
           color="red"
-          mb="md"
-          mt="md"
           withCloseButton
           onClose={() => setError(false)}
+          className="mt-4 mb-4"
         >
           {error}
         </Alert>
@@ -134,7 +124,7 @@ function RouteComponent() {
         }}
         method="post"
       >
-        <Stack>
+        <div className="flex flex-col gap-4">
           <form.AppField name="email">
             {(field) => (
               <field.TextInputField
@@ -228,16 +218,16 @@ function RouteComponent() {
             )}
           </form.AppField>
 
-          <Stack align="center">
+          <div className="flex flex-col items-center gap-4">
             <form.AppField name="turnstile">
               {(field) => (
                 <field.TurnstileField siteKey={env.TURNSTILE_SITE_KEY} />
               )}
             </form.AppField>
-          </Stack>
-        </Stack>
+          </div>
+        </div>
 
-        <Stack mt="lg" gap="md">
+        <div className="mt-5 flex flex-col gap-4">
           <form.AppForm>
             <form.SubmitButton label="Register" />
           </form.AppForm>
@@ -252,8 +242,8 @@ function RouteComponent() {
               </Text>
             </Link>
           </Text>
-        </Stack>
+        </div>
       </form>
-    </Paper>
+    </div>
   );
 }

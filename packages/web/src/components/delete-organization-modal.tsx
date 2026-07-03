@@ -1,5 +1,6 @@
-import { Button, Modal, Stack, Text, TextInput } from '@mantine/core';
 import { useState } from 'react';
+import { LcModal, ModalHeader } from '@/components/lc-modal';
+import { Button, Text, TextInput } from '@/components/ui';
 
 type DeleteOrganizationModalProps = {
   opened: boolean;
@@ -36,75 +37,80 @@ export function DeleteOrganizationModal({
   };
 
   return (
-    <Modal
-      opened={opened}
-      onClose={handleClose}
-      title={`Delete ${typeLabel}`}
-      centered
-      closeOnClickOutside={!isDeleting}
-      closeOnEscape={!isDeleting}
-      withCloseButton={!isDeleting}
+    <LcModal.Root
+      open={opened}
+      onOpenChange={(o) => {
+        if (!o) handleClose();
+      }}
     >
-      <Stack gap="md">
-        <Text size="sm">
-          This will permanently delete the {typeLabel.toLowerCase()}{' '}
-          <Text component="span" fw={700}>
-            {organizationName}
-          </Text>
-          , including:
-        </Text>
+      <LcModal.Portal>
+        <LcModal.Backdrop />
+        <LcModal.Popup size="md">
+          <ModalHeader title={`Delete ${typeLabel}`} />
+          <div className="flex flex-col gap-4">
+            <Text size="sm">
+              This will permanently delete the {typeLabel.toLowerCase()}{' '}
+              <Text component="span" fw={700}>
+                {organizationName}
+              </Text>
+              , including:
+            </Text>
 
-        <Stack gap="xs" pl="md">
-          <Text size="sm" c="dimmed">
-            • All memberships
-          </Text>
-          <Text size="sm" c="dimmed">
-            • Channel associations
-          </Text>
-          <Text size="sm" c="dimmed">
-            • Addresses and geocoding data
-          </Text>
-          <Text size="sm" c="dimmed">
-            • Tags and leaders
-          </Text>
-          <Text size="sm" c="dimmed">
-            • Search index entries
-          </Text>
-        </Stack>
+            <div className="flex flex-col gap-2.5 pl-4">
+              <Text size="sm" c="dimmed">
+                • All memberships
+              </Text>
+              <Text size="sm" c="dimmed">
+                • Channel associations
+              </Text>
+              <Text size="sm" c="dimmed">
+                • Addresses and geocoding data
+              </Text>
+              <Text size="sm" c="dimmed">
+                • Tags and leaders
+              </Text>
+              <Text size="sm" c="dimmed">
+                • Search index entries
+              </Text>
+            </div>
 
-        <Text size="sm" fw={500} c="red">
-          This action cannot be undone.
-        </Text>
+            <Text size="sm" fw={500} c="red">
+              This action cannot be undone.
+            </Text>
 
-        <TextInput
-          label={`Type "${organizationName}" to confirm deletion`}
-          placeholder={organizationName}
-          value={confirmationText}
-          onChange={(event) => setConfirmationText(event.currentTarget.value)}
-          disabled={isDeleting}
-          data-autofocus
-        />
+            <TextInput
+              label={`Type "${organizationName}" to confirm deletion`}
+              placeholder={organizationName}
+              value={confirmationText}
+              onChange={(event) =>
+                setConfirmationText(event.currentTarget.value)
+              }
+              disabled={isDeleting}
+              data-autofocus
+            />
 
-        <Stack gap="xs">
-          <Button
-            color="red"
-            onClick={handleConfirm}
-            disabled={!isValid || isDeleting}
-            loading={isDeleting}
-            fullWidth
-          >
-            {isDeleting ? 'Deleting...' : `Delete ${typeLabel}`}
-          </Button>
-          <Button
-            variant="subtle"
-            onClick={handleClose}
-            disabled={isDeleting}
-            fullWidth
-          >
-            Cancel
-          </Button>
-        </Stack>
-      </Stack>
-    </Modal>
+            <div className="flex flex-col gap-2.5">
+              <Button
+                color="red"
+                onClick={handleConfirm}
+                disabled={!isValid || isDeleting}
+                loading={isDeleting}
+                fullWidth
+              >
+                {isDeleting ? 'Deleting...' : `Delete ${typeLabel}`}
+              </Button>
+              <Button
+                variant="subtle"
+                onClick={handleClose}
+                disabled={isDeleting}
+                fullWidth
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </LcModal.Popup>
+      </LcModal.Portal>
+    </LcModal.Root>
   );
 }

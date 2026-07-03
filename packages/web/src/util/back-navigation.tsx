@@ -27,7 +27,7 @@ export function BackButton() {
       to={backNavigation.to}
       style={{
         textDecoration: 'none',
-        color: 'var(--mantine-color-gray-6)',
+        color: '#868e96',
         fontSize: '14px',
         fontWeight: 500,
         display: 'flex',

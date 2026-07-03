@@ -1,5 +1,6 @@
-import { Button, Modal, Stack, Text, TextInput } from '@mantine/core';
 import { useState } from 'react';
+import { LcModal, ModalHeader } from '@/components/lc-modal';
+import { Button, Text, TextInput } from '@/components/ui';
 
 type DeleteChannelModalProps = {
   opened: boolean;
@@ -33,75 +34,80 @@ export function DeleteChannelModal({
   };
 
   return (
-    <Modal
-      opened={opened}
-      onClose={handleClose}
-      title="Delete Channel"
-      centered
-      closeOnClickOutside={!isDeleting}
-      closeOnEscape={!isDeleting}
-      withCloseButton={!isDeleting}
+    <LcModal.Root
+      open={opened}
+      onOpenChange={(o) => {
+        if (!o) handleClose();
+      }}
     >
-      <Stack gap="md">
-        <Text size="sm">
-          This will permanently delete the channel{' '}
-          <Text component="span" fw={700}>
-            {channelName}
-          </Text>{' '}
-          and all of its uploads, including:
-        </Text>
+      <LcModal.Portal>
+        <LcModal.Backdrop />
+        <LcModal.Popup size="md">
+          <ModalHeader title="Delete Channel" />
+          <div className="flex flex-col gap-4">
+            <Text size="sm">
+              This will permanently delete the channel{' '}
+              <Text component="span" fw={700}>
+                {channelName}
+              </Text>{' '}
+              and all of its uploads, including:
+            </Text>
 
-        <Stack gap="xs" pl="md">
-          <Text size="sm" c="dimmed">
-            • All upload records and their files
-          </Text>
-          <Text size="sm" c="dimmed">
-            • S3 objects and Glacier backups
-          </Text>
-          <Text size="sm" c="dimmed">
-            • Search index entries
-          </Text>
-          <Text size="sm" c="dimmed">
-            • Channel memberships and subscriptions
-          </Text>
-          <Text size="sm" c="dimmed">
-            • Organization associations
-          </Text>
-        </Stack>
+            <div className="flex flex-col gap-2.5 pl-4">
+              <Text size="sm" c="dimmed">
+                • All upload records and their files
+              </Text>
+              <Text size="sm" c="dimmed">
+                • S3 objects and Glacier backups
+              </Text>
+              <Text size="sm" c="dimmed">
+                • Search index entries
+              </Text>
+              <Text size="sm" c="dimmed">
+                • Channel memberships and subscriptions
+              </Text>
+              <Text size="sm" c="dimmed">
+                • Organization associations
+              </Text>
+            </div>
 
-        <Text size="sm" fw={500} c="red">
-          This action cannot be undone.
-        </Text>
+            <Text size="sm" fw={500} c="red">
+              This action cannot be undone.
+            </Text>
 
-        <TextInput
-          label={`Type "${channelName}" to confirm deletion`}
-          placeholder={channelName}
-          value={confirmationText}
-          onChange={(event) => setConfirmationText(event.currentTarget.value)}
-          disabled={isDeleting}
-          data-autofocus
-        />
+            <TextInput
+              label={`Type "${channelName}" to confirm deletion`}
+              placeholder={channelName}
+              value={confirmationText}
+              onChange={(event) =>
+                setConfirmationText(event.currentTarget.value)
+              }
+              disabled={isDeleting}
+              data-autofocus
+            />
 
-        <Stack gap="xs">
-          <Button
-            color="red"
-            onClick={handleConfirm}
-            disabled={!isValid || isDeleting}
-            loading={isDeleting}
-            fullWidth
-          >
-            {isDeleting ? 'Starting Deletion...' : 'Delete Channel'}
-          </Button>
-          <Button
-            variant="subtle"
-            onClick={handleClose}
-            disabled={isDeleting}
-            fullWidth
-          >
-            Cancel
-          </Button>
-        </Stack>
-      </Stack>
-    </Modal>
+            <div className="flex flex-col gap-2.5">
+              <Button
+                color="red"
+                onClick={handleConfirm}
+                disabled={!isValid || isDeleting}
+                loading={isDeleting}
+                fullWidth
+              >
+                {isDeleting ? 'Starting Deletion...' : 'Delete Channel'}
+              </Button>
+              <Button
+                variant="subtle"
+                onClick={handleClose}
+                disabled={isDeleting}
+                fullWidth
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </LcModal.Popup>
+      </LcModal.Portal>
+    </LcModal.Root>
   );
 }

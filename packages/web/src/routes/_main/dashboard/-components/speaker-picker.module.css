@@ -1,0 +1,12 @@
+.row {
+  border-radius: 0.25rem;
+  width: 100%;
+}
+
+.row:hover {
+  background: #f3f4f6;
+}
+
+[data-theme="dark"] .row:hover {
+  background: #27272a;
+}

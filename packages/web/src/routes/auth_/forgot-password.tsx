@@ -1,10 +1,10 @@
-import { Alert, Paper, Stack, Text } from '@mantine/core';
 import { IconCheck, IconInfoCircle } from '@tabler/icons-react';
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
 import { z } from 'zod';
-import { useAppMantineForm } from '@/components/mantine';
+import { Alert, Text } from '@/components/ui';
+import { useAppForm } from '@/components/ui/form';
 import { useTRPC } from '@/trpc/react';
 
 export const Route = createFileRoute('/auth_/forgot-password')({
@@ -46,7 +46,7 @@ function ForgotPasswordRoute() {
     }),
   );
 
-  const form = useAppMantineForm({
+  const form = useAppForm({
     defaultValues: {
       identifier: '',
       turnstile: '',
@@ -63,7 +63,7 @@ function ForgotPasswordRoute() {
   });
 
   return (
-    <Paper radius="md" p="lg" mt="xl" w="28rem" ml="auto" mr="auto" withBorder>
+    <div className="rounded-lg border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900">
       <Text size="lg" fw={500}>
         Reset your password
       </Text>
@@ -73,8 +73,7 @@ function ForgotPasswordRoute() {
           title="Check your email"
           icon={<IconCheck />}
           color="green"
-          mb="md"
-          mt="md"
+          className="mt-4 mb-4"
         >
           If an account exists with that email or username, you will receive a
           password reset link shortly.
@@ -86,10 +85,9 @@ function ForgotPasswordRoute() {
           title="Error"
           icon={<IconInfoCircle />}
           color="red"
-          mb="md"
-          mt="md"
           withCloseButton
           onClose={() => setError(false)}
+          className="mt-4 mb-4"
         >
           {error}
         </Alert>
@@ -104,8 +102,8 @@ function ForgotPasswordRoute() {
           }}
           method="post"
         >
-          <Stack>
-            <Text size="sm" c="dimmed" mt="sm">
+          <div className="flex flex-col gap-4">
+            <Text size="sm" c="dimmed" className="mt-3">
               Enter your email address or username and we'll send you a link to
               reset your password.
             </Text>
@@ -116,16 +114,16 @@ function ForgotPasswordRoute() {
               )}
             </form.AppField>
 
-            <Stack align="center">
+            <div className="flex flex-col items-center gap-4">
               <form.AppField name="turnstile">
                 {(field) => (
                   <field.TurnstileField siteKey={env.TURNSTILE_SITE_KEY} />
                 )}
               </form.AppField>
-            </Stack>
-          </Stack>
+            </div>
+          </div>
 
-          <Stack mt="md" gap="md">
+          <div className="mt-4 flex flex-col gap-4">
             <form.AppForm>
               <form.SubmitButton label="Send reset link" />
             </form.AppForm>
@@ -140,10 +138,10 @@ function ForgotPasswordRoute() {
                 </Text>
               </Link>
             </Text>
-          </Stack>
+          </div>
         </form>
       ) : (
-        <Stack mt="md" gap="md">
+        <div className="mt-4 flex flex-col gap-4">
           <Text size="sm" ta="center" c="dimmed">
             <Link
               to="/auth/login"
@@ -154,8 +152,8 @@ function ForgotPasswordRoute() {
               </Text>
             </Link>
           </Text>
-        </Stack>
+        </div>
       )}
-    </Paper>
+    </div>
   );
 }

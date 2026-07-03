@@ -1,4 +1,3 @@
-import { Alert, Paper, Stack, Text } from '@mantine/core';
 import { IconInfoCircle } from '@tabler/icons-react';
 import {
   useMutation,
@@ -12,7 +11,8 @@ import {
   useRouter,
 } from '@tanstack/react-router';
 import { useState } from 'react';
-import { useAppMantineForm } from '@/components/mantine';
+import { Alert, Text } from '@/components/ui';
+import { useAppForm } from '@/components/ui/form';
 import { loginSchema } from '@/schemas/auth';
 import { useTRPC } from '@/trpc/react';
 import { oidcClientNameFromRedirect } from '@/util/oidc/client-names';
@@ -84,7 +84,7 @@ function LoginRoute() {
     }),
   );
 
-  const form = useAppMantineForm({
+  const form = useAppForm({
     defaultValues: {
       id: '',
       password: '',
@@ -99,21 +99,12 @@ function LoginRoute() {
   });
 
   return (
-    <Paper
-      radius="md"
-      p="lg"
-      mt="xl"
-      maw="28rem"
-      w="100%"
-      ml="auto"
-      mr="auto"
-      withBorder
-    >
-      <Text size="lg" fw={500}>
+    <div className="rounded-lg border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900">
+      <Text size="lg" fw={600}>
         Sign in to your account
       </Text>
       {clientName ? (
-        <Text size="sm" c="dimmed" mt={4}>
+        <Text size="sm" c="dimmed" className="mt-[4px]">
           to continue to {clientName}
         </Text>
       ) : null}
@@ -123,10 +114,9 @@ function LoginRoute() {
           title="Error"
           icon={<IconInfoCircle />}
           color="red"
-          mb="md"
-          mt="md"
           withCloseButton
           onClose={() => setError(false)}
+          className="mt-4 mb-4"
         >
           {error}
         </Alert>
@@ -140,7 +130,7 @@ function LoginRoute() {
         }}
         method="post"
       >
-        <Stack>
+        <div className="mt-5 flex flex-col gap-4">
           <form.AppField name="id">
             {(field) => (
               <field.TextInputField label="Email or username" required />
@@ -151,16 +141,16 @@ function LoginRoute() {
             {(field) => <field.PasswordInputField label="Password" required />}
           </form.AppField>
 
-          <Stack align="center">
+          <div className="flex flex-col items-center gap-4">
             <form.AppField name="turnstile">
               {(field) => (
                 <field.TurnstileField siteKey={env.TURNSTILE_SITE_KEY} />
               )}
             </form.AppField>
-          </Stack>
-        </Stack>
+          </div>
+        </div>
 
-        <Stack mt="md" gap="md">
+        <div className="mt-4 flex flex-col gap-4">
           <form.AppForm>
             <form.SubmitButton label="Submit" />
           </form.AppForm>
@@ -186,8 +176,8 @@ function LoginRoute() {
               </Text>
             </Link>
           </Text>
-        </Stack>
+        </div>
       </form>
-    </Paper>
+    </div>
   );
 }

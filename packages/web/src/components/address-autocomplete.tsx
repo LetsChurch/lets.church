@@ -1,9 +1,12 @@
-import { Autocomplete, Loader } from '@mantine/core';
+import { Autocomplete } from '@base-ui/react/autocomplete';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { array, looseObject, string } from 'zod';
-import { showFailure } from '@/routes/-mantine';
+import { Loader } from '@/components/ui';
+import { controlClasses, InputWrapper } from '@/components/ui/input';
+import { showFailure } from '@/components/ui/notifications';
 import { useTRPC } from '@/trpc/react';
+import { cn } from '@/util/cn';
 
 const suggestionSchema = looseObject({
   name: string(),
@@ -273,31 +276,60 @@ export function AddressAutocomplete({
     }
   };
 
+  const handleOptionSubmit = async (optionValue: string) => {
+    // Find the selected suggestion
+    const selected = suggestions.find((s) => s.value === optionValue);
+    if (selected && onAddressSelect) {
+      // Retrieve full address details
+      const details = await retrieveAddress(selected.mapboxId);
+      if (details) {
+        onAddressSelect(details);
+      }
+    }
+  };
+
   return (
-    <Autocomplete
-      label={label}
-      placeholder={placeholder}
-      value={value}
-      data={data}
-      onChange={handleChange}
-      filter={({ options }) => options}
-      onOptionSubmit={async (optionValue) => {
-        // Find the selected suggestion
-        const selected = suggestions.find((s) => s.value === optionValue);
-        if (selected && onAddressSelect) {
-          // Retrieve full address details
-          const details = await retrieveAddress(selected.mapboxId);
-          if (details) {
-            onAddressSelect(details);
-          }
-        }
-      }}
-      rightSection={loading ? <Loader size={16} /> : null}
-      error={error}
-      comboboxProps={{
-        position: 'bottom',
-        middlewares: { flip: false, shift: false },
-      }}
-    />
+    <InputWrapper label={label} error={error}>
+      <Autocomplete.Root
+        items={data}
+        value={value}
+        onValueChange={handleChange}
+        mode="none"
+      >
+        <div className="relative">
+          <Autocomplete.Input
+            placeholder={placeholder}
+            className={cn(controlClasses(Boolean(error)), 'pr-9')}
+          />
+          {loading ? (
+            <span className="absolute inset-y-0 right-0 flex items-center pr-3">
+              <Loader size={16} />
+            </span>
+          ) : null}
+        </div>
+        <Autocomplete.Portal>
+          <Autocomplete.Positioner
+            side="bottom"
+            sideOffset={4}
+            className="z-50"
+          >
+            <Autocomplete.Popup className="max-h-64 w-[var(--anchor-width)] overflow-y-auto rounded-lg border-fancy-pants bg-white p-1 shadow-lg dark:bg-zinc-900">
+              <Autocomplete.List>
+                {(item: string) => (
+                  <Autocomplete.Item
+                    key={item}
+                    value={item}
+                    onClick={() => handleOptionSubmit(item)}
+                    className="cursor-default rounded px-3 py-1.5 text-primary text-sm data-[highlighted]:bg-brand/10"
+                  >
+                    {item}
+                  </Autocomplete.Item>
+                )}
+              </Autocomplete.List>
+            </Autocomplete.Popup>
+          </Autocomplete.Positioner>
+        </Autocomplete.Portal>
+      </Autocomplete.Root>
+    </InputWrapper>
   );
 }

@@ -42,13 +42,21 @@ export function LcModalBackdrop({ className, ...props }: LcModalBackdropProps) {
 }
 
 const modalPopupVariants = cva(
-  '-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-50 w-full rounded-lg border-fancy-pants bg-white p-6 shadow-xl transition-all duration-300 data-[ending-style]:scale-95 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:bg-zinc-900',
+  // `max-h-[90dvh] overflow-y-auto` keeps a tall modal on-screen and scrollable
+  // instead of overflowing past the viewport with its actions unreachable.
+  '-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-50 max-h-[90dvh] w-full overflow-y-auto rounded-lg border-fancy-pants bg-white p-6 shadow-xl transition-all duration-300 data-[ending-style]:scale-95 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:bg-zinc-900',
   {
     variants: {
       size: {
         sm: 'max-w-sm',
         md: 'max-w-md',
         lg: 'max-w-lg',
+        xl: 'max-w-2xl',
+        '2xl': 'max-w-3xl',
+        // Full-screen: override the centering base so the popup fills the
+        // viewport. It manages its own internal scroll regions, so keep the
+        // outer popup `overflow-hidden` (overrides the base `overflow-y-auto`).
+        full: 'top-0 left-0 h-dvh max-h-dvh w-full max-w-none translate-x-0 translate-y-0 overflow-hidden rounded-none border-0 p-0',
       },
     },
     defaultVariants: {

@@ -1,15 +1,13 @@
-import { Box, Center, Stack, Text, Title } from '@mantine/core';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import Logo from '@/components/logo';
+import { Text, Title } from '@/components/ui';
 import { useTRPC } from '@/trpc/react';
 import { DEFAULT_MAINTENANCE_MESSAGE } from '@/util/maintenance-constants';
-import { MantineWrapper, mantineStyles } from './-mantine';
 
 export const Route = createFileRoute('/maintenance')({
   component: MaintenanceRoute,
   head: () => ({
-    links: mantineStyles,
     meta: [{ title: "Maintenance · Let's Church" }],
   }),
   beforeLoad: async ({ context: { queryClient, trpc } }) => {
@@ -35,18 +33,16 @@ function MaintenanceRoute() {
   );
 
   return (
-    <MantineWrapper>
-      <Center mih="100vh" p="xl">
-        <Stack align="center" gap="lg" maw={520} ta="center">
-          <Box my="md" style={{ transform: 'scale(1.8)' }}>
-            <Logo />
-          </Box>
-          <Title order={1}>We'll Be Right Back</Title>
-          <Text c="dimmed" size="lg">
-            {status.message ?? DEFAULT_MAINTENANCE_MESSAGE}
-          </Text>
-        </Stack>
-      </Center>
-    </MantineWrapper>
+    <div className="flex min-h-screen items-center justify-center bg-page p-8">
+      <div className="flex max-w-[520px] flex-col items-center gap-5 text-center">
+        <div style={{ transform: 'scale(1.8)' }} className="my-4">
+          <Logo />
+        </div>
+        <Title order={1}>We'll Be Right Back</Title>
+        <Text c="dimmed" size="lg">
+          {status.message ?? DEFAULT_MAINTENANCE_MESSAGE}
+        </Text>
+      </div>
+    </div>
   );
 }

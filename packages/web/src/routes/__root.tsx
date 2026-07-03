@@ -11,6 +11,8 @@ import posthog from 'posthog-js';
 import { type ReactNode, useEffect } from 'react';
 import '@fontsource-variable/inter';
 import appCss from '@/app.css?url';
+import { ModalsProvider } from '@/components/ui/confirm-modal';
+import { NotificationsProvider } from '@/components/ui/notifications';
 import type { AppContextType } from '@/router';
 import { setBrowserSize } from '@/stores/browser-size';
 import { getInitialTheme, initializeTheme } from '@/stores/theme';
@@ -222,19 +224,21 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
   const theme = isEmbedRoute ? 'light' : getInitialTheme();
 
   return (
-    <html lang="en" data-theme={theme} data-mantine-color-scheme={theme}>
+    <html lang="en" data-theme={theme}>
       <head>
         <HeadContent />
         {!isEmbedRoute ? (
           <script
             dangerouslySetInnerHTML={{
-              __html: `(function(){try{var m=document.cookie.match(/lc-theme=([^;]+)/);var t=m?m[1]:(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mantine-color-scheme',t);}}catch(e){}})();`,
+              __html: `(function(){try{var m=document.cookie.match(/lc-theme=([^;]+)/);var t=m?m[1]:(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();`,
             }}
           />
         ) : null}
       </head>
       <body>
-        {children}
+        <NotificationsProvider>
+          <ModalsProvider>{children}</ModalsProvider>
+        </NotificationsProvider>
         <Scripts />
       </body>
     </html>

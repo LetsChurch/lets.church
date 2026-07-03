@@ -24,6 +24,7 @@ import {
   MenuItemRouterLink,
 } from '@/components/lc-menu';
 import { LcTooltip } from '@/components/lc-tooltip';
+import { useCopied } from '@/hooks/use-copied';
 import { $currentTime, $setPlayAt } from '@/stores/player';
 import {
   buildLetsBibleUrl,
@@ -280,19 +281,13 @@ const KEYWORD_HIGHLIGHT_CLASS =
 // `copied` flag for the icon swap. `navigator.clipboard` rejects on insecure
 // contexts (http://) or when denied — silent, since the URL bar still works.
 function useCopyTimestampLink(seconds: number) {
-  const [copied, setCopied] = useState(false);
-  const copy = useCallback(async () => {
+  const { copied, copy } = useCopied(1500);
+  const copyLink = useCallback(() => {
     const base = window.location.href.split('#')[0] ?? '';
     const seekTo = Math.max(0, Math.round(seconds));
-    try {
-      await navigator.clipboard.writeText(`${base}#t=${seekTo}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // ignore — the icon is a convenience
-    }
-  }, [seconds]);
-  return { copied, copy };
+    return copy(`${base}#t=${seekTo}`);
+  }, [seconds, copy]);
+  return { copied, copy: copyLink };
 }
 
 const TIMESTAMP_ACTION_CLASS =

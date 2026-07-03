@@ -1,8 +1,8 @@
-import { Alert, Button, Group, Text } from '@mantine/core';
 import { IconInfoCircle } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
+import { Alert, Button, Text } from '@/components/ui';
 import { useTRPC } from '@/trpc/react';
 
 export default function PendingInvitationsBanner() {
@@ -42,18 +42,11 @@ export default function PendingInvitationsBanner() {
     <Alert
       color="blue"
       icon={<IconInfoCircle />}
-      styles={{
-        root: {
-          borderRadius: 0,
-          borderLeft: 'none',
-          borderRight: 'none',
-          borderTop: 'none',
-        },
-      }}
+      className="rounded-none border-x-0 border-t-0"
       withCloseButton
       onClose={() => setDismissed(true)}
     >
-      <Group justify="space-between" wrap="nowrap">
+      <div className="flex flex-nowrap items-center justify-between gap-4">
         <Text size="sm">
           You have {invitations.length} pending invitation
           {invitations.length > 1 ? 's' : ''}
@@ -77,7 +70,7 @@ export default function PendingInvitationsBanner() {
         >
           View Invitations
         </Button>
-      </Group>
+      </div>
     </Alert>
   );
 }

@@ -1,17 +1,19 @@
-import { createFileRoute, Outlet } from '@tanstack/react-router';
-import { MantineWrapper, mantineStyles } from './-mantine';
+import { createFileRoute, Link, Outlet } from '@tanstack/react-router';
+import Logo from '@/components/logo';
 
 export const Route = createFileRoute('/auth_')({
-  component: DashboardLayoutComponent,
-  head: () => ({
-    links: mantineStyles,
-  }),
+  component: AuthLayoutComponent,
 });
 
-function DashboardLayoutComponent() {
+function AuthLayoutComponent() {
   return (
-    <MantineWrapper>
-      <Outlet />
-    </MantineWrapper>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-page px-4 py-10">
+      <Link to="/" className="mb-8">
+        <Logo />
+      </Link>
+      <div className="w-full max-w-md">
+        <Outlet />
+      </div>
+    </div>
   );
 }

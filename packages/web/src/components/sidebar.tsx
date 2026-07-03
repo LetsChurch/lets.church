@@ -17,7 +17,7 @@ import {
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Avatar } from '@/components/avatar';
 import { LcTooltip } from '@/components/lc-tooltip';
 import { ThemeSwitcher } from '@/components/theme-switcher';
@@ -71,10 +71,21 @@ function SidebarDonateCard({ onDismiss }: SidebarDonateCardProps) {
 
 type SidebarProps = {
   className?: string;
+  // When true (e.g. on dashboard routes), start collapsed to give the nested
+  // page more room. The user can still expand it manually.
+  forceCollapsed?: boolean;
 };
 
-export default function Sidebar({ className }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(getInitialSidebarCollapsed());
+export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
+  const [collapsed, setCollapsed] = useState(
+    forceCollapsed || getInitialSidebarCollapsed(),
+  );
+
+  // Collapse when entering a force-collapsed context (e.g. the dashboard).
+  // Doesn't persist to the stored preference, so it's transient for that visit.
+  useEffect(() => {
+    if (forceCollapsed) setCollapsed(true);
+  }, [forceCollapsed]);
   const [showAllChannels, setShowAllChannels] = useState(false);
   const [showAltMenu, setShowAltMenu] = useState(false);
   const [donateCardDismissed, setDonateCardDismissedState] = useState(

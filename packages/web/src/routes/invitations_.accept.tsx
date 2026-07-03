@@ -1,14 +1,3 @@
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  Group,
-  Loader,
-  Stack,
-  Text,
-  Title,
-} from '@mantine/core';
 import { IconAlertCircle, IconCheck, IconX } from '@tabler/icons-react';
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import {
@@ -19,6 +8,7 @@ import {
 } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
+import { Alert, Button, Loader, Text, Title } from '@/components/ui';
 import { useTRPC } from '@/trpc/react';
 
 const searchSchema = z.object({
@@ -239,87 +229,91 @@ function RouteComponent() {
     declineChannelMutation.isPending;
 
   return (
-    <Box p="xl" style={{ maxWidth: 600, margin: '0 auto' }}>
-      <Card shadow="sm" padding="lg" radius="md" withBorder>
-        <Stack gap="md">
-          <Title order={2}>You've Been Invited!</Title>
+    <div className="flex min-h-screen justify-center bg-page px-4 py-8">
+      <div className="w-full max-w-[600px]">
+        <div className="overflow-hidden rounded-lg border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="flex flex-col gap-4">
+            <Title order={2}>You've Been Invited!</Title>
 
-          <Text>
-            You've been invited to join{' '}
-            <Text component="span" fw={700}>
-              {entityName}
-            </Text>{' '}
-            as {getIndefiniteArticle(roleName)}{' '}
-            <Text component="span" fw={700}>
-              {roleName}
+            <Text>
+              You've been invited to join{' '}
+              <Text component="span" fw={700}>
+                {entityName}
+              </Text>{' '}
+              as {getIndefiniteArticle(roleName)}{' '}
+              <Text component="span" fw={700}>
+                {roleName}
+              </Text>
+              .
             </Text>
-            .
-          </Text>
 
-          {error ? (
-            <Alert
-              icon={<IconAlertCircle size={16} />}
-              title="Error"
-              color="red"
-            >
-              <Stack gap="xs">
-                <Text size="sm">{error}</Text>
-                {isVerificationError && (
-                  <Button
-                    size="xs"
-                    variant="light"
-                    color="red"
-                    onClick={() => resendMutation.mutate()}
-                    loading={resendMutation.isPending}
-                    disabled={resendSuccess}
-                  >
-                    {resendSuccess ? 'Email Sent' : 'Resend Verification Email'}
-                  </Button>
-                )}
-              </Stack>
-            </Alert>
-          ) : null}
+            {error ? (
+              <Alert
+                icon={<IconAlertCircle size={16} />}
+                title="Error"
+                color="red"
+              >
+                <div className="flex flex-col gap-2.5">
+                  <Text size="sm">{error}</Text>
+                  {isVerificationError && (
+                    <Button
+                      size="xs"
+                      variant="light"
+                      color="red"
+                      onClick={() => resendMutation.mutate()}
+                      loading={resendMutation.isPending}
+                      disabled={resendSuccess}
+                    >
+                      {resendSuccess
+                        ? 'Email Sent'
+                        : 'Resend Verification Email'}
+                    </Button>
+                  )}
+                </div>
+              </Alert>
+            ) : null}
 
-          <Group justify="space-between" mt="md">
-            <Button
-              variant="outline"
-              color="gray"
-              leftSection={<IconX size={16} />}
-              onClick={handleDecline}
-              disabled={isPending}
-            >
-              Decline
-            </Button>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+              <Button
+                variant="outline"
+                color="gray"
+                leftSection={<IconX size={16} />}
+                onClick={handleDecline}
+                disabled={isPending}
+              >
+                Decline
+              </Button>
 
-            <Button
-              leftSection={
-                isPending ? (
-                  <Loader size="xs" color="white" />
-                ) : (
-                  <IconCheck size={16} />
-                )
-              }
-              onClick={handleAccept}
-              disabled={isPending}
-            >
-              Accept Invitation
-            </Button>
-          </Group>
+              <Button
+                leftSection={
+                  isPending ? (
+                    <Loader size="xs" color="white" />
+                  ) : (
+                    <IconCheck size={16} />
+                  )
+                }
+                onClick={handleAccept}
+                disabled={isPending}
+              >
+                Accept Invitation
+              </Button>
+            </div>
 
-          <Text size="sm" c="dimmed" mt="md">
-            This invitation will expire on{' '}
-            {new Date(invitation.expiresAt).toLocaleDateString()}.
-          </Text>
-        </Stack>
-      </Card>
+            <Text size="sm" c="dimmed" className="mt-4">
+              This invitation will expire on{' '}
+              {new Date(invitation.expiresAt).toLocaleDateString()}.
+            </Text>
+          </div>
+        </div>
 
-      <Box mt="md" ta="center">
-        <Link to="/">
-          <Text size="sm" c="dimmed">
-            Return to home
-          </Text>
-        </Link>
-      </Box>
-    </Box>
+        <div className="mt-4 text-center">
+          <Link to="/">
+            <Text size="sm" c="dimmed">
+              Return to home
+            </Text>
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }
