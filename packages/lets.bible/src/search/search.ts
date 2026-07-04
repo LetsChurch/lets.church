@@ -276,24 +276,109 @@ export async function countExactPhrase(params: {
   });
 }
 
-// "Related passages" via Elasticsearch's more_like_this — lexical similarity
-// (shared significant terms) over verse text. No embeddings required; a future
-// upgrade could fuse in dense-vector kNN for true semantic similarity. `like`
-// is usually a reference verse's text (find passages like John 3:16) or the raw
-// query; `excludeRefs` drops verses already shown as exact matches.
+// Verse `_source` we return for related hits — everything except the huge
+// `embedding` (3072 floats), which we never send to the client.
+const VERSE_SOURCE_FIELDS = [
+  'book',
+  'slug',
+  'name',
+  'ref',
+  'chapter',
+  'verse',
+  'text',
+];
+
+// A verse's stored embedding, fetched from the index by (translation, ref). Lets
+// semantic "related passages" seed off a reference verse's OWN indexed vector —
+// no re-embedding. Returns null when absent (→ lexical fallback).
+async function getVerseVector(
+  translationId: string,
+  ref: string,
+): Promise<number[] | null> {
+  const res = await osSearch<{ embedding?: number[] }>({
+    index: VERSE_INDEX,
+    size: 1,
+    _source: ['embedding'],
+    query: {
+      bool: { filter: [{ term: { translationId } }, { term: { ref } }] },
+    },
+  });
+  const e = res.hits.hits[0]?._source?.embedding;
+  return e && e.length > 0 ? e : null;
+}
+
+// "Related passages" — SEMANTIC similarity via dense-vector kNN over the verse
+// `embedding`, so results are thematically related rather than just sharing rare
+// words. The seed vector is the reference verse's stored embedding (`sourceRef`,
+// e.g. "find passages like John 3:16") or the free-text query embedded on the
+// fly. Falls back to lexical `more_like_this` over verse text when no vector is
+// available (embeddings disabled, or a miss). `excludeRefs` drops verses already
+// shown (the exact matches + the seed verse itself).
 export async function relatedVerses(params: {
   like: string;
+  sourceRef?: string | null;
   translationId: string;
   excludeRefs?: string[];
   size?: number;
 }): Promise<VerseHit[]> {
   const like = params.like.trim();
+  const size = params.size ?? 6;
+  const excludeRefs = params.excludeRefs ?? [];
+  // Drop verses already shown (exact matches + the seed) and — when seeded by a
+  // reference verse — its whole chapter, so "related" surfaces passages ELSEWHERE
+  // rather than the adjacent verses the reader can just keep reading. (`ref` is a
+  // keyword like `ISA.53.5`, so the chapter is the `ISA.53.` prefix.)
+  const mustNot: Array<Record<string, unknown>> = excludeRefs.map((ref) => ({
+    term: { ref },
+  }));
+  if (params.sourceRef) {
+    mustNot.push({
+      prefix: { ref: `${params.sourceRef.split('.').slice(0, 2).join('.')}.` },
+    });
+  }
+
+  // Seed vector: reuse the reference verse's indexed vector, else embed the query.
+  const vector = params.sourceRef
+    ? await getVerseVector(params.translationId, params.sourceRef)
+    : like
+      ? await getQueryVector(like)
+      : null;
+
+  if (vector) {
+    const res = await osSearch<VerseSource>({
+      index: VERSE_INDEX,
+      size,
+      _source: VERSE_SOURCE_FIELDS,
+      query: {
+        knn: {
+          embedding: {
+            vector,
+            // Over-fetch generously so filtering out the shown verses + the seed
+            // chapter can't shrink us below `size`.
+            k: size + excludeRefs.length + 40,
+            filter: {
+              bool: {
+                filter: [{ term: { translationId: params.translationId } }],
+                must_not: mustNot,
+              },
+            },
+          },
+        },
+      },
+    });
+    return res.hits.hits.flatMap((hit) =>
+      hit._source ? [toHit(hit._source)] : [],
+    );
+  }
+
   if (!like) {
     return [];
   }
+  // Lexical fallback: more_like_this over verse text (shared significant terms).
   const res = await osSearch<VerseSource>({
     index: VERSE_INDEX,
-    size: params.size ?? 6,
+    size,
+    _source: VERSE_SOURCE_FIELDS,
     query: {
       bool: {
         filter: [{ term: { translationId: params.translationId } }],
@@ -309,7 +394,7 @@ export async function relatedVerses(params: {
             },
           },
         ],
-        must_not: (params.excludeRefs ?? []).map((ref) => ({ term: { ref } })),
+        must_not: mustNot,
       },
     },
   });

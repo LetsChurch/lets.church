@@ -247,7 +247,13 @@ export const bibleProcedures = {
       }
 
       const [related, crossReferences] = await Promise.all([
-        relatedVerses({ like: likeText, translationId, excludeRefs, size: 6 }),
+        relatedVerses({
+          like: likeText,
+          sourceRef,
+          translationId,
+          excludeRefs,
+          size: 6,
+        }),
         reference?.verse != null
           ? fetchCrossReferences(
               translationId,

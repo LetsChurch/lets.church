@@ -239,8 +239,10 @@ the toolbar "Listen" is not built; homepage "Today's plan" card,
 standalone `/listen` page, and word pronunciation audio are placeholders. (The
 `/listen` page's promise — sermons connected to the passages they teach — is now
 delivered inside the study panel's **Media** tab; the dedicated page itself is
-still a placeholder.) "Related passages" is lexical (`more_like_this`), not
-vector embeddings.
+still a placeholder.) "Related passages" is **semantic** — dense-vector kNN over
+the verse `embedding` (seeded by the reference verse's own indexed vector, or by
+embedding the free-text query), with lexical `more_like_this` as the fallback
+when embeddings are unavailable.
 
 ---
 
@@ -812,8 +814,6 @@ verse view.
   Note/Study are functional.
 - Homepage "Today's plan" card = static mock; `/listen` = placeholder.
 - Word pronunciation audio = not implemented (see `docs/word-pronunciation-audio.md`).
-- "Related passages" = lexical similarity (`more_like_this`), not vector-embedding
-  semantic search.
 - **Autocomplete result-type widgets = book-jump only.** The Smart Autocomplete
   design also sketches interactive *topic facets*, *original-word occurrences*,
   and *recent-with-resume* result widgets — those are concept-only; only the
