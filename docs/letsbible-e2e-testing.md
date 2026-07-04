@@ -297,9 +297,11 @@ just lb-seed-source OT BSB   # BSB OT Hebrew (STEPBible TAHOT, Masoretic) — MS
 just lb-seed-source NT MSB   # MSB NT Greek (Byzantine/Majority)
 just lb-seed-source NT WEB   # WEB NT Greek (Byzantine/Majority — the WEB NT's text basis)
 just lb-seed-source NT KJV   # KJV NT Greek (STEPBible TAGNT, Textus Receptus — TR-only readings incl. the Comma Johanneum)
-# `just lb-up` runs the whole set (BSB ALL + KJV/MSB/WEB NT); prod provision seeds the same.
-just lb-index          # index 124,389 verses into OpenSearch (`lets_bible_verses`; BSB + MSB + KJV + WEB) with popularity from seed/popularity.json + `text-embedding-3-large` vectors for hybrid search. Reads vectors from the COMMITTED artifact seed/embeddings/ (git-lfs) — deterministic and NO API key needed; only live-embeds via OPENAI_API_KEY for verses missing from the artifact (or all, if the artifact is absent).
-# just lb-export-embeddings  # (rare) re-export vectors from the index to seed/embeddings/ after a model/dims change or added translation, then commit the LFS artifact
+# `just lb-up` runs the whole set (BSB ALL + KJV/MSB/WEB NT). NOTE: prod's init
+# container only migrates + pushes mappings — seeding and indexing are manual.
+just lb-index          # index 124,389 verses into OpenSearch (`lets_bible_verses`; BSB + MSB + KJV + WEB) with popularity from seed/popularity.json + `text-embedding-3-large` vectors. Reads vectors ONLY from the COMMITTED artifact seed/embeddings/ (git-lfs) — deterministic, NO API key. Absent (LFS not pulled) → lexical-only index. Never live-embeds.
+# just lb-index-remote <host>  # (manual, remote) same, vs a remote OpenSearch base URL — how a prod index is (re)built from the committed vectors (export OPENSEARCH_USERNAME/PASSWORD first)
+# just lb-embed [tid]    # (rare) regenerate the committed vectors by embedding verse text via OpenAI — the ONLY corpus-embed step — after a model/dims change or added translation, then commit the LFS artifact
 just lb-flex           # build client FlexSearch + reading assets + overlay index → public/{search,reading,overlays}/* (incl. KJV + WEB)
 just lb-up             # all of the above, in order
 ```

@@ -1,165 +1,44 @@
-// Idempotent provisioning for a lets.bible deployment: migrate → seed the corpus
-// if not yet seeded → build the OpenSearch verse index if not yet built. Designed
-// to run on every pod start (the deployment's init container):
+// Structural provisioning for a lets.bible deployment: run DB migrations and push
+// the OpenSearch index mappings + hybrid search pipeline. Runs on every pod start
+// (the deployment's init container). A Postgres advisory lock serializes it across
+// replicas so concurrent starts don't race the migration or the index create.
 //
-//   - Safe across replicas: a Postgres advisory lock serializes provisioning, so
-//     only one pod does the slow work; the others block, then see it's done.
-//   - Cheap once provisioned: a marker row (`lets_bible_provisioning`) records
-//     completion, so the seed/index steps are skipped on subsequent starts.
-//   - Re-seedable: the seed scripts are themselves idempotent (they clear-then-
-//     insert per translation), so a re-run can't duplicate data. Set
-//     LETS_BIBLE_FORCE_RESEED=true to force a full re-seed + re-index.
-//
-// The OpenSearch index is additionally guarded by a live doc-count check, so if
-// the cluster is wiped (but the DB marker persists) the index is rebuilt anyway.
+// It deliberately does NOT seed the corpus or build the verse index, and nothing
+// here (or in indexing) ever calls OpenAI. Seeding and indexing are manual,
+// out-of-band steps:
+//   - local:  `just lb-up` (seed + `lb-index`, which reads the committed vectors)
+//   - remote: `just lb-index-remote <host>` to (re)build an index from the
+//             committed embeddings; seed the target DB out-of-band.
 import { execFileSync } from 'node:child_process';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
-import { VERSE_INDEX } from '../search/client';
 import { createPool } from './pool';
 
-// Committed USX seed dirs, resolved from this file so they work regardless of the
-// child process's cwd. seed:bible defaults to BSB; MSB/WEB pass their own USX_DIR.
-const SEED_DIR = join(
-  dirname(fileURLToPath(import.meta.url)),
-  '..',
-  '..',
-  'seed',
-);
-
-const { LETS_BIBLE_DATABASE_URL, OPENSEARCH_URL } = z
-  .object({
-    LETS_BIBLE_DATABASE_URL: z.string(),
-    OPENSEARCH_URL: z.string().default('http://opensearch:9200'),
-  })
+const { LETS_BIBLE_DATABASE_URL } = z
+  .object({ LETS_BIBLE_DATABASE_URL: z.string() })
   .parse(process.env);
 
-const FORCE = process.env.LETS_BIBLE_FORCE_RESEED === 'true';
 // Stable key so all replicas contend on the same advisory lock.
 const LOCK_KEY = 728_401_553;
-// Order matters: bible text first, then dependent data. seed:source defaults to
-// John only (dev convenience); in prod we seed the WHOLE Bible so the
-// original-language interlinear ("Original" mode) covers every book. Seed BSB
-// with the whole Bible (NT critical Greek + the shared Masoretic OT Hebrew),
-// then each other translation's NT under its OWN Greek basis so every
-// translation's interlinear matches its own text: KJV → Textus Receptus (incl.
-// TR-only readings like the Comma Johanneum, which the critical text omits),
-// MSB/WEB → Byzantine/Majority. The OT falls back to BSB's Hebrew for all — it's
-// the same Masoretic base — so it's seeded once.
-const SEEDS: ReadonlyArray<{ script: string; env?: Record<string, string> }> = [
-  // All four translations first (seed:crossrefs/source FK to bible_translation):
-  // seed:bible defaults to BSB; MSB/WEB reuse it with their own USX + attribution
-  // (mirrors the `lb-seed-bible` recipe chain); KJV has its own seeder.
-  { script: 'seed:bible' },
-  {
-    script: 'seed:bible',
-    env: {
-      TRANSLATION_ID: 'MSB',
-      TRANSLATION_NAME: 'Majority Standard Bible',
-      TRANSLATION_IS_DEFAULT: 'false',
-      TRANSLATION_ATTRIBUTION: 'Majority Standard Bible — Public Domain',
-      TRANSLATION_ATTRIBUTION_URL: 'https://berean.bible',
-      USX_DIR: join(SEED_DIR, 'msb', 'USX_1'),
-    },
-  },
-  { script: 'seed:kjv' },
-  {
-    script: 'seed:bible',
-    env: {
-      TRANSLATION_ID: 'WEB',
-      TRANSLATION_NAME: 'World English Bible',
-      TRANSLATION_IS_DEFAULT: 'false',
-      TRANSLATION_ATTRIBUTION:
-        'World English Bible — Public Domain (trademark eBible.org)',
-      TRANSLATION_ATTRIBUTION_URL: 'https://ebible.org/web/',
-      USX_DIR: join(SEED_DIR, 'web', 'USX_1'),
-    },
-  },
-  { script: 'seed:lexicon' },
-  { script: 'seed:crossrefs' },
-  { script: 'seed:commentaries' },
-  { script: 'seed:source', env: { BOOKS: 'ALL', TRANSLATION_ID: 'BSB' } },
-  { script: 'seed:source', env: { BOOKS: 'NT', TRANSLATION_ID: 'KJV' } },
-  { script: 'seed:source', env: { BOOKS: 'NT', TRANSLATION_ID: 'MSB' } },
-  { script: 'seed:source', env: { BOOKS: 'NT', TRANSLATION_ID: 'WEB' } },
-];
 
-function run(script: string, env?: Record<string, string>): void {
-  const suffix = env
-    ? ` (${Object.entries(env)
-        .map(([k, v]) => `${k}=${v}`)
-        .join(' ')})`
-    : '';
-  console.log(`[provision] pnpm run ${script}${suffix}`);
+function run(script: string): void {
+  console.log(`[provision] pnpm run ${script}`);
   execFileSync('pnpm', ['--filter', '@letschurch/lets.bible', 'run', script], {
     stdio: 'inherit',
-    env: env ? { ...process.env, ...env } : process.env,
+    env: process.env,
   });
-}
-
-async function indexedVerseCount(): Promise<number> {
-  try {
-    const res = await fetch(`${OPENSEARCH_URL}/${VERSE_INDEX}/_count`);
-    if (!res.ok) return 0;
-    const body = (await res.json()) as { count?: number };
-    return body.count ?? 0;
-  } catch {
-    return 0;
-  }
 }
 
 const pool = createPool(LETS_BIBLE_DATABASE_URL);
 try {
   await pool.query('SELECT pg_advisory_lock($1)', [LOCK_KEY]);
   try {
-    // Migrations are idempotent (Drizzle tracks applied ones); always run.
+    // Both idempotent: Drizzle tracks applied migrations, and push-mappings is
+    // create-if-missing + additive. The lock keeps replicas from racing them.
     run('db:migrate');
-
-    await pool.query(
-      `CREATE TABLE IF NOT EXISTS lets_bible_provisioning (
-         id integer PRIMARY KEY,
-         seeded_at timestamptz,
-         indexed_at timestamptz
-       )`,
+    run('es:push-mappings');
+    console.log(
+      '[provision] done (migrations + mappings). Seeding + indexing are manual.',
     );
-    const marker = (
-      await pool.query(
-        'SELECT seeded_at, indexed_at FROM lets_bible_provisioning WHERE id = 1',
-      )
-    ).rows[0] as
-      | { seeded_at: Date | null; indexed_at: Date | null }
-      | undefined;
-
-    if (FORCE || !marker?.seeded_at) {
-      console.log(
-        FORCE ? '[provision] FORCE re-seed…' : '[provision] seeding…',
-      );
-      for (const s of SEEDS) run(s.script, s.env);
-      await pool.query(
-        `INSERT INTO lets_bible_provisioning (id, seeded_at) VALUES (1, now())
-           ON CONFLICT (id) DO UPDATE SET seeded_at = now()`,
-      );
-    } else {
-      console.log(
-        `[provision] already seeded (${marker.seeded_at.toISOString()}) — skipping`,
-      );
-    }
-
-    const indexed =
-      !FORCE && !!marker?.indexed_at && (await indexedVerseCount()) > 0;
-    if (!indexed) {
-      console.log('[provision] building verse index…');
-      run('es:push-mappings');
-      run('es:index-verses');
-      await pool.query(
-        `INSERT INTO lets_bible_provisioning (id, indexed_at) VALUES (1, now())
-           ON CONFLICT (id) DO UPDATE SET indexed_at = now()`,
-      );
-    } else {
-      console.log('[provision] verse index present — skipping');
-    }
-    console.log('[provision] done.');
   } finally {
     await pool.query('SELECT pg_advisory_unlock($1)', [LOCK_KEY]);
   }

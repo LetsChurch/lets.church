@@ -169,11 +169,29 @@ lb-seed-source books="JHN" translation="BSB":
 lb-index:
   docker compose exec letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:index-verses'
 
-# Export verse embeddings from the search index to the committed seed artifact
-# (packages/lets.bible/seed/embeddings/*, tracked in git-lfs). One-time / rerun
-# only after the embedding model/dims change or a translation is added.
-lb-export-embeddings:
-  docker compose exec letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:export-embeddings'
+# Build/refresh the verse index against a REMOTE OpenSearch (pass its base URL as
+# `host`) using the committed seed/embeddings vectors — deterministic, no OpenAI
+# key. Reads verse rows from the local dev Postgres (so seed it fully first —
+# `just lb-up` — the index mirrors local rows) and upserts to `host`; idempotent (creates the index +
+# `lets_bible_hybrid` pipeline if missing). Rare/manual: prod images ship without
+# the vectors, so this is how a remote index gets them. Export the target's creds
+# first: `export OPENSEARCH_USERNAME=… OPENSEARCH_PASSWORD=…`.
+lb-index-remote host:
+  docker compose exec \
+    -e OPENSEARCH_URL='{{host}}' \
+    -e OPENSEARCH_USERNAME="$OPENSEARCH_USERNAME" \
+    -e OPENSEARCH_PASSWORD="$OPENSEARCH_PASSWORD" \
+    letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:push-mappings && pnpm --filter @letschurch/lets.bible run es:index-verses'
+
+# Generate the committed verse-embedding artifact (packages/lets.bible/seed/
+# embeddings/*, git-lfs) by embedding verse text via OpenAI — the ONE manual
+# corpus-embed step (indexing only reads it). Rare: adding a translation or
+# changing the model/dims. Pass a translation id to embed just that one (default:
+# all in the DB). Needs OPENAI_API_KEY + a seeded DB; commit the result.
+#   just lb-embed          # all translations
+#   just lb-embed BSB      # one
+lb-embed tid='':
+  docker compose exec -e TRANSLATION_ID='{{tid}}' letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:embed-verses'
 
 # Build the client-side FlexSearch search assets per translation (public/search/*)
 lb-flex:

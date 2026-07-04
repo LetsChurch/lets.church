@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { EMBED_DIMS } from '../ai/embed';
 
 // Reads the committed PER-TRANSLATION verse-embedding artifacts (seed/embeddings/
-// <TID>.f16.bin + <TID>.manifest.json, produced by export-embeddings.ts) so the
+// <TID>.f16.bin + <TID>.manifest.json, produced by embed-verses.ts) so the
 // indexer can rebuild the search index without re-embedding via OpenAI. Vectors
 // are stored float16, decoded to number[] on demand from per-translation buffers
 // (kept in memory; ~730 MB total across translations) rather than a giant map,
@@ -57,10 +57,19 @@ export function loadCommittedEmbeddings(): CommittedEmbeddings | null {
     ) as TranslationManifest;
     if (m.dims !== EMBED_DIMS) {
       throw new Error(
-        `Committed embeddings for ${m.translationId} are ${m.dims}-d but EMBED_DIMS is ${EMBED_DIMS} — regenerate seed/embeddings (see export-embeddings.ts).`,
+        `Committed embeddings for ${m.translationId} are ${m.dims}-d but EMBED_DIMS is ${EMBED_DIMS} — regenerate seed/embeddings (\`just lb-embed\`).`,
       );
     }
     const buf = readFileSync(join(DIR, `${m.translationId}.f16.bin`));
+    // Guard against a git-LFS pointer / truncated file masquerading as data — a
+    // ~130-byte pointer would otherwise yield empty vectors and a cryptic
+    // downstream "knn_vector dimension mismatch" at index time.
+    const expectedBytes = m.count * m.dims * 2;
+    if (buf.byteLength !== expectedBytes) {
+      throw new Error(
+        `${m.translationId}.f16.bin is ${buf.byteLength} bytes but the manifest expects ${expectedBytes} (${m.count}×${m.dims}×2) — likely an unresolved git-LFS pointer; run \`git lfs pull\`.`,
+      );
+    }
     const f16 = new Float16Array(
       buf.buffer,
       buf.byteOffset,

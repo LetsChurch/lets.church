@@ -18,6 +18,11 @@ packages/lets.bible/dist
 # local copy into the build context.
 packages/lets.bible/public/search
 packages/lets.bible/public/reading
+# Committed verse embeddings (git-lfs, ~731MB). Kept out of every image: dev
+# reads them via the bind mount, and a remote index is (re)built out-of-band with
+# `just lb-index-remote <host>`. Without them the image's init-container
+# provisioning live-embeds instead (it has the OpenAI key).
+packages/lets.bible/seed/embeddings
 
 # Dependencies (installed during build stage)
 **/node_modules
