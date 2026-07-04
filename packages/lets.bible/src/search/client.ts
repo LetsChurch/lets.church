@@ -24,9 +24,19 @@ const {
   })
   .parse(process.env);
 
-// Bumped (v1 → v2 …) whenever the mapping changes incompatibly; reindex into the
-// new name, then flip the alias/constant.
-export const VERSE_INDEX = 'lets_bible_verses_v2';
+// Stable, unversioned index name. `push-mappings.ts` is idempotent (create if
+// missing, else additive mapping updates) — a normal deploy leaves it alone.
+// Static settings (`index.knn`) and incompatible mapping changes can't be
+// applied to a live index, so when one is needed the index is destroyed first
+// (manually, before that deploy), then recreated fresh + repopulated by
+// `index-verses.ts`.
+export const VERSE_INDEX = 'lets_bible_verses';
+
+// Search pipeline that fuses the two branches of a `hybrid` query — the lexical
+// bool and the semantic knn — via min-max score normalization + a weighted
+// arithmetic mean (created by push-mappings.ts). Passed as the `search_pipeline`
+// URL param on the hybrid search request.
+export const HYBRID_PIPELINE = 'lets_bible_hybrid';
 
 export const client = new Client({
   node: OPENSEARCH_URL,
@@ -52,10 +62,16 @@ export type OsHits<T> = {
 };
 
 export async function osSearch<T = unknown>(
-  params: Record<string, unknown> & { index: string; scroll?: string },
+  params: Record<string, unknown> & {
+    index: string;
+    scroll?: string;
+    // A `hybrid` query is only scored correctly when run through its fusion
+    // search pipeline (HYBRID_PIPELINE); pass it here as a URL param.
+    search_pipeline?: string;
+  },
 ): Promise<OsHits<T>> {
-  const { index, scroll, ...body } = params;
-  const res = await client.search({ index, scroll, body });
+  const { index, scroll, search_pipeline, ...body } = params;
+  const res = await client.search({ index, scroll, search_pipeline, body });
   return res.body as OsHits<T>;
 }
 

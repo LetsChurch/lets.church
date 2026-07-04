@@ -16,6 +16,7 @@ import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
+import { VERSE_INDEX } from '../search/client';
 import { createPool } from './pool';
 
 // Committed USX seed dirs, resolved from this file so they work regardless of the
@@ -37,8 +38,6 @@ const { LETS_BIBLE_DATABASE_URL, OPENSEARCH_URL } = z
 const FORCE = process.env.LETS_BIBLE_FORCE_RESEED === 'true';
 // Stable key so all replicas contend on the same advisory lock.
 const LOCK_KEY = 728_401_553;
-// Must match search/client.ts VERSE_INDEX.
-const VERSE_INDEX = 'lets_bible_verses_v2';
 // Order matters: bible text first, then dependent data. seed:source defaults to
 // John only (dev convenience); in prod we seed the WHOLE Bible so the
 // original-language interlinear ("Original" mode) covers every book. Seed BSB

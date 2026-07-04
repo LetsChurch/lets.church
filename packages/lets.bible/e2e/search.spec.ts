@@ -19,6 +19,23 @@ test('LB-SR-02 reference query shows a go-to-reference card', async ({
   await expect(card).toHaveAttribute('href', /\/bible\/john\/3\?v=16/);
 });
 
+// Requires the v3 index built WITH embeddings + OPENAI_API_KEY configured on the
+// server (the hybrid semantic branch); degrades to lexical-only otherwise, where
+// this paraphrase does NOT surface Genesis 50:20 and the test would fail.
+test('LB-SR-12 hybrid search surfaces a paraphrased verse', async ({ page }) => {
+  // "they meant bad but God meant good" shares almost no words with Genesis
+  // 50:20 ("what you intended against me for evil, God intended for good") — a
+  // lexical-only search misses it entirely. The semantic branch of hybrid search
+  // surfaces it on the first page of results.
+  await page.goto('/search?q=they meant bad but God meant good');
+  const genesis = page
+    .locator('ul a')
+    .filter({ hasText: 'Genesis 50:20' })
+    .first();
+  await expect(genesis).toBeVisible({ timeout: 15000 });
+  await expect(genesis).toHaveAttribute('href', /\/bible\/genesis\/50\?v=20/);
+});
+
 test('LB-AC-05 autocomplete reference jump scrolls to the verse', async ({
   page,
 }) => {

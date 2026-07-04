@@ -26,6 +26,7 @@
     "seed:source": "tsx src/db/seed-source.ts",
     "es:push-mappings": "tsx src/search/push-mappings.ts",
     "es:index-verses": "tsx src/search/index-verses.ts",
+    "es:export-embeddings": "tsx src/search/export-embeddings.ts",
     "flex:build": "tsx src/search/build-flex-index.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"

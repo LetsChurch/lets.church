@@ -2,24 +2,68 @@
 // the DB-migration step but for OpenSearch. Run via `just lb-es-push`
 // (or `pnpm run es:push-mappings`).
 
-import { client, VERSE_INDEX, waitForOpenSearch } from './client';
+import {
+  client,
+  HYBRID_PIPELINE,
+  VERSE_INDEX,
+  waitForOpenSearch,
+} from './client';
 import { verseProperties, verseSettings } from './mappings';
 
 await waitForOpenSearch();
 
+// Fusion pipeline for the `hybrid` verse query (lexical bool + semantic knn).
+// Score-normalized fusion (magnitude > rank), NOT rank-based RRF: min-max
+// normalize each branch to [0,1] then take a weighted arithmetic mean. Weights
+// lean SEMANTIC (0.4 lexical / 0.6 semantic) so paraphrases with little lexical
+// overlap surface prominently — precise queries are unaffected because the
+// lexical branch's exact-phrase boost (×5) keeps its normalized score ~1.0, so
+// verbatim/reference matches still rank #1 even at this weighting (verified:
+// "fruit of the Spirit" → Galatians 5:22 #1). Weights are the two hybrid
+// sub-queries, in order.
+await client.transport.request({
+  method: 'PUT',
+  path: `/_search/pipeline/${HYBRID_PIPELINE}`,
+  body: {
+    description:
+      'lets.bible hybrid verse search: min-max normalize + weighted arithmetic mean (lexical-biased)',
+    phase_results_processors: [
+      {
+        'normalization-processor': {
+          normalization: { technique: 'min_max' },
+          combination: {
+            technique: 'arithmetic_mean',
+            parameters: { weights: [0.4, 0.6] },
+          },
+        },
+      },
+    ],
+  },
+});
+console.log(`Pushed search pipeline ${HYBRID_PIPELINE}.`);
+
+// Idempotent + non-destructive: create the index (with static settings like
+// `index.knn`) only if it's missing, otherwise just apply additive mapping
+// updates. Static settings and incompatible mapping changes CAN'T be applied to
+// a live index — for those, destroy the index first (done manually before the
+// deploy that needs them, then this recreates it fresh and `es:index-verses`
+// repopulates). So a normal deploy leaves an existing index untouched.
 const exists = (await client.indices.exists({ index: VERSE_INDEX })).body;
 if (!exists) {
   console.log(`Creating index ${VERSE_INDEX}`);
   await client.indices.create({
     index: VERSE_INDEX,
-    body: { settings: verseSettings },
+    body: {
+      settings: verseSettings,
+      mappings: { properties: verseProperties },
+    },
+  });
+} else {
+  await client.indices.putMapping({
+    index: VERSE_INDEX,
+    body: { properties: verseProperties },
   });
 }
-
-await client.indices.putMapping({
-  index: VERSE_INDEX,
-  body: { properties: verseProperties },
-});
 
 console.log(`Pushed mappings for ${VERSE_INDEX}.`);
 process.exit(0);

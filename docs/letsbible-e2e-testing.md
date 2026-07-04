@@ -188,11 +188,18 @@ In scope (everything implemented to date):
   debounce) — an interactive book-jump widget (book → chapter → verse), exact
   phrase, re-ranked verse matches, topics & recent, with a per-translation scope
   dropdown — plus a results page (reference, full-text, cross-refs, related
-  passages) still backed by Elasticsearch. Both re-ranks fold in a **verse
-  popularity** signal (Common Crawl appearance counts, `seed/popularity.json`) as
-  a bounded tie-breaker so a more-quoted verse edges out an equally-good text
-  match — a `rank_feature` boost server-side, a log term in the FlexSearch
-  `score()` client-side.
+  passages) backed by OpenSearch. The results page's full-text verse hits are
+  **hybrid**: the lexical BM25 query is fused with a **semantic kNN** over
+  per-verse OpenAI embeddings (`text-embedding-3-large`, 3072-d `knn_vector`),
+  combined by a score-normalized (min-max) search pipeline with
+  **semantic-leaning** weights (0.4 lexical / 0.6 semantic) so a paraphrase with
+  little lexical overlap ("they meant bad but God meant good" → Genesis 50:20)
+  surfaces at the top. Exact/phrase/reference matches stay decisive anyway
+  because the lexical branch's exact-phrase boost (×5) keeps its normalized score
+  ~1.0. Degrades to lexical-only when no `OPENAI_API_KEY` is configured. Both re-ranks fold in a **verse popularity** signal (Common Crawl
+  appearance counts, `seed/popularity.json`) as a bounded tie-breaker so a
+  more-quoted verse edges out an equally-good text match — a `rank_feature` boost
+  server-side, a log term in the FlexSearch `score()` client-side.
 - Compare translations: side-by-side verse-aligned view (`/compare/$book/$chapter`),
   launched from the **version picker** (a Compare button on each non-current
   translation row) and from the study panel's verse view.
@@ -276,7 +283,7 @@ To re-run a single lets.bible step against a running stack:
 
 ```
 just lb-migrate        # lets.bible schema (incl. oidc_session.id_token)
-just lb-es-push        # create lets_bible_verses_v2 mappings (incl. `popularity` rank_feature)
+just lb-es-push        # idempotent: create the `lets_bible_verses` index if missing (`popularity` rank_feature + `embedding` knn_vector + `index.knn`) else additive mapping update, + the `lets_bible_hybrid` fusion pipeline. Non-destructive — for a static-setting/incompatible mapping change, DESTROY the index first (manually), then lb-es-push recreates it and lb-index repopulates.
 just lb-seed-bsb       # BSB (default) — 66 books / 31,086 verses
 just lb-seed-msb       # MSB (second translation) — 31,100 verses
 just lb-seed-kjv       # KJV (1769, Strong's + morphology) — 31,102 verses / 790,868 tokens
@@ -291,7 +298,8 @@ just lb-seed-source NT MSB   # MSB NT Greek (Byzantine/Majority)
 just lb-seed-source NT WEB   # WEB NT Greek (Byzantine/Majority — the WEB NT's text basis)
 just lb-seed-source NT KJV   # KJV NT Greek (STEPBible TAGNT, Textus Receptus — TR-only readings incl. the Comma Johanneum)
 # `just lb-up` runs the whole set (BSB ALL + KJV/MSB/WEB NT); prod provision seeds the same.
-just lb-index          # index 124,389 verses into ES v2 (BSB + MSB + KJV + WEB) with popularity from seed/popularity.json
+just lb-index          # index 124,389 verses into OpenSearch (`lets_bible_verses`; BSB + MSB + KJV + WEB) with popularity from seed/popularity.json + `text-embedding-3-large` vectors for hybrid search. Reads vectors from the COMMITTED artifact seed/embeddings/ (git-lfs) — deterministic and NO API key needed; only live-embeds via OPENAI_API_KEY for verses missing from the artifact (or all, if the artifact is absent).
+# just lb-export-embeddings  # (rare) re-export vectors from the index to seed/embeddings/ after a model/dims change or added translation, then commit the LFS artifact
 just lb-flex           # build client FlexSearch + reading assets + overlay index → public/{search,reading,overlays}/* (incl. KJV + WEB)
 just lb-up             # all of the above, in order
 ```
@@ -320,7 +328,7 @@ just lb-up             # all of the above, in order
 | KJV source tokens (Textus Receptus) | `select count(*) from bible_source_token where translation_id='KJV' and book='1JN' and chapter=5 and verse=7` | > 5 (the Comma Johanneum is present — TR-only, absent from the BSB/critical set) |
 | Commentary works | `select count(*) from bible_commentary_work` | 5 (calvin, mhc, mhcc, geneva, wesley) |
 | Commentary entries | `select count(*) from bible_commentary` | ~52,125 (calvin 11,063 / mhc 5,360 / mhcc 4,059 / geneva 14,713 / wesley 16,930) |
-| ES docs | `GET lets_bible_verses_v2/_count` | 124,389 |
+| ES docs | `GET lets_bible_verses/_count` | 124,389 |
 
 ### 2.4 Test accounts & inputs
 
@@ -638,6 +646,7 @@ the stage and clicking fills the input or navigates.
 | LB-SR-10 | Any query **with** results, e.g. `/search?q=fruit of the Spirit` | An **AI answer** card (`aria-label="AI answer (coming soon)"`, ✦ + "AI answer" + **Coming soon** pill + "We're building grounded, cited answers…") renders **first**, above the reference/cross-refs/verses. It is a placeholder only — no generated text, no network/LLM call. |
 | LB-SR-11 | Popularity ranking | `/search?q=the word was god` — the decisive text match **John 1:1 ranks first**, but among the weaker matches a well-known verse (e.g. Luke 1:37) outranks an obscure one (e.g. 1 Kings 12:22); the obscure verse is displaced from the top. Popularity is a bounded `rank_feature` boost (pivot 2000, boost 4) — it reorders similar matches, never lifts a non-match or overrides a strong text match (John 1:1 still #1). Requires the v2 index populated with `popularity` (§2.2). |
 | LB-SR-11 | A query with **no** results (`/search?q=<gibberish>`) | The AI placeholder is **not** shown — only the "No results…" empty state (the card lives in the results branch, not the empty branch). |
+| LB-SR-12 [E2E: search] | Hybrid semantic search: `/search?q=they meant bad but God meant good` (BSB) | The paraphrase shares almost no words with **Genesis 50:20** ("what you intended against me for evil, God intended for good"), so a **lexical-only** search misses it entirely (not in the top results) — but with hybrid search it ranks **#1** among the verse hits, surfaced by the semantic **kNN** branch over per-verse `text-embedding-3-large` (3072-d) embeddings, fused with the lexical BM25 by the `lets_bible_hybrid` pipeline (min-max normalize, semantic-leaning weights 0.4/0.6). Precise queries are **unaffected**: `fruit of the Spirit` still ranks **Galatians 5:22 #1** (the exact-phrase boost dominates the normalized lexical score). **Requires the index built WITH embeddings + `OPENAI_API_KEY` on the server** (§2); without it hybrid degrades to lexical-only and the paraphrase does not surface Gen 50:20. |
 
 ---
 

@@ -16,7 +16,7 @@ import {
 import { bookBySlug } from '@/lib/canon';
 import { osisBookId } from '@/lib/osis';
 import { parseReference } from '@/lib/reference';
-import { relatedVerses, searchVerses } from '@/search/search';
+import { hybridSearchVerses, relatedVerses } from '@/search/search';
 import {
   applyOverlaysToTokens,
   loadOverlayIndex,
@@ -214,7 +214,7 @@ export const bibleProcedures = {
           }
         : null;
 
-      const verses = await searchVerses({
+      const verses = await hybridSearchVerses({
         q,
         translationId,
         size: input.limit,

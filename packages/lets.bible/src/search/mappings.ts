@@ -6,6 +6,12 @@
 // validated by the cluster on push).
 export const verseSettings: Record<string, unknown> = {
   number_of_replicas: 0,
+  // Enable approximate kNN (HNSW) for the `embedding` field. Unlike the web
+  // app's ~7.86M nested paragraph vectors (whose faiss graph OOM'd the pod), a
+  // translation is only ~31k FLAT verse vectors — a tiny graph — so ANN here is
+  // safe and fast. Static setting: it must be set at index-creation time, so
+  // adding it means a new index version (see VERSE_INDEX) + reindex.
+  'index.knn': true,
 };
 
 // biome-ignore lint/suspicious/noExplicitAny: OpenSearch's mapping-property types are thin; `any` lets these literals satisfy putMapping, and the cluster validates the shape on push (see above).
@@ -32,4 +38,20 @@ export const verseProperties: Record<string, any> = {
       exact: { type: 'text', analyzer: 'standard' },
     },
   },
+  // Dense semantic vector of the verse text (OpenAI text-embedding-3-large).
+  // Powers the semantic half of hybrid search so paraphrases with little lexical
+  // overlap ("they meant bad but God meant good" → Genesis 50:20) still match.
+  // `cosinesimil` matches the model's cosine space; omitted on docs indexed
+  // without an API key, in which case hybrid search degrades to lexical-only.
+  // `dimension` MUST equal EMBED_DIMS in ai/embed.ts (3072 for 3-large).
+  embedding: {
+    type: 'knn_vector',
+    dimension: 3072,
+    space_type: 'cosinesimil',
+    method: { name: 'hnsw', engine: 'faiss' },
+  },
 };
+
+// A verse's `embedding` is only present when the indexer had an OpenAI key.
+// Exported so index-verses.ts and search.ts share the dimension constant.
+export const EMBEDDING_FIELD = 'embedding';

@@ -169,6 +169,12 @@ lb-seed-source books="JHN" translation="BSB":
 lb-index:
   docker compose exec letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:index-verses'
 
+# Export verse embeddings from the search index to the committed seed artifact
+# (packages/lets.bible/seed/embeddings/*, tracked in git-lfs). One-time / rerun
+# only after the embedding model/dims change or a translation is added.
+lb-export-embeddings:
+  docker compose exec letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:export-embeddings'
+
 # Build the client-side FlexSearch search assets per translation (public/search/*)
 lb-flex:
   docker compose exec letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run flex:build'

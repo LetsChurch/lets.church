@@ -154,6 +154,16 @@ export function LiveSearchBox({
   const [query, setQuery] = useState(initialQuery ?? '');
   const [, bump] = useReducer((x: number) => x + 1, 0);
 
+  // Keep the box in sync with the URL `?q` on the results page. The results-page
+  // box persists across same-route navigations (searching again, or back/
+  // forward), so when the URL query changes we re-seed the input — otherwise it
+  // would keep the empty state left by SearchBox's post-navigate reset() instead
+  // of showing the new query. (On placements without a URL-driven query, e.g. the
+  // header, `initialQuery` never changes, so this is a no-op after mount.)
+  useEffect(() => {
+    setQuery(initialQuery ?? '');
+  }, [initialQuery]);
+
   const { data: examples } = useSuspenseQuery(
     trpc.home.searchSuggestions.queryOptions(),
   );

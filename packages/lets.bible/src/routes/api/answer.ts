@@ -56,7 +56,7 @@ export const Route = createFileRoute('/api/answer')({
         // bundle; this route file is part of the shared route tree).
         const [
           { answerModel, ANSWER_MODEL },
-          { searchVerses },
+          { hybridSearchVerses },
           { streamText },
           { cacheGet, cacheSet },
         ] = await Promise.all([
@@ -77,9 +77,11 @@ export const Route = createFileRoute('/api/answer')({
           return new Response(cached, { headers: STREAM_HEADERS });
         }
 
-        // Retrieve grounding verses (BM25 + popularity). Also the citation
-        // anchors the model quotes/links.
-        const hits = await searchVerses({
+        // Retrieve grounding verses via hybrid (lexical + semantic) search, so a
+        // paraphrased question surfaces the right passages to cite even when it
+        // shares few words with the text. Also the citation anchors the model
+        // quotes/links.
+        const hits = await hybridSearchVerses({
           q: parsed.q,
           translationId: parsed.translation,
           size: 12,
