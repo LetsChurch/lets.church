@@ -174,13 +174,16 @@ lb-index:
 # key. Reads verse rows from the local dev Postgres (so seed it fully first —
 # `just lb-up` — the index mirrors local rows) and upserts to `host`; idempotent (creates the index +
 # `lets_bible_hybrid` pipeline if missing). Rare/manual: prod images ship without
-# the vectors, so this is how a remote index gets them. Export the target's creds
-# first: `export OPENSEARCH_USERNAME=… OPENSEARCH_PASSWORD=…`.
+# the vectors, so this is how a remote index gets them. Auth is OPTIONAL — export
+# OPENSEARCH_USERNAME/PASSWORD only for a secured target; omit them for a
+# non-secure cluster (client.ts sends no auth when they're empty). NOTE: the run
+# is inside the letsbible container, which isn't on your tailnet — pass a routable
+# IP, not a MagicDNS name (e.g. http://100.x.y.z:9200, not http://core-opensearch).
 lb-index-remote host:
   docker compose exec \
     -e OPENSEARCH_URL='{{host}}' \
-    -e OPENSEARCH_USERNAME="$OPENSEARCH_USERNAME" \
-    -e OPENSEARCH_PASSWORD="$OPENSEARCH_PASSWORD" \
+    -e OPENSEARCH_USERNAME="${OPENSEARCH_USERNAME:-}" \
+    -e OPENSEARCH_PASSWORD="${OPENSEARCH_PASSWORD:-}" \
     letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:push-mappings && pnpm --filter @letschurch/lets.bible run es:index-verses'
 
 # Generate the committed verse-embedding artifact (packages/lets.bible/seed/
