@@ -219,8 +219,26 @@ export const channelProcedures = {
 
       const { subscriberCount, isFollowing, uploadCount } = channel;
 
+      // Is the channel currently broadcasting? (a started, not-yet-ended live
+      // broadcast). Drives the channel-page live indicator + avatar badge.
+      const liveBroadcast = await db.query.UploadRecord.findFirst({
+        columns: { id: true },
+        where: (t, { and, eq, isNull, isNotNull }) =>
+          and(
+            eq(t.channelId, channel.id),
+            eq(t.isLiveBroadcast, true),
+            isNotNull(t.liveStartedAt),
+            isNull(t.liveEndedAt),
+            // Only PUBLIC broadcasts drive the public live indicator (UNLISTED
+            // shouldn't be surfaced); matches getLatestLiveStream.
+            eq(t.visibility, 'PUBLIC'),
+            isNull(t.deletedAt),
+          ),
+      });
+
       return {
         id: OutgoingIdSchema.parse(channel.id),
+        isLive: Boolean(liveBroadcast),
         name: channel.name,
         slug: channel.slug,
         description: channel.description,
@@ -651,5 +669,56 @@ export const channelProcedures = {
         }),
         nextCursor,
       };
+    }),
+
+  // Resolve a channel slug to its current in-progress (or most recent) live
+  // broadcast. Used by the /<slug>/live and /channel/<slug>/live redirects.
+  // Prefers a broadcast that is still live (no liveEndedAt), otherwise the most
+  // recent one. Returns null if the channel has never broadcast.
+  getLatestLiveStream: publicProcedure
+    .input(channelQuerySchema)
+    .query(async ({ input }) => {
+      const { slug } = input;
+
+      // Only resolve for publicly viewable channels (approved, not private) so
+      // this public endpoint can't be used to probe private/unapproved streams.
+      const channel = await db.query.Channel.findFirst({
+        columns: { id: true },
+        where: (t, { and, eq, isNull, ne, isNotNull }) =>
+          and(
+            eq(t.slug, slug),
+            isNull(t.deletedAt),
+            ne(t.visibility, 'PRIVATE'),
+            isNotNull(t.approvedAt),
+          ),
+      });
+      if (!channel) {
+        return null;
+      }
+
+      // Only PUBLIC broadcasts are resolvable via this public URL (UNLISTED
+      // shouldn't be surfaced by a guessable /<slug>/live link). Also exclude
+      // never-started broadcasts (liveStartedAt nullable; a null could win the
+      // DESC ordering).
+      const broadcast = await db.query.UploadRecord.findFirst({
+        columns: { id: true },
+        where: (t, { and, eq, isNull, isNotNull }) =>
+          and(
+            eq(t.channelId, channel.id),
+            eq(t.isLiveBroadcast, true),
+            isNotNull(t.liveStartedAt),
+            eq(t.visibility, 'PUBLIC'),
+            isNull(t.deletedAt),
+          ),
+        orderBy: (t, { desc }) => [
+          desc(sql`${t.liveEndedAt} is null`),
+          desc(t.liveStartedAt),
+        ],
+      });
+      if (!broadcast) {
+        return null;
+      }
+
+      return { mediaId: OutgoingIdSchema.parse(broadcast.id) };
     }),
 };

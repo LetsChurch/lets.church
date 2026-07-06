@@ -1,4 +1,5 @@
 import {
+  IconBroadcast,
   IconCheck,
   IconHeart,
   IconList,
@@ -10,6 +11,7 @@ import {
 } from '@tabler/icons-react';
 import {
   useMutation,
+  useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
@@ -98,6 +100,22 @@ function ChannelDetailsPage() {
   const { userMembership } = channel;
   const isChannelAdmin = userMembership?.isAdmin ?? false;
   const isApproved = Boolean(channel.approvedAt);
+  const canManageLive = isChannelAdmin || isSiteAdmin;
+
+  // Live stream status for the tile (admin-only; the procedure is admin-gated).
+  const liveStreamQuery = useQuery({
+    ...trpc.dashboard.liveStreaming.getLiveStream.queryOptions({
+      channelId: params.channelId,
+    }),
+    enabled: canManageLive,
+  });
+  const liveStatus = liveStreamQuery.isLoading
+    ? '—'
+    : !liveStreamQuery.data
+      ? 'Not set up'
+      : liveStreamQuery.data.status === 'active'
+        ? 'Live'
+        : 'Idle';
 
   const approveChannelMutation = useMutation(
     trpc.dashboard.channels.approveChannel.mutationOptions({
@@ -320,6 +338,17 @@ function ChannelDetailsPage() {
                 </Text>
               </Text>
             }
+          />
+        )}
+
+        {canManageLive && (
+          <StatCard
+            title="Live Streaming"
+            to="/dashboard/channels/$channelId/live"
+            color="violet"
+            icon={<IconBroadcast size={22} stroke={1.5} />}
+            tooltip="Provision a stream key, configure restreaming, and set up broadcasts"
+            value={liveStatus}
           />
         )}
 

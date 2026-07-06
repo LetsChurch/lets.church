@@ -447,10 +447,16 @@ export default async function summarizeUpload(
     .where(eq(TranscriptParagraph.uploadRecordId, uploadRecordId))
     .orderBy(asc(TranscriptParagraph.order));
 
-  invariant(
-    paragraphs.length > 0,
-    `No transcript paragraphs for ${uploadRecordId} — cannot summarize`,
-  );
+  if (paragraphs.length === 0) {
+    // No transcript paragraphs — e.g. a live stream / upload with no audio,
+    // or one whose audio produced an empty transcript. There is nothing to
+    // summarize, so skip gracefully rather than throwing: a hard failure here
+    // cascades up and fails the whole post-transcribe workflow.
+    activityLogger.info(
+      `No transcript paragraphs for ${uploadRecordId} — skipping summarize (no audio / empty transcript)`,
+    );
+    return { summaryLength: 0, searchSummaryLength: 0 };
+  }
   activityLogger.info(
     `Summarizing ${paragraphs.length} paragraphs with ${SUMMARY_MODEL} (${sectionInputs.length} outline sections)`,
   );

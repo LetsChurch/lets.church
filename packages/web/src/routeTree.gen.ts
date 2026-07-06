@@ -13,6 +13,7 @@ import { Route as MaintenanceRouteImport } from './routes/maintenance'
 import { Route as AuthRouteImport } from './routes/auth_'
 import { Route as MainRouteImport } from './routes/_main'
 import { Route as MainIndexRouteImport } from './routes/_main/index'
+import { Route as WebhooksMuxRouteImport } from './routes/webhooks_/mux'
 import { Route as TrpcSplatRouteImport } from './routes/trpc.$'
 import { Route as OidcUserinfoRouteImport } from './routes/oidc.userinfo'
 import { Route as OidcTokenRouteImport } from './routes/oidc.token'
@@ -68,6 +69,7 @@ import { Route as MainAboutDoreanRouteImport } from './routes/_main/about/dorean
 import { Route as MainAboutDmcaRouteImport } from './routes/_main/about/dmca'
 import { Route as MainAboutAddContentRouteImport } from './routes/_main/about/add-content'
 import { Route as MainAboutAddChurchRouteImport } from './routes/_main/about/add-church'
+import { Route as MainSlugLiveRouteImport } from './routes/_main/$slug_.live'
 import { Route as MainDashboardOrganizationsOrgIdRouteImport } from './routes/_main/dashboard/organizations_.$orgId'
 import { Route as MainDashboardInvitationsAcceptRouteImport } from './routes/_main/dashboard/invitations_/accept'
 import { Route as MainDashboardChurchesNewRouteImport } from './routes/_main/dashboard/churches_.new'
@@ -100,6 +102,7 @@ import { Route as MainDashboardAdminBackfillFilenamesRouteImport } from './route
 import { Route as MainDashboardAccountSecurityRouteImport } from './routes/_main/dashboard/account_.security'
 import { Route as MainDashboardAccountProfileRouteImport } from './routes/_main/dashboard/account_.profile'
 import { Route as MainDashboardAccountNewsletterRouteImport } from './routes/_main/dashboard/account_.newsletter'
+import { Route as MainChannelSlugLiveRouteImport } from './routes/_main/channel.$slug_.live'
 import { Route as MainDashboardOrganizationsOrgIdMembersRouteImport } from './routes/_main/dashboard/organizations_.$orgId_.members'
 import { Route as MainDashboardOrganizationsOrgIdEditRouteImport } from './routes/_main/dashboard/organizations_.$orgId_.edit'
 import { Route as MainDashboardOrganizationsOrgIdAssociationsRouteImport } from './routes/_main/dashboard/organizations_.$orgId_.associations'
@@ -112,6 +115,7 @@ import { Route as MainDashboardChannelsChannelIdSpeakersRouteImport } from './ro
 import { Route as MainDashboardChannelsChannelIdSpeakerQueueRouteImport } from './routes/_main/dashboard/channels_.$channelId_.speaker-queue'
 import { Route as MainDashboardChannelsChannelIdPlaylistsRouteImport } from './routes/_main/dashboard/channels_.$channelId_.playlists'
 import { Route as MainDashboardChannelsChannelIdMembersRouteImport } from './routes/_main/dashboard/channels_.$channelId_.members'
+import { Route as MainDashboardChannelsChannelIdLiveRouteImport } from './routes/_main/dashboard/channels_.$channelId_.live'
 import { Route as MainDashboardChannelsChannelIdEditRouteImport } from './routes/_main/dashboard/channels_.$channelId_.edit'
 import { Route as MainDashboardChannelsChannelIdUploadsUploadIdRouteImport } from './routes/_main/dashboard/channels_.$channelId_.uploads_.$uploadId'
 import { Route as MainDashboardChannelsChannelIdPlaylistsPlaylistIdRouteImport } from './routes/_main/dashboard/channels_.$channelId_.playlists_.$playlistId'
@@ -134,6 +138,11 @@ const MainIndexRoute = MainIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => MainRoute,
+} as any)
+const WebhooksMuxRoute = WebhooksMuxRouteImport.update({
+  id: '/webhooks_/mux',
+  path: '/webhooks/mux',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const TrpcSplatRoute = TrpcSplatRouteImport.update({
   id: '/trpc/$',
@@ -416,6 +425,11 @@ const MainAboutAddChurchRoute = MainAboutAddChurchRouteImport.update({
   path: '/add-church',
   getParentRoute: () => MainAboutRoute,
 } as any)
+const MainSlugLiveRoute = MainSlugLiveRouteImport.update({
+  id: '/$slug_/live',
+  path: '/$slug/live',
+  getParentRoute: () => MainRoute,
+} as any)
 const MainDashboardOrganizationsOrgIdRoute =
   MainDashboardOrganizationsOrgIdRouteImport.update({
     id: '/organizations_/$orgId',
@@ -607,6 +621,11 @@ const MainDashboardAccountNewsletterRoute =
     path: '/account/newsletter',
     getParentRoute: () => MainDashboardRoute,
   } as any)
+const MainChannelSlugLiveRoute = MainChannelSlugLiveRouteImport.update({
+  id: '/channel/$slug_/live',
+  path: '/channel/$slug/live',
+  getParentRoute: () => MainRoute,
+} as any)
 const MainDashboardOrganizationsOrgIdMembersRoute =
   MainDashboardOrganizationsOrgIdMembersRouteImport.update({
     id: '/organizations_/$orgId_/members',
@@ -679,6 +698,12 @@ const MainDashboardChannelsChannelIdMembersRoute =
     path: '/channels/$channelId/members',
     getParentRoute: () => MainDashboardRoute,
   } as any)
+const MainDashboardChannelsChannelIdLiveRoute =
+  MainDashboardChannelsChannelIdLiveRouteImport.update({
+    id: '/channels_/$channelId_/live',
+    path: '/channels/$channelId/live',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
 const MainDashboardChannelsChannelIdEditRoute =
   MainDashboardChannelsChannelIdEditRouteImport.update({
     id: '/channels_/$channelId_/edit',
@@ -730,6 +755,8 @@ export interface FileRoutesByFullPath {
   '/oidc/token': typeof OidcTokenRoute
   '/oidc/userinfo': typeof OidcUserinfoRoute
   '/trpc/$': typeof TrpcSplatRoute
+  '/webhooks/mux': typeof WebhooksMuxRoute
+  '/$slug/live': typeof MainSlugLiveRoute
   '/about/add-church': typeof MainAboutAddChurchRoute
   '/about/add-content': typeof MainAboutAddContentRoute
   '/about/dmca': typeof MainAboutDmcaRoute
@@ -757,6 +784,7 @@ export interface FileRoutesByFullPath {
   '/series/$seriesId/rss.xml': typeof SeriesSeriesIdRssDotxmlRoute
   '/about/': typeof MainAboutIndexRoute
   '/dashboard/': typeof MainDashboardIndexRoute
+  '/channel/$slug/live': typeof MainChannelSlugLiveRoute
   '/dashboard/account/newsletter': typeof MainDashboardAccountNewsletterRoute
   '/dashboard/account/profile': typeof MainDashboardAccountProfileRoute
   '/dashboard/account/security': typeof MainDashboardAccountSecurityRoute
@@ -790,6 +818,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/invitations/accept': typeof MainDashboardInvitationsAcceptRoute
   '/dashboard/organizations/$orgId': typeof MainDashboardOrganizationsOrgIdRoute
   '/dashboard/channels/$channelId/edit': typeof MainDashboardChannelsChannelIdEditRoute
+  '/dashboard/channels/$channelId/live': typeof MainDashboardChannelsChannelIdLiveRoute
   '/dashboard/channels/$channelId/members': typeof MainDashboardChannelsChannelIdMembersRoute
   '/dashboard/channels/$channelId/playlists': typeof MainDashboardChannelsChannelIdPlaylistsRoute
   '/dashboard/channels/$channelId/speaker-queue': typeof MainDashboardChannelsChannelIdSpeakerQueueRoute
@@ -834,7 +863,9 @@ export interface FileRoutesByTo {
   '/oidc/token': typeof OidcTokenRoute
   '/oidc/userinfo': typeof OidcUserinfoRoute
   '/trpc/$': typeof TrpcSplatRoute
+  '/webhooks/mux': typeof WebhooksMuxRoute
   '/': typeof MainIndexRoute
+  '/$slug/live': typeof MainSlugLiveRoute
   '/about/add-church': typeof MainAboutAddChurchRoute
   '/about/add-content': typeof MainAboutAddContentRoute
   '/about/dmca': typeof MainAboutDmcaRoute
@@ -862,6 +893,7 @@ export interface FileRoutesByTo {
   '/series/$seriesId/rss.xml': typeof SeriesSeriesIdRssDotxmlRoute
   '/about': typeof MainAboutIndexRoute
   '/dashboard': typeof MainDashboardIndexRoute
+  '/channel/$slug/live': typeof MainChannelSlugLiveRoute
   '/dashboard/account/newsletter': typeof MainDashboardAccountNewsletterRoute
   '/dashboard/account/profile': typeof MainDashboardAccountProfileRoute
   '/dashboard/account/security': typeof MainDashboardAccountSecurityRoute
@@ -895,6 +927,7 @@ export interface FileRoutesByTo {
   '/dashboard/invitations/accept': typeof MainDashboardInvitationsAcceptRoute
   '/dashboard/organizations/$orgId': typeof MainDashboardOrganizationsOrgIdRoute
   '/dashboard/channels/$channelId/edit': typeof MainDashboardChannelsChannelIdEditRoute
+  '/dashboard/channels/$channelId/live': typeof MainDashboardChannelsChannelIdLiveRoute
   '/dashboard/channels/$channelId/members': typeof MainDashboardChannelsChannelIdMembersRoute
   '/dashboard/channels/$channelId/playlists': typeof MainDashboardChannelsChannelIdPlaylistsRoute
   '/dashboard/channels/$channelId/speaker-queue': typeof MainDashboardChannelsChannelIdSpeakerQueueRoute
@@ -943,7 +976,9 @@ export interface FileRoutesById {
   '/oidc/token': typeof OidcTokenRoute
   '/oidc/userinfo': typeof OidcUserinfoRoute
   '/trpc/$': typeof TrpcSplatRoute
+  '/webhooks_/mux': typeof WebhooksMuxRoute
   '/_main/': typeof MainIndexRoute
+  '/_main/$slug_/live': typeof MainSlugLiveRoute
   '/_main/about/add-church': typeof MainAboutAddChurchRoute
   '/_main/about/add-content': typeof MainAboutAddContentRoute
   '/_main/about/dmca': typeof MainAboutDmcaRoute
@@ -971,6 +1006,7 @@ export interface FileRoutesById {
   '/series/$seriesId/rss.xml': typeof SeriesSeriesIdRssDotxmlRoute
   '/_main/about/': typeof MainAboutIndexRoute
   '/_main/dashboard/': typeof MainDashboardIndexRoute
+  '/_main/channel/$slug_/live': typeof MainChannelSlugLiveRoute
   '/_main/dashboard/account_/newsletter': typeof MainDashboardAccountNewsletterRoute
   '/_main/dashboard/account_/profile': typeof MainDashboardAccountProfileRoute
   '/_main/dashboard/account_/security': typeof MainDashboardAccountSecurityRoute
@@ -1004,6 +1040,7 @@ export interface FileRoutesById {
   '/_main/dashboard/invitations_/accept': typeof MainDashboardInvitationsAcceptRoute
   '/_main/dashboard/organizations_/$orgId': typeof MainDashboardOrganizationsOrgIdRoute
   '/_main/dashboard/channels_/$channelId_/edit': typeof MainDashboardChannelsChannelIdEditRoute
+  '/_main/dashboard/channels_/$channelId_/live': typeof MainDashboardChannelsChannelIdLiveRoute
   '/_main/dashboard/channels_/$channelId_/members': typeof MainDashboardChannelsChannelIdMembersRoute
   '/_main/dashboard/channels_/$channelId_/playlists': typeof MainDashboardChannelsChannelIdPlaylistsRoute
   '/_main/dashboard/channels_/$channelId_/speaker-queue': typeof MainDashboardChannelsChannelIdSpeakerQueueRoute
@@ -1053,6 +1090,8 @@ export interface FileRouteTypes {
     | '/oidc/token'
     | '/oidc/userinfo'
     | '/trpc/$'
+    | '/webhooks/mux'
+    | '/$slug/live'
     | '/about/add-church'
     | '/about/add-content'
     | '/about/dmca'
@@ -1080,6 +1119,7 @@ export interface FileRouteTypes {
     | '/series/$seriesId/rss.xml'
     | '/about/'
     | '/dashboard/'
+    | '/channel/$slug/live'
     | '/dashboard/account/newsletter'
     | '/dashboard/account/profile'
     | '/dashboard/account/security'
@@ -1113,6 +1153,7 @@ export interface FileRouteTypes {
     | '/dashboard/invitations/accept'
     | '/dashboard/organizations/$orgId'
     | '/dashboard/channels/$channelId/edit'
+    | '/dashboard/channels/$channelId/live'
     | '/dashboard/channels/$channelId/members'
     | '/dashboard/channels/$channelId/playlists'
     | '/dashboard/channels/$channelId/speaker-queue'
@@ -1157,7 +1198,9 @@ export interface FileRouteTypes {
     | '/oidc/token'
     | '/oidc/userinfo'
     | '/trpc/$'
+    | '/webhooks/mux'
     | '/'
+    | '/$slug/live'
     | '/about/add-church'
     | '/about/add-content'
     | '/about/dmca'
@@ -1185,6 +1228,7 @@ export interface FileRouteTypes {
     | '/series/$seriesId/rss.xml'
     | '/about'
     | '/dashboard'
+    | '/channel/$slug/live'
     | '/dashboard/account/newsletter'
     | '/dashboard/account/profile'
     | '/dashboard/account/security'
@@ -1218,6 +1262,7 @@ export interface FileRouteTypes {
     | '/dashboard/invitations/accept'
     | '/dashboard/organizations/$orgId'
     | '/dashboard/channels/$channelId/edit'
+    | '/dashboard/channels/$channelId/live'
     | '/dashboard/channels/$channelId/members'
     | '/dashboard/channels/$channelId/playlists'
     | '/dashboard/channels/$channelId/speaker-queue'
@@ -1265,7 +1310,9 @@ export interface FileRouteTypes {
     | '/oidc/token'
     | '/oidc/userinfo'
     | '/trpc/$'
+    | '/webhooks_/mux'
     | '/_main/'
+    | '/_main/$slug_/live'
     | '/_main/about/add-church'
     | '/_main/about/add-content'
     | '/_main/about/dmca'
@@ -1293,6 +1340,7 @@ export interface FileRouteTypes {
     | '/series/$seriesId/rss.xml'
     | '/_main/about/'
     | '/_main/dashboard/'
+    | '/_main/channel/$slug_/live'
     | '/_main/dashboard/account_/newsletter'
     | '/_main/dashboard/account_/profile'
     | '/_main/dashboard/account_/security'
@@ -1326,6 +1374,7 @@ export interface FileRouteTypes {
     | '/_main/dashboard/invitations_/accept'
     | '/_main/dashboard/organizations_/$orgId'
     | '/_main/dashboard/channels_/$channelId_/edit'
+    | '/_main/dashboard/channels_/$channelId_/live'
     | '/_main/dashboard/channels_/$channelId_/members'
     | '/_main/dashboard/channels_/$channelId_/playlists'
     | '/_main/dashboard/channels_/$channelId_/speaker-queue'
@@ -1359,6 +1408,7 @@ export interface RootRouteChildren {
   OidcTokenRoute: typeof OidcTokenRoute
   OidcUserinfoRoute: typeof OidcUserinfoRoute
   TrpcSplatRoute: typeof TrpcSplatRoute
+  WebhooksMuxRoute: typeof WebhooksMuxRoute
   ApiInternalMediaForVerseRoute: typeof ApiInternalMediaForVerseRoute
   ChannelSlugPodcastDotxmlRoute: typeof ChannelSlugPodcastDotxmlRoute
   ChannelSlugRssDotxmlRoute: typeof ChannelSlugRssDotxmlRoute
@@ -1397,6 +1447,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof MainIndexRouteImport
       parentRoute: typeof MainRoute
+    }
+    '/webhooks_/mux': {
+      id: '/webhooks_/mux'
+      path: '/webhooks/mux'
+      fullPath: '/webhooks/mux'
+      preLoaderRoute: typeof WebhooksMuxRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/trpc/$': {
       id: '/trpc/$'
@@ -1783,6 +1840,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAboutAddChurchRouteImport
       parentRoute: typeof MainAboutRoute
     }
+    '/_main/$slug_/live': {
+      id: '/_main/$slug_/live'
+      path: '/$slug/live'
+      fullPath: '/$slug/live'
+      preLoaderRoute: typeof MainSlugLiveRouteImport
+      parentRoute: typeof MainRoute
+    }
     '/_main/dashboard/organizations_/$orgId': {
       id: '/_main/dashboard/organizations_/$orgId'
       path: '/organizations/$orgId'
@@ -2007,6 +2071,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainDashboardAccountNewsletterRouteImport
       parentRoute: typeof MainDashboardRoute
     }
+    '/_main/channel/$slug_/live': {
+      id: '/_main/channel/$slug_/live'
+      path: '/channel/$slug/live'
+      fullPath: '/channel/$slug/live'
+      preLoaderRoute: typeof MainChannelSlugLiveRouteImport
+      parentRoute: typeof MainRoute
+    }
     '/_main/dashboard/organizations_/$orgId_/members': {
       id: '/_main/dashboard/organizations_/$orgId_/members'
       path: '/organizations/$orgId/members'
@@ -2089,6 +2160,13 @@ declare module '@tanstack/react-router' {
       path: '/channels/$channelId/members'
       fullPath: '/dashboard/channels/$channelId/members'
       preLoaderRoute: typeof MainDashboardChannelsChannelIdMembersRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/channels_/$channelId_/live': {
+      id: '/_main/dashboard/channels_/$channelId_/live'
+      path: '/channels/$channelId/live'
+      fullPath: '/dashboard/channels/$channelId/live'
+      preLoaderRoute: typeof MainDashboardChannelsChannelIdLiveRouteImport
       parentRoute: typeof MainDashboardRoute
     }
     '/_main/dashboard/channels_/$channelId_/edit': {
@@ -2182,6 +2260,7 @@ interface MainDashboardRouteChildren {
   MainDashboardInvitationsAcceptRoute: typeof MainDashboardInvitationsAcceptRoute
   MainDashboardOrganizationsOrgIdRoute: typeof MainDashboardOrganizationsOrgIdRoute
   MainDashboardChannelsChannelIdEditRoute: typeof MainDashboardChannelsChannelIdEditRoute
+  MainDashboardChannelsChannelIdLiveRoute: typeof MainDashboardChannelsChannelIdLiveRoute
   MainDashboardChannelsChannelIdMembersRoute: typeof MainDashboardChannelsChannelIdMembersRoute
   MainDashboardChannelsChannelIdPlaylistsRoute: typeof MainDashboardChannelsChannelIdPlaylistsRoute
   MainDashboardChannelsChannelIdSpeakerQueueRoute: typeof MainDashboardChannelsChannelIdSpeakerQueueRoute
@@ -2248,6 +2327,8 @@ const MainDashboardRouteChildren: MainDashboardRouteChildren = {
   MainDashboardOrganizationsOrgIdRoute: MainDashboardOrganizationsOrgIdRoute,
   MainDashboardChannelsChannelIdEditRoute:
     MainDashboardChannelsChannelIdEditRoute,
+  MainDashboardChannelsChannelIdLiveRoute:
+    MainDashboardChannelsChannelIdLiveRoute,
   MainDashboardChannelsChannelIdMembersRoute:
     MainDashboardChannelsChannelIdMembersRoute,
   MainDashboardChannelsChannelIdPlaylistsRoute:
@@ -2293,11 +2374,13 @@ interface MainRouteChildren {
   MainLibraryRoute: typeof MainLibraryRoute
   MainSearchRoute: typeof MainSearchRoute
   MainIndexRoute: typeof MainIndexRoute
+  MainSlugLiveRoute: typeof MainSlugLiveRoute
   MainChannelSlugRoute: typeof MainChannelSlugRoute
   MainChurchesSlugRoute: typeof MainChurchesSlugRoute
   MainMediaMediaIdRoute: typeof MainMediaMediaIdRoute
   MainPlaylistPlaylistIdRoute: typeof MainPlaylistPlaylistIdRoute
   MainSeriesSeriesIdRoute: typeof MainSeriesSeriesIdRoute
+  MainChannelSlugLiveRoute: typeof MainChannelSlugLiveRoute
 }
 
 const MainRouteChildren: MainRouteChildren = {
@@ -2311,11 +2394,13 @@ const MainRouteChildren: MainRouteChildren = {
   MainLibraryRoute: MainLibraryRoute,
   MainSearchRoute: MainSearchRoute,
   MainIndexRoute: MainIndexRoute,
+  MainSlugLiveRoute: MainSlugLiveRoute,
   MainChannelSlugRoute: MainChannelSlugRoute,
   MainChurchesSlugRoute: MainChurchesSlugRoute,
   MainMediaMediaIdRoute: MainMediaMediaIdRoute,
   MainPlaylistPlaylistIdRoute: MainPlaylistPlaylistIdRoute,
   MainSeriesSeriesIdRoute: MainSeriesSeriesIdRoute,
+  MainChannelSlugLiveRoute: MainChannelSlugLiveRoute,
 }
 
 const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren)
@@ -2357,6 +2442,7 @@ const rootRouteChildren: RootRouteChildren = {
   OidcTokenRoute: OidcTokenRoute,
   OidcUserinfoRoute: OidcUserinfoRoute,
   TrpcSplatRoute: TrpcSplatRoute,
+  WebhooksMuxRoute: WebhooksMuxRoute,
   ApiInternalMediaForVerseRoute: ApiInternalMediaForVerseRoute,
   ChannelSlugPodcastDotxmlRoute: ChannelSlugPodcastDotxmlRoute,
   ChannelSlugRssDotxmlRoute: ChannelSlugRssDotxmlRoute,

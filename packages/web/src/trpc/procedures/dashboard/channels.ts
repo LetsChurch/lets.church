@@ -176,20 +176,22 @@ const channelProcedure = authProcedure
     });
   });
 
-const channelAdminProcedure = channelProcedure.use(async ({ ctx, next }) => {
-  if (!ctx.canAdmin) {
-    moduleLogger.warn(
-      {
-        appUserId: ctx.session.appUserId,
-      },
-      'User is not admin of channel',
-    );
+export const channelAdminProcedure = channelProcedure.use(
+  async ({ ctx, next }) => {
+    if (!ctx.canAdmin) {
+      moduleLogger.warn(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'User is not admin of channel',
+      );
 
-    throw new TRPCError({ code: 'FORBIDDEN' });
-  }
+      throw new TRPCError({ code: 'FORBIDDEN' });
+    }
 
-  return next();
-});
+    return next();
+  },
+);
 
 const channelUploadProcedure = channelProcedure.use(async ({ ctx, next }) => {
   if (!ctx.canUpload) {

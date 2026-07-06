@@ -759,6 +759,90 @@ export const ChannelInvitation = pgTable(
   }),
 );
 
+// Persistent, per-channel Mux live stream. One row per channel that has
+// provisioned live streaming. The Mux live stream id + stream key are
+// reused across an unlimited number of broadcasts (like a YouTube channel
+// key); each RTMP session creates a fresh Mux asset that we later import.
+export const ChannelLiveStream = pgTable(
+  'channel_live_stream',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    channelId: uuid('channel_id').notNull().unique(),
+    // Mux Live Stream id. The (sensitive) RTMP stream key is NOT stored — it's
+    // fetched from the Mux API on demand when an admin views the config.
+    muxLiveStreamId: text('mux_live_stream_id').notNull().unique(),
+    // Playback id for the live HLS manifest (stream.mux.com/{id}.m3u8).
+    muxPlaybackId: text('mux_playback_id'),
+    latencyMode: text('latency_mode').notNull().default('standard'),
+    reconnectWindow: integer('reconnect_window').notNull().default(60),
+    // Mux live-stream status, kept in sync via webhooks: idle | active |
+    // disconnected | disabled.
+    status: text('status').notNull().default('idle'),
+    // Metadata applied to the UploadRecord created when the stream next goes
+    // active. Null fields fall back to the channel's upload defaults.
+    nextTitle: text('next_title'),
+    nextDescription: text('next_description'),
+    nextVisibility: UploadVisibility('next_visibility'),
+    nextLicense: UploadLicense('next_license'),
+    nextCommentsEnabled: boolean('next_comments_enabled'),
+    nextDownloadsEnabled: boolean('next_downloads_enabled'),
+    // Optional series (upload_list) to add the next broadcast to. Stored as a
+    // plain id (no FK — upload_list is declared later in this file); the
+    // webhook verifies it still belongs to the channel before using it.
+    nextSeriesId: uuid('next_series_id'),
+    createdById: uuid('created_by_id'),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+  },
+  (ChannelLiveStream) => ({
+    channel_live_stream_channel_fkey: foreignKey({
+      name: 'channel_live_stream_channel_fkey',
+      columns: [ChannelLiveStream.channelId],
+      foreignColumns: [Channel.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    channel_live_stream_createdBy_fkey: foreignKey({
+      name: 'channel_live_stream_createdBy_fkey',
+      columns: [ChannelLiveStream.createdById],
+      foreignColumns: [AppUser.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+  }),
+);
+
+// Simulcast (restream) targets for a channel's live stream. Mux passes the
+// ingested feed through to each enabled RTMP/RTMPS target (YouTube, Facebook,
+// etc.) — up to six per live stream.
+export const ChannelSimulcastTarget = pgTable(
+  'channel_simulcast_target',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    channelLiveStreamId: uuid('channel_live_stream_id').notNull(),
+    muxSimulcastTargetId: text('mux_simulcast_target_id').notNull(),
+    label: text('label'),
+    url: text('url').notNull(),
+    // Stream key is sent to Mux on creation and not stored (Mux treats it as
+    // write-only and never returns it).
+    enabled: boolean('enabled').notNull().default(true),
+    // Mux simulcast target status, synced via webhooks: idle | starting |
+    // broadcasting | errored.
+    status: text('status').notNull().default('idle'),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+  },
+  (ChannelSimulcastTarget) => ({
+    channel_simulcast_target_liveStream_fkey: foreignKey({
+      name: 'channel_simulcast_target_liveStream_fkey',
+      columns: [ChannelSimulcastTarget.channelLiveStreamId],
+      foreignColumns: [ChannelLiveStream.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+  }),
+);
+
 export const UploadState = pgTable(
   'upload_state',
   {
@@ -921,6 +1005,17 @@ export const UploadRecord = pgTable(
       .$type<Array<{ id: string; description: string }>>()
       .notNull()
       .default([]),
+    // Live broadcast (Mux) fields. A broadcast is a single UploadRecord that
+    // plays Mux's live HLS while `is_live_broadcast` is true and the CDN
+    // variants haven't landed yet; once the recording is imported and
+    // transcoded, the same record serves our CDN exactly like any other VOD.
+    //   muxAssetId — the per-broadcast Mux asset (the recording).
+    //   muxPlaybackId — playback id for the live HLS manifest.
+    isLiveBroadcast: boolean('is_live_broadcast').notNull().default(false),
+    muxAssetId: text('mux_asset_id'),
+    muxPlaybackId: text('mux_playback_id'),
+    liveStartedAt: timestamp('live_started_at', { precision: 3 }),
+    liveEndedAt: timestamp('live_ended_at', { precision: 3 }),
   },
   (UploadRecord) => ({
     upload_record_createdBy_fkey: foreignKey({
@@ -2065,7 +2160,42 @@ export const ChannelRelations = relations(Channel, ({ many, one }) => ({
   speakerLinkRequests: many(SpeakerLink, {
     relationName: 'ChannelToSpeakerLink',
   }),
+  liveStream: one(ChannelLiveStream, {
+    relationName: 'ChannelToChannelLiveStream',
+    fields: [Channel.id],
+    references: [ChannelLiveStream.channelId],
+  }),
 }));
+
+export const ChannelLiveStreamRelations = relations(
+  ChannelLiveStream,
+  ({ one, many }) => ({
+    channel: one(Channel, {
+      relationName: 'ChannelToChannelLiveStream',
+      fields: [ChannelLiveStream.channelId],
+      references: [Channel.id],
+    }),
+    createdBy: one(AppUser, {
+      relationName: 'AppUserToChannelLiveStream',
+      fields: [ChannelLiveStream.createdById],
+      references: [AppUser.id],
+    }),
+    simulcastTargets: many(ChannelSimulcastTarget, {
+      relationName: 'ChannelLiveStreamToChannelSimulcastTarget',
+    }),
+  }),
+);
+
+export const ChannelSimulcastTargetRelations = relations(
+  ChannelSimulcastTarget,
+  ({ one }) => ({
+    liveStream: one(ChannelLiveStream, {
+      relationName: 'ChannelLiveStreamToChannelSimulcastTarget',
+      fields: [ChannelSimulcastTarget.channelLiveStreamId],
+      references: [ChannelLiveStream.id],
+    }),
+  }),
+);
 
 export const ChannelMembershipRelations = relations(
   ChannelMembership,

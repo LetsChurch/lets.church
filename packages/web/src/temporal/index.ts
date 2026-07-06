@@ -80,6 +80,7 @@ import {
   getCleanupProgressQuery,
   getReindexProgressQuery,
   getStorageAuditProgressQuery,
+  muxRenditionReadySignal,
   updateUploadRecordSignal,
   uploadDoneSignal,
 } from '@letschurch/temporal/refs';
@@ -570,6 +571,62 @@ export async function importMedia(
         : []),
     ],
   });
+}
+
+type MuxImportRecordingParams = Parameters<
+  typeof bg.muxImportRecordingWorkflow
+>[0];
+
+function makeMuxImportRecordingWorkflowId(uploadRecordId: string) {
+  return `muxImportRecording:${uploadRecordId}`;
+}
+
+function muxImportSearchAttributes({
+  uploadRecordId,
+  channelSlug,
+}: MuxImportRecordingParams) {
+  return [
+    { key: UPLOAD_ID_KEY, value: uploadRecordId },
+    ...(channelSlug ? [{ key: CHANNEL_SLUG_KEY, value: channelSlug }] : []),
+  ];
+}
+
+// Start the import workflow for a finished broadcast (called when the live
+// stream goes idle). The workflow then waits for the rendition-ready signal
+// before downloading. Workflow id is keyed on the upload record, so this and
+// the signal below converge on a single execution.
+export async function startMuxImportRecording(
+  params: MuxImportRecordingParams,
+) {
+  return startBackground('muxImportRecordingWorkflow', {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_IMPORT },
+    args: [params],
+    workflowId: makeMuxImportRecordingWorkflowId(params.uploadRecordId),
+    typedSearchAttributes: muxImportSearchAttributes(params),
+  });
+}
+
+// Signal the import workflow that the downloadable MP4 is ready (called when
+// the static-rendition-ready webhook fires). signalWithStart so it also starts
+// the workflow if the idle event was somehow missed.
+export async function signalMuxRenditionReady(
+  params: MuxImportRecordingParams,
+) {
+  return signalWithStartBackground<'muxImportRecordingWorkflow', []>(
+    'muxImportRecordingWorkflow',
+    {
+      ...retryOps,
+      taskQueue: BACKGROUND_QUEUE,
+      priority: { priorityKey: PRIORITY_IMPORT },
+      args: [params],
+      workflowId: makeMuxImportRecordingWorkflowId(params.uploadRecordId),
+      signal: muxRenditionReadySignal,
+      signalArgs: [],
+      typedSearchAttributes: muxImportSearchAttributes(params),
+    },
+  );
 }
 
 export async function waitOnTemporal() {

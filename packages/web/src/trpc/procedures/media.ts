@@ -32,6 +32,7 @@ import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarXs2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { canViewMediaById } from '@/util/media-visibility';
+import { getMuxLivePlaybackUrl } from '@/util/mux';
 import { getClientIpAddress } from '@/util/request-ip';
 import { isSafeUrl } from '@/util/safe-url';
 import {
@@ -235,6 +236,13 @@ export const mediaProcedures = {
           license: true,
           transcribingFinishedAt: true,
           visibility: true,
+          // Live broadcast fields. While `isLiveBroadcast` is set and the CDN
+          // variants haven't landed yet, the player streams Mux's live HLS via
+          // `muxPlaybackId`; afterwards it falls through to our CDN.
+          isLiveBroadcast: true,
+          muxPlaybackId: true,
+          liveStartedAt: true,
+          liveEndedAt: true,
           // LLM-generated display summary (Summary tab). Null until the
           // post-transcript summarize-upload activity has run for this upload.
           summary: true,
@@ -310,6 +318,8 @@ export const mediaProcedures = {
         variants,
         downloadsEnabled,
         transcribingFinishedAt,
+        isLiveBroadcast,
+        muxPlaybackId,
         ...mediaRest
       } = media;
 
@@ -344,13 +354,28 @@ export const mediaProcedures = {
       const hasVideo = variants.some((v) => v.startsWith('VIDEO'));
       const hasAudio = variants.includes('AUDIO');
 
-      const mediaSource = hasVideo
-        ? getPublicMediaUrl(`${media.id}/master.m3u8`)
-        : null;
+      // A live broadcast plays Mux's HLS until our CDN variants land (i.e. the
+      // recording has been imported + transcoded). Once `variants` are
+      // populated the record behaves like any other VOD and we serve our own
+      // CDN — a seamless swap with no change to the player/URL contract.
+      const servingMux = isLiveBroadcast && !hasVideo && Boolean(muxPlaybackId);
+      // Only "actively live" (moving edge, no end recorded) gets the live
+      // treatment — LIVE badge, hidden scrubber. Once the broadcast ends but
+      // before our CDN is ready, Mux serves the finite recording, which is
+      // normally seekable, so we let the player behave like VOD.
+      const isActivelyLive =
+        servingMux && Boolean(media.liveStartedAt) && !media.liveEndedAt;
 
-      const audioSource = hasAudio
-        ? getPublicMediaUrl(`${media.id}/AUDIO.m3u8`)
-        : null;
+      const mediaSource = servingMux
+        ? getMuxLivePlaybackUrl(muxPlaybackId as string)
+        : hasVideo
+          ? getPublicMediaUrl(`${media.id}/master.m3u8`)
+          : null;
+
+      const audioSource =
+        !servingMux && hasAudio
+          ? getPublicMediaUrl(`${media.id}/AUDIO.m3u8`)
+          : null;
 
       // Extract video dimensions from probe data
       let width: number | null = null;
@@ -670,6 +695,13 @@ export const mediaProcedures = {
         posterThumbnailUrl,
         mediaSource,
         audioSource,
+        // `isLiveBroadcast` marks the record as a broadcast. `servingMux` is
+        // true whenever we're still playing Mux (live or the post-stream
+        // recording, before our CDN is ready). `isLive` is true only while
+        // actively broadcasting (moving edge).
+        isLiveBroadcast,
+        servingMux,
+        isLive: isActivelyLive,
         peaksJsonUrl,
         peaksDatUrl,
         width,

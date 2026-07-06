@@ -92,6 +92,7 @@ export {
 } from './get-reprocess-batch';
 export { getStoredProbe } from './get-stored-probe';
 export { default as indexDocument } from './index-document';
+export { default as isUploadFinalized } from './is-upload-finalized';
 export { default as processImage } from './process-image';
 export {
   default as processLlmBatchOutput,

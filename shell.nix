@@ -16,6 +16,7 @@ pkgs.mkShell {
     bun
     docker-compose
     fd
+    ffmpeg
     git-lfs
     go
     gum

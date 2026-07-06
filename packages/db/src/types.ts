@@ -5,7 +5,9 @@ import type { InferSelectModel } from 'drizzle-orm';
 import {
   type AppUserRole as AppUserRoleEnum,
   type AppUser as AppUserTable,
+  type ChannelLiveStream as ChannelLiveStreamTable,
   type ChannelMembership as ChannelMembershipTable,
+  type ChannelSimulcastTarget as ChannelSimulcastTargetTable,
   type Channel as ChannelTable,
   ChannelVisibility as ChannelVisibilityEnum,
   type OrganizationMembership as OrganizationMembershipTable,
@@ -26,6 +28,10 @@ import {
 export type AppUser = InferSelectModel<typeof AppUserTable>;
 export type Channel = InferSelectModel<typeof ChannelTable>;
 export type ChannelMembership = InferSelectModel<typeof ChannelMembershipTable>;
+export type ChannelLiveStream = InferSelectModel<typeof ChannelLiveStreamTable>;
+export type ChannelSimulcastTarget = InferSelectModel<
+  typeof ChannelSimulcastTargetTable
+>;
 export type Organization = InferSelectModel<typeof OrganizationTable>;
 export type OrganizationMembership = InferSelectModel<
   typeof OrganizationMembershipTable

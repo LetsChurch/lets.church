@@ -496,17 +496,41 @@ function RouteComponent() {
         {/* Profile Header */}
         <div className="-mt-12 sm:-mt-16 mb-8 sm:mb-12">
           <div className="flex items-center overflow-hidden rounded-full border-fancy-pants bg-white shadow-lg dark:bg-zinc-900">
-            <Avatar
-              src={channel.avatarUrl || undefined}
-              alt={channel.name}
-              className="size-20 shrink-0 sm:size-32 lg:size-40"
-              fallbackClassName="text-xl sm:text-3xl lg:text-4xl"
-            />
+            <div className="relative shrink-0">
+              <Avatar
+                src={channel.avatarUrl || undefined}
+                alt={channel.name}
+                className="size-20 sm:size-32 lg:size-40"
+                fallbackClassName="text-xl sm:text-3xl lg:text-4xl"
+              />
+              {channel.isLive ? (
+                <Link
+                  to="/channel/$slug/live"
+                  params={{ slug: channel.slug }}
+                  className="-translate-x-1/2 absolute bottom-1 left-1/2 flex items-center gap-1 rounded-md bg-red-600 px-1.5 py-0.5 font-semibold text-[10px] text-white uppercase tracking-wide shadow sm:bottom-2 sm:text-xs"
+                >
+                  <span className="size-1.5 animate-pulse rounded-full bg-white" />
+                  Live
+                </Link>
+              ) : null}
+            </div>
             <div className="flex flex-1 flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4 lg:px-8 lg:py-6">
               <div className="min-w-0 flex-1">
-                <h1 className="font-bold text-xl text-zinc-900 tracking-tight sm:text-3xl lg:text-4xl dark:text-white">
-                  {channel.name}
-                </h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="font-bold text-xl text-zinc-900 tracking-tight sm:text-3xl lg:text-4xl dark:text-white">
+                    {channel.name}
+                  </h1>
+                  {channel.isLive ? (
+                    <Link
+                      to="/channel/$slug/live"
+                      params={{ slug: channel.slug }}
+                      className="flex items-center gap-1 rounded-full bg-red-600 px-2.5 py-1 font-semibold text-white text-xs uppercase tracking-wide hover:bg-red-700"
+                    >
+                      <span className="size-2 animate-pulse rounded-full bg-white" />
+                      Watch live
+                    </Link>
+                  ) : null}
+                </div>
                 <p className="mt-1 text-sm text-zinc-400">
                   {channel.subscriberCount.toLocaleString()}{' '}
                   {channel.subscriberCount === 1 ? 'follower' : 'followers'}
