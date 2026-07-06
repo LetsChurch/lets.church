@@ -973,10 +973,16 @@ export default async function annotateTranscript(
     .from(TranscriptParagraph)
     .where(eq(TranscriptParagraph.uploadRecordId, uploadRecordId))
     .orderBy(asc(TranscriptParagraph.order));
-  invariant(
-    paragraphs.length > 0,
-    `No transcript paragraphs for ${uploadRecordId} — cannot annotate`,
-  );
+  if (paragraphs.length === 0) {
+    // No transcript paragraphs — e.g. a live stream / upload with no audio,
+    // or one whose audio produced an empty transcript. There is nothing to
+    // annotate, so skip gracefully rather than throwing: a hard failure here
+    // cascades up and fails the whole post-transcribe workflow.
+    activityLogger.info(
+      `No transcript paragraphs for ${uploadRecordId} — skipping annotate (no audio / empty transcript)`,
+    );
+    return { paragraphs: 0, outline: 0, bible: 0, keyword: 0, skipped: 0 };
+  }
 
   const paragraphIds = paragraphs.map((p) => p.id);
 

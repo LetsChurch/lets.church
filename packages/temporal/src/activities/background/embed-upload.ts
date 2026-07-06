@@ -49,10 +49,16 @@ export default async function embedUpload(
     .then((r) => r[0]);
 
   invariant(row, `Upload record ${uploadRecordId} not found`);
-  invariant(
-    row.summary && row.searchSummary,
-    `Summaries missing for ${uploadRecordId} — run summarizeUpload first`,
-  );
+  if (!row.summary || !row.searchSummary) {
+    // No summaries — e.g. a live stream / upload with no audio whose
+    // summarize step skipped gracefully (empty transcript). Nothing to
+    // embed, so skip rather than throwing: a hard failure here cascades up
+    // and fails the whole post-transcribe workflow.
+    activityLogger.info(
+      `No summaries for ${uploadRecordId} — skipping summary embed (no audio / empty transcript)`,
+    );
+    return {};
+  }
 
   if (!force && row.summaryEmbedding && row.searchSummaryEmbedding) {
     activityLogger.info('Summary embeddings already present, skipping');
