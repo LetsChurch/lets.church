@@ -27,6 +27,7 @@ export {
   backfillOriginalImageUploadStatesBatch,
 } from './backfill-original-image-upload-states';
 export {
+  type BackfillSizesCursor,
   backfillUploadStateSizesBatch,
   getBackfillSizesCount,
 } from './backfill-upload-state-sizes';
