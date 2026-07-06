@@ -18,6 +18,7 @@ import {
 import { Dropzone } from '@/components/ui/dropzone';
 import { useAppForm } from '@/components/ui/form';
 import { showFailure, showSuccess } from '@/components/ui/notifications';
+import { useAutoSlug } from '@/hooks/use-auto-slug';
 import { OrganizationAutocomplete } from '@/routes/_main/dashboard/-components/organization-autocomplete';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { doMultipartUpload } from '@/util/multipart-upload';
@@ -44,6 +45,7 @@ function CreateChurchPage() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const autoSlug = useAutoSlug();
 
   const { data: organizationTags = [] } = useSuspenseQuery(
     trpc.dashboard.churches.getOrganizationTags.queryOptions(),
@@ -199,7 +201,17 @@ function CreateChurchPage() {
               }}
             >
               <div className="flex flex-col gap-4">
-                <form.AppField name="name">
+                <form.AppField
+                  name="name"
+                  listeners={{
+                    onChange: ({ value }) => {
+                      const next = autoSlug.onNameChange(value);
+                      if (next !== null) {
+                        form.setFieldValue('slug', next);
+                      }
+                    },
+                  }}
+                >
                   {(field) => (
                     <field.TextInputField
                       label="Church Name (required)"
@@ -209,11 +221,17 @@ function CreateChurchPage() {
                   )}
                 </form.AppField>
 
-                <form.AppField name="slug">
+                <form.AppField
+                  name="slug"
+                  listeners={{
+                    onChange: ({ value }) => autoSlug.onSlugChange(value),
+                  }}
+                >
                   {(field) => (
                     <field.TextInputField
                       label="Slug"
-                      placeholder="url-safe-identifier (leave empty to auto-generate)"
+                      placeholder="first-baptist"
+                      description="Your church's web address. Auto-filled from the name; edit it if you'd like. Letters, numbers, dashes (-), and underscores (_) only."
                     />
                   )}
                 </form.AppField>

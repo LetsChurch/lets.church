@@ -47,6 +47,7 @@ import {
 } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { getPublicImageUrl } from '@/util/server-env';
+import { slugify } from '@/util/slugify';
 import { uuidTranslator } from '@/util/uuid';
 import { authProcedure, router } from '../../trpc';
 
@@ -157,12 +158,7 @@ export const churchRouter = router({
       );
 
       try {
-        const slug =
-          input.slug ||
-          input.name
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-|-$/g, '');
+        const slug = input.slug || slugify(input.name);
 
         // Get the tag slugs from the single tags array
         const allTagSlugs = input.tags || [];

@@ -111,6 +111,7 @@ import { coverImageFull, thumbnailMedium } from '@/util/image-sizes';
 import logger from '@/util/logger';
 import { escapeLikePattern } from '@/util/misc';
 import { getPublicImageUrl, getPublicMediaUrl } from '@/util/server-env';
+import { slugify } from '@/util/slugify';
 import { uuidTranslator } from '@/util/uuid';
 import {
   assertSpeakerUsable,
@@ -284,12 +285,14 @@ export const channelRouter = router({
       );
 
       try {
+        const slug = input.slug || slugify(input.name);
+
         const channel = await db.transaction(async (tx) => {
           const [newChannel] = await tx
             .insert(Channel)
             .values({
               name: input.name,
-              slug: input.slug,
+              slug,
               description: input.description || null,
               visibility: input.visibility,
               updatedAt: new Date(),

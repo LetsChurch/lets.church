@@ -15,6 +15,7 @@ import {
 import { Dropzone } from '@/components/ui/dropzone';
 import { useAppForm } from '@/components/ui/form';
 import { showFailure, showSuccess } from '@/components/ui/notifications';
+import { useAutoSlug } from '@/hooks/use-auto-slug';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { preloadImage } from '@/util/image-preload';
 import { doMultipartUpload } from '@/util/multipart-upload';
@@ -41,6 +42,7 @@ function CreateChannelPage() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const autoSlug = useAutoSlug();
 
   const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
@@ -343,7 +345,17 @@ function CreateChannelPage() {
               }}
             >
               <div className="flex flex-col gap-4">
-                <form.AppField name="name">
+                <form.AppField
+                  name="name"
+                  listeners={{
+                    onChange: ({ value }) => {
+                      const next = autoSlug.onNameChange(value);
+                      if (next !== null) {
+                        form.setFieldValue('slug', next);
+                      }
+                    },
+                  }}
+                >
                   {(field) => (
                     <field.TextInputField
                       label="Channel Name (required)"
@@ -353,16 +365,21 @@ function CreateChannelPage() {
                   )}
                 </form.AppField>
 
-                <form.AppField name="slug">
+                <form.AppField
+                  name="slug"
+                  listeners={{
+                    onChange: ({ value }) => autoSlug.onSlugChange(value),
+                  }}
+                >
                   {(field) => (
                     <div className="flex flex-col gap-2.5">
                       <field.TextInputField
-                        label="Channel Address (required)"
+                        label="Channel Address"
                         placeholder="first-baptist"
-                        required
                       />
                       <Text size="xs" c="dimmed">
-                        This creates your channel's web address. You can use
+                        This creates your channel's web address. Auto-filled
+                        from the name; edit it if you'd like. You can use
                         letters, numbers, dashes (-), and underscores (_). For
                         example: "first-baptist" or "pastor-john"
                       </Text>

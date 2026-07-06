@@ -81,7 +81,19 @@ export const channelFormSchema = z.object({
   defaultUploadDownloadsEnabled: z.boolean().nullable().optional(),
 });
 
-export const createChannelSchema = channelFormSchema;
+// On create, a blank slug is allowed: the create procedure auto-generates one
+// from the name (mirrors churches). Editing keeps the slug required so an
+// existing channel's web address can't be blanked out.
+export const createChannelSchema = channelFormSchema.extend({
+  slug: z
+    .string()
+    .regex(
+      /^[a-zA-Z0-9_-]+$/,
+      'Slug can only contain letters, numbers, underscores, and hyphens',
+    )
+    .optional()
+    .or(z.literal('')),
+});
 
 export const updateChannelSchema = channelFormSchema.extend({
   channelId: channelIdSchema,

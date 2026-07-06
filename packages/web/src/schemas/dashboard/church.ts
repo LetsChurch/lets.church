@@ -121,16 +121,18 @@ const addressSchema = z.object({
 
 export const createChurchSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  // Constrain to URL-safe characters: the slug is interpolated into hrefs
-  // (including raw map-popup HTML), so an unconstrained value could break out
-  // of an attribute. Matches the channel slug convention.
+  // Blank is allowed: the create procedure auto-generates a slug from the name
+  // when none is supplied. A non-blank value must be URL-safe — the slug is
+  // interpolated into hrefs (including raw map-popup HTML), so an unconstrained
+  // value could break out of an attribute. Matches the channel slug convention.
   slug: z
     .string()
     .regex(
       /^[a-zA-Z0-9_-]+$/,
       'Slug can only contain letters, numbers, underscores, and hyphens',
     )
-    .optional(),
+    .optional()
+    .or(z.literal('')),
   description: z.string().optional(),
   websiteUrl: z
     .string()
