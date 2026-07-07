@@ -5,7 +5,6 @@
     "target": "ES2024",
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "noEmit": true,
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }
