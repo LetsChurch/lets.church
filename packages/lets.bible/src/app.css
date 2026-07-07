@@ -5,13 +5,13 @@
    logo.svg), so it needs no web font. Georgia is the reading serif used for
    scripture body text. Mirrors the Claude Design concept. */
 @theme {
-  --font-sans: "Hanken Grotesk", system-ui, sans-serif;
+  --font-sans: "Hanken Grotesk Variable", system-ui, sans-serif;
   /* Reading serif for scripture (the Begum Bold wordmark is SVG artwork). */
   --font-serif: Georgia, "Times New Roman", serif;
   /* Hebrew face for acrostic letters + interlinear. */
-  --font-hebrew: "Frank Ruhl Libre", "Noto Serif", serif;
+  --font-hebrew: "Frank Ruhl Libre Variable", "Noto Serif Variable", serif;
   /* Greek face for the interlinear original-language line. */
-  --font-greek: "Noto Serif", Georgia, serif;
+  --font-greek: "Noto Serif Variable", Georgia, serif;
   --font-mono: ui-monospace, Menlo, monospace;
 
   --color-paper: #f4f1e9;

@@ -5,6 +5,10 @@ import {
   Scripts,
 } from '@tanstack/react-router';
 import { type ReactNode, useEffect } from 'react';
+import '@fontsource-variable/hanken-grotesk';
+import '@fontsource-variable/frank-ruhl-libre';
+import '@fontsource-variable/noto-serif';
+import '@fontsource-variable/noto-serif/wght-italic.css';
 import appCss from '@/app.css?url';
 import type { AppContextType } from '@/router';
 
@@ -27,16 +31,6 @@ export const Route = createRootRouteWithContext<AppContextType>()({
       { rel: 'manifest', href: '/manifest.webmanifest' },
       // PNG — Safari/iOS ignores SVG apple-touch-icons.
       { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
-      { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-      {
-        rel: 'preconnect',
-        href: 'https://fonts.gstatic.com',
-        crossOrigin: 'anonymous',
-      },
-      {
-        rel: 'stylesheet',
-        href: 'https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Frank+Ruhl+Libre:wght@400;500&family=Noto+Serif:ital,wght@0,400;0,500;1,400&display=swap',
-      },
     ],
   }),
   component: RootComponent,

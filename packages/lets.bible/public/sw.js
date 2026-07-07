@@ -10,21 +10,20 @@
                               whole Bible + search work offline — the reader
                               fetches chapters from /reading/<id>/<slug>.json and
                               an idle pass precaches them (see local/precache.ts).
-     - built static assets  → stale-while-revalidate.
-     - Google Fonts         → cache-first (they rarely change).
+     - built static assets  → stale-while-revalidate (this includes the
+       static content          self-hosted @fontsource woff2 files under /assets).
      - tRPC query GETs       → network-first, so an opened chapter's
                               cross-references / preferences / translations are
                               available offline.
 
    Bump VERSION to roll all caches on the next activation. */
 
-const VERSION = 'v2';
+const VERSION = 'v3';
 const PAGES = `lb-pages-${VERSION}`;
 const ASSETS = `lb-assets-${VERSION}`;
-const FONTS = `lb-fonts-${VERSION}`;
 const API = `lb-api-${VERSION}`;
 const CONTENT = `lb-content-${VERSION}`;
-const KEEP = new Set([PAGES, ASSETS, FONTS, API, CONTENT]);
+const KEEP = new Set([PAGES, ASSETS, API, CONTENT]);
 
 // Dev vs prod is signalled explicitly by the registration URL (`/sw.js?dev`),
 // not by sniffing request shapes. In dev we use network-first for *everything*
@@ -50,13 +49,6 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-function isGoogleFonts(url) {
-  return (
-    url.hostname === 'fonts.googleapis.com' ||
-    url.hostname === 'fonts.gstatic.com'
-  );
-}
-
 // Never store a response the server marked private/uncacheable — authenticated
 // chapter pages (SSR'd notes/highlights) and user-specific tRPC responses. The
 // caches are keyed by URL only, so caching those would let the previous user's
@@ -74,9 +66,6 @@ function isCacheable(res) {
 function cacheNameFor(url, isDoc) {
   if (isDoc) {
     return PAGES;
-  }
-  if (isGoogleFonts(url)) {
-    return FONTS;
   }
   if (url.origin !== self.location.origin) {
     return null;
@@ -217,12 +206,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   const url = new URL(request.url);
-
-  // Google Fonts (cross-origin) — cache-first.
-  if (isGoogleFonts(url)) {
-    event.respondWith(cacheFirst(request, FONTS));
-    return;
-  }
 
   // Only handle same-origin requests below.
   if (url.origin !== self.location.origin) {
