@@ -22,7 +22,13 @@ pool.on('error', (err) => {
 
 export const db = drizzle(pool, {
   schema,
-  logger: process.env.NODE_ENV !== 'production',
+  // On for dev SSR (helpful), off in production. DB_LOG explicitly overrides
+  // either way: the seed/backfill scripts set it to "0" because Drizzle's
+  // logger serializes and synchronously writes every statement (including all
+  // bound params) to stdout, which dominates wall-clock time on bulk inserts.
+  logger: process.env.DB_LOG
+    ? process.env.DB_LOG === '1'
+    : process.env.NODE_ENV !== 'production',
 });
 
 export type TransactionClient = Parameters<
