@@ -112,6 +112,7 @@ import logger from '@/util/logger';
 import { escapeLikePattern } from '@/util/misc';
 import { getPublicImageUrl, getPublicMediaUrl } from '@/util/server-env';
 import { slugify } from '@/util/slugify';
+import { titleFromFileName } from '@/util/upload-title';
 import { uuidTranslator } from '@/util/uuid';
 import {
   assertSpeakerUsable,
@@ -2371,6 +2372,9 @@ export const channelRouter = router({
           userCommentsEnabled: channel.defaultUploadCommentsEnabled ?? true,
           downloadsEnabled: channel.defaultUploadDownloadsEnabled ?? true,
           originalFileName: input.originalFileName,
+          // Pre-fill the title from the file name so the new upload's edit page
+          // opens with a sensible default the user can accept or tweak.
+          title: titleFromFileName(input.originalFileName) || null,
           channelId: input.channelId,
           appUserId: ctx.session.appUser.id,
           uploadFinalized: false,
