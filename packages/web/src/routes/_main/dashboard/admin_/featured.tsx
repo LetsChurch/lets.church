@@ -1,11 +1,5 @@
 import { Autocomplete } from '@base-ui/react/autocomplete';
 import {
-  DragDropContext,
-  Draggable,
-  Droppable,
-  type DropResult,
-} from '@hello-pangea/dnd';
-import {
   IconGripVertical,
   IconPlus,
   IconTrash,
@@ -20,6 +14,7 @@ import {
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useDebounce } from 'use-debounce';
+import { SortableItem, SortableList } from '@/components/sortable-list';
 import { ActionIcon, Badge, InputWrapper, Text, Title } from '@/components/ui';
 import { modals } from '@/components/ui/confirm-modal';
 import { notifications } from '@/components/ui/notifications';
@@ -173,13 +168,7 @@ function FeaturedUploadsPage() {
     });
   };
 
-  const handleDragEnd = async (result: DropResult) => {
-    if (!result.destination) return;
-
-    const newItems = Array.from(items);
-    const [reorderedItem] = newItems.splice(result.source.index, 1);
-    newItems.splice(result.destination.index, 0, reorderedItem);
-
+  const handleReorder = (newItems: typeof items) => {
     setItems(newItems);
 
     // Update the order in the database
@@ -279,114 +268,96 @@ function FeaturedUploadsPage() {
           homepage.
         </Text>
       ) : (
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="featured">
-            {(provided) => (
-              <div
-                className="flex flex-col gap-4"
-                {...provided.droppableProps}
-                ref={provided.innerRef}
-              >
-                {items.map((item, index) => (
-                  <Draggable
-                    key={item.uploadRecord.id}
-                    draggableId={item.uploadRecord.id}
-                    index={index}
-                  >
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        className="overflow-hidden rounded-lg border-fancy-pants bg-white p-5 dark:bg-zinc-900"
-                        style={{
-                          ...provided.draggableProps.style,
-                          opacity: snapshot.isDragging ? 0.8 : 1,
-                          transform: snapshot.isDragging
-                            ? `${provided.draggableProps.style?.transform} rotate(2deg)`
-                            : provided.draggableProps.style?.transform,
-                        }}
-                      >
-                        <div className="flex flex-nowrap items-center justify-start gap-4">
-                          <div {...provided.dragHandleProps}>
-                            <ActionIcon variant="subtle" color="gray" size="lg">
-                              <IconGripVertical size={20} />
-                            </ActionIcon>
-                          </div>
+        <SortableList
+          items={items}
+          getId={(item) => item.uploadRecord.id}
+          onReorder={handleReorder}
+          className="flex flex-col gap-4"
+        >
+          {(item) => (
+            <SortableItem key={item.uploadRecord.id} id={item.uploadRecord.id}>
+              {({ setNodeRef, style, attributes, listeners }) => (
+                <div
+                  ref={setNodeRef}
+                  className="overflow-hidden rounded-lg border-fancy-pants bg-white p-5 dark:bg-zinc-900"
+                  style={style}
+                >
+                  <div className="flex flex-nowrap items-center justify-start gap-4">
+                    <div {...attributes} {...listeners}>
+                      <ActionIcon variant="subtle" color="gray" size="lg">
+                        <IconGripVertical size={20} />
+                      </ActionIcon>
+                    </div>
 
-                          <Link
-                            to="/dashboard/channels/$channelId/uploads/$uploadId"
-                            params={{
-                              channelId: item.uploadRecord.channel.id,
-                              uploadId: item.uploadRecord.id,
-                            }}
-                            className="flex flex-1 gap-4 text-inherit no-underline"
-                          >
-                            {item.uploadRecord.thumbnailUrl ? (
-                              <img
-                                src={item.uploadRecord.thumbnailUrl}
-                                alt={item.uploadRecord.title || 'Untitled'}
-                                width={120}
-                                height={68}
-                                className="rounded-sm object-cover"
-                              />
-                            ) : null}
+                    <Link
+                      to="/dashboard/channels/$channelId/uploads/$uploadId"
+                      params={{
+                        channelId: item.uploadRecord.channel.id,
+                        uploadId: item.uploadRecord.id,
+                      }}
+                      className="flex flex-1 gap-4 text-inherit no-underline"
+                    >
+                      {item.uploadRecord.thumbnailUrl ? (
+                        <img
+                          src={item.uploadRecord.thumbnailUrl}
+                          alt={item.uploadRecord.title || 'Untitled'}
+                          width={120}
+                          height={68}
+                          className="rounded-sm object-cover"
+                        />
+                      ) : null}
 
-                            <div style={{ flex: 1 }}>
-                              <div className="mb-2.5 flex flex-wrap items-center justify-start gap-2.5">
-                                <Text fw={500} size="sm">
-                                  {item.uploadRecord.title || 'Untitled'}
-                                </Text>
-                                <Badge color="blue" size="sm">
-                                  Featured
-                                </Badge>
-                              </div>
+                      <div style={{ flex: 1 }}>
+                        <div className="mb-2.5 flex flex-wrap items-center justify-start gap-2.5">
+                          <Text fw={500} size="sm">
+                            {item.uploadRecord.title || 'Untitled'}
+                          </Text>
+                          <Badge color="blue" size="sm">
+                            Featured
+                          </Badge>
+                        </div>
 
-                              <Text size="xs" c="dimmed" lineClamp={2}>
-                                {item.uploadRecord.description ||
-                                  'No description'}
+                        <Text size="xs" c="dimmed" lineClamp={2}>
+                          {item.uploadRecord.description || 'No description'}
+                        </Text>
+
+                        <div className="mt-2.5 flex flex-wrap items-center justify-start gap-2.5">
+                          <Text size="xs" c="dimmed">
+                            {item.uploadRecord.channel.name}
+                          </Text>
+                          {item.uploadRecord.lengthSeconds ? (
+                            <>
+                              <Text size="xs" c="dimmed">
+                                •
                               </Text>
-
-                              <div className="mt-2.5 flex flex-wrap items-center justify-start gap-2.5">
-                                <Text size="xs" c="dimmed">
-                                  {item.uploadRecord.channel.name}
-                                </Text>
-                                {item.uploadRecord.lengthSeconds ? (
-                                  <>
-                                    <Text size="xs" c="dimmed">
-                                      •
-                                    </Text>
-                                    <Text size="xs" c="dimmed">
-                                      {formatTime(
-                                        item.uploadRecord.lengthSeconds * 1000,
-                                      )}
-                                    </Text>
-                                  </>
-                                ) : null}
-                              </div>
-                            </div>
-                          </Link>
-
-                          <ActionIcon
-                            color="red"
-                            variant="subtle"
-                            size="lg"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveFromFeatured(item.uploadRecord.id);
-                            }}
-                          >
-                            <IconTrash size={20} />
-                          </ActionIcon>
+                              <Text size="xs" c="dimmed">
+                                {formatTime(
+                                  item.uploadRecord.lengthSeconds * 1000,
+                                )}
+                              </Text>
+                            </>
+                          ) : null}
                         </div>
                       </div>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
+                    </Link>
+
+                    <ActionIcon
+                      color="red"
+                      variant="subtle"
+                      size="lg"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveFromFeatured(item.uploadRecord.id);
+                      }}
+                    >
+                      <IconTrash size={20} />
+                    </ActionIcon>
+                  </div>
+                </div>
+              )}
+            </SortableItem>
+          )}
+        </SortableList>
       )}
     </div>
   );

@@ -1,11 +1,5 @@
 import { Combobox } from '@base-ui/react/combobox';
 import {
-  DragDropContext,
-  Draggable,
-  Droppable,
-  type DropResult,
-} from '@hello-pangea/dnd';
-import {
   IconEdit,
   IconGripVertical,
   IconLink,
@@ -23,6 +17,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
+import { SortableItem, SortableList } from '@/components/sortable-list';
 import {
   ActionIcon,
   Badge,
@@ -274,13 +269,7 @@ function PlaylistDetailsPage() {
     });
   };
 
-  const handleDragEnd = async (result: DropResult) => {
-    if (!result.destination) return;
-
-    const newItems = Array.from(items);
-    const [reorderedItem] = newItems.splice(result.source.index, 1);
-    newItems.splice(result.destination.index, 0, reorderedItem);
-
+  const handleReorder = (newItems: typeof items) => {
     setItems(newItems);
 
     // Update the order in the database
@@ -439,89 +428,69 @@ function PlaylistDetailsPage() {
           No uploads in this playlist yet. Add some uploads to get started.
         </Text>
       ) : (
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="playlist">
-            {(provided) => (
-              <div
-                className="flex flex-col gap-4"
-                {...provided.droppableProps}
-                ref={provided.innerRef}
-              >
-                {items.map((item, index) => (
-                  <Draggable
-                    key={item.upload.id}
-                    draggableId={item.upload.id}
-                    index={index}
-                  >
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        className="overflow-hidden rounded-xl border-fancy-pants bg-white p-5 dark:bg-zinc-900"
-                        style={{
-                          ...provided.draggableProps.style,
-                          opacity: snapshot.isDragging ? 0.8 : 1,
-                        }}
-                      >
-                        <div className="flex flex-wrap items-center justify-start gap-4">
-                          <ActionIcon
-                            variant="subtle"
-                            color="gray"
-                            {...provided.dragHandleProps}
-                          >
-                            <IconGripVertical size={16} />
-                          </ActionIcon>
+        <SortableList
+          items={items}
+          getId={(item) => item.upload.id}
+          onReorder={handleReorder}
+          className="flex flex-col gap-4"
+        >
+          {(item) => (
+            <SortableItem key={item.upload.id} id={item.upload.id}>
+              {({ setNodeRef, style, attributes, listeners }) => (
+                <div
+                  ref={setNodeRef}
+                  className="overflow-hidden rounded-xl border-fancy-pants bg-white p-5 dark:bg-zinc-900"
+                  style={style}
+                >
+                  <div className="flex flex-wrap items-center justify-start gap-4">
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      {...attributes}
+                      {...listeners}
+                    >
+                      <IconGripVertical size={16} />
+                    </ActionIcon>
 
-                          <div
-                            style={{ flex: 1 }}
-                            className="flex flex-col gap-2.5"
-                          >
-                            <Text fw={500}>
-                              {item.upload.title || 'Untitled'}
-                            </Text>
-                            {item.upload.description && (
-                              <Text size="sm" c="dimmed" lineClamp={2}>
-                                {item.upload.description}
-                              </Text>
-                            )}
-                            <div className="flex flex-wrap items-center justify-start gap-4">
-                              <Badge size="xs" color="gray">
-                                {item.upload.visibility}
-                              </Badge>
-                              <Text size="xs" c="dimmed">
-                                {formatDate(item.upload.createdAt)}
-                              </Text>
-                              {item.upload.lengthSeconds && (
-                                <Text size="xs" c="dimmed">
-                                  {Math.floor(item.upload.lengthSeconds / 60)}:
-                                  {Math.floor(item.upload.lengthSeconds % 60)
-                                    .toString()
-                                    .padStart(2, '0')}
-                                </Text>
-                              )}
-                            </div>
-                          </div>
-
-                          <ActionIcon
-                            color="red"
-                            variant="light"
-                            onClick={() =>
-                              handleRemoveFromPlaylist(item.upload.id)
-                            }
-                            loading={removeFromPlaylistMutation.isPending}
-                          >
-                            <IconTrash size={16} />
-                          </ActionIcon>
-                        </div>
+                    <div style={{ flex: 1 }} className="flex flex-col gap-2.5">
+                      <Text fw={500}>{item.upload.title || 'Untitled'}</Text>
+                      {item.upload.description && (
+                        <Text size="sm" c="dimmed" lineClamp={2}>
+                          {item.upload.description}
+                        </Text>
+                      )}
+                      <div className="flex flex-wrap items-center justify-start gap-4">
+                        <Badge size="xs" color="gray">
+                          {item.upload.visibility}
+                        </Badge>
+                        <Text size="xs" c="dimmed">
+                          {formatDate(item.upload.createdAt)}
+                        </Text>
+                        {item.upload.lengthSeconds && (
+                          <Text size="xs" c="dimmed">
+                            {Math.floor(item.upload.lengthSeconds / 60)}:
+                            {Math.floor(item.upload.lengthSeconds % 60)
+                              .toString()
+                              .padStart(2, '0')}
+                          </Text>
+                        )}
                       </div>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
+                    </div>
+
+                    <ActionIcon
+                      color="red"
+                      variant="light"
+                      onClick={() => handleRemoveFromPlaylist(item.upload.id)}
+                      loading={removeFromPlaylistMutation.isPending}
+                    >
+                      <IconTrash size={16} />
+                    </ActionIcon>
+                  </div>
+                </div>
+              )}
+            </SortableItem>
+          )}
+        </SortableList>
       )}
 
       {/* Edit Playlist Modal */}
