@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, useLocation } from '@tanstack/react-router';
+
 import BottomTabBar from '@/components/bottom-tab-bar';
 import Sidebar from '@/components/sidebar';
 
@@ -13,9 +14,9 @@ function RouteComponent() {
   const isDashboard = pathname.startsWith('/dashboard');
 
   return (
-    <div className="flex h-screen bg-page">
+    <div className="bg-page flex h-screen">
       <Sidebar forceCollapsed={isDashboard} />
-      <main className="relative flex-1 overflow-y-auto overflow-x-hidden pb-16 sm:pb-0">
+      <main className="relative flex-1 overflow-x-hidden overflow-y-auto pb-16 sm:pb-0">
         <Outlet />
       </main>
       <BottomTabBar />

@@ -7,6 +7,7 @@ import {
 import { publicS3 } from '@letschurch/s3/public';
 import { and, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { z } from 'zod';
+
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import {
   organizationAvatarLarge,
@@ -19,6 +20,7 @@ import { isChannelRoutable } from '@/util/media-visibility';
 import { formatPhoneNumber } from '@/util/phone';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
+
 import { publicProcedure } from '../trpc';
 
 const moduleLogger = logger.child({

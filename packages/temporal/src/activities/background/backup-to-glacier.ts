@@ -2,12 +2,14 @@ import { createReadStream, createWriteStream } from 'node:fs';
 import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
+
 import { db, UploadState } from '@letschurch/db';
 import { backupS3 } from '@letschurch/s3/backup';
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { heartbeat } from '@temporalio/activity';
 import { eq } from 'drizzle-orm';
+
 import logger from '../../util/logger';
 
 const WORK_DIR = process.env.BACKUP_WORKING_DIRECTORY ?? '/data/backup';

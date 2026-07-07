@@ -1,15 +1,16 @@
 import { Button, Text } from '@/components/ui';
+
 import { AddressAutocomplete } from './address-autocomplete';
 
 type AddressFieldsProps = {
-  // biome-ignore lint/suspicious/noExplicitAny: Form API is complex and component needs to accept any form instance
+  // oxlint-disable-next-line typescript/no-explicit-any -- Form API is complex and component needs to accept any form instance
   form: any;
 };
 
 export function AddressFields({ form }: AddressFieldsProps) {
   return (
     <form.AppField name="addresses" mode="array">
-      {/* biome-ignore lint/suspicious/noExplicitAny: Field type is determined by form library */}
+      {/* oxlint-disable-next-line typescript/no-explicit-any -- Field type is determined by form library */}
       {(addressesField: any) => (
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -42,7 +43,7 @@ export function AddressFields({ form }: AddressFieldsProps) {
             </Text>
           ) : (
             <div className="flex flex-col gap-4">
-              {/* biome-ignore lint/suspicious/noExplicitAny: Address type is determined by form data */}
+              {/* oxlint-disable-next-line typescript/no-explicit-any -- Address type is determined by form data */}
               {addressesField.state.value.map((address: any, index: number) => (
                 <div
                   key={`address-${address.type}-${index}`}
@@ -67,7 +68,7 @@ export function AddressFields({ form }: AddressFieldsProps) {
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <div>
                         <form.AppField name={`addresses[${index}].type`}>
-                          {/* biome-ignore lint/suspicious/noExplicitAny: Field type is determined by form library */}
+                          {/* oxlint-disable-next-line typescript/no-explicit-any -- Field type is determined by form library */}
                           {(field: any) => (
                             <field.SelectField
                               label="Address Type"
@@ -93,7 +94,7 @@ export function AddressFields({ form }: AddressFieldsProps) {
                       </div>
                       <div>
                         <form.AppField name={`addresses[${index}].name`}>
-                          {/* biome-ignore lint/suspicious/noExplicitAny: Field type is determined by form library */}
+                          {/* oxlint-disable-next-line typescript/no-explicit-any -- Field type is determined by form library */}
                           {(field: any) => (
                             <field.TextInputField
                               label="Name"
@@ -106,7 +107,7 @@ export function AddressFields({ form }: AddressFieldsProps) {
                         <form.AppField
                           name={`addresses[${index}].streetAddress`}
                         >
-                          {/* biome-ignore lint/suspicious/noExplicitAny: Field type is determined by form library */}
+                          {/* oxlint-disable-next-line typescript/no-explicit-any -- Field type is determined by form library */}
                           {(field: any) => (
                             <AddressAutocomplete
                               label="Street Address"
@@ -143,7 +144,7 @@ export function AddressFields({ form }: AddressFieldsProps) {
                       </div>
                       <div>
                         <form.AppField name={`addresses[${index}].locality`}>
-                          {/* biome-ignore lint/suspicious/noExplicitAny: Field type is determined by form library */}
+                          {/* oxlint-disable-next-line typescript/no-explicit-any -- Field type is determined by form library */}
                           {(field: any) => (
                             <field.TextInputField
                               label="City"
@@ -154,7 +155,7 @@ export function AddressFields({ form }: AddressFieldsProps) {
                       </div>
                       <div>
                         <form.AppField name={`addresses[${index}].region`}>
-                          {/* biome-ignore lint/suspicious/noExplicitAny: Field type is determined by form library */}
+                          {/* oxlint-disable-next-line typescript/no-explicit-any -- Field type is determined by form library */}
                           {(field: any) => (
                             <field.TextInputField
                               label="State/Region"
@@ -165,7 +166,7 @@ export function AddressFields({ form }: AddressFieldsProps) {
                       </div>
                       <div>
                         <form.AppField name={`addresses[${index}].postalCode`}>
-                          {/* biome-ignore lint/suspicious/noExplicitAny: Field type is determined by form library */}
+                          {/* oxlint-disable-next-line typescript/no-explicit-any -- Field type is determined by form library */}
                           {(field: any) => (
                             <field.TextInputField
                               label="Postal Code"
@@ -176,7 +177,7 @@ export function AddressFields({ form }: AddressFieldsProps) {
                       </div>
                       <div>
                         <form.AppField name={`addresses[${index}].country`}>
-                          {/* biome-ignore lint/suspicious/noExplicitAny: Field type is determined by form library */}
+                          {/* oxlint-disable-next-line typescript/no-explicit-any -- Field type is determined by form library */}
                           {(field: any) => (
                             <field.TextInputField
                               label="Country"
@@ -189,7 +190,7 @@ export function AddressFields({ form }: AddressFieldsProps) {
                         <form.AppField
                           name={`addresses[${index}].postOfficeBoxNumber`}
                         >
-                          {/* biome-ignore lint/suspicious/noExplicitAny: Field type is determined by form library */}
+                          {/* oxlint-disable-next-line typescript/no-explicit-any -- Field type is determined by form library */}
                           {(field: any) => (
                             <field.TextInputField
                               label="P.O. Box Number"

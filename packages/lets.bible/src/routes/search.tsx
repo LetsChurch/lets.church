@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
+
 import { AiAnswer } from '@/components/ai-answer';
 import { PageShell } from '@/components/chrome';
 import { LiveSearchBox } from '@/components/live-search-box';
@@ -32,13 +33,13 @@ function SearchResults() {
 
         <div className="mt-10">
           {!q?.trim() ? (
-            <p className="text-[14px] text-faint">
+            <p className="text-faint text-[14px]">
               Search a reference, phrase, topic, or idea.
             </p>
           ) : isLoading ? (
-            <p className="text-[14px] text-faint">Searching…</p>
+            <p className="text-faint text-[14px]">Searching…</p>
           ) : isError ? (
-            <p className="text-[14px] text-redletter">
+            <p className="text-redletter text-[14px]">
               Something went wrong. Please try again.
             </p>
           ) : (
@@ -80,7 +81,7 @@ type SearchData = {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-3 font-bold text-[11px] text-faint uppercase tracking-[0.1em]">
+    <div className="text-faint mb-3 text-[11px] font-bold tracking-[0.1em] uppercase">
       {children}
     </div>
   );
@@ -96,20 +97,20 @@ function VerseRow({ hit, html }: { hit: VerseHit; html?: boolean }) {
         // Verse deep-link: don't reset scroll to top — the reader scrolls the
         // verse into view (see chapterLink in lib/reference.ts).
         resetScroll={false}
-        className="block rounded-xl px-4 py-3 transition hover:bg-paper-soft"
+        className="hover:bg-paper-soft block rounded-xl px-4 py-3 transition"
       >
-        <span className="font-semibold text-[13px] text-gold">
+        <span className="text-gold text-[13px] font-semibold">
           {hit.name} {hit.chapter}:{hit.verse}
         </span>
         {html ? (
           // ES highlight uses encoder:'html' — the verse text is HTML-escaped and
           // only our <mark> tags are injected, so this is safe to render.
           <span
-            className="search-result mt-1 block font-serif text-[16px] text-ink leading-relaxed"
+            className="search-result text-ink mt-1 block font-serif text-[16px] leading-relaxed"
             dangerouslySetInnerHTML={{ __html: hit.highlight }}
           />
         ) : (
-          <span className="mt-1 block font-serif text-[16px] text-ink leading-relaxed">
+          <span className="text-ink mt-1 block font-serif text-[16px] leading-relaxed">
             {hit.text}
           </span>
         )}
@@ -139,7 +140,7 @@ function Results({
 
   if (empty) {
     return (
-      <p className="text-[14px] text-faint">
+      <p className="text-faint text-[14px]">
         No results for “{query}”. Try different words or a reference like “John
         3:16”.
       </p>
@@ -153,17 +154,17 @@ function Results({
       {reference ? (
         <Link
           {...chapterLink(reference.book, reference.chapter, reference.verse)}
-          className="flex items-center justify-between rounded-2xl border border-gold-soft/50 bg-paper-raised px-5 py-4 shadow-sm transition hover:border-gold-soft"
+          className="border-gold-soft/50 bg-paper-raised hover:border-gold-soft flex items-center justify-between rounded-2xl border px-5 py-4 shadow-sm transition"
         >
           <span>
-            <span className="block font-bold text-[11px] text-gold-soft uppercase tracking-[0.14em]">
+            <span className="text-gold-soft block text-[11px] font-bold tracking-[0.14em] uppercase">
               Go to reference
             </span>
-            <span className="mt-0.5 block font-serif text-[20px] text-ink-strong">
+            <span className="text-ink-strong mt-0.5 block font-serif text-[20px]">
               {reference.label}
             </span>
           </span>
-          <span className="text-[18px] text-gold">→</span>
+          <span className="text-gold text-[18px]">→</span>
         </Link>
       ) : null}
 
@@ -175,13 +176,13 @@ function Results({
               <li key={x.label}>
                 <Link
                   {...chapterLink(x.slug, x.chapter, x.verse ?? undefined)}
-                  className="block rounded-xl px-4 py-3 transition hover:bg-paper-soft"
+                  className="hover:bg-paper-soft block rounded-xl px-4 py-3 transition"
                 >
-                  <span className="font-semibold text-[13px] text-gold">
+                  <span className="text-gold text-[13px] font-semibold">
                     {x.label}
                   </span>
                   {x.text ? (
-                    <span className="mt-1 block font-serif text-[16px] text-ink leading-relaxed">
+                    <span className="text-ink mt-1 block font-serif text-[16px] leading-relaxed">
                       {x.text}
                     </span>
                   ) : null}

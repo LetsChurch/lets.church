@@ -11,6 +11,7 @@ import {
   useRouter,
 } from '@tanstack/react-router';
 import { useState } from 'react';
+
 import { Alert, Text } from '@/components/ui';
 import { useAppForm } from '@/components/ui/form';
 import { loginSchema } from '@/schemas/auth';
@@ -99,7 +100,7 @@ function LoginRoute() {
   });
 
   return (
-    <div className="rounded-lg border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900">
+    <div className="border-fancy-pants rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
       <Text size="lg" fw={600}>
         Sign in to your account
       </Text>

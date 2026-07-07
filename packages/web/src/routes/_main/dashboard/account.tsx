@@ -1,5 +1,7 @@
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
+
 import { Button, Text, Title } from '@/components/ui';
+
 import styles from './-styles.module.css';
 
 export const Route = createFileRoute('/_main/dashboard/account')({
@@ -30,7 +32,7 @@ function AccountPage() {
       </Title>
 
       <div className="flex flex-col gap-5">
-        <div className="overflow-hidden rounded-lg border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900">
+        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
           <div className="mb-2.5 flex flex-wrap items-start justify-between gap-4">
             <Text fw={500}>Profile Information</Text>
             <Button
@@ -49,7 +51,7 @@ function AccountPage() {
           </Text>
         </div>
 
-        <div className="overflow-hidden rounded-lg border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900">
+        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
           <div className="mb-2.5 flex flex-wrap items-start justify-between gap-4">
             <Text fw={500}>Password & Security</Text>
             <Button
@@ -68,7 +70,7 @@ function AccountPage() {
           </Text>
         </div>
 
-        <div className="overflow-hidden rounded-lg border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900">
+        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
           <div className="mb-2.5 flex flex-wrap items-start justify-between gap-4">
             <Text fw={500}>Newsletter Subscription</Text>
             <Button
@@ -87,7 +89,7 @@ function AccountPage() {
           </Text>
         </div>
 
-        <div className="overflow-hidden rounded-lg border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900">
+        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
           <div className="mb-2.5 flex flex-wrap items-start justify-between gap-4">
             <Text fw={500}>Notifications</Text>
             <Button

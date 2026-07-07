@@ -14,7 +14,7 @@ export const verseSettings: Record<string, unknown> = {
   'index.knn': true,
 };
 
-// biome-ignore lint/suspicious/noExplicitAny: OpenSearch's mapping-property types are thin; `any` lets these literals satisfy putMapping, and the cluster validates the shape on push (see above).
+// oxlint-disable-next-line typescript/no-explicit-any -- OpenSearch's mapping-property types are thin; `any` lets these literals satisfy putMapping, and the cluster validates the shape on push (see above).
 export const verseProperties: Record<string, any> = {
   translationId: { type: 'keyword' },
   book: { type: 'keyword' }, // USFM code, e.g. JHN

@@ -1,17 +1,17 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* lets.bible design tokens — warm paper, gold accent, Hanken Grotesk for UI.
    The wordmark is Begum Bold, shipped as outlined logo artwork (see logo.tsx /
    logo.svg), so it needs no web font. Georgia is the reading serif used for
    scripture body text. Mirrors the Claude Design concept. */
 @theme {
-  --font-sans: "Hanken Grotesk Variable", system-ui, sans-serif;
+  --font-sans: 'Hanken Grotesk Variable', system-ui, sans-serif;
   /* Reading serif for scripture (the Begum Bold wordmark is SVG artwork). */
-  --font-serif: Georgia, "Times New Roman", serif;
+  --font-serif: Georgia, 'Times New Roman', serif;
   /* Hebrew face for acrostic letters + interlinear. */
-  --font-hebrew: "Frank Ruhl Libre Variable", "Noto Serif Variable", serif;
+  --font-hebrew: 'Frank Ruhl Libre Variable', 'Noto Serif Variable', serif;
   /* Greek face for the interlinear original-language line. */
-  --font-greek: "Noto Serif Variable", Georgia, serif;
+  --font-greek: 'Noto Serif Variable', Georgia, serif;
   --font-mono: ui-monospace, Menlo, monospace;
 
   --color-paper: #f4f1e9;
@@ -59,7 +59,7 @@
    via an explicit `data-theme="dark"` (the Storybook theme toggle / overrides).
    The OS rule is suppressed when `data-theme="light"` is forced. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme='light']) {
     --color-paper: #1c1b18;
     --color-paper-raised: #26251f;
     --color-paper-soft: #211f1b;
@@ -85,7 +85,7 @@
   }
 }
 
-[data-theme="dark"] {
+[data-theme='dark'] {
   --color-paper: #1c1b18;
   --color-paper-raised: #26251f;
   --color-paper-soft: #211f1b;
@@ -124,7 +124,7 @@
   }
 
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) body {
+    :root:not([data-theme='light']) body {
       background: radial-gradient(
         120% 80% at 50% -10%,
         #211f1b 0%,
@@ -133,7 +133,7 @@
     }
   }
 
-  [data-theme="dark"] body {
+  [data-theme='dark'] body {
     background: radial-gradient(120% 80% at 50% -10%, #211f1b 0%, #1c1b18 60%);
   }
 
@@ -197,19 +197,19 @@
    `:root:not([data-theme="light"])` rules (higher, via `:not`), so specificity
    ascends through the file (non-descending). The highlight color also takes
    precedence over red-letter text within a highlight. */
-[data-theme="dark"] .verse-highlight {
+[data-theme='dark'] .verse-highlight {
   background: transparent;
   color: var(--hl);
 }
-[data-theme="dark"] .verse-highlight .text-redletter {
+[data-theme='dark'] .verse-highlight .text-redletter {
   color: var(--hl);
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .verse-highlight {
+  :root:not([data-theme='light']) .verse-highlight {
     background: transparent;
     color: var(--hl);
   }
-  :root:not([data-theme="light"]) .verse-highlight .text-redletter {
+  :root:not([data-theme='light']) .verse-highlight .text-redletter {
     color: var(--hl);
   }
 }
@@ -225,12 +225,12 @@
   padding: 0 1px;
   background: color-mix(in srgb, var(--color-gold) 22%, transparent);
 }
-[data-theme="dark"] .search-result mark {
+[data-theme='dark'] .search-result mark {
   background: transparent;
   color: var(--color-gold);
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .search-result mark {
+  :root:not([data-theme='light']) .search-result mark {
     background: transparent;
     color: var(--color-gold);
   }

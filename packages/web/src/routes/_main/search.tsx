@@ -11,6 +11,7 @@ import { formatDistanceToNow } from 'date-fns';
 import posthog from 'posthog-js';
 import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
+
 import { AnswerPanel } from '@/components/answer-panel';
 import { AvatarCarousel } from '@/components/avatar-carousel';
 import { EmptyState } from '@/components/empty-state';
@@ -672,7 +673,7 @@ function SearchResults({ q }: { q: string }) {
 
           {channels.length > 0 ? (
             <div className="space-y-4">
-              <h2 className="font-medium text-primary">Channels</h2>
+              <h2 className="text-primary font-medium">Channels</h2>
               <AvatarCarousel items={channels} />
             </div>
           ) : null}
@@ -749,7 +750,7 @@ function SegmentPreview({
       mediaId={item.id}
       startSeconds={startSeconds}
       thumbnailUrl={item.thumbnailUrl}
-      className="relative z-10 flex cursor-pointer flex-row gap-1.5 rounded-md bg-white/5 p-3 text-primary transition-colors hover:bg-white/10"
+      className="text-primary relative z-10 flex cursor-pointer flex-row gap-1.5 rounded-md bg-white/5 p-3 transition-colors hover:bg-white/10"
       onPreviewOpen={() =>
         posthog.capture('transcript_preview_opened', {
           upload_id: item.id,
@@ -775,11 +776,11 @@ function SegmentPreview({
         })
       }
     >
-      <div className="pt-1 text-[10px] tabular-nums leading-[1.4] tracking-[-0.2px]">
+      <div className="pt-1 text-[10px] leading-[1.4] tracking-[-0.2px] tabular-nums">
         {formatTime(segment.start)}
       </div>
       <div
-        className="[&_mark]:-my-0.5 [&_mark]:-mx-1 text-primary/80 text-sm [&_mark]:rounded-sm [&_mark]:bg-orange-400/40 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:text-primary"
+        className="text-primary/80 [&_mark]:text-primary text-sm [&_mark]:-mx-1 [&_mark]:-my-0.5 [&_mark]:rounded-sm [&_mark]:bg-orange-400/40 [&_mark]:px-1 [&_mark]:py-0.5"
         dangerouslySetInnerHTML={{ __html: joinAdjacentMarks(segment.text) }}
       />
     </MediaPreviewTarget>
@@ -823,7 +824,7 @@ function Result({ item }: { item: SearchResultItem }) {
                     <SegmentPreview key={index} item={item} segment={segment} />
                   ))}
                 </Collapsible.Panel>
-                <Collapsible.Trigger className="relative z-10 mt-2 w-full px-1 py-0.5 text-center text-muted text-xs transition-colors hover:text-primary">
+                <Collapsible.Trigger className="text-muted hover:text-primary relative z-10 mt-2 w-full px-1 py-0.5 text-center text-xs transition-colors">
                   {showAll ? 'Show less' : `Show ${rest.length} more`}
                 </Collapsible.Trigger>
               </Collapsible.Root>
@@ -876,9 +877,9 @@ function NoSearch() {
 
       {/* Recent Searches */}
       {isLoggedIn && recentSearches.length > 0 ? (
-        <div className="border-white/10 border-b py-6 sm:hidden">
+        <div className="border-b border-white/10 py-6 sm:hidden">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-medium text-lg text-primary">
+            <h2 className="text-primary text-lg font-medium">
               Recent Searches
             </h2>
           </div>
@@ -891,14 +892,14 @@ function NoSearch() {
                 <button
                   type="button"
                   onClick={() => handleSearchClick(search.query)}
-                  className="flex-1 text-left text-primary transition-colors hover:text-primary"
+                  className="text-primary hover:text-primary flex-1 text-left transition-colors"
                 >
                   {search.query}
                 </button>
                 <button
                   type="button"
                   onClick={() => removeRecentSearch(search.query)}
-                  className="flex size-7 items-center justify-center text-muted transition-colors hover:text-primary"
+                  className="text-muted hover:text-primary flex size-7 items-center justify-center transition-colors"
                   aria-label={`Remove ${search.query}`}
                 >
                   <IconX size={16} />
@@ -912,7 +913,7 @@ function NoSearch() {
       {/* Trending */}
       <div className="pt-6">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-medium text-lg text-primary">Trending</h2>
+          <h2 className="text-primary text-lg font-medium">Trending</h2>
         </div>
         <div className="space-y-4">
           {trendingUploads.map((upload) => (

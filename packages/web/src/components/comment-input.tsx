@@ -1,5 +1,6 @@
 import { IconArrowUpRight } from '@tabler/icons-react';
 import { useRef, useState } from 'react';
+
 import { cn } from '@/util/cn';
 
 type CommentInputProps = {
@@ -85,7 +86,7 @@ export function CommentInput({
         </button>
       </div>
       {displayError ? (
-        <div className="mt-2 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-red-400 text-sm">
+        <div className="mt-2 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-400">
           {displayError}
         </div>
       ) : null}

@@ -2,6 +2,7 @@ import { IconAlertCircle, IconCheck } from '@tabler/icons-react';
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
+
 import {
   Alert,
   Badge,
@@ -128,7 +129,7 @@ function BackfillFilenamesPage() {
         </Text>
       </Alert>
 
-      <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-4 dark:bg-zinc-900">
+      <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-4 dark:bg-zinc-900">
         <div className="flex flex-col gap-4">
           <Title order={3}>Status</Title>
 
@@ -182,7 +183,7 @@ function BackfillFilenamesPage() {
       </div>
 
       {!isRunning && status.remainingCount > 0 ? (
-        <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-4 dark:bg-zinc-900">
+        <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-4 dark:bg-zinc-900">
           <div className="flex flex-col gap-4">
             <Title order={3}>Start Backfill</Title>
 

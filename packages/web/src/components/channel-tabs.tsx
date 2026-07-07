@@ -1,4 +1,5 @@
 import { Tabs } from '@base-ui/react/tabs';
+
 import { cn } from '@/util/cn';
 
 export type ChannelTab = 'videos' | 'playlists' | 'series' | 'links';
@@ -45,12 +46,12 @@ export default function ChannelTabs({
           className="group relative flex h-10 items-center gap-1 pt-1.5 pb-2"
         >
           <div className="flex items-center gap-2 pb-px">
-            <span className="overflow-hidden overflow-ellipsis whitespace-nowrap font-medium text-primary/70 text-sm leading-none group-data-[active]:text-primary">
+            <span className="text-primary/70 group-data-[active]:text-primary overflow-hidden text-sm leading-none font-medium overflow-ellipsis whitespace-nowrap">
               {tab.label}
             </span>
           </div>
           {tab.count !== undefined ? (
-            <div className="flex h-[18px] min-w-[18px] items-center justify-center rounded-[9px] bg-white/10 px-1.5 pt-[2px] pb-[3px] font-bold text-[10px] text-primary/70">
+            <div className="text-primary/70 flex h-[18px] min-w-[18px] items-center justify-center rounded-[9px] bg-white/10 px-1.5 pt-[2px] pb-[3px] text-[10px] font-bold">
               {tab.count > 99 ? '99+' : tab.count}
             </div>
           ) : null}
@@ -59,7 +60,7 @@ export default function ChannelTabs({
       {/* Sliding active-tab underline. Base UI positions it via CSS vars set on
           the indicator; the styling matches the previous per-tab underline. */}
       <Tabs.Indicator
-        className="absolute bottom-0 h-[2px] rounded-tl-[1px] rounded-tr-[1px] bg-brand shadow-[0px_2px_12px_0px_#6366f1] backdrop-blur-sm transition-all duration-200"
+        className="bg-brand absolute bottom-0 h-[2px] rounded-tl-[1px] rounded-tr-[1px] shadow-[0px_2px_12px_0px_#6366f1] backdrop-blur-sm transition-all duration-200"
         style={{
           left: 'var(--active-tab-left)',
           width: 'var(--active-tab-width)',

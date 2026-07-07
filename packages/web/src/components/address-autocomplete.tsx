@@ -2,6 +2,7 @@ import { Autocomplete } from '@base-ui/react/autocomplete';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { array, looseObject, string } from 'zod';
+
 import { Loader } from '@/components/ui';
 import { controlClasses, InputWrapper } from '@/components/ui/input';
 import { showFailure } from '@/components/ui/notifications';
@@ -313,14 +314,14 @@ export function AddressAutocomplete({
             sideOffset={4}
             className="z-50"
           >
-            <Autocomplete.Popup className="max-h-64 w-[var(--anchor-width)] overflow-y-auto rounded-lg border-fancy-pants bg-white p-1 shadow-lg dark:bg-zinc-900">
+            <Autocomplete.Popup className="border-fancy-pants max-h-64 w-[var(--anchor-width)] overflow-y-auto rounded-lg bg-white p-1 shadow-lg dark:bg-zinc-900">
               <Autocomplete.List>
                 {(item: string) => (
                   <Autocomplete.Item
                     key={item}
                     value={item}
                     onClick={() => handleOptionSubmit(item)}
-                    className="cursor-default rounded px-3 py-1.5 text-primary text-sm data-[highlighted]:bg-brand/10"
+                    className="text-primary data-[highlighted]:bg-brand/10 cursor-default rounded px-3 py-1.5 text-sm"
                   >
                     {item}
                   </Autocomplete.Item>

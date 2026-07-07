@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'vitest';
+
 import type {
   TranscriptAnnotation,
   TranscriptParagraph,
 } from '@/components/transcript-paragraphs';
+
 import { buildScriptureIndex } from './scripture-index';
 
 type BibleMeta = {

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+
 import LcButton from './lc-button';
 
 const meta = {

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+
 import { cn } from '@/util/cn';
 
 type WaveformBackgroundProps = {

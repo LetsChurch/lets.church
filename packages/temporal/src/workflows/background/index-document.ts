@@ -1,4 +1,5 @@
 import { proxyActivities, setHandler } from '@temporalio/workflow';
+
 import type * as activities from '../../activities/background';
 import type { DocumentKind } from '../../activities/background/index-document';
 import { BACKGROUND_QUEUE } from '../../queues';

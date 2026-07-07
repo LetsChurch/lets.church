@@ -11,6 +11,7 @@ import { backupS3 } from '@letschurch/s3/backup';
 import { publicS3 } from '@letschurch/s3/public';
 import { Context } from '@temporalio/activity';
 import { and, eq, inArray } from 'drizzle-orm';
+
 import logger from '../../util/logger';
 
 const moduleLogger = logger.child({

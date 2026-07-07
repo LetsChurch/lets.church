@@ -1,5 +1,6 @@
 import { IconMoon, IconSun } from '@tabler/icons-react';
 import { useState } from 'react';
+
 import { LcTooltip } from '@/components/lc-tooltip';
 import { getInitialTheme, setTheme } from '@/stores/theme';
 
@@ -26,7 +27,7 @@ export function ThemeSwitcher({ collapsed = false }: ThemeSwitcherProps) {
       <LcTooltip content={label} side="right">
         <button
           type="button"
-          className="flex size-6 cursor-pointer items-center justify-center text-primary/70 transition-colors hover:text-primary/90"
+          className="text-primary/70 hover:text-primary/90 flex size-6 cursor-pointer items-center justify-center transition-colors"
           onClick={handleToggle}
           aria-label={label}
         >
@@ -40,12 +41,12 @@ export function ThemeSwitcher({ collapsed = false }: ThemeSwitcherProps) {
     <button
       type="button"
       onClick={handleToggle}
-      className="flex w-full cursor-pointer items-center gap-2.5 transition-colors hover:text-primary/80"
+      className="hover:text-primary/80 flex w-full cursor-pointer items-center gap-2.5 transition-colors"
     >
       <div className="flex size-6 items-center justify-center">
         <Icon size={16} className="text-primary/70" />
       </div>
-      <span className="font-normal text-gray-600 text-xs dark:text-gray-400">
+      <span className="text-xs font-normal text-gray-600 dark:text-gray-400">
         {label}
       </span>
     </button>

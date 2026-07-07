@@ -27,6 +27,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import type { Block, ProseVerse, Run } from '../../components/passage/types';
 import { CANON, type CanonBook } from '../../lib/canon';
 import {

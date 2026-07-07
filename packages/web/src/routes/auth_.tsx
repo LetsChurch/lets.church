@@ -1,4 +1,5 @@
 import { createFileRoute, Link, Outlet } from '@tanstack/react-router';
+
 import Logo from '@/components/logo';
 
 export const Route = createFileRoute('/auth_')({
@@ -7,7 +8,7 @@ export const Route = createFileRoute('/auth_')({
 
 function AuthLayoutComponent() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-page px-4 py-10">
+    <div className="bg-page flex min-h-screen flex-col items-center justify-center px-4 py-10">
       <Link to="/" className="mb-8">
         <Logo />
       </Link>

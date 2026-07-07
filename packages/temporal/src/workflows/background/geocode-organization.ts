@@ -1,4 +1,5 @@
 import { executeChild, proxyActivities } from '@temporalio/workflow';
+
 import type * as activities from '../../activities/background';
 import { BACKGROUND_QUEUE, PRIORITY_USER } from '../../queues';
 import { indexDocumentWorkflow } from './index-document';

@@ -2,6 +2,7 @@ import { IconPhoto, IconUpload, IconX } from '@tabler/icons-react';
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useCallback, useEffect, useState } from 'react';
+
 import {
   ActionIcon,
   Button,
@@ -286,7 +287,7 @@ function ProfilePage() {
                 withArrow
                 position="bottom"
               >
-                {/* biome-ignore lint/a11y/noStaticElementInteractions: hover-only affordance revealing the upload overlay; the file input is the real control */}
+                {/* oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- hover-only affordance revealing the upload overlay; the file input is the real control */}
                 <div
                   className="relative size-30"
                   onMouseEnter={(e) => {

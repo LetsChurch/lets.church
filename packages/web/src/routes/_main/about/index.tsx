@@ -119,7 +119,7 @@ function RouteComponent() {
         reasoning behind this approach, learn more about{' '}
         <Link
           to="/about/dorean"
-          className="font-semibold text-brand hover:text-brand-700"
+          className="text-brand hover:text-brand-700 font-semibold"
         >
           the Dorean Principle
         </Link>
@@ -146,7 +146,7 @@ function RouteComponent() {
           href="https://givebutter.com/LetsChurch"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block rounded-lg bg-brand px-8 py-4 font-semibold text-lg text-white shadow-lg transition-colors hover:bg-brand-700"
+          className="bg-brand hover:bg-brand-700 inline-block rounded-lg px-8 py-4 text-lg font-semibold text-white shadow-lg transition-colors"
         >
           Donate Now
         </a>

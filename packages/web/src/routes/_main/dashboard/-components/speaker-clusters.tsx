@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
+
 import {
   MediaPreviewGroup,
   MediaPreviewScope,
@@ -13,6 +14,7 @@ import {
   Text,
   TextInput,
 } from '@/components/ui';
+
 import { SpeakerPicker } from './speaker-picker';
 import { usePaged } from './use-paged';
 
@@ -104,7 +106,7 @@ function ClusterCard({
     onCreate(cluster.channelId, name.trim(), selectedMembers);
 
   return (
-    <div className="overflow-hidden rounded-lg border-fancy-pants bg-white p-4 dark:bg-zinc-900">
+    <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-4 dark:bg-zinc-900">
       <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center justify-start gap-2.5">
           <Badge variant="light" color="purple">

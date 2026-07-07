@@ -1,6 +1,7 @@
 import { db, UploadUserComment, UploadUserCommentRating } from '@letschurch/db';
 import { and, count, eq, isNotNull } from 'drizzle-orm';
 import pAll from 'p-all';
+
 import logger from '../../util/logger';
 
 const moduleLogger = logger.child({

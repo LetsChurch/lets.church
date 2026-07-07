@@ -106,10 +106,7 @@ export {
   type ReindexKind,
   reindexBatch,
 } from './reindex';
-export {
-  default as sendEmail,
-  validateSendEmailConfig,
-} from './send-email';
+export { default as sendEmail, validateSendEmailConfig } from './send-email';
 export {
   default as sendInvitationEmail,
   type InvitationEmailArgs,

@@ -18,12 +18,14 @@ import {
 import { tool } from 'ai';
 import { and, eq, gte, isNull, lte, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
+
 import { OutgoingIdSchema } from '@/schemas/common';
 import {
   resolveChannelNames,
   resolveChannelSlugs,
 } from '@/trpc/search/channels';
 import logger from '@/util/logger';
+
 import { sanitizeSourceText } from '../sanitize';
 
 const moduleLogger = logger.child({ module: 'ai/tools/search-media' });

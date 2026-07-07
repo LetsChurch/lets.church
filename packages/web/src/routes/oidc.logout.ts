@@ -2,6 +2,7 @@ import { AppSession, db } from '@letschurch/db';
 import { createFileRoute } from '@tanstack/react-router';
 import { deleteCookie } from '@tanstack/react-start/server';
 import { eq } from 'drizzle-orm';
+
 import { getSession } from '@/util/auth';
 import {
   clients,

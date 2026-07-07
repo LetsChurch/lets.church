@@ -12,6 +12,7 @@
 // is a translator footnote; <note style="x"> is a cross-reference.
 
 import { XMLParser } from 'fast-xml-parser';
+
 import type {
   Block,
   CrossRefRun,

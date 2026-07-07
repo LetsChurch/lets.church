@@ -1,5 +1,6 @@
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
+
 import { Badge, Button, Progress, Text, Title } from '@/components/ui';
 import { showFailure, showSuccess } from '@/components/ui/notifications';
 import type { ReindexKind } from '@/temporal';
@@ -129,7 +130,7 @@ function ReindexPage() {
           return (
             <div
               key={kind}
-              className="overflow-hidden rounded-xl border-fancy-pants bg-white dark:bg-zinc-900"
+              className="border-fancy-pants overflow-hidden rounded-xl bg-white dark:bg-zinc-900"
             >
               <div className="flex flex-col gap-3">
                 <div className="flex flex-wrap items-center justify-between gap-4">

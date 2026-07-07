@@ -16,6 +16,7 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
+
 import {
   Avatar,
   Badge,
@@ -28,7 +29,9 @@ import {
 import { notifications } from '@/components/ui/notifications';
 import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
+
 import { StatCard } from './-components/stat-card';
+
 import styles from './-styles.module.css';
 
 export const Route = createFileRoute('/_main/dashboard/channels_/$channelId')({

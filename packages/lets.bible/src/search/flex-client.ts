@@ -5,7 +5,9 @@
 // suggest/OR pass (recall), then a phrase/proximity re-rank mirrors the ES
 // relevance tiers — this matches Elasticsearch ranking on realistic queries.
 import { Charset, Index } from 'flexsearch';
+
 import { findBook } from '@/lib/canon';
+
 import { getCachedIndex, hashString, putCachedIndex } from './index-cache';
 
 export type VerseSuggestion = {

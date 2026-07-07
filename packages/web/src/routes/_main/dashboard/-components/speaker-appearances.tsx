@@ -1,10 +1,12 @@
 import { Link } from '@tanstack/react-router';
+
 import {
   MediaPreviewGroup,
   MediaPreviewScope,
   MediaPreviewTarget,
 } from '@/components/media-preview-link';
 import { Badge, Button, Pagination, Table, Text, Title } from '@/components/ui';
+
 import { usePaged } from './use-paged';
 
 const PAGE_SIZE = 25;

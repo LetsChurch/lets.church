@@ -1,6 +1,7 @@
 import { db, UploadRecord } from '@letschurch/db';
 import { Context } from '@temporalio/activity';
 import { eq } from 'drizzle-orm';
+
 import {
   absoluteWebUrl,
   dashboardPaths,

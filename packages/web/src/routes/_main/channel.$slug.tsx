@@ -23,6 +23,7 @@ import {
 import { createFileRoute, Link, notFound } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useMemo, useRef, useState } from 'react';
+
 import { Avatar } from '@/components/avatar';
 import ChannelTabs, { type ChannelTab } from '@/components/channel-tabs';
 import { EmptyState } from '@/components/empty-state';
@@ -222,10 +223,10 @@ function ChannelNotFound() {
         className="mx-auto mb-6 text-zinc-300 dark:text-zinc-700"
         strokeWidth={1.5}
       />
-      <h1 className="font-bold text-4xl text-zinc-900 tracking-tight dark:text-white">
+      <h1 className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-white">
         Channel not found
       </h1>
-      <p className="mx-auto mt-4 max-w-md text-lg text-zinc-600 leading-relaxed dark:text-zinc-400">
+      <p className="mx-auto mt-4 max-w-md text-lg leading-relaxed text-zinc-600 dark:text-zinc-400">
         The channel you're looking for doesn't exist or may have been removed.
       </p>
       <Link
@@ -494,8 +495,8 @@ function RouteComponent() {
 
       <div className="isolate mx-auto max-w-7xl px-6 pb-24">
         {/* Profile Header */}
-        <div className="-mt-12 sm:-mt-16 mb-8 sm:mb-12">
-          <div className="flex items-center overflow-hidden rounded-full border-fancy-pants bg-white shadow-lg dark:bg-zinc-900">
+        <div className="-mt-12 mb-8 sm:-mt-16 sm:mb-12">
+          <div className="border-fancy-pants flex items-center overflow-hidden rounded-full bg-white shadow-lg dark:bg-zinc-900">
             <div className="relative shrink-0">
               <Avatar
                 src={channel.avatarUrl || undefined}
@@ -507,7 +508,7 @@ function RouteComponent() {
                 <Link
                   to="/channel/$slug/live"
                   params={{ slug: channel.slug }}
-                  className="-translate-x-1/2 absolute bottom-1 left-1/2 flex items-center gap-1 rounded-md bg-red-600 px-1.5 py-0.5 font-semibold text-[10px] text-white uppercase tracking-wide shadow sm:bottom-2 sm:text-xs"
+                  className="absolute bottom-1 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-md bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-white uppercase shadow sm:bottom-2 sm:text-xs"
                 >
                   <span className="size-1.5 animate-pulse rounded-full bg-white" />
                   Live
@@ -517,14 +518,14 @@ function RouteComponent() {
             <div className="flex flex-1 flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4 lg:px-8 lg:py-6">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <h1 className="font-bold text-xl text-zinc-900 tracking-tight sm:text-3xl lg:text-4xl dark:text-white">
+                  <h1 className="text-xl font-bold tracking-tight text-zinc-900 sm:text-3xl lg:text-4xl dark:text-white">
                     {channel.name}
                   </h1>
                   {channel.isLive ? (
                     <Link
                       to="/channel/$slug/live"
                       params={{ slug: channel.slug }}
-                      className="flex items-center gap-1 rounded-full bg-red-600 px-2.5 py-1 font-semibold text-white text-xs uppercase tracking-wide hover:bg-red-700"
+                      className="flex items-center gap-1 rounded-full bg-red-600 px-2.5 py-1 text-xs font-semibold tracking-wide text-white uppercase hover:bg-red-700"
                     >
                       <span className="size-2 animate-pulse rounded-full bg-white" />
                       Watch live
@@ -558,7 +559,7 @@ function RouteComponent() {
         {/* Description */}
         {channel.description ? (
           <div className="mb-8">
-            <p className="whitespace-pre-wrap text-lg text-secondary leading-relaxed">
+            <p className="text-secondary text-lg leading-relaxed whitespace-pre-wrap">
               {channel.description}
             </p>
           </div>
@@ -642,7 +643,7 @@ function RouteComponent() {
                       key={playlist.id}
                       to="/playlist/$playlistId"
                       params={{ playlistId: playlist.id }}
-                      className="group flex flex-col rounded-2xl border-fancy-pants bg-zinc-100 p-4 transition-all hover:shadow-md dark:bg-zinc-900"
+                      className="group border-fancy-pants flex flex-col rounded-2xl bg-zinc-100 p-4 transition-all hover:shadow-md dark:bg-zinc-900"
                     >
                       {playlist.thumbnailUrl ? (
                         <div className="relative aspect-video w-full overflow-hidden rounded-lg">
@@ -669,7 +670,7 @@ function RouteComponent() {
                         </div>
                       )}
                       <div className="mt-3 min-w-0 flex-1">
-                        <h3 className="truncate font-semibold text-primary">
+                        <h3 className="text-primary truncate font-semibold">
                           {playlist.title}
                         </h3>
                         <p className="text-secondary text-sm">
@@ -701,7 +702,7 @@ function RouteComponent() {
                       key={seriesItem.id}
                       to="/series/$seriesId"
                       params={{ seriesId: seriesItem.id }}
-                      className="group flex flex-col rounded-2xl border-fancy-pants bg-zinc-100 p-4 transition-all hover:shadow-md dark:bg-zinc-900"
+                      className="group border-fancy-pants flex flex-col rounded-2xl bg-zinc-100 p-4 transition-all hover:shadow-md dark:bg-zinc-900"
                     >
                       {seriesItem.thumbnailUrl ? (
                         <div className="relative aspect-video w-full overflow-hidden rounded-lg">
@@ -728,7 +729,7 @@ function RouteComponent() {
                         </div>
                       )}
                       <div className="mt-3 min-w-0 flex-1">
-                        <h3 className="truncate font-semibold text-primary">
+                        <h3 className="text-primary truncate font-semibold">
                           {seriesItem.title}
                         </h3>
                         <p className="text-secondary text-sm">
@@ -756,8 +757,8 @@ function RouteComponent() {
               <div className="mx-auto max-w-4xl space-y-8">
                 {/* Associated Churches */}
                 {churches && churches.length > 0 ? (
-                  <section className="rounded-2xl border-fancy-pants bg-zinc-100 p-6 dark:bg-zinc-900">
-                    <h2 className="mb-4 flex items-center gap-2 font-semibold text-primary text-xl">
+                  <section className="border-fancy-pants rounded-2xl bg-zinc-100 p-6 dark:bg-zinc-900">
+                    <h2 className="text-primary mb-4 flex items-center gap-2 text-xl font-semibold">
                       <IconBuildingChurch size={20} strokeWidth={2} />
                       {churches.length === 1 ? 'Church' : 'Churches'}
                     </h2>
@@ -777,7 +778,7 @@ function RouteComponent() {
                               fallbackClassName="text-sm"
                             />
                             <div className="min-w-0 flex-1">
-                              <h3 className="truncate font-semibold text-primary">
+                              <h3 className="text-primary truncate font-semibold">
                                 {church.name}
                               </h3>
                               <p className="text-secondary text-xs">
@@ -785,7 +786,7 @@ function RouteComponent() {
                               </p>
                             </div>
                             <IconChevronRight
-                              className="mt-1 shrink-0 text-muted"
+                              className="text-muted mt-1 shrink-0"
                               size={16}
                             />
                           </Link>
@@ -797,8 +798,8 @@ function RouteComponent() {
 
                 {/* Social Media & Website */}
                 {hasSocialLinks ? (
-                  <section className="rounded-2xl border-fancy-pants bg-zinc-100 p-6 dark:bg-zinc-900">
-                    <h2 className="mb-4 flex items-center gap-2 font-semibold text-primary text-xl">
+                  <section className="border-fancy-pants rounded-2xl bg-zinc-100 p-6 dark:bg-zinc-900">
+                    <h2 className="text-primary mb-4 flex items-center gap-2 text-xl font-semibold">
                       <IconWorld size={20} strokeWidth={2} />
                       Links
                     </h2>
@@ -812,10 +813,10 @@ function RouteComponent() {
                         >
                           <IconWorld
                             size={20}
-                            className="mt-0.5 shrink-0 text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            className="text-secondary mt-0.5 shrink-0 group-hover:text-indigo-600 dark:group-hover:text-white"
                             strokeWidth={1.5}
                           />
-                          <span className="break-all text-secondary text-sm group-hover:text-indigo-600 dark:group-hover:text-white">
+                          <span className="text-secondary text-sm break-all group-hover:text-indigo-600 dark:group-hover:text-white">
                             {channel.websiteUrl.replace(/^https?:\/\//, '')}
                           </span>
                         </a>

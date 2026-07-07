@@ -61,6 +61,7 @@ import {
   sum,
 } from 'drizzle-orm';
 import { z } from 'zod';
+
 import { usernameSchema } from '@/schemas/auth';
 import { IncomingIdSchema } from '@/schemas/common';
 import {
@@ -129,6 +130,7 @@ import {
   filterUploadsWithoutActiveWorkflows,
 } from '@/util/temporal-workflow';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
+
 import { authorizedSpeakerChannelIds } from '../../speaker-labeling/helpers';
 import { mergeSpeakers } from '../../speaker-labeling/merge';
 import {

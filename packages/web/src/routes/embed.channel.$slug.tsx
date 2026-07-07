@@ -6,6 +6,7 @@ import { formatDistanceToNow } from 'date-fns';
 import type { FormEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
+
 import { EmptyState } from '@/components/empty-state';
 import { SearchRow } from '@/components/search-row';
 import { useTRPC } from '@/trpc/react';
@@ -44,7 +45,7 @@ export const Route = createFileRoute('/embed/channel/$slug')({
   component: RouteComponent,
   notFoundComponent: () => (
     <div className="flex min-h-screen items-center justify-center bg-white px-4 text-center">
-      <p className="text-gray-600 text-sm">Channel not found.</p>
+      <p className="text-sm text-gray-600">Channel not found.</p>
     </div>
   ),
   validateSearch: z.object({
@@ -165,7 +166,7 @@ function RouteComponent() {
   return (
     <div className="flex min-h-screen flex-col bg-white">
       {/* Search Bar */}
-      <div className="sticky top-0 z-10 border-gray-200 border-b bg-white px-4 py-3">
+      <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-4 py-3">
         <EmbedSearchBar
           placeholder={`Search in ${channel.name}...`}
           defaultValue={search.q}
@@ -394,7 +395,7 @@ function RecentUploads({ channelSlug }: { channelSlug: string }) {
       {/* Loading indicator */}
       {isFetchingNextPage ? (
         <div className="flex justify-center py-8">
-          <div className="text-gray-600 text-sm">Loading more...</div>
+          <div className="text-sm text-gray-600">Loading more...</div>
         </div>
       ) : null}
     </>
@@ -536,7 +537,7 @@ function SearchResults({ q, channelSlug }: { q: string; channelSlug: string }) {
       {/* Loading indicator */}
       {isFetchingNextPage ? (
         <div className="flex justify-center py-8">
-          <div className="text-gray-600 text-sm">Loading more...</div>
+          <div className="text-sm text-gray-600">Loading more...</div>
         </div>
       ) : null}
     </div>
@@ -578,11 +579,11 @@ function Result({ item }: { item: SearchResultItem }) {
               className="relative z-10 flex cursor-pointer flex-row gap-1.5 rounded-md bg-gray-950/5 p-3 text-gray-950 transition-colors hover:bg-gray-950/10"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="pt-1 text-[10px] tabular-nums leading-[1.4] tracking-[-0.2px]">
+              <div className="pt-1 text-[10px] leading-[1.4] tracking-[-0.2px] tabular-nums">
                 {formatTime(segment.start)}
               </div>
               <div
-                className="[&_mark]:-my-0.5 [&_mark]:-mx-1 text-gray-950/80 text-sm [&_mark]:rounded-sm [&_mark]:bg-orange-400/40 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:text-gray-950"
+                className="text-sm text-gray-950/80 [&_mark]:-mx-1 [&_mark]:-my-0.5 [&_mark]:rounded-sm [&_mark]:bg-orange-400/40 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:text-gray-950"
                 dangerouslySetInnerHTML={{
                   __html: segment.text,
                 }}
@@ -597,7 +598,7 @@ function Result({ item }: { item: SearchResultItem }) {
                 e.stopPropagation();
                 setShowAllSegments((show) => !show);
               }}
-              className="relative z-10 w-full px-1 py-0.5 text-center text-gray-600 text-xs opacity-0 transition-all hover:text-gray-950 group-hover:opacity-100"
+              className="relative z-10 w-full px-1 py-0.5 text-center text-xs text-gray-600 opacity-0 transition-all group-hover:opacity-100 hover:text-gray-950"
             >
               {showAllSegments
                 ? 'Show less'

@@ -2,9 +2,11 @@ import { Menu } from '@base-ui/react/menu';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { MouseEvent, ReactNode } from 'react';
+
 import { DEFAULT_BOOK, DEFAULT_CHAPTER } from '@/lib/canon';
 import { clearLocalData } from '@/local/sync';
 import { useTRPC } from '@/trpc/react';
+
 import { Avatar } from './avatar';
 import { Logo } from './logo';
 
@@ -13,7 +15,7 @@ import { Logo } from './logo';
 export function HomeLogoLink() {
   return (
     <Link to="/" aria-label="lets.bible home" className="flex items-center">
-      <Logo className="h-[18px] text-ink-strong" />
+      <Logo className="text-ink-strong h-[18px]" />
     </Link>
   );
 }
@@ -32,22 +34,22 @@ export function useAuth() {
 function AccountMenu({ name }: { name: string }) {
   return (
     <Menu.Root>
-      <Menu.Trigger className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-gold/40">
+      <Menu.Trigger className="focus-visible:ring-gold/40 rounded-full outline-none focus-visible:ring-2">
         <Avatar name={name} className="size-8" />
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Positioner sideOffset={8} align="end" className="z-30">
-          <Menu.Popup className="min-w-[200px] rounded-xl border border-line-strong bg-paper-raised p-1 shadow-[0_26px_50px_-28px_rgba(40,34,18,0.45)]">
-            <div className="truncate px-3 py-2 text-[12.5px] text-muted-2">
+          <Menu.Popup className="border-line-strong bg-paper-raised min-w-[200px] rounded-xl border p-1 shadow-[0_26px_50px_-28px_rgba(40,34,18,0.45)]">
+            <div className="text-muted-2 truncate px-3 py-2 text-[12.5px]">
               {name}
             </div>
-            <Menu.Separator className="my-1 h-px bg-line" />
+            <Menu.Separator className="bg-line my-1 h-px" />
             <Menu.Item
               render={(props) => (
                 <Link
                   {...props}
                   to="/library"
-                  className="block cursor-pointer rounded-md px-3 py-2 text-[14px] text-ink outline-none data-highlighted:bg-paper-soft"
+                  className="text-ink data-highlighted:bg-paper-soft block cursor-pointer rounded-md px-3 py-2 text-[14px] outline-none"
                 >
                   Your library
                 </Link>
@@ -58,7 +60,7 @@ function AccountMenu({ name }: { name: string }) {
                 <Link
                   {...props}
                   to="/settings"
-                  className="block cursor-pointer rounded-md px-3 py-2 text-[14px] text-ink outline-none data-highlighted:bg-paper-soft"
+                  className="text-ink data-highlighted:bg-paper-soft block cursor-pointer rounded-md px-3 py-2 text-[14px] outline-none"
                 >
                   Settings
                 </Link>
@@ -76,7 +78,7 @@ function AccountMenu({ name }: { name: string }) {
                     // LocalSync still covers session expiry / other sign-outs.
                     clearLocalData();
                   }}
-                  className="block cursor-pointer rounded-md px-3 py-2 text-[14px] text-ink outline-none data-highlighted:bg-paper-soft"
+                  className="text-ink data-highlighted:bg-paper-soft block cursor-pointer rounded-md px-3 py-2 text-[14px] outline-none"
                 >
                   Log out
                 </a>
@@ -106,13 +108,13 @@ export function AuthActions() {
     <div className="flex items-center gap-2 sm:gap-3">
       <Link
         to="/library"
-        className="font-semibold text-muted text-sm hover:text-ink"
+        className="text-muted hover:text-ink text-sm font-semibold"
       >
         Library
       </Link>
       <a
         href="/login"
-        className="rounded-[9px] border border-line-strong bg-paper-raised px-[15px] py-2 font-semibold text-ink text-sm"
+        className="border-line-strong bg-paper-raised text-ink rounded-[9px] border px-[15px] py-2 text-sm font-semibold"
       >
         Sign in
       </a>
@@ -122,7 +124,7 @@ export function AuthActions() {
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-30 flex h-[62px] flex-shrink-0 items-center gap-4 border-line/70 border-b bg-paper/80 px-4 backdrop-blur-sm sm:px-7">
+    <header className="border-line/70 bg-paper/80 sticky top-0 z-30 flex h-[62px] flex-shrink-0 items-center gap-4 border-b px-4 backdrop-blur-sm sm:px-7">
       <HomeLogoLink />
       <span className="flex-1" />
       <AuthActions />
@@ -138,7 +140,7 @@ export function Footer() {
   const trpc = useTRPC();
   const { data: authHost } = useQuery(trpc.common.authHost.queryOptions());
   return (
-    <footer className="flex flex-shrink-0 flex-wrap items-center justify-center gap-[18px] p-6 text-[12.5px] text-faint">
+    <footer className="text-faint flex flex-shrink-0 flex-wrap items-center justify-center gap-[18px] p-6 text-[12.5px]">
       <a href={authHost ?? undefined}>Powered by lets.church</a>
       <Dot />
       <Link to="/about">About</Link>
@@ -164,27 +166,27 @@ export function NotFound() {
   return (
     <PageShell>
       <div className="mx-auto flex max-w-[560px] flex-col items-center px-6 py-24 text-center sm:py-32">
-        <div className="font-bold text-[11px] text-gold-soft uppercase tracking-[0.16em]">
+        <div className="text-gold-soft text-[11px] font-bold tracking-[0.16em] uppercase">
           Not found
         </div>
-        <h1 className="mt-3 font-serif text-[34px] text-ink-strong leading-[1.15] sm:text-[40px]">
+        <h1 className="text-ink-strong mt-3 font-serif text-[34px] leading-[1.15] sm:text-[40px]">
           We couldn’t find that page
         </h1>
-        <p className="mt-4 max-w-[440px] text-[15px] text-muted leading-relaxed">
+        <p className="text-muted mt-4 max-w-[440px] text-[15px] leading-relaxed">
           The page or passage you’re looking for doesn’t exist. Check the
           reference, or head back to start reading.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
             to="/"
-            className="inline-block rounded-[9px] bg-ink-strong px-4 py-[10px] font-semibold text-[14px] text-white dark:text-paper"
+            className="bg-ink-strong dark:text-paper inline-block rounded-[9px] px-4 py-[10px] text-[14px] font-semibold text-white"
           >
             Go home
           </Link>
           <Link
             to="/bible/$book/$chapter"
             params={{ book: DEFAULT_BOOK, chapter: String(DEFAULT_CHAPTER) }}
-            className="inline-block rounded-[9px] border border-line-strong bg-paper-raised px-4 py-[10px] font-semibold text-[14px] text-ink"
+            className="border-line-strong bg-paper-raised text-ink inline-block rounded-[9px] border px-4 py-[10px] text-[14px] font-semibold"
           >
             Start reading
           </Link>

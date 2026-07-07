@@ -1,4 +1,5 @@
 import { condition, proxyActivities, setHandler } from '@temporalio/workflow';
+
 import type * as activities from '../../activities/background';
 import type { UploadRecordUpdateData } from '../../client';
 import { BACKGROUND_QUEUE } from '../../queues';

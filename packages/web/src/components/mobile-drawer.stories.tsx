@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { IconX } from '@tabler/icons-react';
 import { useState } from 'react';
+
 import { MobileDrawer } from './mobile-drawer';
 
 const meta = {
@@ -23,7 +24,7 @@ function MobileDrawerExample() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg bg-brand px-6 py-3 font-medium text-primary hover:bg-indigo-600"
+        className="bg-brand text-primary rounded-lg px-6 py-3 font-medium hover:bg-indigo-600"
       >
         Open Drawer
       </button>
@@ -33,8 +34,8 @@ function MobileDrawerExample() {
           <MobileDrawer.Backdrop />
           <MobileDrawer.Content>
             {/* Header */}
-            <div className="flex h-12 items-center justify-between border-zinc-800 border-b px-5">
-              <MobileDrawer.Title className="font-bold text-lg text-primary">
+            <div className="flex h-12 items-center justify-between border-b border-zinc-800 px-5">
+              <MobileDrawer.Title className="text-primary text-lg font-bold">
                 Drawer Title
               </MobileDrawer.Title>
               <MobileDrawer.Close className="flex size-8 items-center justify-center rounded-lg hover:bg-white/10">
@@ -44,11 +45,11 @@ function MobileDrawerExample() {
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-5">
-              <p className="mb-4 text-primary">
+              <p className="text-primary mb-4">
                 This is a mobile drawer component that slides up from the
                 bottom.
               </p>
-              <p className="mb-4 text-primary/70">
+              <p className="text-primary/70 mb-4">
                 You can drag the handle at the top to dismiss it, or click
                 outside to close.
               </p>
@@ -90,7 +91,7 @@ function ShortContentExample() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg bg-brand px-6 py-3 font-medium text-primary hover:bg-indigo-600"
+        className="bg-brand text-primary rounded-lg px-6 py-3 font-medium hover:bg-indigo-600"
       >
         Open Short Drawer
       </button>
@@ -100,8 +101,8 @@ function ShortContentExample() {
           <MobileDrawer.Backdrop />
           <MobileDrawer.Content>
             {/* Header */}
-            <div className="flex h-12 items-center justify-between border-zinc-800 border-b px-5">
-              <MobileDrawer.Title className="font-bold text-lg text-primary">
+            <div className="flex h-12 items-center justify-between border-b border-zinc-800 px-5">
+              <MobileDrawer.Title className="text-primary text-lg font-bold">
                 Quick Action
               </MobileDrawer.Title>
               <MobileDrawer.Close className="flex size-8 items-center justify-center rounded-lg hover:bg-white/10">
@@ -111,12 +112,12 @@ function ShortContentExample() {
 
             {/* Content */}
             <div className="p-5">
-              <p className="mb-4 text-primary">
+              <p className="text-primary mb-4">
                 This drawer has shorter content.
               </p>
               <button
                 type="button"
-                className="w-full rounded-lg bg-brand px-4 py-2 font-medium text-primary hover:bg-indigo-600"
+                className="bg-brand text-primary w-full rounded-lg px-4 py-2 font-medium hover:bg-indigo-600"
               >
                 Confirm Action
               </button>

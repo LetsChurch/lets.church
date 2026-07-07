@@ -47,19 +47,23 @@ test('LB-MOB-01 study panel opens as a bottom drawer (verse view)', async ({
     await expect(sheet).toBeVisible({ timeout: 1000 });
   }).toPass();
   await expect(sheet).toContainText('John 3:16');
-  await expect(
-    sheet.getByText(/For God so loved the world/),
-  ).toBeVisible();
+  await expect(sheet.getByText(/For God so loved the world/)).toBeVisible();
   // verse actions are all visible
-  await expect(sheet.getByRole('button', { name: 'Highlight gold' })).toBeVisible();
+  await expect(
+    sheet.getByRole('button', { name: 'Highlight gold' }),
+  ).toBeVisible();
   await expect(sheet.getByRole('button', { name: 'Copy' })).toBeVisible();
   await expect(sheet.getByRole('button', { name: 'Share' })).toBeVisible();
   await expect(sheet.getByRole('button', { name: 'Compare' })).toBeVisible();
   await expect(sheet.getByRole('button', { name: 'Add note' })).toBeVisible();
-  await expect(sheet.getByRole('button', { name: /Study a word/ })).toBeVisible();
+  await expect(
+    sheet.getByRole('button', { name: /Study a word/ }),
+  ).toBeVisible();
 
   // the desktop side rail is never rendered on mobile
-  await expect(page.locator('aside[aria-label="Verse actions"]')).toHaveCount(0);
+  await expect(page.locator('aside[aria-label="Verse actions"]')).toHaveCount(
+    0,
+  );
 
   // Esc dismisses it
   await page.keyboard.press('Escape');
@@ -93,7 +97,10 @@ test('LB-MOB-03 word view returns to the verse view in the same drawer', async (
 
 test('LB-MOB-04 chapter picker opens as a bottom drawer', async ({ page }) => {
   await page.goto('/bible/john/3');
-  await page.locator('header').getByRole('button', { name: /Chapter 3/ }).click();
+  await page
+    .locator('header')
+    .getByRole('button', { name: /Chapter 3/ })
+    .click();
   const sheet = drawer(page);
   await expect(sheet).toBeVisible();
   const ch9 = sheet.getByRole('link', { name: '9', exact: true });
@@ -135,9 +142,7 @@ test('LB-MOB-07 reader chrome collapses on mobile', async ({ page }) => {
   await page.goto('/bible/john/3');
   const header = page.locator('header');
   // the pickers + the interlinear toggle are still reachable
-  await expect(
-    header.getByRole('button', { name: /Chapter 3/ }),
-  ).toBeVisible();
+  await expect(header.getByRole('button', { name: /Chapter 3/ })).toBeVisible();
   // the version picker trigger is reachable (compare + interlinear live inside it)
   await expect(header.getByRole('button', { name: /BSB/ })).toBeVisible();
   // compare + interlinear are no longer header controls
@@ -163,7 +168,9 @@ test('LB-MOB-08 compare view stays readable on mobile', async ({ page }) => {
 
 test('LB-MOB-09 homepage fits the phone viewport', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('img', { name: 'lets.bible' }).first()).toBeVisible();
+  await expect(
+    page.getByRole('img', { name: 'lets.bible' }).first(),
+  ).toBeVisible();
   await expect(page.getByPlaceholder(/Search a reference/)).toBeVisible();
   await expect(page.getByText('Verse of the day')).toBeVisible();
   // the ⌘K hint is present but hidden on mobile

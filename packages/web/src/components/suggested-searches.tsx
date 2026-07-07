@@ -28,7 +28,7 @@ export function SuggestedSearches({
 
   return (
     <div className="space-y-3">
-      <h2 className="flex items-center gap-1.5 font-semibold text-primary text-sm">
+      <h2 className="text-primary flex items-center gap-1.5 text-sm font-semibold">
         <IconSparkles
           size={16}
           className="shrink-0 text-indigo-500 dark:text-indigo-300"
@@ -54,7 +54,7 @@ export function SuggestedSearches({
                 // Compact like the answer dialog's source chips (rounded-full,
                 // text-xs) with the fancy border, on the same zinc surface as the
                 // facet cards so it reads well in light and dark mode.
-                className="inline-flex cursor-pointer items-center rounded-full border-fancy-pants bg-zinc-100 px-3 py-1 text-left font-medium text-primary/80 text-xs transition-colors hover:bg-zinc-200 hover:text-primary dark:bg-zinc-900 dark:text-primary/90 dark:hover:bg-zinc-800"
+                className="border-fancy-pants text-primary/80 hover:text-primary dark:text-primary/90 inline-flex cursor-pointer items-center rounded-full bg-zinc-100 px-3 py-1 text-left text-xs font-medium transition-colors hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800"
               >
                 {search}
               </button>

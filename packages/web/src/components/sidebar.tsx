@@ -18,6 +18,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
+
 import { Avatar } from '@/components/avatar';
 import { LcTooltip } from '@/components/lc-tooltip';
 import { ThemeSwitcher } from '@/components/theme-switcher';
@@ -32,6 +33,7 @@ import {
 } from '@/stores/sidebar';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
+
 import Logo from './logo';
 
 type SidebarDonateCardProps = {
@@ -40,16 +42,16 @@ type SidebarDonateCardProps = {
 
 function SidebarDonateCard({ onDismiss }: SidebarDonateCardProps) {
   return (
-    <div className="overflow-hidden rounded-xl border border-white/10 bg-brand p-3">
+    <div className="bg-brand overflow-hidden rounded-xl border border-white/10 p-3">
       <div className="mb-3">
-        <p className="text-center font-bold text-sm text-white leading-snug">
+        <p className="text-center text-sm leading-snug font-bold text-white">
           Keep sharing good news without ads.
         </p>
       </div>
       <div className="flex flex-col gap-1">
         <a
           href="https://givebutter.com/LetsChurch"
-          className="rounded-full bg-white px-2.5 py-1.5 text-center font-semibold text-brand text-xs transition-opacity hover:opacity-90"
+          className="text-brand rounded-full bg-white px-2.5 py-1.5 text-center text-xs font-semibold transition-opacity hover:opacity-90"
           target="_blank"
           rel="noopener"
         >
@@ -59,7 +61,7 @@ function SidebarDonateCard({ onDismiss }: SidebarDonateCardProps) {
           <button
             type="button"
             onClick={onDismiss}
-            className="rounded-full px-2.5 py-1.5 font-semibold text-white/80 text-xs transition-colors hover:bg-white/10"
+            className="rounded-full px-2.5 py-1.5 text-xs font-semibold text-white/80 transition-colors hover:bg-white/10"
           >
             Dismiss
           </button>
@@ -167,25 +169,25 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
               <div className="flex flex-col gap-2 px-1 py-3">
                 <Link
                   to="/about"
-                  className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
+                  className="text-primary rounded-lg px-2 py-1.5 text-sm font-medium transition-colors hover:bg-white/10"
                 >
                   Our Mission
                 </Link>
                 <Link
                   to="/about/dorean"
-                  className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
+                  className="text-primary rounded-lg px-2 py-1.5 text-sm font-medium transition-colors hover:bg-white/10"
                 >
                   The Dorean Principle
                 </Link>
                 <Link
                   to="/about/add-content"
-                  className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
+                  className="text-primary rounded-lg px-2 py-1.5 text-sm font-medium transition-colors hover:bg-white/10"
                 >
                   How to Add Content
                 </Link>
                 <Link
                   to="/about/add-church"
-                  className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
+                  className="text-primary rounded-lg px-2 py-1.5 text-sm font-medium transition-colors hover:bg-white/10"
                 >
                   How to Add Your Church
                 </Link>
@@ -198,25 +200,25 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                 <div className="mx-2 my-2.5 h-px bg-zinc-900" />
                 <Link
                   to="/about/theology"
-                  className="rounded-lg px-2 py-1.5 font-medium text-primary/70 text-xs transition-colors hover:bg-white/10"
+                  className="text-primary/70 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors hover:bg-white/10"
                 >
                   Statement of Theology
                 </Link>
                 <Link
                   to="/about/terms"
-                  className="rounded-lg px-2 py-1.5 font-medium text-primary/70 text-xs transition-colors hover:bg-white/10"
+                  className="text-primary/70 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors hover:bg-white/10"
                 >
                   Terms of Service
                 </Link>
                 <Link
                   to="/about/privacy"
-                  className="rounded-lg px-2 py-1.5 font-medium text-primary/70 text-xs transition-colors hover:bg-white/10"
+                  className="text-primary/70 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors hover:bg-white/10"
                 >
                   Privacy Policy
                 </Link>
                 <Link
                   to="/about/dmca"
-                  className="rounded-lg px-2 py-1.5 font-medium text-primary/70 text-xs transition-colors hover:bg-white/10"
+                  className="text-primary/70 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors hover:bg-white/10"
                 >
                   DMCA
                 </Link>
@@ -226,7 +228,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                       href="https://gitlab.com/LetsChurch/lets.church"
                       target="_blank"
                       rel="noopener"
-                      className="text-primary/50 transition-colors hover:text-primary/80"
+                      className="text-primary/50 hover:text-primary/80 transition-colors"
                     >
                       <IconBrandGitlab size={16} />
                     </a>
@@ -236,7 +238,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                       href="https://github.com/LetsChurch/lets.church"
                       target="_blank"
                       rel="noopener"
-                      className="text-primary/50 transition-colors hover:text-primary/80"
+                      className="text-primary/50 hover:text-primary/80 transition-colors"
                     >
                       <IconBrandGithub size={16} />
                     </a>
@@ -255,7 +257,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                     render={
                       <Link
                         to="/"
-                        className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
+                        className="group relative flex items-center gap-2.5 px-4 py-2 text-sm font-medium transition-colors hover:bg-white/5"
                         activeProps={{
                           className: 'text-primary',
                         }}
@@ -266,12 +268,12 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                     }
                   >
                     <IconCompass size={24} />
-                    <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
+                    <div className="glow-md bg-brand absolute top-0 right-0 h-full w-0.5 opacity-0 group-[.active]:opacity-100" />
                   </LcTooltip>
                 ) : (
                   <Link
                     to="/"
-                    className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
+                    className="group relative flex items-center gap-2.5 px-4 py-2 text-sm font-medium transition-colors hover:bg-white/5"
                     activeProps={{
                       className: 'text-primary',
                     }}
@@ -281,7 +283,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                   >
                     <IconCompass size={24} />
                     <span className="pb-0.5">Explore</span>
-                    <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
+                    <div className="glow-md bg-brand absolute top-0 right-0 h-full w-0.5 opacity-0 group-[.active]:opacity-100" />
                   </Link>
                 )}
                 <hr className="mx-4 h-px border-gray-100 dark:border-zinc-900" />
@@ -296,21 +298,21 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                     render={
                       <Link
                         to="/following"
-                        className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-primary/70 text-sm transition-colors hover:bg-white/5"
+                        className="group text-primary/70 relative flex items-center gap-2.5 px-4 py-2 text-sm font-medium transition-colors hover:bg-white/5"
                       />
                     }
                   >
                     <IconFlag size={24} className="text-primary/70" />
-                    <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
+                    <div className="glow-md bg-brand absolute top-0 right-0 h-full w-0.5 opacity-0 group-[.active]:opacity-100" />
                   </LcTooltip>
                 ) : (
                   <Link
                     to="/following"
-                    className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-primary/70 text-sm transition-colors hover:bg-white/5"
+                    className="group text-primary/70 relative flex items-center gap-2.5 px-4 py-2 text-sm font-medium transition-colors hover:bg-white/5"
                   >
                     <IconFlag size={24} className="text-primary/70" />
                     <span className="pb-0.5">Following</span>
-                    <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
+                    <div className="glow-md bg-brand absolute top-0 right-0 h-full w-0.5 opacity-0 group-[.active]:opacity-100" />
                   </Link>
                 )}
 
@@ -320,12 +322,12 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                     {!isLoggedIn ? (
                       <Link
                         to="/auth/login"
-                        className="text-left text-gray-600 text-xs dark:text-gray-400"
+                        className="text-left text-xs text-gray-600 dark:text-gray-400"
                       >
                         Sign in to see channels
                       </Link>
                     ) : !hasChannels ? (
-                      <p className="text-left text-gray-600 text-xs dark:text-gray-400">
+                      <p className="text-left text-xs text-gray-600 dark:text-gray-400">
                         No channels yet
                       </p>
                     ) : (
@@ -337,18 +339,18 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                               key={channel.id}
                               to="/channel/$slug"
                               params={{ slug: channel.slug }}
-                              className="flex items-center gap-2.5 transition-colors hover:text-primary/80"
+                              className="hover:text-primary/80 flex items-center gap-2.5 transition-colors"
                             >
                               <div className="flex size-6 shrink-0 items-center justify-center">
                                 <Avatar
                                   src={channel.avatarUrl || undefined}
                                   alt={channel.name}
-                                  className="size-5 border-fancy-pants"
+                                  className="border-fancy-pants size-5"
                                   fallbackClassName="text-[10px]"
                                 />
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="truncate font-medium text-primary/70 text-xs">
+                                <p className="text-primary/70 truncate text-xs font-medium">
                                   {channel.name}
                                 </p>
                               </div>
@@ -358,7 +360,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                           <button
                             type="button"
                             onClick={() => setShowAllChannels(!showAllChannels)}
-                            className="flex items-center gap-2.5 text-left transition-colors hover:text-primary/80"
+                            className="hover:text-primary/80 flex items-center gap-2.5 text-left transition-colors"
                           >
                             <div className="flex size-6 items-center justify-center">
                               <IconChevronDown
@@ -369,7 +371,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                                 )}
                               />
                             </div>
-                            <span className="font-normal text-gray-600 text-xs dark:text-gray-400">
+                            <span className="text-xs font-normal text-gray-600 dark:text-gray-400">
                               {showAllChannels ? 'Show Less' : 'Show More'}
                             </span>
                           </button>
@@ -398,7 +400,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                               <Avatar
                                 src={channel.avatarUrl || undefined}
                                 alt={channel.name}
-                                className="size-5 border-fancy-pants"
+                                className="border-fancy-pants size-5"
                                 fallbackClassName="text-[10px]"
                               />
                             </div>
@@ -437,7 +439,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                     render={
                       <Link
                         to="/churches"
-                        className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
+                        className="group relative flex items-center gap-2.5 px-4 py-2 text-sm font-medium transition-colors hover:bg-white/5"
                         activeProps={{
                           className: 'text-primary',
                         }}
@@ -448,12 +450,12 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                     }
                   >
                     <IconBuildingChurch size={24} />
-                    <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
+                    <div className="glow-md bg-brand absolute top-0 right-0 h-full w-0.5 opacity-0 group-[.active]:opacity-100" />
                   </LcTooltip>
                 ) : (
                   <Link
                     to="/churches"
-                    className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
+                    className="group relative flex items-center gap-2.5 px-4 py-2 text-sm font-medium transition-colors hover:bg-white/5"
                     activeProps={{
                       className: 'text-primary',
                     }}
@@ -463,7 +465,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                   >
                     <IconBuildingChurch size={24} />
                     <span className="pb-0.5">Churches</span>
-                    <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
+                    <div className="glow-md bg-brand absolute top-0 right-0 h-full w-0.5 opacity-0 group-[.active]:opacity-100" />
                   </Link>
                 )}
                 {collapsed ? (
@@ -474,7 +476,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                       <Link
                         to="/channels"
                         search={{ sort: 'subscribers' }}
-                        className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
+                        className="group relative flex items-center gap-2.5 px-4 py-2 text-sm font-medium transition-colors hover:bg-white/5"
                         activeProps={{
                           className: 'text-primary',
                         }}
@@ -485,13 +487,13 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                     }
                   >
                     <IconUsers size={24} />
-                    <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
+                    <div className="glow-md bg-brand absolute top-0 right-0 h-full w-0.5 opacity-0 group-[.active]:opacity-100" />
                   </LcTooltip>
                 ) : (
                   <Link
                     to="/channels"
                     search={{ sort: 'subscribers' }}
-                    className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
+                    className="group relative flex items-center gap-2.5 px-4 py-2 text-sm font-medium transition-colors hover:bg-white/5"
                     activeProps={{
                       className: 'text-primary',
                     }}
@@ -501,7 +503,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                   >
                     <IconUsers size={24} />
                     <span className="pb-0.5">Channels</span>
-                    <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
+                    <div className="glow-md bg-brand absolute top-0 right-0 h-full w-0.5 opacity-0 group-[.active]:opacity-100" />
                   </Link>
                 )}
                 {collapsed ? (
@@ -511,7 +513,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                     render={
                       <Link
                         to="/library"
-                        className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
+                        className="group relative flex items-center gap-2.5 px-4 py-2 text-sm font-medium transition-colors hover:bg-white/5"
                         activeProps={{
                           className: 'text-primary',
                         }}
@@ -524,13 +526,13 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                     <IconBookmark size={24} />
                     <div
                       role="presentation"
-                      className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100"
+                      className="glow-md bg-brand absolute top-0 right-0 h-full w-0.5 opacity-0 group-[.active]:opacity-100"
                     />
                   </LcTooltip>
                 ) : (
                   <Link
                     to="/library"
-                    className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
+                    className="group relative flex items-center gap-2.5 px-4 py-2 text-sm font-medium transition-colors hover:bg-white/5"
                     activeProps={{
                       className: 'text-primary',
                     }}
@@ -542,7 +544,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                     <span className="pb-0.5">Library</span>
                     <div
                       role="presentation"
-                      className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100"
+                      className="glow-md bg-brand absolute top-0 right-0 h-full w-0.5 opacity-0 group-[.active]:opacity-100"
                     />
                   </Link>
                 )}
@@ -573,23 +575,23 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                   <div className="mt-1 flex flex-col gap-2 px-4 pt-1 pb-2">
                     <Link
                       to="/history"
-                      className="flex items-center gap-2.5 transition-colors hover:text-primary/80"
+                      className="hover:text-primary/80 flex items-center gap-2.5 transition-colors"
                     >
                       <div className="flex size-6 items-center justify-center">
                         <IconHistory size={16} className="text-primary/70" />
                       </div>
-                      <span className="font-normal text-gray-600 text-xs dark:text-gray-400">
+                      <span className="text-xs font-normal text-gray-600 dark:text-gray-400">
                         History
                       </span>
                     </Link>
                     <Link
                       to="/library"
-                      className="flex items-center gap-2.5 transition-colors hover:text-primary/80"
+                      className="hover:text-primary/80 flex items-center gap-2.5 transition-colors"
                     >
                       <div className="flex size-6 items-center justify-center">
                         <IconBookmarks size={16} className="text-primary/70" />
                       </div>
-                      <span className="font-normal text-gray-600 text-xs dark:text-gray-400">
+                      <span className="text-xs font-normal text-gray-600 dark:text-gray-400">
                         Saved Content
                       </span>
                     </Link>
@@ -603,7 +605,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
 
       {/* Donate Card */}
       {collapsed || showAltMenu || donateCardDismissed ? null : (
-        <div className="mb-4 animate-fade-in px-4">
+        <div className="animate-fade-in mb-4 px-4">
           <SidebarDonateCard onDismiss={handleDismissDonateCard} />
         </div>
       )}
@@ -618,7 +620,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
       {/* Alternative Menu Legal Footer */}
       {collapsed || !showAltMenu ? null : (
         <div className="flex flex-col gap-2 px-4 py-4">
-          <p className="font-normal text-[10px] text-zinc-500 leading-snug">
+          <p className="text-[10px] leading-snug font-normal text-zinc-500">
             Let's Church is in the public domain and is operated as a{' '}
             non-profit.{' '}
             <Link to="/about" className="underline">
@@ -634,7 +636,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
           <div className="px-4 pb-3">
             <LcTooltip content="Donate" side="right">
               <a
-                className="flex size-6 cursor-pointer items-center justify-center text-brand transition-all hover:scale-110 hover:animate-pulse hover:text-indigo-400"
+                className="text-brand flex size-6 cursor-pointer items-center justify-center transition-all hover:scale-110 hover:animate-pulse hover:text-indigo-400"
                 href="https://givebutter.com/LetsChurch"
                 target="_blank"
                 rel="noopener"
@@ -652,7 +654,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
               <button
                 type="button"
                 onClick={openAltMenuFromCollapsed}
-                className="flex size-6 cursor-pointer items-center justify-center transition-colors hover:text-primary/80"
+                className="hover:text-primary/80 flex size-6 cursor-pointer items-center justify-center transition-colors"
               >
                 <IconInfoCircle
                   size={16}
@@ -670,7 +672,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
               <button
                 type="button"
                 onClick={() => setShowAltMenu(true)}
-                className="flex w-full cursor-pointer items-center gap-2.5 transition-colors hover:text-primary/80"
+                className="hover:text-primary/80 flex w-full cursor-pointer items-center gap-2.5 transition-colors"
               >
                 <div className="flex size-6 items-center justify-center">
                   <IconInfoCircle
@@ -678,7 +680,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                     className="text-gray-600 dark:text-gray-400"
                   />
                 </div>
-                <span className="font-normal text-gray-600 text-xs dark:text-gray-400">
+                <span className="text-xs font-normal text-gray-600 dark:text-gray-400">
                   About Let's Church
                 </span>
               </button>
@@ -694,7 +696,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
               <LcTooltip content="Expand Sidebar" side="right">
                 <button
                   type="button"
-                  className="flex w-full cursor-pointer items-center gap-2.5 transition-colors hover:text-primary/80"
+                  className="hover:text-primary/80 flex w-full cursor-pointer items-center gap-2.5 transition-colors"
                   onClick={toggleCollapsed}
                 >
                   <div className="flex size-6 items-center justify-center">
@@ -709,7 +711,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
               <button
                 type="button"
                 onClick={toggleCollapsed}
-                className="flex w-full cursor-pointer items-center gap-2.5 transition-colors hover:text-primary/80"
+                className="hover:text-primary/80 flex w-full cursor-pointer items-center gap-2.5 transition-colors"
               >
                 <div className="flex size-6 items-center justify-center">
                   <IconLayoutSidebarLeftCollapse
@@ -717,7 +719,7 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                     className="text-gray-600 dark:text-gray-400"
                   />
                 </div>
-                <span className="font-normal text-gray-600 text-xs dark:text-gray-400">
+                <span className="text-xs font-normal text-gray-600 dark:text-gray-400">
                   Collapse Sidebar
                 </span>
               </button>

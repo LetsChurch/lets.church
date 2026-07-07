@@ -28,7 +28,9 @@ import {
   isNull,
   sql,
 } from 'drizzle-orm';
+
 import { startIndexMediaDocument } from '@/temporal';
+
 import {
   assertSpeakerUsable,
   authorizedSpeakerChannelIds,

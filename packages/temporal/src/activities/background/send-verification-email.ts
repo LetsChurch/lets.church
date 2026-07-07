@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 import { stripIndent } from 'proper-tags';
 import { z } from 'zod';
+
 import { client } from '../../client';
 import { BACKGROUND_QUEUE } from '../../queues';
 import { emailHtml, sanitizeForHtml } from '../../util/email';
@@ -66,7 +67,9 @@ export default async function sendVerificationEmailActivity(
       `,
   ).html;
 
-  await (await client).workflow.start(sendEmailWorkflow, {
+  await (
+    await client
+  ).workflow.start(sendEmailWorkflow, {
     args: [
       {
         from: 'hello@lets.church',

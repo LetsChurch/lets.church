@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import useEmblaCarousel from 'embla-carousel-react';
 import WheelGestures from 'embla-carousel-wheel-gestures';
+
 import { Avatar } from '@/components/avatar';
 
 type AvatarCarouselProps = {
@@ -22,7 +23,7 @@ export function AvatarCarousel({ items }: AvatarCarouselProps) {
   );
 
   return (
-    <div className="sm:-mx-16 overflow-hidden sm:px-16" ref={emblaRef}>
+    <div className="overflow-hidden sm:-mx-16 sm:px-16" ref={emblaRef}>
       <div className="flex gap-4 px-4 sm:px-0">
         {items.map((item) => (
           <Link
@@ -34,10 +35,10 @@ export function AvatarCarousel({ items }: AvatarCarouselProps) {
             <Avatar
               src={item.avatarUrl || undefined}
               alt={item.name}
-              className="size-[72px] border-fancy-pants"
+              className="border-fancy-pants size-[72px]"
               fallbackClassName="bg-brand font-bold text-xl"
             />
-            <p className="line-clamp-2 w-[72px] overflow-hidden text-ellipsis text-center font-normal text-primary text-xs opacity-60">
+            <p className="text-primary line-clamp-2 w-[72px] overflow-hidden text-center text-xs font-normal text-ellipsis opacity-60">
               {item.name}
             </p>
           </Link>

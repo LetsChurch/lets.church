@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+
 import { ComingSoon } from './coming-soon';
 
 const meta = {

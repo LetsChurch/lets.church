@@ -2,6 +2,7 @@
 // Runtime enum objects are derived from the pgEnum definitions in schema.ts.
 
 import type { InferSelectModel } from 'drizzle-orm';
+
 import {
   type AppUserRole as AppUserRoleEnum,
   type AppUser as AppUserTable,

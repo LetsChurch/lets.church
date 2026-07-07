@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import { EMBED_DIMS } from '../ai/embed';
 
 // Reads the committed PER-TRANSLATION verse-embedding artifacts (seed/embeddings/

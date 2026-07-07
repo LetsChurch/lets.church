@@ -1,4 +1,5 @@
 import { cn } from '@/util/cn';
+
 import { type LcColor, normalizeColor } from './_colors';
 
 type ProgressSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';

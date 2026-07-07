@@ -1,4 +1,5 @@
 import { useState } from 'react';
+
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { Button, Text, TextInput } from '@/components/ui';
 

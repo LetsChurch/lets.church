@@ -1,4 +1,5 @@
 import { z } from 'zod';
+
 import { authHost } from '@/server/oidc';
 import {
   type Preferences,
@@ -7,6 +8,7 @@ import {
   TEXT_SIZE_MIN,
   writePreferences,
 } from '@/server/preferences';
+
 import type { Context } from '../context';
 import { publicProcedure } from '../trpc';
 

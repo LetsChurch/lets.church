@@ -1,6 +1,7 @@
 import { db, UploadRecord } from '@letschurch/db';
 import { eq, inArray } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
+
 import {
   createEmbeddingsTracked,
   EMBED_DIMS,

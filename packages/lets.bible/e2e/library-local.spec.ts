@@ -229,9 +229,7 @@ test('LB-LIB-05 guest highlight persists across reload + shows in Library', asyn
 
   await page.reload();
   await page.goto('/library');
-  await expect(
-    page.getByRole('link', { name: /John 3:16/ }),
-  ).toBeVisible();
+  await expect(page.getByRole('link', { name: /John 3:16/ })).toBeVisible();
 });
 
 test('LB-LIB-06 reading records "Continue reading"/Recent locally', async ({
@@ -243,9 +241,7 @@ test('LB-LIB-06 reading records "Continue reading"/Recent locally', async ({
     .poll(() => page.evaluate(() => localStorage.getItem('lb-progress') ?? ''))
     .toContain('PHP');
   await page.goto('/library');
-  await expect(
-    page.getByRole('link', { name: /Philippians 4/ }),
-  ).toBeVisible();
+  await expect(page.getByRole('link', { name: /Philippians 4/ })).toBeVisible();
 });
 
 test('LB-FORM note editor: Save disabled while empty, then saves', async ({

@@ -1,4 +1,5 @@
 import { xxh32 } from '@node-rs/xxhash';
+
 import type { DocumentKind } from './activities/background/index-document';
 
 /**

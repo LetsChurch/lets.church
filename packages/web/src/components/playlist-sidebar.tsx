@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
+
 import { Avatar } from '@/components/avatar';
 import { formatTime } from '@/util/format';
 
@@ -57,8 +58,8 @@ export function PlaylistSidebar({
   return (
     <>
       {/* Sidebar Header */}
-      <div className="flex flex-col gap-1 border-zinc-200 border-b px-5 py-2.5 dark:border-zinc-800">
-        <h3 className="font-medium text-primary text-sm">
+      <div className="flex flex-col gap-1 border-b border-zinc-200 px-5 py-2.5 dark:border-zinc-800">
+        <h3 className="text-primary text-sm font-medium">
           {listTitle ?? (listType === 'playlist' ? 'Playlist' : 'Series')}
         </h3>
         <p className="text-secondary text-xs">
@@ -79,7 +80,7 @@ export function PlaylistSidebar({
               data-current={isCurrent ? 'true' : 'false'}
             >
               <div
-                className={`flex cursor-pointer gap-2 border-zinc-200 border-b px-3 py-2 hover:bg-white/5 dark:border-zinc-800 ${isCurrent ? 'bg-brand/10' : ''}`}
+                className={`flex cursor-pointer gap-2 border-b border-zinc-200 px-3 py-2 hover:bg-white/5 dark:border-zinc-800 ${isCurrent ? 'bg-brand/10' : ''}`}
               >
                 {/* Thumbnail */}
                 <div className="relative h-16 w-28 shrink-0">
@@ -99,12 +100,12 @@ export function PlaylistSidebar({
                     )}
                   </div>
                   {item.lengthSeconds ? (
-                    <div className="absolute right-1 bottom-1 flex h-4 items-center justify-center rounded-full bg-gray-950/70 px-1.5 font-medium text-[10px] text-shadow text-white tabular-nums leading-none tracking-tight backdrop-blur-sm dark:bg-white/50 dark:text-gray-950">
+                    <div className="text-shadow absolute right-1 bottom-1 flex h-4 items-center justify-center rounded-full bg-gray-950/70 px-1.5 text-[10px] leading-none font-medium tracking-tight text-white tabular-nums backdrop-blur-sm dark:bg-white/50 dark:text-gray-950">
                       {formatTime(item.lengthSeconds * 1000)}
                     </div>
                   ) : null}
                   {isCurrent ? (
-                    <div className="absolute top-1 left-1 rounded bg-brand px-1.5 py-0.5 font-bold text-[10px] text-white">
+                    <div className="bg-brand absolute top-1 left-1 rounded px-1.5 py-0.5 text-[10px] font-bold text-white">
                       NOW PLAYING
                     </div>
                   ) : null}
@@ -112,7 +113,7 @@ export function PlaylistSidebar({
 
                 {/* Item Info */}
                 <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
-                  <h4 className="line-clamp-2 font-medium text-primary text-sm leading-snug">
+                  <h4 className="text-primary line-clamp-2 text-sm leading-snug font-medium">
                     {item.title ?? 'Untitled'}
                   </h4>
                   <div className="flex items-center gap-1.5">
@@ -122,7 +123,7 @@ export function PlaylistSidebar({
                       className="size-4 shrink-0"
                       fallbackClassName="bg-gray-200 text-gray-600 text-[8px]"
                     />
-                    <p className="overflow-hidden text-ellipsis whitespace-nowrap text-secondary text-xs">
+                    <p className="text-secondary overflow-hidden text-xs text-ellipsis whitespace-nowrap">
                       {item.channel.name}
                     </p>
                   </div>

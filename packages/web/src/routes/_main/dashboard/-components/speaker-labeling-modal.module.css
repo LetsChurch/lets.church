@@ -7,7 +7,7 @@
   background: #f3f4f6;
 }
 
-[data-theme="dark"] .row:hover {
+[data-theme='dark'] .row:hover {
   background: #27272a;
 }
 
@@ -20,6 +20,6 @@
 
 .paragraph:hover .splitControl,
 .paragraph:focus-within .splitControl,
-.splitControl[aria-expanded="true"] {
+.splitControl[aria-expanded='true'] {
   opacity: 1;
 }

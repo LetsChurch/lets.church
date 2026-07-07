@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { htmlToMarkdown } from './html-to-markdown';
 
 describe('htmlToMarkdown', () => {

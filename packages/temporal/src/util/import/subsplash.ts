@@ -1,8 +1,9 @@
 import { invariant, noop } from 'es-toolkit';
 import { pEvent } from 'p-event';
 import { chromium, type Request } from 'playwright';
-import type { Logger } from '../logger';
+
 import type { DownloadResult } from '.';
+import type { Logger } from '../logger';
 import { downloadUrl } from './download';
 import { USER_AGENT } from './user-agent';
 import { ytdlp } from './yt-dlp';

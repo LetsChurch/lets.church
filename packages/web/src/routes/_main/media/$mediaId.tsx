@@ -23,6 +23,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
 import { z } from 'zod';
+
 import { AutoplayCountdown } from '@/components/autoplay-countdown';
 import { CommentsSection } from '@/components/comments-section';
 import LcButton from '@/components/lc-button';
@@ -380,7 +381,7 @@ function MobileTranscriptDrawerContent({
 
   return (
     <>
-      <div className="flex h-10 items-center gap-2 border-zinc-200 border-b border-solid px-5 dark:border-zinc-800">
+      <div className="flex h-10 items-center gap-2 border-b border-solid border-zinc-200 px-5 dark:border-zinc-800">
         {isSearchActive ? (
           <>
             <div className="relative flex-1">
@@ -389,12 +390,12 @@ function MobileTranscriptDrawerContent({
                 value={searchQuery}
                 onChange={handleSearchChange}
                 placeholder="Search transcript..."
-                className="w-full rounded-md border border-gray-600 bg-transparent px-3 py-1.5 pr-8 text-primary text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                // biome-ignore lint/a11y/noAutofocus: this is rendered by user interaction
+                className="text-primary w-full rounded-md border border-gray-600 bg-transparent px-3 py-1.5 pr-8 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                // oxlint-disable-next-line jsx-a11y/no-autofocus -- this is rendered by user interaction
                 autoFocus
               />
               {hasQuery ? (
-                <div className="-translate-y-1/2 absolute top-1/2 right-2 text-gray-400 text-xs">
+                <div className="absolute top-1/2 right-2 -translate-y-1/2 text-xs text-gray-400">
                   {searchResults.length}
                 </div>
               ) : null}
@@ -411,7 +412,7 @@ function MobileTranscriptDrawerContent({
         ) : (
           <>
             <div className="flex grow items-baseline gap-2 pb-0.5">
-              <MobileDrawer.Title className="font-bold text-base text-primary">
+              <MobileDrawer.Title className="text-primary text-base font-bold">
                 Transcript
               </MobileDrawer.Title>
             </div>
@@ -484,9 +485,9 @@ function MobilePlaylistDrawerContent({
 
   return (
     <>
-      <div className="flex h-10 items-center gap-2 border-zinc-200 border-b border-solid px-5 dark:border-zinc-800">
+      <div className="flex h-10 items-center gap-2 border-b border-solid border-zinc-200 px-5 dark:border-zinc-800">
         <div className="flex grow items-baseline gap-2 pb-0.5">
-          <MobileDrawer.Title className="font-bold text-base text-primary">
+          <MobileDrawer.Title className="text-primary text-base font-bold">
             {listTitle ?? (listType === 'playlist' ? 'Playlist' : 'Series')}
           </MobileDrawer.Title>
           <span className="text-secondary text-xs">
@@ -517,10 +518,10 @@ function MediaNotFound() {
   return (
     <MainLayout>
       <div className="mx-auto mt-32 max-w-5xl px-6 text-center">
-        <h1 className="font-bold text-4xl text-zinc-900 tracking-tight dark:text-white">
+        <h1 className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-white">
           Media not found
         </h1>
-        <p className="mx-auto mt-4 max-w-md text-lg text-zinc-600 leading-relaxed dark:text-zinc-400">
+        <p className="mx-auto mt-4 max-w-md text-lg leading-relaxed text-zinc-600 dark:text-zinc-400">
           The media you're looking for doesn't exist, is private, or may have
           been removed.
         </p>
@@ -1117,7 +1118,7 @@ function RouteComponent() {
 
             {sameChannelItems.length > 0 ? (
               <div className="mt-10 pb-4">
-                <h2 className="mb-4 font-bold text-lg text-primary">
+                <h2 className="text-primary mb-4 text-lg font-bold">
                   More from {media.channel.name}
                 </h2>
                 <MediaCarousel
@@ -1131,7 +1132,7 @@ function RouteComponent() {
 
             {otherRelatedItems.length > 0 ? (
               <div className="mt-10 pb-4">
-                <h2 className="mb-4 font-bold text-lg text-primary">
+                <h2 className="text-primary mb-4 text-lg font-bold">
                   Other Related Content
                 </h2>
                 <MediaCarousel
@@ -1224,9 +1225,9 @@ function RouteComponent() {
       >
         <MobileDrawer.Portal>
           <MobileDrawer.Content>
-            <div className="flex h-10 items-center justify-center gap-2 border-zinc-200 border-b border-solid px-5 dark:border-zinc-800">
+            <div className="flex h-10 items-center justify-center gap-2 border-b border-solid border-zinc-200 px-5 dark:border-zinc-800">
               <div className="flex grow items-baseline gap-2 pb-0.5">
-                <MobileDrawer.Title className="font-bold text-base text-primary">
+                <MobileDrawer.Title className="text-primary text-base font-bold">
                   Comments
                 </MobileDrawer.Title>
               </div>
@@ -1260,11 +1261,11 @@ function RouteComponent() {
       >
         <AlertDialog.Portal>
           <AlertDialog.Backdrop className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm" />
-          <AlertDialog.Popup className="-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-50 w-full max-w-md rounded-2xl border border-white/10 bg-zinc-900 p-6 shadow-xl">
-            <AlertDialog.Title className="mb-2 font-bold text-lg text-primary">
+          <AlertDialog.Popup className="fixed top-1/2 left-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/10 bg-zinc-900 p-6 shadow-xl">
+            <AlertDialog.Title className="text-primary mb-2 text-lg font-bold">
               Login Required
             </AlertDialog.Title>
-            <AlertDialog.Description className="mb-6 text-primary/70 text-sm">
+            <AlertDialog.Description className="text-primary/70 mb-6 text-sm">
               {loginDialogAction === 'rate'
                 ? 'You need to be logged in to rate this content.'
                 : loginDialogAction === 'save'
@@ -1297,9 +1298,9 @@ function RouteComponent() {
           <LcModal.Backdrop />
           <LcModal.Popup>
             <ModalHeader title="Unfollow Channel" />
-            <p className="mb-6 text-secondary text-sm">
+            <p className="text-secondary mb-6 text-sm">
               Are you sure you want to unfollow{' '}
-              <span className="font-semibold text-primary">
+              <span className="text-primary font-semibold">
                 {media.channel.name}
               </span>
               ? You will no longer see their content in your feed.
@@ -1308,14 +1309,14 @@ function RouteComponent() {
               <button
                 type="button"
                 onClick={() => setUnfollowConfirmOpen(false)}
-                className="flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-2 font-semibold text-primary text-sm"
+                className="text-primary flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleUnfollowConfirm}
-                className="flex-1 rounded-lg bg-red-600 px-4 py-2 font-semibold text-sm text-white"
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white"
               >
                 Unfollow
               </button>

@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
+
 import { getDiscoveryDocument } from '@/util/oidc/discovery';
 
 export const Route = createFileRoute('/.well-known/openid-configuration')({

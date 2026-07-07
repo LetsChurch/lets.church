@@ -11,11 +11,11 @@ export function ViewMoreCard({ text, to }: Props) {
   return (
     <Link
       to={to}
-      className="flex aspect-video items-center justify-center rounded-lg border-fancy-pants bg-zinc-100 transition-colors hover:bg-muted/20 dark:bg-zinc-900"
+      className="border-fancy-pants hover:bg-muted/20 flex aspect-video items-center justify-center rounded-lg bg-zinc-100 transition-colors dark:bg-zinc-900"
     >
       <div className="flex items-center gap-2 text-center">
-        <span className="font-medium text-primary text-sm">{text}</span>
-        <IconChevronRight className="size-4 text-muted" />
+        <span className="text-primary text-sm font-medium">{text}</span>
+        <IconChevronRight className="text-muted size-4" />
       </div>
     </Link>
   );

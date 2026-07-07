@@ -1,11 +1,13 @@
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
+
 import { bibleVerse, db } from '@/db';
 import { findBook } from '@/lib/canon';
 import { TOPICS } from '@/lib/topics';
 import { epochDay, VOTD_REFS, votdRefForDay } from '@/lib/votd';
 import { parseCookies } from '@/server/oidc';
 import { resolveTranslation } from '@/server/translation';
+
 import { publicProcedure } from '../trpc';
 
 // Turn a canonical ref ('JHN.3.16') into a human reference label ('John 3:16')

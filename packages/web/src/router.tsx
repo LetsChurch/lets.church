@@ -1,10 +1,11 @@
 import { createRouter as createTanStackRouter } from '@tanstack/react-router';
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query';
+
 import { routeTree } from './routeTree.gen';
 import { getContext, Provider as TrpcProvider } from './trpc/react';
 
 declare global {
-  // biome-ignore lint/style/useConsistentTypeDefinitions: global definition
+  // oxlint-disable-next-line typescript/consistent-type-definitions -- global definition
   interface Window {
     __TANSTACK_QUERY_CLIENT__: import('@tanstack/query-core').QueryClient;
   }

@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
+
 import { AuthActions } from '@/components/chrome';
 import { LiveSearchBox } from '@/components/live-search-box';
 import {
@@ -491,13 +492,13 @@ function Reader() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-paper-soft">
+    <div className="bg-paper-soft flex min-h-screen flex-col">
       {/* reading chrome */}
-      <header className="sticky top-0 z-30 flex h-15 flex-shrink-0 items-center gap-2 border-line border-b bg-paper-soft/85 px-3 backdrop-blur-sm sm:gap-[18px] sm:px-[26px]">
+      <header className="border-line bg-paper-soft/85 sticky top-0 z-30 flex h-15 flex-shrink-0 items-center gap-2 border-b px-3 backdrop-blur-sm sm:gap-[18px] sm:px-[26px]">
         <Link
           to="/"
           title="Home"
-          className="inline-flex items-center gap-[7px] font-semibold text-[13.5px] text-muted"
+          className="text-muted inline-flex items-center gap-[7px] text-[13.5px] font-semibold"
         >
           <span className="text-[15px]">←</span>
           <span className="hidden sm:inline">Home</span>
@@ -561,10 +562,10 @@ function Reader() {
                 give the book/chapter context, and it saves vertical space. */}
             {interlinearView ? null : (
               <div className="mb-[34px] text-center">
-                <div className="font-bold text-[12px] text-gold-soft uppercase tracking-[0.16em]">
+                <div className="text-gold-soft text-[12px] font-bold tracking-[0.16em] uppercase">
                   {book.name}
                 </div>
-                <div className="mt-1.5 font-serif text-[46px] text-ink-strong leading-none">
+                <div className="text-ink-strong mt-1.5 font-serif text-[46px] leading-none">
                   Chapter {chapterNum}
                 </div>
               </div>
@@ -603,7 +604,7 @@ function Reader() {
                   redLetter={prefs.redLetter}
                 />
               ) : (
-                <p className="text-center text-[14px] text-faint">
+                <p className="text-faint text-center text-[14px]">
                   Loading interlinear…
                 </p>
               )
@@ -632,18 +633,18 @@ function Reader() {
                 flashVerse={flashVerse}
               />
             ) : (
-              <p className="text-center text-[14px] text-faint">
+              <p className="text-faint text-center text-[14px]">
                 This chapter isn’t available.
               </p>
             )}
 
-            <div className="mt-[34px] flex items-center justify-between gap-3 border-line border-t pt-[18px]">
+            <div className="border-line mt-[34px] flex items-center justify-between gap-3 border-t pt-[18px]">
               <BottomChapterLink
                 target={prevChapter}
                 dir="left"
                 interlinear={interlinearView}
               />
-              <span className="min-w-0 flex-1 text-center text-[12.5px] text-faint">
+              <span className="text-faint min-w-0 flex-1 text-center text-[12.5px]">
                 {selection?.kind === 'verse'
                   ? selection.verses.length === 1
                     ? `Verse ${selection.verses[0]} selected`
@@ -661,14 +662,14 @@ function Reader() {
 
             {/* Translation attribution / copyright courtesy line. */}
             {currentTranslationRow?.attribution ? (
-              <p className="mt-5 text-center text-[11px] text-faint">
+              <p className="text-faint mt-5 text-center text-[11px]">
                 {currentTranslationRow.name} ({currentTranslationRow.id}).{' '}
                 {currentTranslationRow.attributionUrl ? (
                   <a
                     href={currentTranslationRow.attributionUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="underline decoration-line-strong underline-offset-2 hover:text-muted-2"
+                    className="decoration-line-strong hover:text-muted-2 underline underline-offset-2"
                   >
                     {currentTranslationRow.attribution}
                   </a>
@@ -744,8 +745,8 @@ function BottomChapterLink({
     <Link
       {...chapterNavLink(target, interlinear)}
       aria-label={`${dir === 'left' ? 'Previous' : 'Next'} chapter — ${label}`}
-      className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-2 text-[13px] transition-colors hover:text-gold ${
-        dir === 'right' ? 'font-semibold text-gold' : 'text-muted-2'
+      className={`hover:text-gold inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-2 text-[13px] whitespace-nowrap transition-colors ${
+        dir === 'right' ? 'text-gold font-semibold' : 'text-muted-2'
       }`}
     >
       {dir === 'left' ? <ChevronIcon dir="left" className="size-4" /> : null}
@@ -785,7 +786,7 @@ function ChapterNavButtons({
             {...chapterNavLink(prev, interlinear)}
             aria-label={`Previous chapter — ${prev.book.name} ${prev.chapter}`}
             title={`${prev.book.name} ${prev.chapter}`}
-            className={`${btn} hover:-translate-x-0.5 left-1 sm:left-2`}
+            className={`${btn} left-1 hover:-translate-x-0.5 sm:left-2`}
           >
             <ChevronIcon dir="left" className="size-8 sm:size-10" />
           </Link>

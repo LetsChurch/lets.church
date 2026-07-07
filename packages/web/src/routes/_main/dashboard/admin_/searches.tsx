@@ -8,6 +8,7 @@ import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
 import { Fragment, useState } from 'react';
+
 import { ActionIcon, Badge, Button, Table, Text, Title } from '@/components/ui';
 import { notifications } from '@/components/ui/notifications';
 import { useTRPC } from '@/trpc/react';
@@ -103,7 +104,7 @@ function Pagination({
       </ActionIcon>
       {paginationRange(value, total).map((page, i) =>
         page === 'dots' ? (
-          <span key={`dots-${i}`} className="px-2 text-secondary text-sm">
+          <span key={`dots-${i}`} className="text-secondary px-2 text-sm">
             …
           </span>
         ) : (
@@ -288,7 +289,7 @@ function SearchLogsPage() {
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-lg border-fancy-pants bg-white dark:bg-zinc-900">
+      <div className="border-fancy-pants overflow-hidden rounded-lg bg-white dark:bg-zinc-900">
         <Table striped highlightOnHover>
           <Table.Thead>
             <Table.Tr>

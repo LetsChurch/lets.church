@@ -2,12 +2,14 @@ import { IconThumbDown, IconThumbUp } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+
 import { Avatar } from '@/components/avatar';
 import { CommentInput } from '@/components/comment-input';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { $setPlayAt } from '@/stores/player';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
+
 import LcButton from './lc-button';
 
 const TIMESTAMP_RE = /\b(\d{1,2}:\d{2}(?::\d{2})?)\b/g;
@@ -46,7 +48,7 @@ function renderWithTimestamps(
           e.preventDefault();
           $setPlayAt.set(s);
         }}
-        className="cursor-pointer text-brand underline decoration-dotted hover:text-brand dark:text-white dark:hover:text-white"
+        className="text-brand hover:text-brand cursor-pointer underline decoration-dotted dark:text-white dark:hover:text-white"
       >
         {ts}
       </a>,
@@ -227,13 +229,13 @@ export function Comment({
 
       <div className="flex-1 overflow-hidden">
         <div className="mb-1 flex items-baseline gap-2">
-          <span className="font-medium text-primary text-sm">
+          <span className="text-primary text-sm font-medium">
             {comment.author.fullName || `@${comment.author.username}`}
           </span>
           <span className="text-primary/50 text-xs">{timeAgo}</span>
         </div>
 
-        <p className="wrap-break-word mb-2 whitespace-pre-wrap text-primary/90 text-sm leading-relaxed">
+        <p className="text-primary/90 mb-2 text-sm leading-relaxed wrap-break-word whitespace-pre-wrap">
           {renderWithTimestamps(comment.text, lengthSeconds)}
         </p>
 
@@ -265,7 +267,7 @@ export function Comment({
             <button
               type="button"
               onClick={handleReplyClick}
-              className="rounded-lg px-2 py-1 text-primary/70 text-xs transition-colors hover:bg-white/10"
+              className="text-primary/70 rounded-lg px-2 py-1 text-xs transition-colors hover:bg-white/10"
             >
               Reply
             </button>
@@ -275,7 +277,7 @@ export function Comment({
             <button
               type="button"
               onClick={() => setShowReplies(!showReplies)}
-              className="rounded-lg px-2 py-1 text-indigo-400 text-xs transition-colors hover:bg-white/10"
+              className="rounded-lg px-2 py-1 text-xs text-indigo-400 transition-colors hover:bg-white/10"
             >
               {showReplies ? 'Hide' : 'View'} {comment.replyCount}{' '}
               {comment.replyCount === 1 ? 'reply' : 'replies'}

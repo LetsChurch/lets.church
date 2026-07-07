@@ -1,5 +1,6 @@
 import { createTransport, type SendMailOptions } from 'nodemailer';
 import { z } from 'zod';
+
 import logger from '../../util/logger';
 
 export type EmailArgs = SendMailOptions;

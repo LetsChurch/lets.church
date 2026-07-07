@@ -1,7 +1,9 @@
 import * as readline from 'node:readline';
 import { Readable } from 'node:stream';
+
 import OpenAI, { toFile } from 'openai';
 import { z } from 'zod';
+
 import { stripOpenaiPrefix } from './llm';
 
 const env = z

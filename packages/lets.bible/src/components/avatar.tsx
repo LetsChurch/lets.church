@@ -22,7 +22,7 @@ export function Avatar({
 }) {
   return (
     <BaseAvatar.Root
-      className={`inline-flex items-center justify-center overflow-hidden rounded-full bg-gradient-to-b from-gold-soft to-gold font-bold text-[12.5px] text-white ${className}`}
+      className={`from-gold-soft to-gold inline-flex items-center justify-center overflow-hidden rounded-full bg-gradient-to-b text-[12.5px] font-bold text-white ${className}`}
     >
       <BaseAvatar.Fallback>{initialsFrom(name)}</BaseAvatar.Fallback>
     </BaseAvatar.Root>

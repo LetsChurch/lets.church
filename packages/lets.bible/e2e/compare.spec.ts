@@ -10,9 +10,7 @@ test('LB-CMP-01 compare shows verse-aligned columns for both translations', asyn
   await expect(page.getByText('BSB')).toBeVisible();
   await expect(page.getByText('MSB')).toBeVisible();
   // Verse 1 text appears in both columns (same wording in John 1:1).
-  await expect(
-    page.getByText('In the beginning was the Word'),
-  ).toHaveCount(2);
+  await expect(page.getByText('In the beginning was the Word')).toHaveCount(2);
 });
 
 test('LB-CMP-02 version picker Compare opens the compare view', async ({
@@ -31,7 +29,9 @@ test('LB-CMP-02 version picker Compare opens the compare view', async ({
   await expect(page.getByText('· Compare')).toBeVisible();
 });
 
-test('LB-CMP-03 verse-toolbar Compare jumps to that verse', async ({ page }) => {
+test('LB-CMP-03 verse-toolbar Compare jumps to that verse', async ({
+  page,
+}) => {
   await page.goto('/bible/john/1');
   // A direct ?v= only scrolls + flashes now (LB-READ-08); tap verse 3 to open the
   // verse view, then Compare. Retry: a tap before hydration is a no-op.

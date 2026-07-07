@@ -4,6 +4,7 @@ import {
   setHandler,
   startChild,
 } from '@temporalio/workflow';
+
 import type * as activities from '../../activities/background';
 import { BACKGROUND_QUEUE } from '../../queues';
 import {

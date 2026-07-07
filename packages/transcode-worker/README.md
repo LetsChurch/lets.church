@@ -10,12 +10,12 @@ This worker downloads media from the ingest bucket, transcodes it into various q
 
 ### Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `IDENTITY` | Unique identifier for this worker instance | Yes |
-| `TEMPORAL_ADDRESS` | Temporal server address | Yes |
-| `MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS` | Max concurrent activity tasks (CPU path only; ignored when `TRANSCODE_HW_ACCEL=ama:*`) | Yes |
-| `SENTRY_DSN` | Sentry error tracking DSN | Yes |
+| Variable                                  | Description                                                                            | Required |
+| ----------------------------------------- | -------------------------------------------------------------------------------------- | -------- |
+| `IDENTITY`                                | Unique identifier for this worker instance                                             | Yes      |
+| `TEMPORAL_ADDRESS`                        | Temporal server address                                                                | Yes      |
+| `MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS` | Max concurrent activity tasks (CPU path only; ignored when `TRANSCODE_HW_ACCEL=ama:*`) | Yes      |
+| `SENTRY_DSN`                              | Sentry error tracking DSN                                                              | Yes      |
 
 ### Concurrency on the AMA hardware path
 
@@ -27,12 +27,12 @@ charged on both axes and admitted only when **both** fit:
 
 - **Sessions** — the count of concurrent on-device `h264_ama` encoder contexts.
   Each HLS rendition is one session, so a single ladder already opens **3–4**
-  (4K = 4, 1080p = 3, 720p = 2, 480p = 1; audio-only = 0). This is the *primary*
+  (4K = 4, 1080p = 3, 720p = 2, 480p = 1; audio-only = 0). This is the _primary_
   binding constraint — a single big ladder fits, but two small jobs (6–8
   sessions, low pixels) exhaust the encoder. Bounded by `AMA_MAX_SESSIONS`.
 - **Pixels** — aggregate encode throughput in **1080p60-equivalent units**,
   weighted by output area (4K rung = 4× a 1080p rung) and frame rate (60fps ≈ 2×
-  the load of 30fps; source fps from the probe). A job's pixel cost is the *max*
+  the load of 30fps; source fps from the probe). A job's pixel cost is the _max_
   of its encode-ladder and source-decode load (so the decoder is bounded too — a
   between-tier source like 1440p decodes more than its ladder encodes). Bounded
   by `AMA_ENCODE_BUDGET`.
@@ -51,14 +51,14 @@ deadlock.
 #### Single vs. double density (why the default is 6)
 
 The MA35D's per-device encoder capacity depends on the **codec**, which AMD calls
-encoder *density*:
+encoder _density_:
 
 - **Single density** — any combination of AVC (H.264), HEVC, or AV1 Type-2
   encoders. ~`8x1080p60` per device.
 - **Double density** — the above **plus** the dedicated AV1 Type-1 encoder
   block, which roughly doubles per-device stream counts (e.g. ~`16x1080p60`).
 
-Density is selected *implicitly* by which encoder you run — there is no flag.
+Density is selected _implicitly_ by which encoder you run — there is no flag.
 **We emit H.264 (`h264_ama` = AVC), so we are always in single density**; the
 double-density numbers require AV1 Type-1 and do not apply to us. The default
 `AMA_ENCODE_BUDGET=6` is therefore measured against the **single-density**
@@ -92,13 +92,13 @@ Thumbnail jobs draw on the **same** dual-constraint budget: **1 `jpeg_ama`
 session + the source-decode pixels**. Only ≤4K sources take the hardware path —
 the AMA decoder tops out at 4K.
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `TRANSCODE_HW_ACCEL` | `ama:<n>` to use MA35D device `n`; unset/`none` for the libx264 CPU path | No |
-| `AMA_MAX_SESSIONS` | Per-device encoder-session budget (default `4` = one 4K ladder). The binding constraint — measure the true limit before raising | No |
-| `AMA_ENCODE_BUDGET` | Per-device pixel budget in 1080p60-equivalent units (default `6`) | No |
-| `AMA_MAX_CONCURRENT` | Hard cap on jobs pulled onto one pod at once; the operator master switch (manifest pins `1` pending session validation) | No |
-| `AMA_HW_THUMBNAILS` | `true` to hardware-accelerate thumbnail extraction on AMA pods (default off; needs on-device validation) | No |
+| Variable             | Description                                                                                                                     | Required |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `TRANSCODE_HW_ACCEL` | `ama:<n>` to use MA35D device `n`; unset/`none` for the libx264 CPU path                                                        | No       |
+| `AMA_MAX_SESSIONS`   | Per-device encoder-session budget (default `4` = one 4K ladder). The binding constraint — measure the true limit before raising | No       |
+| `AMA_ENCODE_BUDGET`  | Per-device pixel budget in 1080p60-equivalent units (default `6`)                                                               | No       |
+| `AMA_MAX_CONCURRENT` | Hard cap on jobs pulled onto one pod at once; the operator master switch (manifest pins `1` pending session validation)         | No       |
+| `AMA_HW_THUMBNAILS`  | `true` to hardware-accelerate thumbnail extraction on AMA pods (default off; needs on-device validation)                        | No       |
 
 ### S3 Configuration
 
@@ -106,23 +106,23 @@ This worker requires access to **both ingest and public buckets**:
 
 #### Ingest Bucket (source files)
 
-| Variable | Description |
-|----------|-------------|
-| `S3_INGEST_BUCKET` | S3 bucket name for source media |
-| `S3_INGEST_REGION` | S3 region |
-| `S3_INGEST_ENDPOINT` | S3 endpoint URL |
-| `S3_INGEST_ACCESS_KEY_ID` | S3 access key |
-| `S3_INGEST_SECRET_ACCESS_KEY` | S3 secret key |
+| Variable                      | Description                     |
+| ----------------------------- | ------------------------------- |
+| `S3_INGEST_BUCKET`            | S3 bucket name for source media |
+| `S3_INGEST_REGION`            | S3 region                       |
+| `S3_INGEST_ENDPOINT`          | S3 endpoint URL                 |
+| `S3_INGEST_ACCESS_KEY_ID`     | S3 access key                   |
+| `S3_INGEST_SECRET_ACCESS_KEY` | S3 secret key                   |
 
 #### Public Bucket (transcoded output)
 
-| Variable | Description |
-|----------|-------------|
-| `S3_PUBLIC_BUCKET` | S3 bucket name for public media |
-| `S3_PUBLIC_REGION` | S3 region |
-| `S3_PUBLIC_ENDPOINT` | S3 endpoint URL |
-| `S3_PUBLIC_ACCESS_KEY_ID` | S3 access key |
-| `S3_PUBLIC_SECRET_ACCESS_KEY` | S3 secret key |
+| Variable                      | Description                     |
+| ----------------------------- | ------------------------------- |
+| `S3_PUBLIC_BUCKET`            | S3 bucket name for public media |
+| `S3_PUBLIC_REGION`            | S3 region                       |
+| `S3_PUBLIC_ENDPOINT`          | S3 endpoint URL                 |
+| `S3_PUBLIC_ACCESS_KEY_ID`     | S3 access key                   |
+| `S3_PUBLIC_SECRET_ACCESS_KEY` | S3 secret key                   |
 
 ### System Requirements
 

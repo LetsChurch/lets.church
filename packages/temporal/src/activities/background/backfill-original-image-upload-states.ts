@@ -9,6 +9,7 @@ import {
 } from '@letschurch/db';
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { eq } from 'drizzle-orm';
+
 import logger from '../../util/logger';
 
 export type BackfillOriginalImageBatchResult = {

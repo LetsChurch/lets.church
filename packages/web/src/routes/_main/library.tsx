@@ -1,6 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
+
 import { EmptyState } from '@/components/empty-state';
 import { LibraryTabs } from '@/components/library-tabs';
 import MainLayout from '@/components/main-layout';
@@ -103,7 +104,7 @@ function RouteComponent() {
   return (
     <MainLayout>
       <div className="mb-6 px-4 sm:px-0">
-        <h1 className="mb-4 font-bold text-2xl text-primary">Library</h1>
+        <h1 className="text-primary mb-4 text-2xl font-bold">Library</h1>
         <LibraryTabs activeTab="saved" />
       </div>
 

@@ -1,9 +1,11 @@
 import { readFile } from 'node:fs/promises';
+
 import { noop } from 'es-toolkit';
 import { execa } from 'execa';
 import fastGlob from 'fast-glob';
 import { stringifySync } from 'subtitle';
 import { z } from 'zod';
+
 import logger from './logger';
 import { isAdjective, isConjunction, isPreposition } from './words';
 

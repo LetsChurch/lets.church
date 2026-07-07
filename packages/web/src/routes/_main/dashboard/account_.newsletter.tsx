@@ -2,6 +2,7 @@ import { IconInfoCircle } from '@tabler/icons-react';
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
+
 import { Alert, Text, Title } from '@/components/ui';
 import { useAppForm } from '@/components/ui/form';
 import { useTRPC } from '@/trpc/react';
@@ -81,7 +82,7 @@ function NewsletterPage() {
       </Title>
 
       <div className="flex max-w-[600px] flex-col gap-5">
-        <div className="overflow-hidden rounded-lg border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900">
+        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
           <Title order={3} className="mb-4">
             Subscribe to Newsletter
           </Title>
@@ -149,7 +150,7 @@ function NewsletterPage() {
           </form>
         </div>
 
-        <div className="overflow-hidden rounded-lg border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900">
+        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
           <Title order={3} className="mb-4">
             Unsubscribe
           </Title>

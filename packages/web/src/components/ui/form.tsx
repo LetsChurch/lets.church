@@ -1,6 +1,7 @@
 import { Turnstile } from '@marsidev/react-turnstile';
 import { createFormHook, createFormHookContexts } from '@tanstack/react-form';
 import type { ComponentProps } from 'react';
+
 import { Button } from './button';
 import { LoadingOverlay } from './feedback';
 import {
@@ -204,7 +205,7 @@ function DatePickerField(props: {
             e.target.value ? new Date(e.target.value) : new Date(),
           )
         }
-        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-primary text-sm outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/25 dark:border-zinc-700 dark:bg-zinc-900"
+        className="text-primary focus:border-brand focus:ring-brand/25 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm transition-colors outline-none focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900"
       />
     </InputWrapper>
   );

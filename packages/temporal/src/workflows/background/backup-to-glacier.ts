@@ -1,4 +1,5 @@
 import { proxyActivities } from '@temporalio/workflow';
+
 import type * as activities from '../../activities/background';
 import { GLACIER_QUEUE } from '../../queues';
 

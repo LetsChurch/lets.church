@@ -5,6 +5,7 @@ import {
 } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useRef, useState } from 'react';
+
 import { Avatar } from '@/components/avatar';
 import { AvatarCarousel } from '@/components/avatar-carousel';
 import { EmptyState } from '@/components/empty-state';
@@ -46,20 +47,20 @@ function ChannelListItem({
   return (
     <div
       key={channel.id}
-      className="flex items-center justify-between rounded-lg bg-surface-100 p-4"
+      className="bg-surface-100 flex items-center justify-between rounded-lg p-4"
     >
       <div className="flex items-center space-x-3">
         <Avatar
           src={channel.avatarUrl || undefined}
           alt={channel.name}
-          className="size-10 border-fancy-pants"
+          className="border-fancy-pants size-10"
           fallbackClassName={cn(
             'bg-zinc-900 font-bold',
             isFollowed ? 'text-sm' : 'text-lg',
           )}
         />
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-bold text-primary text-sm">
+          <h3 className="text-primary truncate text-sm font-bold">
             {channel.name}
           </h3>
           {!isFollowed && channel.followerCount !== undefined ? (
@@ -254,7 +255,7 @@ function RouteComponent() {
               <div className="overflow-hidden pb-4">
                 <AvatarCarousel items={followedChannels} />
               </div>
-              <div className="border-zinc-800 border-b px-4 sm:px-0" />
+              <div className="border-b border-zinc-800 px-4 sm:px-0" />
             </div>
           ) : null}
 
@@ -282,7 +283,7 @@ function RouteComponent() {
 
           {!hasFollowedChannels && initialSuggestedChannels.length > 0 ? (
             <div className="px-4 sm:px-0">
-              <h2 className="mb-4 font-bold text-lg text-primary">
+              <h2 className="text-primary mb-4 text-lg font-bold">
                 {isLoggedIn ? 'Suggested Channels' : 'Popular Channels'}
               </h2>
               <div className="space-y-3">
@@ -313,7 +314,7 @@ function RouteComponent() {
           <LcModal.Backdrop />
           <LcModal.Popup>
             <ModalHeader title="Create an Account" />
-            <p className="mb-6 text-secondary text-sm">
+            <p className="text-secondary mb-6 text-sm">
               Create an account to follow channels and get a customized feed
               with your favorite content!
             </p>
@@ -321,13 +322,13 @@ function RouteComponent() {
               <button
                 type="button"
                 onClick={() => setSignInModalOpen(false)}
-                className="flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-2 font-semibold text-primary text-sm"
+                className="text-primary flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold"
               >
                 Cancel
               </button>
               <Link
                 to="/auth/register"
-                className="flex flex-1 items-center justify-center rounded-lg bg-brand px-4 py-2 font-semibold text-sm text-white"
+                className="bg-brand flex flex-1 items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold text-white"
                 onClick={() => setSignInModalOpen(false)}
               >
                 Create Account
@@ -346,9 +347,9 @@ function RouteComponent() {
           <LcModal.Backdrop />
           <LcModal.Popup>
             <ModalHeader title="Unfollow Channel" />
-            <p className="mb-6 text-secondary text-sm">
+            <p className="text-secondary mb-6 text-sm">
               Are you sure you want to unfollow{' '}
-              <span className="font-semibold text-primary">
+              <span className="text-primary font-semibold">
                 {channelToUnfollow?.name}
               </span>
               ? You will no longer see their content in your feed.
@@ -360,14 +361,14 @@ function RouteComponent() {
                   setUnfollowConfirmOpen(false);
                   setChannelToUnfollow(null);
                 }}
-                className="flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-2 font-semibold text-primary text-sm"
+                className="text-primary flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleUnfollowConfirm}
-                className="flex-1 rounded-lg bg-red-600 px-4 py-2 font-semibold text-sm text-white"
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white"
               >
                 Unfollow
               </button>

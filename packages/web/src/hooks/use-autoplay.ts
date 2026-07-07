@@ -1,5 +1,6 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { getAutoplayEnabled } from '@/stores/autoplay';
 
 type UseAutoplayOptions = {

@@ -4,6 +4,7 @@ import { useForm } from '@tanstack/react-form';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
+
 import { findBook } from '@/lib/canon';
 import { HIGHLIGHT_COLORS, highlightDotStyle } from '@/lib/highlight-colors';
 import { decodeMorph } from '@/lib/morph';
@@ -31,6 +32,7 @@ import {
   setNote,
 } from '@/local/store';
 import { useTRPC } from '@/trpc/react';
+
 import {
   type CrossRef,
   FootnoteSegments,
@@ -114,7 +116,7 @@ function StudyPanelInner({
   // scrolling as one. Each section's close removes just that verse; removing the
   // last one empties the selection and closes the panel.
   return (
-    <div className="flex min-h-0 flex-1 flex-col divide-y-4 divide-line overflow-y-auto">
+    <div className="divide-line flex min-h-0 flex-1 flex-col divide-y-4 overflow-y-auto">
       {verses.map((vd) => (
         <VerseView
           key={vd.verse}
@@ -187,7 +189,7 @@ export function StudyPanel(
             <Drawer.Popup
               aria-label={ariaLabel}
               data-drawer
-              className="pointer-events-auto flex h-full w-[340px] flex-col border-line-strong border-l bg-paper-raised shadow-[-18px_0_40px_-28px_rgba(40,34,18,0.4)] outline-none transition-transform duration-300 ease-out [transform:translateX(var(--drawer-swipe-movement-x))] data-[ending-style]:translate-x-full data-[starting-style]:translate-x-full data-[swiping]:duration-0"
+              className="border-line-strong bg-paper-raised pointer-events-auto flex h-full w-[340px] [transform:translateX(var(--drawer-swipe-movement-x))] flex-col border-l shadow-[-18px_0_40px_-28px_rgba(40,34,18,0.4)] transition-transform duration-300 ease-out outline-none data-[ending-style]:translate-x-full data-[starting-style]:translate-x-full data-[swiping]:duration-0"
             >
               {body}
             </Drawer.Popup>
@@ -226,10 +228,10 @@ export function StudyPanel(
           <Drawer.Popup
             aria-label={ariaLabel}
             data-drawer
-            className="pointer-events-auto flex max-h-[92dvh] w-full flex-col rounded-t-2xl border-line-strong border-t bg-paper-raised outline-none transition-transform duration-300 ease-out [transform:translateY(calc(var(--drawer-snap-point-offset,0px)+var(--drawer-swipe-movement-y,0px)))] data-[ending-style]:translate-y-full data-[starting-style]:translate-y-full data-[swiping]:duration-0"
+            className="border-line-strong bg-paper-raised pointer-events-auto flex max-h-[92dvh] w-full [transform:translateY(calc(var(--drawer-snap-point-offset,0px)+var(--drawer-swipe-movement-y,0px)))] flex-col rounded-t-2xl border-t transition-transform duration-300 ease-out outline-none data-[ending-style]:translate-y-full data-[starting-style]:translate-y-full data-[swiping]:duration-0"
           >
             <div className="flex flex-shrink-0 cursor-grab justify-center pt-2.5 pb-1 active:cursor-grabbing">
-              <div className="h-1.5 w-10 rounded-full bg-line-strong" />
+              <div className="bg-line-strong h-1.5 w-10 rounded-full" />
             </div>
             {body}
           </Drawer.Popup>
@@ -251,13 +253,13 @@ function PanelHeader({
   onClose: () => void;
 }) {
   return (
-    <header className="flex items-start justify-between gap-3 border-line border-b px-5 py-4">
+    <header className="border-line flex items-start justify-between gap-3 border-b px-5 py-4">
       <div>
-        <div className="font-bold text-[11px] text-gold-soft uppercase tracking-[0.16em]">
+        <div className="text-gold-soft text-[11px] font-bold tracking-[0.16em] uppercase">
           {eyebrow}
         </div>
         <div
-          className={`mt-1 font-serif text-ink-strong leading-tight ${titleClass ?? 'text-[24px]'}`}
+          className={`text-ink-strong mt-1 font-serif leading-tight ${titleClass ?? 'text-[24px]'}`}
         >
           {title}
         </div>
@@ -265,7 +267,7 @@ function PanelHeader({
       <button
         type="button"
         onClick={onClose}
-        className="-mr-1 flex size-8 flex-shrink-0 items-center justify-center rounded-lg text-[18px] text-muted-2 outline-none hover:bg-paper-soft focus-visible:ring-2 focus-visible:ring-gold/40"
+        className="text-muted-2 hover:bg-paper-soft focus-visible:ring-gold/40 -mr-1 flex size-8 flex-shrink-0 items-center justify-center rounded-lg text-[18px] outline-none focus-visible:ring-2"
       >
         <span aria-hidden>×</span>
         <span className="sr-only">Close</span>
@@ -340,7 +342,7 @@ function VerseView({
         onValueChange={(value) => setStudyTab(value as StudyTab)}
         className="flex flex-col"
       >
-        <Tabs.List className="relative flex gap-5 border-line border-b px-5">
+        <Tabs.List className="border-line relative flex gap-5 border-b px-5">
           <Tabs.Tab value="verse" className={tabClass}>
             Verse
           </Tabs.Tab>
@@ -351,7 +353,7 @@ function VerseView({
             Media
           </Tabs.Tab>
           <Tabs.Indicator
-            className="absolute bottom-0 h-0.5 rounded-t-sm bg-gold transition-all duration-200"
+            className="bg-gold absolute bottom-0 h-0.5 rounded-t-sm transition-all duration-200"
             style={{
               left: 'var(--active-tab-left)',
               width: 'var(--active-tab-width)',
@@ -367,8 +369,8 @@ function VerseView({
             onSelectWord={onSelectWord}
           />
 
-          <div className="mt-5 border-line border-t pt-4">
-            <div className="mb-2 font-semibold text-[11px] text-gold-soft uppercase tracking-[0.12em]">
+          <div className="border-line mt-5 border-t pt-4">
+            <div className="text-gold-soft mb-2 text-[11px] font-semibold tracking-[0.12em] uppercase">
               Highlight
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -381,8 +383,8 @@ function VerseView({
                   style={highlightDotStyle(c)}
                   className={`size-[22px] rounded-full ${
                     color === c
-                      ? 'ring-2 ring-gold ring-offset-2 ring-offset-paper-raised'
-                      : 'ring-1 ring-line-strong hover:ring-gold-soft'
+                      ? 'ring-gold ring-offset-paper-raised ring-2 ring-offset-2'
+                      : 'ring-line-strong hover:ring-gold-soft ring-1'
                   }`}
                 />
               ))}
@@ -390,7 +392,7 @@ function VerseView({
                 <button
                   type="button"
                   onClick={() => removeHighlight(book, chapter, verse)}
-                  className="ml-1 font-semibold text-[12px] text-muted-2 hover:text-gold"
+                  className="text-muted-2 hover:text-gold ml-1 text-[12px] font-semibold"
                 >
                   Clear
                 </button>
@@ -398,7 +400,7 @@ function VerseView({
             </div>
           </div>
 
-          <div className="mt-5 flex flex-wrap gap-1.5 border-line border-t pt-4">
+          <div className="border-line mt-5 flex flex-wrap gap-1.5 border-t pt-4">
             <button
               type="button"
               className={action}
@@ -455,7 +457,7 @@ function VerseView({
           <button
             type="button"
             onClick={onStudyFirstWord}
-            className="mt-6 w-full rounded-lg border border-gold-soft/50 px-3 py-2 font-semibold text-[12.5px] text-gold hover:bg-gold/5"
+            className="border-gold-soft/50 text-gold hover:bg-gold/5 mt-6 w-full rounded-lg border px-3 py-2 text-[12.5px] font-semibold"
           >
             Study a word — or tap any word in the verse
           </button>
@@ -493,8 +495,8 @@ function AnnotationSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mt-5 border-line border-t pt-4">
-      <div className="mb-2 font-semibold text-[11px] text-gold-soft uppercase tracking-[0.12em]">
+    <div className="border-line mt-5 border-t pt-4">
+      <div className="text-gold-soft mb-2 text-[11px] font-semibold tracking-[0.12em] uppercase">
         {label}
       </div>
       {children}
@@ -565,7 +567,7 @@ function renderParagraph(text: string): React.ReactNode[] {
 
 function CommentaryBody({ body }: { body: string }) {
   return (
-    <div className="space-y-2 text-[13px] text-ink leading-relaxed">
+    <div className="text-ink space-y-2 text-[13px] leading-relaxed">
       {body.split('\n\n').map((p, i) => (
         <p key={`p${i}`} className="whitespace-pre-line">
           {renderParagraph(p)}
@@ -589,7 +591,7 @@ function CommentaryDownloadButton({
   if (status.state === 'downloading') {
     return (
       <span
-        className={`flex-shrink-0 px-1 font-semibold text-[11px] text-muted-2 tabular-nums ${className}`}
+        className={`text-muted-2 flex-shrink-0 px-1 text-[11px] font-semibold tabular-nums ${className}`}
         title="Downloading for offline…"
       >
         {Math.round((status.progress ?? 0) * 100)}%
@@ -667,7 +669,7 @@ function CommentariesTab({
   const followingId = useCommentaryWork();
 
   if (isLoading || !works || !entries) {
-    return <p className="text-[13px] text-muted-2">Loading commentaries…</p>;
+    return <p className="text-muted-2 text-[13px]">Loading commentaries…</p>;
   }
 
   const entryByWork = new Map(entries.map((e) => [e.workId, e]));
@@ -687,7 +689,7 @@ function CommentariesTab({
           <button
             type="button"
             onClick={() => setCommentaryWork(null)}
-            className="font-semibold text-[12px] text-gold hover:underline"
+            className="text-gold text-[12px] font-semibold hover:underline"
           >
             ‹ All commentaries
           </button>
@@ -695,16 +697,16 @@ function CommentariesTab({
         </div>
 
         <div className="mt-3">
-          <div className="font-serif text-[18px] text-ink-strong leading-tight">
+          <div className="text-ink-strong font-serif text-[18px] leading-tight">
             {following.name}
           </div>
-          <div className="mt-0.5 text-[12px] text-muted-2">
+          <div className="text-muted-2 mt-0.5 text-[12px]">
             {following.author}
             {following.year ? ` · ${following.year}` : ''}
             {following.tradition ? ` · ${following.tradition}` : ''}
           </div>
           {entry?.verseEnd ? (
-            <div className="mt-0.5 text-[11px] text-gold-soft">
+            <div className="text-gold-soft mt-0.5 text-[11px]">
               on vv. {entry.verse}–{entry.verseEnd}
             </div>
           ) : null}
@@ -720,14 +722,14 @@ function CommentariesTab({
                 href={following.sourceUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-3 inline-block font-semibold text-[12px] text-gold hover:underline"
+                className="text-gold mt-3 inline-block text-[12px] font-semibold hover:underline"
               >
                 Source
               </a>
             ) : null}
           </>
         ) : (
-          <p className="mt-4 text-[13px] text-muted italic">
+          <p className="text-muted mt-4 text-[13px] italic">
             {following.author} has no note on {reference}.
             {here.length > 0
               ? ' Use ‹ All commentaries to see what’s available here.'
@@ -741,13 +743,13 @@ function CommentariesTab({
   // List view — choose a commentary for this verse.
   if (here.length === 0) {
     return (
-      <p className="text-[13px] text-muted-2">No commentaries on this verse.</p>
+      <p className="text-muted-2 text-[13px]">No commentaries on this verse.</p>
     );
   }
   return (
     // Flush, full-bleed list (the panel supplies the px-5 gutter): rows are
     // separated by hairline dividers rather than boxed in padded cards.
-    <div className="-mx-5 flex flex-col divide-y divide-line">
+    <div className="divide-line -mx-5 flex flex-col divide-y">
       {here.map((w) => {
         const entry = entryByWork.get(w.id);
         return (
@@ -755,15 +757,15 @@ function CommentariesTab({
           // (not nested — mirrors the translation picker's row actions).
           <div
             key={w.id}
-            className="flex items-start gap-2 px-5 py-3 hover:bg-paper-soft"
+            className="hover:bg-paper-soft flex items-start gap-2 px-5 py-3"
           >
             <button
               type="button"
               onClick={() => setCommentaryWork(w.id)}
               className="min-w-0 flex-1 text-left"
             >
-              <div className="font-semibold text-[13px] text-ink">{w.name}</div>
-              <div className="text-[11.5px] text-muted-2">
+              <div className="text-ink text-[13px] font-semibold">{w.name}</div>
+              <div className="text-muted-2 text-[11.5px]">
                 {w.author}
                 {w.year ? ` · ${w.year}` : ''}
                 {entry?.verseEnd
@@ -771,7 +773,7 @@ function CommentariesTab({
                   : ''}
               </div>
               {entry ? (
-                <div className="mt-1 line-clamp-2 text-[12px] text-muted leading-snug">
+                <div className="text-muted mt-1 line-clamp-2 text-[12px] leading-snug">
                   {stripRefMarkers(entry.body)}
                 </div>
               ) : null}
@@ -835,7 +837,7 @@ function RelatedMediaTab({
         href={data.searchUrl}
         target="_blank"
         rel="noreferrer"
-        className="inline-block font-semibold text-[12px] text-gold hover:underline"
+        className="text-gold inline-block text-[12px] font-semibold hover:underline"
       >
         Search {reference} on lets.church →
       </a>
@@ -843,13 +845,13 @@ function RelatedMediaTab({
 
   // Attribution: this catalog is lets.church's, surfaced here.
   const poweredBy = (
-    <p className="text-[11px] text-faint">
+    <p className="text-faint text-[11px]">
       Powered by{' '}
       <a
         href={authHost ?? undefined}
         target="_blank"
         rel="noreferrer"
-        className="font-semibold text-gold-soft hover:underline"
+        className="text-gold-soft font-semibold hover:underline"
       >
         lets.church
       </a>
@@ -857,7 +859,7 @@ function RelatedMediaTab({
   );
 
   if (isLoading) {
-    return <p className="text-[13px] text-muted-2">Loading media…</p>;
+    return <p className="text-muted-2 text-[13px]">Loading media…</p>;
   }
 
   const items = data?.items ?? [];
@@ -865,7 +867,7 @@ function RelatedMediaTab({
   if (items.length === 0) {
     return (
       <div className="space-y-3">
-        <p className="text-[13px] text-muted-2">
+        <p className="text-muted-2 text-[13px]">
           No media references this verse yet.
         </p>
         {searchLink}
@@ -877,7 +879,7 @@ function RelatedMediaTab({
   return (
     <div>
       {/* Flush, full-bleed list — the panel supplies the px-5 gutter. */}
-      <div className="-mx-5 flex flex-col divide-y divide-line">
+      <div className="divide-line -mx-5 flex flex-col divide-y">
         {items.map((item) => {
           const duration = formatDuration(item.lengthSeconds);
           return (
@@ -886,9 +888,9 @@ function RelatedMediaTab({
               href={item.url}
               target="_blank"
               rel="noreferrer"
-              className="flex items-start gap-3 px-5 py-3 hover:bg-paper-soft"
+              className="hover:bg-paper-soft flex items-start gap-3 px-5 py-3"
             >
-              <div className="relative aspect-video w-28 shrink-0 overflow-hidden rounded-md bg-paper-soft ring-1 ring-line">
+              <div className="bg-paper-soft ring-line relative aspect-video w-28 shrink-0 overflow-hidden rounded-md ring-1">
                 {item.thumbnailUrl ? (
                   <img
                     src={item.thumbnailUrl}
@@ -904,10 +906,10 @@ function RelatedMediaTab({
                 ) : null}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="line-clamp-2 font-semibold text-[13px] text-ink leading-snug">
+                <div className="text-ink line-clamp-2 text-[13px] leading-snug font-semibold">
                   {item.title ?? 'Untitled'}
                 </div>
-                <div className="mt-0.5 text-[11.5px] text-muted-2">
+                <div className="text-muted-2 mt-0.5 text-[11.5px]">
                   {item.channelName ?? 'Unknown'}
                   {` · ${formatViews(item.viewCount)} view${item.viewCount === 1 ? '' : 's'}`}
                 </div>
@@ -950,9 +952,9 @@ function VerseAnnotations({
             {verseFootnotes.map(({ label, note }, i) => (
               <li
                 key={`fn${i}`}
-                className="flex gap-2 text-[13.5px] text-ink leading-relaxed"
+                className="text-ink flex gap-2 text-[13.5px] leading-relaxed"
               >
-                <span className="font-semibold text-gold italic">{label}</span>
+                <span className="text-gold font-semibold italic">{label}</span>
                 <span>
                   <FootnoteSegments segments={note.segments} />
                 </span>
@@ -969,7 +971,7 @@ function VerseAnnotations({
               <li key={`xr${i}`} className="text-[13.5px]">
                 <Link
                   {...chapterLink(x.slug, x.chapter, x.verse ?? undefined)}
-                  className="font-semibold text-gold hover:underline"
+                  className="text-gold font-semibold hover:underline"
                 >
                   {x.label}
                 </Link>
@@ -981,10 +983,10 @@ function VerseAnnotations({
 
       {hasOverlays ? (
         <AnnotationSection label="Source text">
-          <ul className="space-y-2 text-[13px] text-muted leading-relaxed">
+          <ul className="text-muted space-y-2 text-[13px] leading-relaxed">
             {overlays.divineNames.length > 0 ? (
               <li>
-                <span className="font-semibold text-ink">Divine name</span> —
+                <span className="text-ink font-semibold">Divine name</span> —
                 the LORD renders the Tetragrammaton{' '}
                 <span className="font-hebrew" dir="rtl" lang="he">
                   יְהוָה
@@ -994,7 +996,7 @@ function VerseAnnotations({
             ) : null}
             {overlays.hasOtQuote ? (
               <li>
-                <span className="font-semibold text-ink">
+                <span className="text-ink font-semibold">
                   Old Testament quotation
                 </span>{' '}
                 — this verse quotes the Old Testament
@@ -1006,7 +1008,7 @@ function VerseAnnotations({
             ) : null}
             {overlays.hallelujahs.length > 0 ? (
               <li>
-                <span className="font-semibold text-ink">Hallelujah</span> —
+                <span className="text-ink font-semibold">Hallelujah</span> —
                 “Praise Yah”: hallĕlû (praise) + Yah (a short form of YHWH).
               </li>
             ) : null}
@@ -1034,13 +1036,13 @@ function VerseWords({
   if (runs.length === 0) {
     // Fallback to the plain joined text if runs aren't available.
     return (
-      <p className="font-serif text-[18px] text-ink leading-relaxed">
+      <p className="text-ink font-serif text-[18px] leading-relaxed">
         {verseText}
       </p>
     );
   }
   return (
-    <p className="font-serif text-[18px] text-ink leading-relaxed">
+    <p className="text-ink font-serif text-[18px] leading-relaxed">
       {runs.map((r, i) => {
         if (r.note) {
           return null;
@@ -1055,12 +1057,12 @@ function VerseWords({
             otQuote: r.otQuote,
           };
           return (
-            // biome-ignore lint/a11y/useSemanticElements: a span keeps inline text flow; it carries the button role + keyboard handlers
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a span keeps inline text flow; it carries the button role + keyboard handlers
             <span
               key={`w${i}`}
               role="button"
               tabIndex={0}
-              className="cursor-pointer rounded-[2px] hover:bg-gold/10 hover:text-gold"
+              className="hover:bg-gold/10 hover:text-gold cursor-pointer rounded-[2px]"
               onClick={() => onSelectWord(word)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -1134,17 +1136,17 @@ function NoteEditor({
         {(field) => (
           <>
             <textarea
-              // biome-ignore lint/a11y/noAutofocus: the note editor is opened intentionally by the user
+              // oxlint-disable-next-line jsx-a11y/no-autofocus -- the note editor is opened intentionally by the user
               autoFocus
               value={field.state.value}
               onChange={(e) => field.handleChange(e.target.value)}
               onBlur={field.handleBlur}
               placeholder={`Note on ${label}…`}
               rows={4}
-              className="w-full resize-none rounded-lg border border-line-strong bg-paper-soft px-2.5 py-2 text-[13px] text-ink outline-none placeholder:text-faint focus:border-gold-soft"
+              className="border-line-strong bg-paper-soft text-ink placeholder:text-faint focus:border-gold-soft w-full resize-none rounded-lg border px-2.5 py-2 text-[13px] outline-none"
             />
             {field.state.meta.isTouched && field.state.meta.errors[0] ? (
-              <span className="px-0.5 text-[11.5px] text-redletter">
+              <span className="text-redletter px-0.5 text-[11.5px]">
                 {String(field.state.meta.errors[0])}
               </span>
             ) : null}
@@ -1159,7 +1161,7 @@ function NoteEditor({
               removeNote(book, chapter, verse);
               onClose();
             }}
-            className="mr-auto rounded-lg px-2.5 py-1.5 font-semibold text-[12px] text-redletter hover:bg-paper-soft"
+            className="text-redletter hover:bg-paper-soft mr-auto rounded-lg px-2.5 py-1.5 text-[12px] font-semibold"
           >
             Delete
           </button>
@@ -1167,7 +1169,7 @@ function NoteEditor({
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg px-2.5 py-1.5 font-semibold text-[12px] text-muted-2 hover:bg-paper-soft"
+          className="text-muted-2 hover:bg-paper-soft rounded-lg px-2.5 py-1.5 text-[12px] font-semibold"
         >
           Cancel
         </button>
@@ -1178,7 +1180,7 @@ function NoteEditor({
             <button
               type="submit"
               disabled={!canSubmit || isSubmitting}
-              className="rounded-lg bg-gold px-3 py-1.5 font-bold text-[#1f1d18] text-[12px] disabled:opacity-50"
+              className="bg-gold rounded-lg px-3 py-1.5 text-[12px] font-bold text-[#1f1d18] disabled:opacity-50"
             >
               Save
             </button>
@@ -1228,12 +1230,12 @@ function WordView({
       <button
         type="button"
         onClick={onBackToVerse}
-        className="group flex flex-col gap-1 border-line border-b px-5 py-3 text-left hover:bg-paper-soft"
+        className="group border-line hover:bg-paper-soft flex flex-col gap-1 border-b px-5 py-3 text-left"
       >
-        <span className="font-semibold text-[11px] text-gold uppercase tracking-[0.12em] group-hover:underline">
+        <span className="text-gold text-[11px] font-semibold tracking-[0.12em] uppercase group-hover:underline">
           ‹ {reference}
         </span>
-        <span className="line-clamp-2 text-[12.5px] text-muted-2 italic">
+        <span className="text-muted-2 line-clamp-2 text-[12.5px] italic">
           {verseText}
         </span>
       </button>
@@ -1244,27 +1246,27 @@ function WordView({
           // (independent of the lexicon load below).
           const parsed = decodeMorph(word.morph, word.language);
           return parsed ? (
-            <div className="mb-5 border-line border-b pb-4">
-              <div className="mb-1 font-semibold text-[11px] text-gold-soft uppercase tracking-[0.12em]">
+            <div className="border-line mb-5 border-b pb-4">
+              <div className="text-gold-soft mb-1 text-[11px] font-semibold tracking-[0.12em] uppercase">
                 Parsing
               </div>
-              <p className="text-[14px] text-ink leading-relaxed">
+              <p className="text-ink text-[14px] leading-relaxed">
                 {parsed.label}
               </p>
-              <p className="mt-0.5 font-mono text-[11px] text-muted-2">
+              <p className="text-muted-2 mt-0.5 font-mono text-[11px]">
                 {parsed.raw}
               </p>
             </div>
           ) : null;
         })()}
         {isLoading ? (
-          <p className="text-[13px] text-faint">Loading…</p>
+          <p className="text-faint text-[13px]">Loading…</p>
         ) : (
           <>
             {lexeme ? (
               <LexemeBody lexeme={lexeme} isHebrew={isHebrew} />
             ) : (
-              <p className="text-[13px] text-faint">
+              <p className="text-faint text-[13px]">
                 No lexicon entry for{' '}
                 <span className="font-mono">{word.strong}</span>.
               </p>
@@ -1282,7 +1284,7 @@ function WordView({
         )}
       </div>
 
-      <footer className="border-line border-t px-5 py-2.5 text-[11px] text-faint">
+      <footer className="border-line text-faint border-t px-5 py-2.5 text-[11px]">
         Strong’s Exhaustive Concordance (1890), public domain.
       </footer>
     </>
@@ -1308,7 +1310,7 @@ function LexemeBody({
     <>
       <div className="flex items-baseline gap-3">
         <span
-          className={`text-[34px] text-ink-strong leading-none ${
+          className={`text-ink-strong text-[34px] leading-none ${
             isHebrew ? 'font-hebrew' : 'font-serif'
           }`}
           dir={isHebrew ? 'rtl' : 'ltr'}
@@ -1316,20 +1318,20 @@ function LexemeBody({
         >
           {lexeme.lemma}
         </span>
-        <span className="rounded-full border border-line-strong bg-paper-soft px-2.5 py-[3px] font-mono font-semibold text-[11px] text-muted">
+        <span className="border-line-strong bg-paper-soft text-muted rounded-full border px-2.5 py-[3px] font-mono text-[11px] font-semibold">
           {lexeme.strong}
         </span>
       </div>
 
       {lexeme.transliteration || lexeme.pronunciation ? (
-        <div className="mt-2 text-[14px] text-muted italic">
+        <div className="text-muted mt-2 text-[14px] italic">
           {lexeme.transliteration}
           {lexeme.transliteration && lexeme.pronunciation ? ' · ' : ''}
           {lexeme.pronunciation}
         </div>
       ) : null}
 
-      <div className="mt-1 font-semibold text-[11px] text-faint uppercase tracking-[0.1em]">
+      <div className="text-faint mt-1 text-[11px] font-semibold tracking-[0.1em] uppercase">
         {isHebrew ? 'Hebrew' : 'Greek'}
       </div>
 
@@ -1364,7 +1366,7 @@ function SourceText({
     return null;
   }
   return (
-    <div className="mt-5 space-y-4 border-line border-t pt-4">
+    <div className="border-line mt-5 space-y-4 border-t pt-4">
       {word.divineName ? (
         <Section label="Source text">
           The divine name{' '}
@@ -1408,7 +1410,7 @@ function OtQuoteSource({
   );
   return (
     <div>
-      <div className="mb-1 font-semibold text-[11px] text-gold-soft uppercase tracking-[0.12em]">
+      <div className="text-gold-soft mb-1 text-[11px] font-semibold tracking-[0.12em] uppercase">
         Old Testament quotation
       </div>
       {data && data.length > 0 ? (
@@ -1428,7 +1430,7 @@ function OtQuoteSource({
                     x.toChapter,
                     x.toVerse ?? undefined,
                   )}
-                  className="font-semibold text-gold hover:underline"
+                  className="text-gold font-semibold hover:underline"
                 >
                   {label}
                 </Link>
@@ -1437,7 +1439,7 @@ function OtQuoteSource({
           })}
         </ul>
       ) : (
-        <p className="text-[13px] text-muted leading-relaxed">
+        <p className="text-muted text-[13px] leading-relaxed">
           This passage quotes the Old Testament.
         </p>
       )}
@@ -1454,10 +1456,10 @@ function Section({
 }) {
   return (
     <div className="mt-4">
-      <div className="mb-1 font-semibold text-[11px] text-gold-soft uppercase tracking-[0.12em]">
+      <div className="text-gold-soft mb-1 text-[11px] font-semibold tracking-[0.12em] uppercase">
         {label}
       </div>
-      <p className="text-[14px] text-ink leading-relaxed">{children}</p>
+      <p className="text-ink text-[14px] leading-relaxed">{children}</p>
     </div>
   );
 }
@@ -1483,18 +1485,18 @@ function Occurrences({
   });
 
   return (
-    <div className="mt-5 border-line border-t pt-4">
+    <div className="border-line mt-5 border-t pt-4">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between font-semibold text-[12.5px] text-gold outline-none focus-visible:underline"
+        className="text-gold flex w-full items-center justify-between text-[12.5px] font-semibold outline-none focus-visible:underline"
       >
         <span>Other occurrences</span>
-        <span className="text-[11px] text-muted-2">{open ? '▲' : '▼'}</span>
+        <span className="text-muted-2 text-[11px]">{open ? '▲' : '▼'}</span>
       </button>
       {open ? (
         isLoading ? (
-          <p className="mt-3 text-[13px] text-faint">Loading…</p>
+          <p className="text-faint mt-3 text-[13px]">Loading…</p>
         ) : data && data.length > 0 ? (
           <ul className="mt-3 space-y-2.5">
             {data.map((o, i) => {
@@ -1512,15 +1514,15 @@ function Occurrences({
                       search={{ v: o.verse }}
                       // Verse deep-link: keep scroll, the reader centers the verse.
                       resetScroll={false}
-                      className="font-semibold text-gold hover:underline"
+                      className="text-gold font-semibold hover:underline"
                     >
                       {label}
                     </Link>
                   ) : (
-                    <span className="font-semibold text-muted">{label}</span>
+                    <span className="text-muted font-semibold">{label}</span>
                   )}
                   {o.count > 1 ? (
-                    <span className="ml-1 font-semibold text-[11px] text-gold-soft">
+                    <span className="text-gold-soft ml-1 text-[11px] font-semibold">
                       ×{o.count}
                     </span>
                   ) : null}{' '}
@@ -1530,7 +1532,7 @@ function Occurrences({
             })}
           </ul>
         ) : (
-          <p className="mt-3 text-[13px] text-faint">No other occurrences.</p>
+          <p className="text-faint mt-3 text-[13px]">No other occurrences.</p>
         )
       ) : null}
     </div>

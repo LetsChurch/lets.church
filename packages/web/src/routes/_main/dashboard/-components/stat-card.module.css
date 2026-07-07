@@ -13,7 +13,7 @@
   text-transform: uppercase;
   &::after {
     display: block;
-    content: "";
+    content: '';
     position: absolute;
     inset: 0;
   }
@@ -35,8 +35,8 @@
   & .value {
     color: var(--tile-value-color);
 
-    & .mantine-Text-root[data-c="dimmed"] {
-      /* biome-ignore lint/complexity/noImportantStyles: mantine override */
+    & .mantine-Text-root[data-c='dimmed'] {
+      /* !important -- mantine override */
       color: var(--tile-dimmed-color) !important;
     }
   }
@@ -51,7 +51,7 @@
   --tile-dimmed-color: #1c7ed6;
 }
 
-[data-theme="dark"] .blue {
+[data-theme='dark'] .blue {
   --tile-border-color: rgba(34, 139, 230, 0.35);
   --tile-bg-color: rgba(34, 139, 230, 0.12);
   --tile-icon-color: #4dabf7;
@@ -68,7 +68,7 @@
   --tile-value-color: #2b8a3e;
 }
 
-[data-theme="dark"] .green {
+[data-theme='dark'] .green {
   --tile-border-color: rgba(64, 192, 87, 0.35);
   --tile-bg-color: rgba(64, 192, 87, 0.12);
   --tile-icon-color: #69db7c;
@@ -84,7 +84,7 @@
   --tile-value-color: #4a1fb0;
 }
 
-[data-theme="dark"] .violet {
+[data-theme='dark'] .violet {
   --tile-border-color: rgba(112, 72, 232, 0.4);
   --tile-bg-color: rgba(112, 72, 232, 0.15);
   --tile-icon-color: #9775fa;

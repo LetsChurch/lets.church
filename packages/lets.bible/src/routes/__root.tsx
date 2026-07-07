@@ -8,9 +8,11 @@ import { type ReactNode, useEffect } from 'react';
 import '@fontsource-variable/hanken-grotesk';
 import '@fontsource-variable/frank-ruhl-libre';
 import '@fontsource-variable/noto-serif';
+
 import '@fontsource-variable/noto-serif/wght-italic.css';
-import appCss from '@/app.css?url';
 import type { AppContextType } from '@/router';
+
+import appCss from '@/app.css?url';
 
 export const Route = createRootRouteWithContext<AppContextType>()({
   head: () => ({

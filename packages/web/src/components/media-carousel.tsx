@@ -3,6 +3,7 @@ import useEmblaCarousel from 'embla-carousel-react';
 import WheelGestures from 'embla-carousel-wheel-gestures';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useState } from 'react';
+
 import { CarouselNavigationButtons } from '@/components/carousel-navigation-buttons';
 import { CarouselPagination } from '@/components/carousel-pagination';
 import { MediaCard } from '@/components/media-card';

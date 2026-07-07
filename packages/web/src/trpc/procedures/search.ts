@@ -20,6 +20,7 @@ import {
 import { TRPCError } from '@trpc/server';
 import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
+
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarSm2x, appAvatarXs2x } from '@/util/avatar-sizes';
 import { bibleBookName, formatVerseRef } from '@/util/bible-url';
@@ -29,6 +30,7 @@ import { isChannelRoutable } from '@/util/media-visibility';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { getVerseParagraphsByUpload } from '@/util/verse-paragraphs';
+
 import { hydrateUploads } from '../search/hydrate';
 import { extractQuotedPhrases, parseSearchQuery } from '../search/parse-query';
 import {
@@ -362,10 +364,10 @@ export const searchProcedures = {
       if (q.trim().length === 0) {
         const hasFilter = Boolean(
           channelIds ||
-            bibleRefs ||
-            bibleBooks ||
-            speakers ||
-            (publishedAt && (publishedAt.gte || publishedAt.lte)),
+          bibleRefs ||
+          bibleBooks ||
+          speakers ||
+          (publishedAt && (publishedAt.gte || publishedAt.lte)),
         );
         if (!hasFilter) {
           // Nothing to search on (the UI shows trending here); guard defensively.

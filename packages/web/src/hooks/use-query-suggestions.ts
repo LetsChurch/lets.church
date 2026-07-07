@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useDebounce } from 'use-debounce';
+
 import { useTRPC } from '@/trpc/react';
 
 /**
@@ -31,9 +32,9 @@ export function useQuerySuggestions(
 
   const hasContext = Boolean(
     context.titles?.length ||
-      context.channels?.length ||
-      context.speakers?.length ||
-      context.books?.length,
+    context.channels?.length ||
+    context.speakers?.length ||
+    context.books?.length,
   );
 
   const { data } = useQuery({

@@ -1,4 +1,5 @@
 import { decodeMorph } from '@/lib/morph';
+
 import type { WordRef } from './passage';
 
 // One word of the interlinear, as returned by `bible.interlinear` (a token
@@ -78,18 +79,18 @@ export function InterlinearControls({
     // drawer can sit flush below both at top-30 (120px) without overlapping.
     // Below lg it may wrap to a taller bar (mobile uses a bottom-sheet panel, not
     // the top-offset rail, so that doesn't matter).
-    <div className="sticky top-15 z-20 flex min-h-14 flex-shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 border-line border-b bg-paper-soft/95 px-4 py-2.5 backdrop-blur-sm sm:px-[26px] lg:h-15 lg:flex-nowrap">
+    <div className="border-line bg-paper-soft/95 sticky top-15 z-20 flex min-h-14 flex-shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b px-4 py-2.5 backdrop-blur-sm sm:px-[26px] lg:h-15 lg:flex-nowrap">
       {reverseAvailable ? (
         <div className="flex items-center gap-2.5">
-          <span className="text-[12px] text-muted">Word order</span>
-          <div className="inline-flex gap-0.5 rounded-[10px] border border-line-strong bg-paper p-[3px]">
+          <span className="text-muted text-[12px]">Word order</span>
+          <div className="border-line-strong bg-paper inline-flex gap-0.5 rounded-[10px] border p-[3px]">
             <button
               type="button"
               onClick={() => set({ englishFirst: false })}
               className={`${segBase} ${
                 englishFirst
-                  ? 'font-medium text-muted hover:text-ink'
-                  : 'bg-paper-raised font-semibold text-ink-strong shadow-sm'
+                  ? 'text-muted hover:text-ink font-medium'
+                  : 'bg-paper-raised text-ink-strong font-semibold shadow-sm'
               }`}
             >
               Original
@@ -99,8 +100,8 @@ export function InterlinearControls({
               onClick={() => set({ englishFirst: true })}
               className={`${segBase} ${
                 englishFirst
-                  ? 'bg-paper-raised font-semibold text-ink-strong shadow-sm'
-                  : 'font-medium text-muted hover:text-ink'
+                  ? 'bg-paper-raised text-ink-strong font-semibold shadow-sm'
+                  : 'text-muted hover:text-ink font-medium'
               }`}
             >
               English (reverse)
@@ -114,7 +115,7 @@ export function InterlinearControls({
         <div />
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="mr-0.5 text-[12px] text-muted">Lines</span>
+        <span className="text-muted mr-0.5 text-[12px]">Lines</span>
         <LineChip
           label="Translit"
           on={showTranslit}
@@ -139,7 +140,7 @@ export function InterlinearControls({
         ) : (
           <span
             title="Parsing isn’t available for this passage yet"
-            className={`${chipBase} cursor-default border-line-strong border-dashed bg-transparent text-muted-2`}
+            className={`${chipBase} border-line-strong text-muted-2 cursor-default border-dashed bg-transparent`}
           >
             Parsing
           </span>
@@ -166,7 +167,7 @@ function LineChip({
       className={`${chipBase} ${
         on
           ? 'border-gold-soft/60 bg-gold/15 text-ink-strong'
-          : 'border-line-strong bg-transparent text-muted hover:border-gold-soft/50 hover:text-ink'
+          : 'border-line-strong text-muted hover:border-gold-soft/50 hover:text-ink bg-transparent'
       }`}
     >
       {label}
@@ -217,7 +218,7 @@ function Token({
         // Weight depends only on the englishFirst MODE (stable), never on
         // selection — changing weight on select would widen the text and shift
         // the layout. Selection only deepens the color (muted → ink).
-        className={`whitespace-nowrap text-[13px] leading-tight ${
+        className={`text-[13px] leading-tight whitespace-nowrap ${
           englishFirst ? 'font-semibold' : ''
         } ${
           showRed
@@ -237,7 +238,7 @@ function Token({
     showTranslit && w.transliteration ? (
       <span
         key="translit"
-        className={`font-serif text-[12px] italic leading-tight ${
+        className={`font-serif text-[12px] leading-tight italic ${
           faded ? 'text-faint-2' : 'text-muted-2'
         }`}
       >
@@ -266,7 +267,7 @@ function Token({
       type="button"
       onClick={onSelect}
       data-strong={w.strong ?? undefined}
-      className={`flex flex-col items-center gap-[3px] rounded-[10px] px-2 py-1.5 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-gold/40 ${
+      className={`focus-visible:ring-gold/40 flex flex-col items-center gap-[3px] rounded-[10px] px-2 py-1.5 text-center transition-colors outline-none focus-visible:ring-2 ${
         selected
           ? 'bg-[rgba(154,123,63,0.14)] shadow-[inset_0_0_0_1px_rgba(154,123,63,0.42)]'
           : 'hover:bg-[rgba(154,123,63,0.07)]'
@@ -318,7 +319,7 @@ export function Interlinear({
         <div key={verse} className="flex items-start gap-x-2">
           {verseNumbers ? (
             <div className="mt-2 w-9 flex-shrink-0">
-              <span className="rounded-[5px] border border-gold-soft/40 bg-gold/10 px-1.5 py-px font-bold font-sans text-[12px] text-gold-soft">
+              <span className="border-gold-soft/40 bg-gold/10 text-gold-soft rounded-[5px] border px-1.5 py-px font-sans text-[12px] font-bold">
                 {verse}
               </span>
             </div>
@@ -392,7 +393,7 @@ function SourceToken({
       type="button"
       onClick={onSelect}
       data-strong={w.strong ?? undefined}
-      className={`flex flex-col items-center gap-[3px] rounded-[10px] px-2 py-1.5 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-gold/40 ${
+      className={`focus-visible:ring-gold/40 flex flex-col items-center gap-[3px] rounded-[10px] px-2 py-1.5 text-center transition-colors outline-none focus-visible:ring-2 ${
         selected
           ? 'bg-[rgba(154,123,63,0.14)] shadow-[inset_0_0_0_1px_rgba(154,123,63,0.42)]'
           : 'hover:bg-[rgba(154,123,63,0.07)]'
@@ -409,7 +410,7 @@ function SourceToken({
       </span>
       {showTranslit && w.transliteration ? (
         <span
-          className={`font-serif text-[12px] italic leading-tight ${
+          className={`font-serif text-[12px] leading-tight italic ${
             faded ? 'text-faint-2' : 'text-muted-2'
           }`}
         >
@@ -418,7 +419,7 @@ function SourceToken({
       ) : null}
       {showGloss && w.english ? (
         <span
-          className={`whitespace-nowrap text-[13px] leading-tight ${
+          className={`text-[13px] leading-tight whitespace-nowrap ${
             faded ? 'text-faint' : selected ? 'text-ink' : 'text-muted'
           }`}
         >
@@ -437,7 +438,7 @@ function SourceToken({
       {parsed ? (
         <span
           title={parsed.label}
-          className="font-mono text-[9.5px] text-muted-2 leading-tight"
+          className="text-muted-2 font-mono text-[9.5px] leading-tight"
         >
           {parsed.raw}
         </span>
@@ -484,7 +485,7 @@ export function SourceInterlinear({
           <div key={verse} className="flex items-start gap-x-2">
             {verseNumbers ? (
               <div className="mt-2 w-9 flex-shrink-0">
-                <span className="rounded-[5px] border border-gold-soft/40 bg-gold/10 px-1.5 py-px font-bold font-sans text-[12px] text-gold-soft">
+                <span className="border-gold-soft/40 bg-gold/10 text-gold-soft rounded-[5px] border px-1.5 py-px font-sans text-[12px] font-bold">
                   {verse}
                 </span>
               </div>

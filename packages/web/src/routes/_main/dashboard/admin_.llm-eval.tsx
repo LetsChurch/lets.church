@@ -6,6 +6,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import { z } from 'zod';
+
 import {
   ActionIcon,
   Alert,
@@ -36,7 +37,7 @@ function Code({
 }) {
   return (
     <code
-      className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.85em] text-primary dark:bg-zinc-800"
+      className="text-primary rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.85em] dark:bg-zinc-800"
       style={style}
     >
       {children}
@@ -92,7 +93,7 @@ function UploadSelect({
                 onChange(null);
                 onSearchChange('');
               }}
-              className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted transition-colors hover:text-primary"
+              className="text-muted hover:text-primary absolute inset-y-0 right-0 flex items-center pr-3 transition-colors"
             >
               <IconX size={16} />
             </Combobox.Clear>
@@ -100,8 +101,8 @@ function UploadSelect({
         </div>
         <Combobox.Portal>
           <Combobox.Positioner sideOffset={4} className="z-50">
-            <Combobox.Popup className="max-h-64 w-[var(--anchor-width)] overflow-y-auto rounded-lg border-fancy-pants bg-white p-1 shadow-lg dark:bg-zinc-900">
-              <Combobox.Empty className="px-3 py-2 text-secondary text-sm empty:hidden">
+            <Combobox.Popup className="border-fancy-pants max-h-64 w-[var(--anchor-width)] overflow-y-auto rounded-lg bg-white p-1 shadow-lg dark:bg-zinc-900">
+              <Combobox.Empty className="text-secondary px-3 py-2 text-sm empty:hidden">
                 {nothingFoundMessage}
               </Combobox.Empty>
               <Combobox.List>
@@ -109,7 +110,7 @@ function UploadSelect({
                   <Combobox.Item
                     key={item.value}
                     value={item}
-                    className="flex cursor-default items-center rounded px-3 py-1.5 text-primary text-sm data-[highlighted]:bg-brand/10"
+                    className="text-primary data-[highlighted]:bg-brand/10 flex cursor-default items-center rounded px-3 py-1.5 text-sm"
                   >
                     {item.label}
                   </Combobox.Item>
@@ -163,14 +164,14 @@ function ModelsInput({
         {value.map((tag) => (
           <span
             key={tag}
-            className="flex items-center gap-1 rounded bg-brand/10 py-0.5 pr-1 pl-2 text-brand text-xs dark:text-indigo-300"
+            className="bg-brand/10 text-brand flex items-center gap-1 rounded py-0.5 pr-1 pl-2 text-xs dark:text-indigo-300"
           >
             {tag}
             <button
               type="button"
               aria-label={`Remove ${tag}`}
               onClick={() => onChange(value.filter((t) => t !== tag))}
-              className="rounded p-0.5 hover:bg-brand/20"
+              className="hover:bg-brand/20 rounded p-0.5"
             >
               <IconX size={12} />
             </button>
@@ -193,7 +194,7 @@ function ModelsInput({
             }
           }}
           onBlur={add}
-          className="min-w-16 flex-1 bg-transparent text-primary text-sm outline-none placeholder:text-muted"
+          className="text-primary placeholder:text-muted min-w-16 flex-1 bg-transparent text-sm outline-none"
         />
       </div>
     </InputWrapper>
@@ -521,7 +522,7 @@ function LlmEvalPage() {
           </Text>
         </div>
 
-        <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-4 dark:bg-zinc-900">
+        <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-4 dark:bg-zinc-900">
           <div className="flex flex-col gap-4">
             <UploadSelect
               label="Upload"
@@ -644,7 +645,7 @@ function ResultCard({
   return (
     <div
       style={{ height: '100%' }}
-      className="overflow-hidden rounded-xl border-fancy-pants bg-white p-4 dark:bg-zinc-900"
+      className="border-fancy-pants overflow-hidden rounded-xl bg-white p-4 dark:bg-zinc-900"
     >
       <div className="flex flex-col gap-3">
         <div className="flex flex-nowrap items-start justify-between gap-4">

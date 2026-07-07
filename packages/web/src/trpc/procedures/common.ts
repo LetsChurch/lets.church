@@ -8,6 +8,7 @@ import {
 import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import {
   getInvitationDetailsSchema,
@@ -18,6 +19,7 @@ import { sendVerificationEmail } from '@/temporal';
 import logger from '@/util/logger';
 import { getMaintenanceConfig } from '@/util/maintenance';
 import { uuidTranslator } from '@/util/uuid';
+
 import { authProcedure, publicProcedure } from '../trpc';
 
 const moduleLogger = logger.child({

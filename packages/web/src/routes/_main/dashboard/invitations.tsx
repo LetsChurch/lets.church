@@ -2,6 +2,7 @@ import { IconInfoCircle } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
+
 import { Alert, Badge, Button, Text, Title } from '@/components/ui';
 import { notifications } from '@/components/ui/notifications';
 import { useTRPC } from '@/trpc/react';
@@ -124,7 +125,7 @@ function InvitationsRoute() {
         {invitations.map((invitation) => (
           <div
             key={invitation.token}
-            className="overflow-hidden rounded-xl border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900"
+            className="border-fancy-pants overflow-hidden rounded-xl bg-white p-5 shadow-sm dark:bg-zinc-900"
           >
             <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
               <div>

@@ -7,6 +7,6 @@
   background: #f3f4f6;
 }
 
-[data-theme="dark"] .row:hover {
+[data-theme='dark'] .row:hover {
   background: #27272a;
 }

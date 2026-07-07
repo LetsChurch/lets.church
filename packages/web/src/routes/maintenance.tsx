@@ -1,5 +1,6 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
+
 import Logo from '@/components/logo';
 import { Text, Title } from '@/components/ui';
 import { useTRPC } from '@/trpc/react';
@@ -33,7 +34,7 @@ function MaintenanceRoute() {
   );
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-page p-8">
+    <div className="bg-page flex min-h-screen items-center justify-center p-8">
       <div className="flex max-w-[520px] flex-col items-center gap-5 text-center">
         <div style={{ transform: 'scale(1.8)' }} className="my-4">
           <Logo />

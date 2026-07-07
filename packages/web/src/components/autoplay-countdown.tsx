@@ -1,4 +1,5 @@
 import { IconPlayerPlayFilled, IconX } from '@tabler/icons-react';
+
 import LcButton from '@/components/lc-button';
 
 type AutoplayCountdownProps = {
@@ -20,11 +21,11 @@ export function AutoplayCountdown({
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 flex items-end justify-center pb-24">
-      <div className="pointer-events-auto flex max-w-md items-center gap-4 rounded-2xl border-fancy-pants bg-zinc-900/90 px-6 py-4 backdrop-blur-lg">
+      <div className="border-fancy-pants pointer-events-auto flex max-w-md items-center gap-4 rounded-2xl bg-zinc-900/90 px-6 py-4 backdrop-blur-lg">
         {/* Circular Progress */}
         <div className="relative flex size-12 shrink-0 items-center justify-center">
           <svg
-            className="-rotate-90 size-full"
+            className="size-full -rotate-90"
             viewBox="0 0 48 48"
             role="img"
             aria-label="Countdown progress"
@@ -59,7 +60,7 @@ export function AutoplayCountdown({
         {/* Text */}
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <p className="text-sm text-zinc-400">Next up in {countdown}s</p>
-          <p className="truncate font-medium text-primary text-sm">
+          <p className="text-primary truncate text-sm font-medium">
             {nextMediaTitle}
           </p>
         </div>

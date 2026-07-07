@@ -312,7 +312,7 @@ function RouteComponent() {
         </a>
       </p>
 
-      <p className="text-gray-600 text-sm dark:text-gray-400">
+      <p className="text-sm text-gray-600 dark:text-gray-400">
         Content adapted from &ldquo;Should Ministry Be Free?&rdquo; by Conley
         Owens
       </p>

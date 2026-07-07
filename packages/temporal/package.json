@@ -1,8 +1,8 @@
 {
   "name": "@letschurch/temporal",
   "version": "0.0.0",
-  "type": "module",
   "private": true,
+  "type": "module",
   "exports": {
     "./activities/background": "./src/activities/background/index.ts",
     "./activities/probe": "./src/activities/probe/index.ts",
@@ -27,10 +27,11 @@
   },
   "scripts": {
     "check": "pnpm run /^check:/",
-    "check:biome": "biome check",
+    "check:fmt": "oxfmt --check",
+    "check:lint": "oxlint",
     "check:ts": "tsc --noEmit",
-    "fix": "biome check --write",
-    "fix!": "biome check --write --unsafe",
+    "fix": "oxfmt && oxlint --fix",
+    "fix!": "oxfmt && oxlint --fix-dangerously",
     "test": "vitest run"
   },
   "dependencies": {
@@ -81,12 +82,13 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@biomejs/biome": "catalog:",
     "@types/html-minifier": "^4.0.6",
     "@types/mjml": "^4.7.4",
     "@types/node": "catalog:",
     "@types/nodemailer": "^7.0.3",
     "@types/wait-on": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

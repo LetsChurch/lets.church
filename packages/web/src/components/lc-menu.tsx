@@ -44,7 +44,7 @@ export function LcMenuPopup({
 }: LcMenuPopupProps) {
   return (
     <Menu.Popup
-      className={`min-w-[200px] rounded-lg border-fancy-pants bg-white p-1 shadow-xl transition-opacity duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0 dark:bg-zinc-900 ${className}`}
+      className={`border-fancy-pants min-w-[200px] rounded-lg bg-white p-1 shadow-xl transition-opacity duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0 dark:bg-zinc-900 ${className}`}
       {...props}
     >
       {children}

@@ -1,6 +1,7 @@
 import { db, OrganizationAddress } from '@letschurch/db';
 import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
+
 import logger from '../../util/logger';
 
 export function validateGeocodeConfig() {

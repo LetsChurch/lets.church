@@ -4,6 +4,7 @@ import {
   proxyActivities,
   startChild,
 } from '@temporalio/workflow';
+
 import type * as backgroundActivities from '../../activities/background';
 import { BACKGROUND_QUEUE, PRIORITY_REPROCESS } from '../../queues';
 import type { ReprocessScope } from '../../reprocess-scope';

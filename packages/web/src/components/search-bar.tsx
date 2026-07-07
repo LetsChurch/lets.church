@@ -9,6 +9,7 @@ import { useLocation, useNavigate } from '@tanstack/react-router';
 import { cva, type VariantProps } from 'class-variance-authority';
 import type { FormEvent } from 'react';
 import { Fragment, useEffect, useRef, useState } from 'react';
+
 import { InfoTip } from '@/components/info-tip';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { useQuerySuggestions } from '@/hooks/use-query-suggestions';
@@ -133,9 +134,9 @@ const searchBarIconVariants = cva('', {
 
 // Explains the three ways to use the bar, shown from the (?) trigger beside it.
 const SEARCH_HELP = (
-  <div className="max-w-64 space-y-1.5 font-normal text-xs leading-relaxed">
+  <div className="max-w-64 space-y-1.5 text-xs leading-relaxed font-normal">
     <p className="font-semibold">How to search</p>
-    <ul className="list-disc space-y-1 pl-4 marker:text-primary/40">
+    <ul className="marker:text-primary/40 list-disc space-y-1 pl-4">
       <li>
         <span className="font-semibold">Ask a question</span> (e.g. “What is
         sanctification?”)
@@ -559,7 +560,7 @@ export default function SearchBar({
 
             {/* Results — desktop only, inside the enveloping panel. */}
             {isOpen ? (
-              <div className="hidden border-gray-950/10 border-t sm:block dark:border-white/10">
+              <div className="hidden border-t border-gray-950/10 sm:block dark:border-white/10">
                 <Autocomplete.List className="flex max-h-[60vh]">
                   {/* LEFT — recent searches + corpus entity suggestions */}
                   {items.length > 0 ? (
@@ -581,25 +582,25 @@ export default function SearchBar({
                         return (
                           <Fragment key={`${item.kind}:${item.value}`}>
                             {item.sectionLabel ? (
-                              <div className="px-4 pt-2 pb-1 font-medium text-primary/40 text-xs uppercase tracking-wide">
+                              <div className="text-primary/40 px-4 pt-2 pb-1 text-xs font-medium tracking-wide uppercase">
                                 {item.sectionLabel}
                               </div>
                             ) : null}
                             <Autocomplete.Item
                               value={item}
                               onClick={() => handleItemClick(item.value)}
-                              className="cursor-pointer px-4 py-2.5 text-primary/80 text-sm outline-none transition-colors hover:bg-gray-950/5 hover:text-primary data-highlighted:bg-gray-950/5 data-highlighted:text-primary dark:data-highlighted:bg-white/10 dark:hover:bg-white/10"
+                              className="text-primary/80 hover:text-primary data-highlighted:text-primary cursor-pointer px-4 py-2.5 text-sm transition-colors outline-none hover:bg-gray-950/5 data-highlighted:bg-gray-950/5 dark:hover:bg-white/10 dark:data-highlighted:bg-white/10"
                             >
                               <div className="flex items-center justify-between gap-3">
                                 <div className="flex min-w-0 items-center gap-3">
                                   <Icon
                                     size={16}
-                                    className="shrink-0 text-primary opacity-50"
+                                    className="text-primary shrink-0 opacity-50"
                                   />
                                   {item.kind === 'search' ? (
                                     <span className="truncate">
                                       Search for{' '}
-                                      <span className="font-medium text-primary">
+                                      <span className="text-primary font-medium">
                                         “{item.label}”
                                       </span>
                                     </span>
@@ -615,7 +616,7 @@ export default function SearchBar({
                                     onClick={(e) =>
                                       handleDeleteSearch(e, item.value)
                                     }
-                                    className="flex size-6 items-center justify-center text-primary/30 transition-colors hover:text-primary/60"
+                                    className="text-primary/30 hover:text-primary/60 flex size-6 items-center justify-center transition-colors"
                                     aria-label={`Remove ${item.value}`}
                                   >
                                     <IconX size={14} />
@@ -639,7 +640,7 @@ export default function SearchBar({
                     >
                       {facetGroups.map((group) => (
                         <Autocomplete.Group key={group.title} className="mb-1">
-                          <Autocomplete.GroupLabel className="px-4 pt-2 pb-1 font-medium text-primary/40 text-xs uppercase tracking-wide">
+                          <Autocomplete.GroupLabel className="text-primary/40 px-4 pt-2 pb-1 text-xs font-medium tracking-wide uppercase">
                             {group.title}
                           </Autocomplete.GroupLabel>
                           {group.rows.map((row) => (
@@ -647,7 +648,7 @@ export default function SearchBar({
                               key={row.value}
                               value={row}
                               onClick={row.onClick}
-                              className="flex cursor-pointer items-center justify-between gap-3 px-4 py-1.5 text-primary/80 text-sm outline-none transition-colors hover:bg-gray-950/5 hover:text-primary data-highlighted:bg-gray-950/5 data-highlighted:text-primary dark:data-highlighted:bg-white/10 dark:hover:bg-white/10"
+                              className="text-primary/80 hover:text-primary data-highlighted:text-primary flex cursor-pointer items-center justify-between gap-3 px-4 py-1.5 text-sm transition-colors outline-none hover:bg-gray-950/5 data-highlighted:bg-gray-950/5 dark:hover:bg-white/10 dark:data-highlighted:bg-white/10"
                             >
                               <span className="flex min-w-0 items-center gap-2">
                                 {row.avatarUrl ? (
@@ -659,7 +660,7 @@ export default function SearchBar({
                                 ) : null}
                                 <span className="truncate">{row.label}</span>
                               </span>
-                              <span className="shrink-0 text-primary/40 text-xs tabular-nums">
+                              <span className="text-primary/40 shrink-0 text-xs tabular-nums">
                                 {row.count}
                               </span>
                             </Autocomplete.Item>
@@ -691,7 +692,7 @@ export default function SearchBar({
           can't swallow taps, and inside wrapperRef so the outside-click dismiss
           ignores taps in it. */}
       {isOpen ? (
-        <div className="max-h-[calc(100dvh-13rem)] overflow-y-auto overscroll-contain border-gray-950/10 border-t py-2 sm:hidden dark:border-white/10">
+        <div className="max-h-[calc(100dvh-13rem)] overflow-y-auto overscroll-contain border-t border-gray-950/10 py-2 sm:hidden dark:border-white/10">
           {items.map((item) => {
             const Icon =
               item.kind === 'recent'
@@ -702,7 +703,7 @@ export default function SearchBar({
             return (
               <Fragment key={`m:${item.kind}:${item.value}`}>
                 {item.sectionLabel ? (
-                  <div className="px-4 pt-2 pb-1 font-medium text-primary/40 text-xs uppercase tracking-wide">
+                  <div className="text-primary/40 px-4 pt-2 pb-1 text-xs font-medium tracking-wide uppercase">
                     {item.sectionLabel}
                   </div>
                 ) : null}
@@ -710,16 +711,16 @@ export default function SearchBar({
                   <button
                     type="button"
                     onClick={() => handleItemClick(item.value)}
-                    className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left text-primary/90 text-sm"
+                    className="text-primary/90 flex min-w-0 flex-1 items-center gap-3 py-3 text-left text-sm"
                   >
                     <Icon
                       size={18}
-                      className="shrink-0 text-primary opacity-50"
+                      className="text-primary shrink-0 opacity-50"
                     />
                     {item.kind === 'search' ? (
                       <span className="truncate">
                         Search for{' '}
-                        <span className="font-medium text-primary">
+                        <span className="text-primary font-medium">
                           “{item.label}”
                         </span>
                       </span>
@@ -731,7 +732,7 @@ export default function SearchBar({
                     <button
                       type="button"
                       onClick={(e) => handleDeleteSearch(e, item.value)}
-                      className="flex size-8 shrink-0 items-center justify-center text-primary/30"
+                      className="text-primary/30 flex size-8 shrink-0 items-center justify-center"
                       aria-label={`Remove ${item.value}`}
                     >
                       <IconX size={18} />
@@ -743,10 +744,10 @@ export default function SearchBar({
           })}
 
           {hasFacets ? (
-            <div className="mt-1 space-y-3 border-gray-950/10 border-t px-4 pt-3 pb-1 dark:border-white/10">
+            <div className="mt-1 space-y-3 border-t border-gray-950/10 px-4 pt-3 pb-1 dark:border-white/10">
               {facetGroups.map((group) => (
                 <div key={`m:${group.title}`}>
-                  <div className="mb-1.5 font-medium text-primary/40 text-xs uppercase tracking-wide">
+                  <div className="text-primary/40 mb-1.5 text-xs font-medium tracking-wide uppercase">
                     {group.title}
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -755,7 +756,7 @@ export default function SearchBar({
                         key={`m:${group.title}:${row.value}`}
                         type="button"
                         onClick={row.onClick}
-                        className="flex shrink-0 items-center gap-1.5 rounded-full border border-gray-950/10 bg-gray-950/5 px-3 py-1.5 text-primary/90 text-sm dark:border-white/10 dark:bg-white/5"
+                        className="text-primary/90 flex shrink-0 items-center gap-1.5 rounded-full border border-gray-950/10 bg-gray-950/5 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-white/5"
                       >
                         {row.avatarUrl ? (
                           <img

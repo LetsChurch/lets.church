@@ -16,6 +16,7 @@ import {
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useDebounce } from 'use-debounce';
+
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { SortableItem, SortableList } from '@/components/sortable-list';
 import {
@@ -386,7 +387,7 @@ function PlaylistDetailsPage() {
           filter={null}
         >
           <div className="relative">
-            <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted">
+            <span className="text-muted pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
               <IconPlus size={16} />
             </span>
             <Combobox.Input
@@ -395,15 +396,15 @@ function PlaylistDetailsPage() {
             />
             <Combobox.Clear
               aria-label="Clear"
-              className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted transition-colors hover:text-primary"
+              className="text-muted hover:text-primary absolute inset-y-0 right-0 flex items-center pr-3 transition-colors"
             >
               <IconX size={16} />
             </Combobox.Clear>
           </div>
           <Combobox.Portal>
             <Combobox.Positioner sideOffset={4} className="z-50">
-              <Combobox.Popup className="max-h-64 w-[var(--anchor-width)] overflow-y-auto rounded-lg border-fancy-pants bg-white p-1 shadow-lg dark:bg-zinc-900">
-                <Combobox.Empty className="px-3 py-2 text-secondary text-sm empty:hidden">
+              <Combobox.Popup className="border-fancy-pants max-h-64 w-[var(--anchor-width)] overflow-y-auto rounded-lg bg-white p-1 shadow-lg dark:bg-zinc-900">
+                <Combobox.Empty className="text-secondary px-3 py-2 text-sm empty:hidden">
                   No uploads found
                 </Combobox.Empty>
                 <Combobox.List>
@@ -411,7 +412,7 @@ function PlaylistDetailsPage() {
                     <Combobox.Item
                       key={item.value}
                       value={item}
-                      className="flex cursor-default items-center rounded px-3 py-1.5 text-primary text-sm data-[highlighted]:bg-brand/10"
+                      className="text-primary data-[highlighted]:bg-brand/10 flex cursor-default items-center rounded px-3 py-1.5 text-sm"
                     >
                       {item.label}
                     </Combobox.Item>
@@ -439,7 +440,7 @@ function PlaylistDetailsPage() {
               {({ setNodeRef, style, attributes, listeners }) => (
                 <div
                   ref={setNodeRef}
-                  className="overflow-hidden rounded-xl border-fancy-pants bg-white p-5 dark:bg-zinc-900"
+                  className="border-fancy-pants overflow-hidden rounded-xl bg-white p-5 dark:bg-zinc-900"
                   style={style}
                 >
                   <div className="flex flex-wrap items-center justify-start gap-4">

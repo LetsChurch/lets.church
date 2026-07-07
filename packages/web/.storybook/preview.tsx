@@ -1,8 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 
-import type { Preview, } from '@storybook/react-vite'
+import { withThemeByDataAttribute } from '@storybook/addon-themes';
 import '@fontsource-variable/inter';
-import { withThemeByDataAttribute } from '@storybook/addon-themes'
+import type { Preview } from '@storybook/react-vite';
 import {
   createMemoryHistory,
   createRootRoute,
@@ -11,34 +11,38 @@ import {
   RouterProvider,
   useRouterState,
   type NotFoundRouteProps,
-} from '@tanstack/react-router'
-import { createContext, useContext, type ReactNode } from 'react'
-import '../src/app.css'
+} from '@tanstack/react-router';
+import { createContext, useContext, type ReactNode } from 'react';
+
+import '../src/app.css';
 
 //#region Dummy story router
 function RenderStory() {
   const storyFn = useContext(CurrentStoryContext);
 
   if (!storyFn) {
-    throw new Error("Storybook root not found");
+    throw new Error('Storybook root not found');
   }
 
   return storyFn();
 }
 
-export const CurrentStoryContext = createContext<(() => ReactNode) | undefined>(undefined);
+export const CurrentStoryContext = createContext<(() => ReactNode) | undefined>(
+  undefined,
+);
 
 function NotFoundComponent(_props: NotFoundRouteProps) {
   const state = useRouterState();
 
   return (
     <div>
-      <i>Warning:</i> Simulated route not found for path <code>{state.location.href}</code>
+      <i>Warning:</i> Simulated route not found for path{' '}
+      <code>{state.location.href}</code>
     </div>
   );
 }
 
-const storyPath = "/__story__";
+const storyPath = '/__story__';
 
 const storyRoute = createRoute({
   path: storyPath,
@@ -71,8 +75,8 @@ const preview: Preview = {
   parameters: {
     controls: {
       matchers: {
-       color: /(background|color)$/i,
-       date: /Date$/i,
+        color: /(background|color)$/i,
+        date: /Date$/i,
       },
     },
 
@@ -80,8 +84,8 @@ const preview: Preview = {
       // 'todo' - show a11y violations in the test UI only
       // 'error' - fail CI on a11y violations
       // 'off' - skip a11y checks entirely
-      test: 'todo'
-    }
+      test: 'todo',
+    },
   },
   decorators: [
     storyRouterDecorator,

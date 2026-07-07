@@ -4,7 +4,9 @@
 // "no preference — use the default translation".
 
 import { eq } from 'drizzle-orm';
+
 import { db, userPreference } from '@/db';
+
 import { parseCookies } from './oidc';
 
 // How the divine name (YHWH) is rendered in the reading: the traditional

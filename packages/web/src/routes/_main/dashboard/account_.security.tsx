@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
+
 import { Button, Text, Title } from '@/components/ui';
 import { useAppForm } from '@/components/ui/form';
 import { showFailure, showSuccess } from '@/components/ui/notifications';
@@ -74,7 +75,7 @@ function SecurityPage() {
       </Title>
 
       <div className="flex max-w-[600px] flex-col gap-5">
-        <div className="overflow-hidden rounded-lg border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900">
+        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
           <Text fw={500} className="mb-4">
             Change Password
           </Text>
@@ -131,7 +132,7 @@ function SecurityPage() {
           </form>
         </div>
 
-        <div className="overflow-hidden rounded-lg border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900">
+        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
           <div className="mb-2.5 flex flex-wrap items-start justify-between gap-4">
             <div>
               <Text fw={500}>Two-Factor Authentication</Text>
@@ -145,7 +146,7 @@ function SecurityPage() {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-lg border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900">
+        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
           <div className="mb-2.5 flex flex-wrap items-start justify-between gap-4">
             <div>
               <Text fw={500}>Active Sessions</Text>

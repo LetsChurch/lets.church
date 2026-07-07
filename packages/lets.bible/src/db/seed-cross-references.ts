@@ -9,8 +9,9 @@
 // Run in the letsbible container: `just lb-seed-crossrefs`
 
 import { eq } from 'drizzle-orm';
-import { loadCrossRefs } from '../server/overlays';
+
 import { bibleCrossReference, db } from '.';
+import { loadCrossRefs } from '../server/overlays';
 
 // translation id → which translation's cross-reference set it uses.
 const TRANSLATIONS: [id: string, reference: string][] = [

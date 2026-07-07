@@ -1,5 +1,6 @@
 import { condition, proxyActivities, setHandler } from '@temporalio/workflow';
 import { invariant } from 'es-toolkit';
+
 import type * as activities from '../../activities/background';
 import { BACKGROUND_QUEUE } from '../../queues';
 import { completeResetPasswordSignal } from '../../refs';

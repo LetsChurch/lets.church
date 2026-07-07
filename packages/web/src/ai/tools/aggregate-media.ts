@@ -1,8 +1,10 @@
 import { buildMediaLexicalRequest, osSearch } from '@letschurch/opensearch';
 import { tool } from 'ai';
 import { z } from 'zod';
+
 import { OutgoingIdSchema } from '@/schemas/common';
 import { resolveChannelNames } from '@/trpc/search/channels';
+
 import { sanitizeSourceText } from '../sanitize';
 
 const MatchSchema = z.object({

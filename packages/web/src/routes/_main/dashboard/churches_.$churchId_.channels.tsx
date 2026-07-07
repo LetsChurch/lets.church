@@ -9,6 +9,7 @@ import {
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useDebounce } from 'use-debounce';
+
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import {
   ActionIcon,
@@ -231,7 +232,7 @@ function ChurchChannelsPage() {
                     />
                     <Combobox.Clear
                       aria-label="Clear channel search"
-                      className="absolute inset-y-0 right-0 flex items-center pr-2 text-muted hover:text-primary"
+                      className="text-muted hover:text-primary absolute inset-y-0 right-0 flex items-center pr-2"
                     >
                       <IconX size={16} />
                     </Combobox.Clear>
@@ -239,8 +240,8 @@ function ChurchChannelsPage() {
                 </InputWrapper>
                 <Combobox.Portal>
                   <Combobox.Positioner sideOffset={4} className="z-[60]">
-                    <Combobox.Popup className="max-h-64 w-[var(--anchor-width)] overflow-y-auto rounded-lg border-fancy-pants bg-white p-1 shadow-lg dark:bg-zinc-900">
-                      <Combobox.Empty className="px-3 py-6 text-center text-secondary text-sm empty:hidden">
+                    <Combobox.Popup className="border-fancy-pants max-h-64 w-[var(--anchor-width)] overflow-y-auto rounded-lg bg-white p-1 shadow-lg dark:bg-zinc-900">
+                      <Combobox.Empty className="text-secondary px-3 py-6 text-center text-sm empty:hidden">
                         {debouncedSearchQuery.length < 2
                           ? 'Type at least 2 characters to search.'
                           : 'No channels found.'}
@@ -254,7 +255,7 @@ function ChurchChannelsPage() {
                           <Combobox.Item
                             key={item.value}
                             value={item}
-                            className="flex cursor-default items-center gap-3 rounded-md px-2 py-1.5 data-[highlighted]:bg-brand/10"
+                            className="data-[highlighted]:bg-brand/10 flex cursor-default items-center gap-3 rounded-md px-2 py-1.5"
                           >
                             <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-blue-500">
                               <IconBroadcast size={16} className="text-white" />

@@ -3,6 +3,7 @@ import {
   localOnlyCollectionOptions,
   localStorageCollectionOptions,
 } from '@tanstack/react-db';
+
 import type { LocalHighlight, LocalNote, LocalProgress } from './types';
 
 // First-party TanStack DB collections — the reactive, local-first source of

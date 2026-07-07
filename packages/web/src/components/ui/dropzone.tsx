@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from 'react';
+
 import { cn } from '@/util/cn';
 
 // A Mantine-compatible Dropzone built on native drag/drop + a hidden file
@@ -117,7 +118,7 @@ export function Dropzone({
 
   return (
     <DropzoneStatusContext.Provider value={status}>
-      {/* biome-ignore lint/a11y/useSemanticElements: a drag-and-drop dropzone needs a div, not a native button */}
+      {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a drag-and-drop dropzone needs a div, not a native button */}
       <div
         role="button"
         tabIndex={disabled ? -1 : 0}

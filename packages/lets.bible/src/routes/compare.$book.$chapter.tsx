@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { z } from 'zod';
+
 import { bookBySlug } from '@/lib/canon';
 import { adjacentChapter, chapterLink } from '@/lib/reference';
 import { useTRPC } from '@/trpc/react';
@@ -159,7 +160,7 @@ function VerseText({ segments }: { segments: Segment[] | null }) {
         seg.diff ? (
           <mark
             key={i}
-            className="rounded-[3px] bg-[rgba(154,123,63,0.18)] box-decoration-clone px-[2px] text-ink-strong"
+            className="text-ink-strong rounded-[3px] bg-[rgba(154,123,63,0.18)] box-decoration-clone px-[2px]"
           >
             {seg.text}
           </mark>
@@ -222,14 +223,14 @@ function Compare() {
         : `${book.name} ${chapterNum}:${firstVerse}–${lastVerse}`;
 
   return (
-    <div className="flex min-h-screen flex-col bg-paper [--gutter:38px] sm:[--gutter:56px]">
+    <div className="bg-paper flex min-h-screen flex-col [--gutter:38px] sm:[--gutter:56px]">
       {/* sticky header + column labels (full width) */}
-      <div className="sticky top-0 z-30 border-line border-b bg-paper-soft/95 backdrop-blur-sm">
+      <div className="border-line bg-paper-soft/95 sticky top-0 z-30 border-b backdrop-blur-sm">
         <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-3 sm:px-6">
           <Link
             {...chapterLink(bookSlug, chapterNum)}
             title="Back to reading"
-            className="inline-flex items-center gap-[7px] justify-self-start font-semibold text-[13.5px] text-muted hover:text-ink"
+            className="text-muted hover:text-ink inline-flex items-center gap-[7px] justify-self-start text-[13.5px] font-semibold"
           >
             <span className="text-[15px]">←</span>
             <span className="truncate">
@@ -237,10 +238,10 @@ function Compare() {
             </span>
           </Link>
           <div className="justify-self-center text-center">
-            <span className="font-bold font-serif text-[18px] text-ink-strong sm:text-[19px]">
+            <span className="text-ink-strong font-serif text-[18px] font-bold sm:text-[19px]">
               Compare
             </span>
-            <span className="ml-2 hidden text-[13.5px] text-muted-2 sm:inline">
+            <span className="text-muted-2 ml-2 hidden text-[13.5px] sm:inline">
               {range}
             </span>
           </div>
@@ -256,7 +257,7 @@ function Compare() {
 
         {/* column header row */}
         <div
-          className="grid border-line/70 border-t"
+          className="border-line/70 grid border-t"
           style={{ gridTemplateColumns: gridTemplate }}
         >
           <span />
@@ -265,10 +266,10 @@ function Compare() {
               key={t.id}
               className="border-line/70 border-l px-4 py-2.5 sm:px-6"
             >
-              <div className="font-bold text-[13px] text-ink-strong tracking-[0.03em]">
+              <div className="text-ink-strong text-[13px] font-bold tracking-[0.03em]">
                 {t.id}
               </div>
-              <div className="truncate text-[11.5px] text-muted-2">
+              <div className="text-muted-2 truncate text-[11.5px]">
                 {t.name}
               </div>
             </div>
@@ -285,7 +286,7 @@ function Compare() {
             <div
               key={row.verse}
               data-compare-verse={row.verse}
-              className={`grid border-line/55 border-b ${
+              className={`border-line/55 grid border-b ${
                 targeted
                   ? 'bg-[rgba(154,123,63,0.1)]'
                   : ri % 2 === 1
@@ -294,13 +295,13 @@ function Compare() {
               }`}
               style={{ gridTemplateColumns: gridTemplate }}
             >
-              <div className="select-none pt-4 pr-2 text-right font-sans font-semibold text-[11px] text-gold-soft sm:pt-5">
+              <div className="text-gold-soft pt-4 pr-2 text-right font-sans text-[11px] font-semibold select-none sm:pt-5">
                 {row.verse}
               </div>
               {row.texts.map((_text, i) => (
                 <p
                   key={data.translations[i].id}
-                  className="border-line/55 border-l px-4 py-4 font-serif text-[15px] text-ink leading-[1.62] sm:px-6 sm:py-5 sm:text-[16.5px] sm:leading-[1.7]"
+                  className="border-line/55 text-ink border-l px-4 py-4 font-serif text-[15px] leading-[1.62] sm:px-6 sm:py-5 sm:text-[16.5px] sm:leading-[1.7]"
                 >
                   <VerseText segments={segments[i]} />
                 </p>
@@ -352,22 +353,22 @@ function AddTranslation({
 
   return (
     <Menu.Root>
-      <Menu.Trigger className="inline-flex items-center gap-1 rounded-[7px] px-2 py-1 font-semibold text-[13.5px] text-gold outline-none hover:bg-paper focus-visible:ring-2 focus-visible:ring-gold/40 data-[popup-open]:bg-paper">
+      <Menu.Trigger className="text-gold hover:bg-paper focus-visible:ring-gold/40 data-[popup-open]:bg-paper inline-flex items-center gap-1 rounded-[7px] px-2 py-1 text-[13.5px] font-semibold outline-none focus-visible:ring-2">
         + Add translation
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Positioner sideOffset={6} align="end">
-          <Menu.Popup className="z-40 rounded-xl border border-line-strong bg-paper-raised p-1 shadow-[0_26px_50px_-28px_rgba(40,34,18,0.45)]">
+          <Menu.Popup className="border-line-strong bg-paper-raised z-40 rounded-xl border p-1 shadow-[0_26px_50px_-28px_rgba(40,34,18,0.45)]">
             {addable.map((t) => (
               <Menu.Item
                 key={t.id}
                 onClick={() => add(t.id)}
-                className="flex cursor-pointer items-baseline gap-2 rounded-md px-3 py-1.5 outline-none data-highlighted:bg-paper-soft"
+                className="data-highlighted:bg-paper-soft flex cursor-pointer items-baseline gap-2 rounded-md px-3 py-1.5 outline-none"
               >
-                <span className="font-bold text-[13px] text-ink-strong">
+                <span className="text-ink-strong text-[13px] font-bold">
                   {t.id}
                 </span>
-                <span className="text-[12px] text-muted-2">{t.name}</span>
+                <span className="text-muted-2 text-[12px]">{t.name}</span>
               </Menu.Item>
             ))}
           </Menu.Popup>
@@ -408,7 +409,7 @@ function CompareNav({
           to="/compare/$book/$chapter"
           params={{ book: next.book.slug, chapter: String(next.chapter) }}
           search={search}
-          className="font-semibold text-gold"
+          className="text-gold font-semibold"
         >
           {next.book.name} {next.chapter} ›
         </Link>

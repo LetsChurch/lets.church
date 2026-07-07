@@ -1,0 +1,36 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "oxc"],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "typescript/consistent-type-imports": [
+      "error",
+      { "disallowTypeAnnotations": false }
+    ],
+    "typescript/consistent-type-exports": "error",
+    "typescript/consistent-type-definitions": ["error", "type"],
+    "typescript/no-explicit-any": "error",
+    "typescript/no-empty-object-type": "error",
+    "no-unused-vars": [
+      "error",
+      {
+        "args": "none",
+        "caughtErrorsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "argsIgnorePattern": "^_",
+        "destructuredArrayIgnorePattern": "^_"
+      }
+    ]
+  },
+  "ignorePatterns": [
+    "**/*.gen.*",
+    "**/*.module.css.d.ts",
+    "**/generated/**",
+    "**/drizzle/**",
+    "**/prisma/**",
+    "**/seed/**",
+    "**/public/**"
+  ]
+}

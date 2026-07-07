@@ -1,5 +1,6 @@
 import { IconInfoCircle } from '@tabler/icons-react';
 import type { ComponentProps, ReactNode } from 'react';
+
 import { LcTooltip } from '@/components/lc-tooltip';
 import { cn } from '@/util/cn';
 

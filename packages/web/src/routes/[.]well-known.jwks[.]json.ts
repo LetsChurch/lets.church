@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
+
 import { getPublicJwks } from '@/util/oidc/keys';
 
 export const Route = createFileRoute('/.well-known/jwks.json')({

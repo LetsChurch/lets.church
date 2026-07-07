@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
+
 import { bookBySlug, findBook } from '@/lib/canon';
+
 import { collections } from './collections';
 import { scheduleSync } from './sync';
 import type {

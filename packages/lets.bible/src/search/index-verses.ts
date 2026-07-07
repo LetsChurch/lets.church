@@ -5,6 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import { bibleVerse, db } from '../db';
 import { findBook } from '../lib/canon';
 import { client, VERSE_INDEX, waitForOpenSearch } from './client';

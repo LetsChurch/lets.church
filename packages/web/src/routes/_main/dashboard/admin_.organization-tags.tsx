@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
+
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { ActionIcon, Badge, Button, Table, Text, Title } from '@/components/ui';
 import { useAppForm } from '@/components/ui/form';
@@ -251,7 +252,7 @@ function OrganizationTagsPage() {
 
         {Object.entries(groupedTags).map(([category, categoryTags]) => (
           <div key={category}>
-            <Title order={2} className="mb-4 font-semibold text-xl">
+            <Title order={2} className="mb-4 text-xl font-semibold">
               {CATEGORY_OPTIONS.find((opt) => opt.value === category)?.label ||
                 category}
             </Title>

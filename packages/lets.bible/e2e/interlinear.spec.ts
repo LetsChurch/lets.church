@@ -35,7 +35,9 @@ test('LB-IL-02 tapping an interlinear word opens the study panel', async ({
   await expect(panel).toContainText('John 1:1'); // verse context
 });
 
-test('LB-IL-10 selecting a word does not shift the layout', async ({ page }) => {
+test('LB-IL-10 selecting a word does not shift the layout', async ({
+  page,
+}) => {
   await page.goto('/bible/john/1?view=interlinear');
   const word = page.locator('button[data-strong="G3056"]').first(); // "Word"
   await expect(word).toBeVisible();

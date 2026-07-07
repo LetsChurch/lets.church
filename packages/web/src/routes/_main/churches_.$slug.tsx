@@ -19,6 +19,7 @@ import {
 } from '@tabler/icons-react';
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
+
 import { Avatar } from '@/components/avatar';
 import Header from '@/components/header';
 import { MediaCarousel } from '@/components/media-carousel';
@@ -203,10 +204,10 @@ function ChurchProfileComponent() {
           className="mx-auto mb-6 text-zinc-300 dark:text-zinc-700"
           strokeWidth={1.5}
         />
-        <h1 className="font-bold text-4xl text-zinc-900 tracking-tight dark:text-white">
+        <h1 className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-white">
           Church not found
         </h1>
-        <p className="mx-auto mt-4 max-w-md text-lg text-zinc-600 leading-relaxed dark:text-zinc-400">
+        <p className="mx-auto mt-4 max-w-md text-lg leading-relaxed text-zinc-600 dark:text-zinc-400">
           The church you're looking for doesn't exist or may have been removed.
         </p>
         <Link
@@ -300,8 +301,8 @@ function ChurchProfileComponent() {
 
       <div className="isolate mx-auto max-w-5xl px-6 pb-24">
         {/* Profile Header */}
-        <div className="-mt-12 sm:-mt-16 mb-8 sm:mb-12">
-          <div className="flex items-center overflow-hidden rounded-full border-fancy-pants bg-white shadow-lg dark:bg-zinc-900">
+        <div className="-mt-12 mb-8 sm:-mt-16 sm:mb-12">
+          <div className="border-fancy-pants flex items-center overflow-hidden rounded-full bg-white shadow-lg dark:bg-zinc-900">
             <Avatar
               src={church.avatarUrl}
               alt={church.name}
@@ -309,7 +310,7 @@ function ChurchProfileComponent() {
               fallbackClassName="text-xl sm:text-3xl lg:text-4xl"
             />
             <div className="flex-1 px-4 py-3 sm:px-6 sm:py-4 lg:px-8 lg:py-6">
-              <h1 className="font-bold text-xl text-zinc-900 tracking-tight sm:text-3xl lg:text-4xl dark:text-white">
+              <h1 className="text-xl font-bold tracking-tight text-zinc-900 sm:text-3xl lg:text-4xl dark:text-white">
                 {church.name}
               </h1>
             </div>
@@ -321,10 +322,10 @@ function ChurchProfileComponent() {
           <div className="space-y-8 lg:col-span-2">
             {/* Description and Tags */}
             {church.description || church.tags.length > 0 ? (
-              <section className="rounded-2xl border-fancy-pants bg-zinc-100 p-5 dark:bg-zinc-900">
-                <h2 className="mb-4 font-medium text-primary text-sm">About</h2>
+              <section className="border-fancy-pants rounded-2xl bg-zinc-100 p-5 dark:bg-zinc-900">
+                <h2 className="text-primary mb-4 text-sm font-medium">About</h2>
                 {church.description ? (
-                  <p className="whitespace-pre-wrap text-lg text-secondary leading-relaxed">
+                  <p className="text-secondary text-lg leading-relaxed whitespace-pre-wrap">
                     {church.description}
                   </p>
                 ) : null}
@@ -353,7 +354,7 @@ function ChurchProfileComponent() {
                       })
                       .map(([category, tags]) => (
                         <div key={category} className="mb-4 last:mb-0">
-                          <h3 className="mb-2 font-medium text-muted text-xs uppercase tracking-wider">
+                          <h3 className="text-muted mb-2 text-xs font-medium tracking-wider uppercase">
                             {category.toLowerCase().replace('_', ' ')}
                           </h3>
                           <div className="flex flex-wrap gap-1.5">
@@ -387,8 +388,8 @@ function ChurchProfileComponent() {
             {/* Note: Only show this section if there are channels OR if there's contact info to encourage upload.
               Churches without channels AND without contact info shouldn't really be listed anyway. */}
             {church.officialChannels.length > 0 || hasContactInfo ? (
-              <section className="rounded-2xl border-fancy-pants bg-zinc-100 p-5 dark:bg-zinc-900">
-                <h2 className="mb-4 font-medium text-primary text-sm">
+              <section className="border-fancy-pants rounded-2xl bg-zinc-100 p-5 dark:bg-zinc-900">
+                <h2 className="text-primary mb-4 text-sm font-medium">
                   Official Channels
                 </h2>
                 {church.officialChannels.length > 0 ? (
@@ -408,7 +409,7 @@ function ChurchProfileComponent() {
                             fallbackClassName="text-sm"
                           />
                           <div className="min-w-0 flex-1">
-                            <h3 className="truncate font-semibold text-primary">
+                            <h3 className="text-primary truncate font-semibold">
                               {channel.name}
                             </h3>
                             <p className="text-secondary text-sm">
@@ -421,19 +422,19 @@ function ChurchProfileComponent() {
                   </div>
                 ) : (
                   <div className="rounded-xl bg-zinc-50/50 p-6 text-center dark:bg-zinc-800/50">
-                    <p className="mb-4 text-secondary text-sm leading-relaxed">
+                    <p className="text-secondary mb-4 text-sm leading-relaxed">
                       Want to search and watch their sermons? Let them know!
                     </p>
                     {church.primaryEmail ? (
                       <a
                         href={`mailto:${church.primaryEmail}?subject=${encodeURIComponent(`Upload your sermons to Let's Church`)}&body=${encodeURIComponent(`Hi,\n\nI noticed that ${church.name} is listed on Let's Church (https://lets.church), but doesn't have any sermons uploaded yet.\n\nI'd love to be able to search and watch your sermons on the platform. Would you consider uploading them?\n\nThanks!`)}`}
-                        className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 font-medium text-sm text-white transition-all hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                        className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
                       >
                         <IconMail size={16} strokeWidth={2} />
                         Send them an email
                       </a>
                     ) : (
-                      <div className="space-y-2 text-secondary text-sm">
+                      <div className="text-secondary space-y-2 text-sm">
                         <p className="font-medium">Contact them:</p>
                         <div className="flex flex-wrap justify-center gap-3">
                           {church.primaryPhoneNumber ? (
@@ -464,7 +465,7 @@ function ChurchProfileComponent() {
 
                 {churchMedia && churchMedia.length > 0 ? (
                   <div className="mt-6">
-                    <h3 className="mb-4 font-medium text-primary text-sm">
+                    <h3 className="text-primary mb-4 text-sm font-medium">
                       Recent Uploads
                     </h3>
                     <MediaCarousel
@@ -486,13 +487,13 @@ function ChurchProfileComponent() {
                           <Link
                             to="/channel/$slug"
                             params={{ slug: church.officialChannels[0].slug }}
-                            className="flex aspect-video items-center justify-center rounded-lg border-fancy-pants bg-white transition-colors hover:bg-zinc-50 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                            className="border-fancy-pants flex aspect-video items-center justify-center rounded-lg bg-white transition-colors hover:bg-zinc-50 dark:bg-zinc-800 dark:hover:bg-zinc-700"
                           >
                             <div className="flex items-center gap-2 text-center">
-                              <span className="font-medium text-primary text-sm">
+                              <span className="text-primary text-sm font-medium">
                                 Browse all content
                               </span>
-                              <IconChevronRight className="size-4 text-muted" />
+                              <IconChevronRight className="text-muted size-4" />
                             </div>
                           </Link>
                         ) : undefined
@@ -505,8 +506,8 @@ function ChurchProfileComponent() {
 
             {/* Endorsed Channels */}
             {church.endorsedChannels.length > 0 ? (
-              <section className="rounded-2xl border-fancy-pants bg-zinc-100 p-5 dark:bg-zinc-900">
-                <h2 className="mb-4 font-medium text-primary text-sm">
+              <section className="border-fancy-pants rounded-2xl bg-zinc-100 p-5 dark:bg-zinc-900">
+                <h2 className="text-primary mb-4 text-sm font-medium">
                   Endorsed Channels
                 </h2>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -525,7 +526,7 @@ function ChurchProfileComponent() {
                           fallbackClassName="text-sm"
                         />
                         <div className="min-w-0 flex-1">
-                          <h3 className="truncate font-semibold text-primary">
+                          <h3 className="text-primary truncate font-semibold">
                             {channel.name}
                           </h3>
                           <p className="text-secondary text-sm">Endorsed</p>
@@ -542,8 +543,8 @@ function ChurchProfileComponent() {
           <div className="space-y-6 lg:col-span-1">
             {/* Contact Information */}
             {hasContactInfo || hasSocialLinks ? (
-              <section className="rounded-2xl border-fancy-pants bg-zinc-100 p-5 dark:bg-zinc-900">
-                <h2 className="mb-4 flex items-center gap-2 font-medium text-primary text-sm">
+              <section className="border-fancy-pants rounded-2xl bg-zinc-100 p-5 dark:bg-zinc-900">
+                <h2 className="text-primary mb-4 flex items-center gap-2 text-sm font-medium">
                   <IconBuilding size={16} strokeWidth={2} />
                   Contact
                 </h2>
@@ -555,10 +556,10 @@ function ChurchProfileComponent() {
                     >
                       <IconMail
                         size={20}
-                        className="mt-0.5 shrink-0 text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                        className="text-secondary mt-0.5 shrink-0 group-hover:text-indigo-600 dark:group-hover:text-white"
                         strokeWidth={1.5}
                       />
-                      <span className="break-all text-secondary text-sm group-hover:text-indigo-600 dark:group-hover:text-white">
+                      <span className="text-secondary text-sm break-all group-hover:text-indigo-600 dark:group-hover:text-white">
                         {church.primaryEmail}
                       </span>
                     </a>
@@ -570,7 +571,7 @@ function ChurchProfileComponent() {
                     >
                       <IconPhone
                         size={20}
-                        className="mt-0.5 shrink-0 text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                        className="text-secondary mt-0.5 shrink-0 group-hover:text-indigo-600 dark:group-hover:text-white"
                         strokeWidth={1.5}
                       />
                       <span className="text-secondary text-sm group-hover:text-indigo-600 dark:group-hover:text-white">
@@ -587,10 +588,10 @@ function ChurchProfileComponent() {
                     >
                       <IconWorld
                         size={20}
-                        className="mt-0.5 shrink-0 text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                        className="text-secondary mt-0.5 shrink-0 group-hover:text-indigo-600 dark:group-hover:text-white"
                         strokeWidth={1.5}
                       />
-                      <span className="break-all text-secondary text-sm group-hover:text-indigo-600 dark:group-hover:text-white">
+                      <span className="text-secondary text-sm break-all group-hover:text-indigo-600 dark:group-hover:text-white">
                         {church.websiteUrl.replace(/^https?:\/\//, '')}
                       </span>
                     </a>
@@ -755,8 +756,8 @@ function ChurchProfileComponent() {
 
             {/* Addresses */}
             {church.addresses.length > 0 ? (
-              <section className="rounded-2xl border-fancy-pants bg-zinc-100 p-5 dark:bg-zinc-900">
-                <h2 className="mb-4 flex items-center gap-2 font-medium text-primary text-sm">
+              <section className="border-fancy-pants rounded-2xl bg-zinc-100 p-5 dark:bg-zinc-900">
+                <h2 className="text-primary mb-4 flex items-center gap-2 text-sm font-medium">
                   <IconMapPin size={16} strokeWidth={2} />
                   {church.addresses.length === 1 ? 'Location' : 'Locations'}
                 </h2>
@@ -780,11 +781,11 @@ function ChurchProfileComponent() {
                     return (
                       <div key={addressKey} className="rounded-lg p-3">
                         {address.type && church.addresses.length > 1 ? (
-                          <p className="mb-2 font-medium text-indigo-600 text-xs uppercase tracking-wider dark:text-indigo-400">
+                          <p className="mb-2 text-xs font-medium tracking-wider text-indigo-600 uppercase dark:text-indigo-400">
                             {address.type.toLowerCase()}
                           </p>
                         ) : null}
-                        <address className="space-y-0.5 text-secondary text-sm not-italic leading-relaxed">
+                        <address className="text-secondary space-y-0.5 text-sm leading-relaxed not-italic">
                           {addressLines.map((line) => (
                             <p key={line}>{line}</p>
                           ))}

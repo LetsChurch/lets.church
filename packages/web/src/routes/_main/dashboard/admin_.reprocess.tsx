@@ -4,6 +4,7 @@ import { IconAlertTriangle } from '@tabler/icons-react';
 import { useMutation, useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useDeferredValue, useState } from 'react';
+
 import {
   Alert,
   Badge,
@@ -39,7 +40,7 @@ function SegmentedControl({
         if (typeof v === 'string') onChange(v);
       }}
       disabled={disabled}
-      className="inline-flex w-fit items-center gap-0.5 rounded-lg border-fancy-pants bg-gray-950/5 p-0.5 dark:bg-white/5"
+      className="border-fancy-pants inline-flex w-fit items-center gap-0.5 rounded-lg bg-gray-950/5 p-0.5 dark:bg-white/5"
     >
       {data.map((item) => (
         <Toggle
@@ -218,7 +219,7 @@ function ReprocessPage() {
       </div>
 
       {/* New transcription pipeline */}
-      <div className="overflow-hidden rounded-xl border-fancy-pants bg-white dark:bg-zinc-900">
+      <div className="border-fancy-pants overflow-hidden rounded-xl bg-white dark:bg-zinc-900">
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -309,7 +310,7 @@ function ReprocessPage() {
       </div>
 
       {/* By channel */}
-      <div className="overflow-hidden rounded-xl border-fancy-pants bg-white dark:bg-zinc-900">
+      <div className="border-fancy-pants overflow-hidden rounded-xl bg-white dark:bg-zinc-900">
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -435,7 +436,7 @@ function ReprocessPage() {
       </div>
 
       {/* All uploads */}
-      <div className="overflow-hidden rounded-xl border-fancy-pants bg-white dark:bg-zinc-900">
+      <div className="border-fancy-pants overflow-hidden rounded-xl bg-white dark:bg-zinc-900">
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+
 import { type OsMsearchItem, type OsQuery, osSearch } from './client';
 
 // Hybrid search over the unified `lc_media_v1` index. Two stages:
@@ -940,7 +941,7 @@ export async function runMediaFacets(args: BuildMediaSearchArgs): Promise<{
   // Verse + book are one "scripture" dimension: the verse facet drops both.
   const hasScripture = Boolean(
     (args.bibleRefs && args.bibleRefs.length > 0) ||
-      (args.bibleBooks && args.bibleBooks.length > 0),
+    (args.bibleBooks && args.bibleBooks.length > 0),
   );
   const hasDate = Boolean(
     args.publishedAt && (args.publishedAt.gte || args.publishedAt.lte),

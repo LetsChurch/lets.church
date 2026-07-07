@@ -1,5 +1,6 @@
 import { Tooltip } from '@base-ui/react/tooltip';
 import { type ComponentPropsWithoutRef, Fragment } from 'react';
+
 import { cn } from '@/util/cn';
 
 type LcButtonGroupProps = {
@@ -43,9 +44,9 @@ export default function LcButtonGroup({
                       sideOffset={8}
                       className="z-50"
                     >
-                      <Tooltip.Popup className="rounded-lg border-fancy-pants bg-white px-2 py-1.5 font-semibold text-xs shadow-lg dark:bg-zinc-900 dark:text-primary">
+                      <Tooltip.Popup className="border-fancy-pants dark:text-primary rounded-lg bg-white px-2 py-1.5 text-xs font-semibold shadow-lg dark:bg-zinc-900">
                         {tooltip}
-                        <Tooltip.Arrow className="data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=top]:-bottom-1 data-[side=right]:-left-1" />
+                        <Tooltip.Arrow className="data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=right]:-left-1 data-[side=top]:-bottom-1" />
                       </Tooltip.Popup>
                     </Tooltip.Positioner>
                   </Tooltip.Portal>

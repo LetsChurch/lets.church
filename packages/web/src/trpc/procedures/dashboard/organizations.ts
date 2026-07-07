@@ -8,6 +8,7 @@ import {
 import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
 import { and, count, eq } from 'drizzle-orm';
+
 import {
   cancelOrganizationInvitationSchema,
   getAllOrganizationsSchema,
@@ -26,6 +27,7 @@ import { mantineAvatarSm2x, mantineAvatarXl2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { getPublicImageUrl } from '@/util/server-env';
 import { uuidTranslator } from '@/util/uuid';
+
 import { authProcedure, router } from '../../trpc';
 
 const moduleLogger = logger.child({

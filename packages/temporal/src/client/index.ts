@@ -2,6 +2,7 @@ import { Client, Connection, type WorkflowOptions } from '@temporalio/client';
 import PLazy from 'p-lazy';
 import waitOn from 'wait-on';
 import { z } from 'zod';
+
 import type { DocumentKind } from '../activities/background/index-document';
 import { emptySignal } from '../refs';
 import { UPLOAD_ID_KEY } from '../search-attributes';
@@ -90,7 +91,9 @@ export async function createUploadRecord(
   data: UploadRecordCreateData,
   importId?: string,
 ) {
-  const res = await (await client).workflow.start(createUploadRecordWorkflow, {
+  const res = await (
+    await client
+  ).workflow.start(createUploadRecordWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     ...staticMeta({

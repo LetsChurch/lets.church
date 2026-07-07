@@ -1,4 +1,5 @@
 import { proxyActivities } from '@temporalio/workflow';
+
 import type * as activities from '../../activities/background';
 import type { EmailArgs } from '../../activities/background/send-email';
 import { BACKGROUND_QUEUE } from '../../queues';

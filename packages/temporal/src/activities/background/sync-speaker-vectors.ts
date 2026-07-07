@@ -8,6 +8,7 @@ import {
 } from '@letschurch/db';
 import { client, SPEAKER_VECTOR_INDEX } from '@letschurch/opensearch';
 import { and, asc, eq, isNull } from 'drizzle-orm';
+
 import logger from '../../util/logger';
 
 const moduleLogger = logger.child({

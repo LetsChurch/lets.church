@@ -1,5 +1,6 @@
 import { Tabs as BaseTabs } from '@base-ui/react/tabs';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+
 import { cn } from '@/util/cn';
 
 // A Mantine-compatible wrapper around Base UI Tabs so migrated dashboard pages
@@ -55,7 +56,7 @@ function TabsList({
     >
       {children}
       <BaseTabs.Indicator
-        className="absolute bottom-0 h-[2px] rounded-t bg-brand transition-all duration-200"
+        className="bg-brand absolute bottom-0 h-[2px] rounded-t transition-all duration-200"
         style={{
           left: 'var(--active-tab-left)',
           width: 'var(--active-tab-width)',

@@ -2,7 +2,9 @@ import { db, NewsletterMailingList } from '@letschurch/db';
 import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+
 import logger from '@/util/logger';
+
 import { authProcedure, router } from '../trpc';
 
 const moduleLogger = logger.child({

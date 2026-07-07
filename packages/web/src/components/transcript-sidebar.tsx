@@ -1,5 +1,6 @@
 import { useStore } from '@nanostores/react';
 import { IconSearch, IconX } from '@tabler/icons-react';
+
 import { Transcript } from '@/components/transcript';
 import { TranscriptSearchResults } from '@/components/transcript-search-results';
 import {
@@ -40,9 +41,9 @@ export function TranscriptSidebar({ transcript }: TranscriptSidebarProps) {
 
   return (
     <div className="h-full">
-      <div className="sticky top-4 bottom-4 isolate flex h-[calc(100vh-6rem)] flex-col overflow-hidden rounded-2xl border-fancy-pants bg-zinc-100 dark:bg-zinc-900">
+      <div className="border-fancy-pants sticky top-4 bottom-4 isolate flex h-[calc(100vh-6rem)] flex-col overflow-hidden rounded-2xl bg-zinc-100 dark:bg-zinc-900">
         {/* Sidebar Header */}
-        <div className="flex items-center gap-2 border-zinc-200 border-b px-5 py-2.5 dark:border-zinc-800">
+        <div className="flex items-center gap-2 border-b border-zinc-200 px-5 py-2.5 dark:border-zinc-800">
           {isSearchActive ? (
             <>
               <div className="relative flex-1">
@@ -51,12 +52,12 @@ export function TranscriptSidebar({ transcript }: TranscriptSidebarProps) {
                   value={searchQuery}
                   onChange={handleSearchChange}
                   placeholder="Search transcript..."
-                  className="w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1.5 pr-8 text-primary text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-800"
-                  // biome-ignore lint/a11y/noAutofocus: this is rendered by user interaction
+                  className="text-primary w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1.5 pr-8 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-zinc-800"
+                  // oxlint-disable-next-line jsx-a11y/no-autofocus -- this is rendered by user interaction
                   autoFocus
                 />
                 {hasQuery ? (
-                  <div className="-translate-y-1/2 absolute top-1/2 right-2 text-gray-400 text-xs">
+                  <div className="absolute top-1/2 right-2 -translate-y-1/2 text-xs text-gray-400">
                     {searchResults.length}
                   </div>
                 ) : null}
@@ -72,7 +73,7 @@ export function TranscriptSidebar({ transcript }: TranscriptSidebarProps) {
             </>
           ) : (
             <>
-              <h3 className="flex-1 font-medium text-primary text-sm">
+              <h3 className="text-primary flex-1 text-sm font-medium">
                 Transcript
               </h3>
               <button

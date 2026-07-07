@@ -1,4 +1,5 @@
 import { Link, type LinkProps } from '@tanstack/react-router';
+
 import { cn } from '@/util/cn';
 
 type LcLinkProps = LinkProps & {

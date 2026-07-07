@@ -30,7 +30,17 @@
 
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import { eq } from 'drizzle-orm';
+
+import {
+  bibleBook,
+  bibleCrossReference,
+  bibleToken,
+  bibleTranslation,
+  bibleVerse,
+  db,
+} from '.';
 import {
   type KjvParsedBook,
   loadKjvSource,
@@ -41,14 +51,6 @@ import {
   loadCrossRefs,
   referenceUsxDir,
 } from '../server/overlays';
-import {
-  bibleBook,
-  bibleCrossReference,
-  bibleToken,
-  bibleTranslation,
-  bibleVerse,
-  db,
-} from '.';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SEED_DIR = join(here, '..', '..', 'seed');
@@ -67,7 +69,7 @@ const translation = {
 };
 
 async function insertChunked<T>(
-  // biome-ignore lint/suspicious/noExplicitAny: drizzle table types vary per call
+  // oxlint-disable-next-line typescript/no-explicit-any -- drizzle table types vary per call
   table: any,
   rows: T[],
   chunkSize: number,

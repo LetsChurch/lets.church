@@ -1,6 +1,8 @@
 import { extname, join } from 'node:path';
+
 import { invariant, noop } from 'es-toolkit';
 import { execa } from 'execa';
+
 import type { Logger } from '../logger';
 import { downloadUrl } from './download';
 import { assertPublicUrl } from './safe-url';

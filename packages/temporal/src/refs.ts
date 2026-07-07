@@ -8,6 +8,7 @@
 // underlying bundler regression that motivated this split.
 
 import type { QueryDefinition, SignalDefinition } from '@temporalio/client';
+
 import type { UploadRecordUpdateData } from './client';
 
 // The argsBrand/retBrand fields on SignalDefinition/QueryDefinition are virtual

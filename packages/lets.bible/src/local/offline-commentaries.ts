@@ -8,8 +8,10 @@
 // `useSyncExternalStore` store (SSR snapshot = empty), like lib/study-session.ts.
 
 import { useSyncExternalStore } from 'react';
+
 import { usfmOf } from '@/local/store';
 import { trpcClient, type useTRPC } from '@/trpc/react';
+
 import { kvDelete, kvGet, kvKeys, kvSet, now } from './db';
 
 type Trpc = ReturnType<typeof useTRPC>;

@@ -1,6 +1,7 @@
 import { Annotation, db, TranscriptParagraph } from '@letschurch/db';
 import type { MediaSegment } from '@letschurch/opensearch';
 import { and, eq, inArray } from 'drizzle-orm';
+
 import {
   annotationCoversVerse,
   type BibleAnnotationMeta,

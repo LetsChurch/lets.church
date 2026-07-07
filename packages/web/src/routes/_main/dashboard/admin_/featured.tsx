@@ -14,6 +14,7 @@ import {
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useDebounce } from 'use-debounce';
+
 import { SortableItem, SortableList } from '@/components/sortable-list';
 import { ActionIcon, Badge, InputWrapper, Text, Title } from '@/components/ui';
 import { modals } from '@/components/ui/confirm-modal';
@@ -227,15 +228,15 @@ function FeaturedUploadsPage() {
       >
         <InputWrapper label="Add Upload to Featured">
           <div className="relative">
-            <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-secondary">
+            <span className="text-secondary pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
               <IconPlus size={16} />
             </span>
             <Autocomplete.Input
               placeholder="Search uploads to feature..."
-              className="h-9 w-full rounded-md border border-gray-300 bg-transparent pr-9 pl-9 text-primary text-sm outline-none transition-colors placeholder:text-secondary focus:border-brand focus:ring-2 focus:ring-brand/25 dark:border-zinc-700"
+              className="text-primary placeholder:text-secondary focus:border-brand focus:ring-brand/25 h-9 w-full rounded-md border border-gray-300 bg-transparent pr-9 pl-9 text-sm transition-colors outline-none focus:ring-2 dark:border-zinc-700"
             />
             <Autocomplete.Clear
-              className="absolute inset-y-0 right-0 flex items-center pr-3 text-secondary transition-colors hover:text-primary"
+              className="text-secondary hover:text-primary absolute inset-y-0 right-0 flex items-center pr-3 transition-colors"
               aria-label="Clear"
             >
               <IconX size={16} />
@@ -244,14 +245,14 @@ function FeaturedUploadsPage() {
         </InputWrapper>
         <Autocomplete.Portal>
           <Autocomplete.Positioner sideOffset={4} className="z-50">
-            <Autocomplete.Popup className="max-h-72 w-[var(--anchor-width)] overflow-y-auto rounded-lg border-fancy-pants bg-white p-1 shadow-xl dark:bg-zinc-900">
+            <Autocomplete.Popup className="border-fancy-pants max-h-72 w-[var(--anchor-width)] overflow-y-auto rounded-lg bg-white p-1 shadow-xl dark:bg-zinc-900">
               <Autocomplete.List>
                 {autocompleteData.map((item) => (
                   <Autocomplete.Item
                     key={item.value}
                     value={item}
                     onClick={() => handleAutocompleteSelect(item.value)}
-                    className="cursor-pointer rounded-md px-3 py-2 text-primary text-sm outline-none transition-colors hover:bg-gray-100 data-highlighted:bg-gray-100 dark:data-highlighted:bg-zinc-800 dark:hover:bg-zinc-800"
+                    className="text-primary cursor-pointer rounded-md px-3 py-2 text-sm transition-colors outline-none hover:bg-gray-100 data-highlighted:bg-gray-100 dark:hover:bg-zinc-800 dark:data-highlighted:bg-zinc-800"
                   >
                     {item.label}
                   </Autocomplete.Item>
@@ -279,7 +280,7 @@ function FeaturedUploadsPage() {
               {({ setNodeRef, style, attributes, listeners }) => (
                 <div
                   ref={setNodeRef}
-                  className="overflow-hidden rounded-lg border-fancy-pants bg-white p-5 dark:bg-zinc-900"
+                  className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 dark:bg-zinc-900"
                   style={style}
                 >
                   <div className="flex flex-nowrap items-center justify-start gap-4">

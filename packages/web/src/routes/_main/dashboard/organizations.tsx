@@ -6,6 +6,7 @@ import {
 } from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
+
 import {
   LcMenu,
   MenuItemButton,
@@ -23,6 +24,7 @@ import {
 import { useDisclosure } from '@/hooks/use-disclosure';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
+
 import classes from './-churches.module.css';
 
 export const Route = createFileRoute('/_main/dashboard/organizations')({

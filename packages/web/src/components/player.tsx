@@ -21,6 +21,7 @@ import {
 } from 'media-chrome/react';
 import posthog from 'posthog-js';
 import { useEffect, useRef, useState } from 'react';
+
 import { LcTooltip } from '@/components/lc-tooltip';
 import Logo from '@/components/logo';
 import { MediaSwitcher } from '@/components/media-switcher';
@@ -31,7 +32,7 @@ import { cn } from '@/util/cn';
 import { stopMediaElement } from '@/util/stop-media-element';
 
 declare module 'react' {
-  // biome-ignore lint/style/useConsistentTypeDefinitions: external interface
+  // oxlint-disable-next-line typescript/consistent-type-definitions -- external interface
   interface CSSProperties {
     [key: `--${string}`]: string | number;
   }
@@ -522,7 +523,7 @@ export function Player({
         )}
       >
         {isLive && currentSource && (
-          <div className="pointer-events-none absolute top-3 left-3 z-10 flex items-center gap-1.5 rounded-md bg-red-600 px-2 py-1 font-semibold text-white text-xs uppercase tracking-wide group-[[mediaisfullscreen]]:top-6 group-[[mediaisfullscreen]]:left-6">
+          <div className="pointer-events-none absolute top-3 left-3 z-10 flex items-center gap-1.5 rounded-md bg-red-600 px-2 py-1 text-xs font-semibold tracking-wide text-white uppercase group-[[mediaisfullscreen]]:top-6 group-[[mediaisfullscreen]]:left-6">
             <span className="size-2 animate-pulse rounded-full bg-white" />
             Live
           </div>
@@ -580,7 +581,7 @@ export function Player({
                 className={
                   mediaType === 'video'
                     ? 'bg-black'
-                    : 'bg-linear-to-t from-gray-100 to-50% to-gray-400/0 dark:from-gray-900 dark:to-gray-900/0'
+                    : 'bg-linear-to-t from-gray-100 to-gray-400/0 to-50% dark:from-gray-900 dark:to-gray-900/0'
                 }
               />
 
@@ -660,13 +661,13 @@ export function Player({
                         <LcTooltip content="Picture in Picture" side="bottom">
                           <MediaPipButton
                             noTooltip
-                            className="size-7 rounded-lg border-fancy-pants bg-black/30 p-1 backdrop-blur-lg group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5"
+                            className="border-fancy-pants size-7 rounded-lg bg-black/30 p-1 backdrop-blur-lg group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5"
                           />
                         </LcTooltip>
                         <LcTooltip content="Fullscreen" side="bottom">
                           <MediaFullscreenButton
                             noTooltip
-                            className="size-7 rounded-lg border-fancy-pants bg-black/30 p-1 backdrop-blur-lg group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5"
+                            className="border-fancy-pants size-7 rounded-lg bg-black/30 p-1 backdrop-blur-lg group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5"
                           />
                         </LcTooltip>
                       </>
@@ -788,7 +789,7 @@ export function Player({
             {seekFeedback && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                 {seekFeedback.direction === 'backward' && (
-                  <div className="-translate-x-1/2 absolute left-1/4 flex size-16 animate-ping items-center justify-center rounded-full bg-black/50">
+                  <div className="absolute left-1/4 flex size-16 -translate-x-1/2 animate-ping items-center justify-center rounded-full bg-black/50">
                     <IconRewindBackward10 className="size-8 text-white" />
                   </div>
                 )}

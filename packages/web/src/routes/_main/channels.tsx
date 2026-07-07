@@ -3,6 +3,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
+
 import { ChannelCard } from '@/components/channel-card';
 import { ChannelFiltersModal } from '@/components/channel-filters-modal';
 import { EmptyState } from '@/components/empty-state';
@@ -196,8 +197,8 @@ function RouteComponent() {
     <MainLayout containerClassName="mx-auto max-w-7xl px-4 py-8">
       <div className="space-y-8">
         <div className="space-y-2">
-          <h1 className="font-bold text-4xl text-primary">Browse Channels</h1>
-          <p className="text-lg text-secondary">
+          <h1 className="text-primary text-4xl font-bold">Browse Channels</h1>
+          <p className="text-secondary text-lg">
             Discover churches and creators sharing sermons, teachings, and more.
           </p>
         </div>
@@ -219,12 +220,12 @@ function RouteComponent() {
               }
             }}
             placeholder="Search channels..."
-            className="w-full rounded-3xl border border-gray-950/15 bg-gray-950/10 py-2.5 pr-12 pl-4 text-primary text-sm shadow-sm backdrop-blur-md transition-all placeholder:text-gray-950/30 hover:border-gray-950/25 hover:bg-gray-950/15 focus:border-white/0 focus:bg-gray-950/20 focus:shadow-[0_0_0_2px_--theme(--color-white/0.2),0_0_20px_--theme(--color-white/0.3)] focus:outline-none dark:border-white/15 dark:bg-white/10 dark:focus:bg-white/20 dark:hover:border-white/25 dark:hover:bg-white/15 dark:placeholder:text-white/30"
+            className="text-primary w-full rounded-3xl border border-gray-950/15 bg-gray-950/10 py-2.5 pr-12 pl-4 text-sm shadow-sm backdrop-blur-md transition-all placeholder:text-gray-950/30 hover:border-gray-950/25 hover:bg-gray-950/15 focus:border-white/0 focus:bg-gray-950/20 focus:shadow-[0_0_0_2px_--theme(--color-white/0.2),0_0_20px_--theme(--color-white/0.3)] focus:outline-none dark:border-white/15 dark:bg-white/10 dark:placeholder:text-white/30 dark:hover:border-white/25 dark:hover:bg-white/15 dark:focus:bg-white/20"
           />
           <button
             type="button"
             onClick={() => setFiltersOpen(true)}
-            className="-translate-y-1/2 absolute top-1/2 right-2 flex size-8 items-center justify-center rounded-full text-primary opacity-50 transition-colors hover:bg-white/10 hover:text-primary"
+            className="text-primary hover:text-primary absolute top-1/2 right-2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full opacity-50 transition-colors hover:bg-white/10"
             aria-label="Filters"
           >
             <IconAdjustmentsHorizontal size={24} />

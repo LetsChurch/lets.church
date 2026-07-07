@@ -8,6 +8,7 @@ import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { Context } from '@temporalio/activity';
 import { eq } from 'drizzle-orm';
+
 import logger from '../../util/logger';
 
 const moduleLogger = logger.child({

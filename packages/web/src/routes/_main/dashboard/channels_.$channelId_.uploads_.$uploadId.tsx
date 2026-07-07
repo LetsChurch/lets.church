@@ -38,6 +38,7 @@ import type { HlsVideoElement } from 'hls-video-element';
 import HlsVideo from 'hls-video-element/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDebounce } from 'use-debounce';
+
 import { LcMenu, MenuItemButton } from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import {
@@ -69,12 +70,14 @@ import { trpcClient, useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 import { doMultipartUpload } from '@/util/multipart-upload';
 import { stopMediaElement } from '@/util/stop-media-element';
+
 import { SpeakerLabelingModal } from './-components/speaker-labeling-modal';
-import styles from './-styles.module.css';
 import {
   $deletedUploads,
   $uploadProgress,
 } from './channels_.$channelId_.uploads';
+
+import styles from './-styles.module.css';
 
 export const Route = createFileRoute(
   '/_main/dashboard/channels_/$channelId_/uploads_/$uploadId',
@@ -986,7 +989,7 @@ function ChannelUploadPage() {
                             />
                             <Combobox.Clear
                               aria-label="Clear series"
-                              className="absolute inset-y-0 right-0 flex items-center pr-2 text-muted hover:text-primary"
+                              className="text-muted hover:text-primary absolute inset-y-0 right-0 flex items-center pr-2"
                             >
                               <IconX size={16} />
                             </Combobox.Clear>
@@ -997,8 +1000,8 @@ function ChannelUploadPage() {
                               sideOffset={4}
                               className="z-50"
                             >
-                              <Combobox.Popup className="max-h-64 w-[var(--anchor-width)] overflow-y-auto rounded-lg border-fancy-pants bg-white p-1 shadow-lg dark:bg-zinc-900">
-                                <Combobox.Empty className="px-3 py-2 text-secondary text-sm empty:hidden">
+                              <Combobox.Popup className="border-fancy-pants max-h-64 w-[var(--anchor-width)] overflow-y-auto rounded-lg bg-white p-1 shadow-lg dark:bg-zinc-900">
+                                <Combobox.Empty className="text-secondary px-3 py-2 text-sm empty:hidden">
                                   {debouncedSeriesSearch.length < 2
                                     ? 'Type to search series...'
                                     : 'No series found'}
@@ -1008,7 +1011,7 @@ function ChannelUploadPage() {
                                     <Combobox.Item
                                       key={item.value}
                                       value={item}
-                                      className="flex cursor-default items-center justify-between rounded px-3 py-1.5 text-primary text-sm data-[highlighted]:bg-brand/10"
+                                      className="text-primary data-[highlighted]:bg-brand/10 flex cursor-default items-center justify-between rounded px-3 py-1.5 text-sm"
                                     >
                                       {item.label}
                                       <Combobox.ItemIndicator>
@@ -1151,7 +1154,7 @@ function ChannelUploadPage() {
                               isProcessing || reprocessUploadMutation.isPending
                             }
                             onClick={() => setShowReprocessModal(true)}
-                            className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-primary text-sm hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-zinc-800"
+                            className="text-primary flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-zinc-800"
                           >
                             {reprocessUploadMutation.isPending ? (
                               <Loader size={14} />
@@ -1174,7 +1177,7 @@ function ChannelUploadPage() {
                             onClick={() => {
                               toggleFeaturedMutation.mutate({ uploadId });
                             }}
-                            className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-primary text-sm hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-zinc-800"
+                            className="text-primary flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-zinc-800"
                           >
                             {toggleFeaturedMutation.isPending ? (
                               <Loader size={14} />
@@ -1202,7 +1205,7 @@ function ChannelUploadPage() {
                                   uploadRecordId: uploadId,
                                 });
                               }}
-                              className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-primary text-sm hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-zinc-800"
+                              className="text-primary flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-zinc-800"
                             >
                               {retryUploadMutation.isPending ? (
                                 <Loader size={14} />
@@ -1231,7 +1234,7 @@ function ChannelUploadPage() {
                                     uploadRecordId: uploadId,
                                   });
                                 }}
-                                className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-primary text-sm hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-zinc-800"
+                                className="text-primary flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-zinc-800"
                               >
                                 {regenerateSummaryMutation.isPending ? (
                                   <Loader size={14} />
@@ -1256,7 +1259,7 @@ function ChannelUploadPage() {
                                     uploadRecordId: uploadId,
                                   });
                                 }}
-                                className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-primary text-sm hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-zinc-800"
+                                className="text-primary flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-zinc-800"
                               >
                                 {regenerateAnnotationsMutation.isPending ? (
                                   <Loader size={14} />
@@ -1297,7 +1300,7 @@ function ChannelUploadPage() {
                                     setNavigatingToLlmEval(false);
                                   });
                                 }}
-                                className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-primary text-sm hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-zinc-800"
+                                className="text-primary flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-zinc-800"
                               >
                                 {navigatingToLlmEval ? (
                                   <Loader size={14} />
@@ -1692,19 +1695,19 @@ function ChannelUploadPage() {
               >
                 <Toggle
                   value="transcode"
-                  className="rounded-md px-3 py-1.5 text-center text-primary text-sm transition-colors data-[pressed]:bg-white data-[pressed]:shadow-sm dark:data-[pressed]:bg-zinc-900"
+                  className="text-primary rounded-md px-3 py-1.5 text-center text-sm transition-colors data-[pressed]:bg-white data-[pressed]:shadow-sm dark:data-[pressed]:bg-zinc-900"
                 >
                   Transcode
                 </Toggle>
                 <Toggle
                   value="transcribe"
-                  className="rounded-md px-3 py-1.5 text-center text-primary text-sm transition-colors data-[pressed]:bg-white data-[pressed]:shadow-sm dark:data-[pressed]:bg-zinc-900"
+                  className="text-primary rounded-md px-3 py-1.5 text-center text-sm transition-colors data-[pressed]:bg-white data-[pressed]:shadow-sm dark:data-[pressed]:bg-zinc-900"
                 >
                   Transcribe
                 </Toggle>
                 <Toggle
                   value="everything"
-                  className="rounded-md px-3 py-1.5 text-center text-primary text-sm transition-colors data-[pressed]:bg-white data-[pressed]:shadow-sm dark:data-[pressed]:bg-zinc-900"
+                  className="text-primary rounded-md px-3 py-1.5 text-center text-sm transition-colors data-[pressed]:bg-white data-[pressed]:shadow-sm dark:data-[pressed]:bg-zinc-900"
                 >
                   Everything
                 </Toggle>

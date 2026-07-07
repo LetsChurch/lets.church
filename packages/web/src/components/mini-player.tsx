@@ -1,6 +1,7 @@
 import type { HlsVideoElement } from 'hls-video-element';
 import HlsVideo from 'hls-video-element/react';
 import { useEffect, useRef, useState } from 'react';
+
 import { formatTime } from '@/util/format';
 import { stopMediaElement } from '@/util/stop-media-element';
 
@@ -267,7 +268,7 @@ export function MiniPlayer({
       )}
       {title ? (
         <div className="bg-zinc-900 px-2.5 py-2">
-          <p className="line-clamp-2 font-medium text-white text-xs leading-snug">
+          <p className="line-clamp-2 text-xs leading-snug font-medium text-white">
             {title}
           </p>
         </div>

@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router';
+
 import { Avatar } from '@/components/avatar';
 
 export type ChannelCardProps = {
@@ -22,7 +23,7 @@ export function ChannelCard({
       : `${subscriberCount.toLocaleString()} subscribers`;
 
   return (
-    <div className="group relative rounded-lg border-fancy-pants bg-white p-6 transition-all hover:shadow-lg dark:bg-zinc-900">
+    <div className="group border-fancy-pants relative rounded-lg bg-white p-6 transition-all hover:shadow-lg dark:bg-zinc-900">
       <Link
         to="/channel/$slug"
         params={{ slug: channelSlug }}
@@ -38,11 +39,11 @@ export function ChannelCard({
           fallbackClassName="bg-gradient-to-br from-brand/80 to-brand text-2xl font-semibold"
         />
         <div className="min-w-0 flex-1 space-y-1">
-          <h3 className="truncate font-semibold text-lg text-primary">
+          <h3 className="text-primary truncate text-lg font-semibold">
             {name}
           </h3>
           {description ? (
-            <p className="line-clamp-2 text-secondary text-sm">{description}</p>
+            <p className="text-secondary line-clamp-2 text-sm">{description}</p>
           ) : null}
           <p className="text-muted text-xs">{subscriberText}</p>
         </div>

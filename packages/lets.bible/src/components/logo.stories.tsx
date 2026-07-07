@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+
 import { Logo } from './logo';
 
 const meta = {
@@ -24,9 +25,9 @@ export const Icon: Story = {
 export const Sizes: Story = {
   render: () => (
     <div className="flex flex-col items-center gap-6">
-      <Logo className="h-4 text-ink-strong" />
-      <Logo className="h-7 text-ink-strong" />
-      <Logo className="h-12 text-ink-strong" />
+      <Logo className="text-ink-strong h-4" />
+      <Logo className="text-ink-strong h-7" />
+      <Logo className="text-ink-strong h-12" />
     </div>
   ),
 };

@@ -10,6 +10,7 @@ import {
   useRouterState,
 } from '@tanstack/react-router';
 import { createContext, type ReactNode, useContext } from 'react';
+
 import '../src/app.css';
 
 // ---------------------------------------------------------------------------
@@ -29,7 +30,7 @@ function RenderStory() {
     throw new Error('Storybook root not found');
   }
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-paper p-10 font-sans text-ink">
+    <div className="bg-paper text-ink flex min-h-screen flex-col items-center justify-center p-10 font-sans">
       {storyFn()}
     </div>
   );
@@ -62,7 +63,7 @@ const storyRouter = createRouter({
 function storyRouterDecorator(storyFn: () => ReactNode) {
   return (
     <CurrentStoryContext.Provider value={storyFn}>
-      {/* biome-ignore lint/suspicious/noExplicitAny: story memory router instance */}
+      {/* oxlint-disable-next-line typescript/no-explicit-any -- story memory router instance */}
       <RouterProvider router={storyRouter as any} />
     </CurrentStoryContext.Provider>
   );

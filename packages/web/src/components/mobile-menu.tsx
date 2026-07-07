@@ -9,7 +9,9 @@ import {
   IconX,
 } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
+
 import { cn } from '@/util/cn';
+
 import Logo from './logo';
 import { ThemeSwitcher } from './theme-switcher';
 
@@ -19,16 +21,16 @@ type MobileMenuDonateCardProps = {
 
 function MobileMenuDonateCard({ onDismiss }: MobileMenuDonateCardProps) {
   return (
-    <div className="overflow-hidden rounded-xl border border-white/10 bg-brand p-3">
+    <div className="bg-brand overflow-hidden rounded-xl border border-white/10 p-3">
       <div className="mb-3">
-        <p className="text-center font-bold text-sm text-white leading-snug">
+        <p className="text-center text-sm leading-snug font-bold text-white">
           Keep sharing good news without ads.
         </p>
       </div>
       <div className="flex flex-col gap-1">
         <a
           href="https://givebutter.com/LetsChurch"
-          className="rounded-full bg-white px-2.5 py-1.5 text-center font-semibold text-brand text-xs transition-opacity hover:opacity-90"
+          className="text-brand rounded-full bg-white px-2.5 py-1.5 text-center text-xs font-semibold transition-opacity hover:opacity-90"
           target="_blank"
           rel="noopener"
         >
@@ -38,7 +40,7 @@ function MobileMenuDonateCard({ onDismiss }: MobileMenuDonateCardProps) {
           <button
             type="button"
             onClick={onDismiss}
-            className="rounded-full px-2.5 py-1.5 font-semibold text-white/80 text-xs transition-colors hover:bg-white/10"
+            className="rounded-full px-2.5 py-1.5 text-xs font-semibold text-white/80 transition-colors hover:bg-white/10"
           >
             Dismiss
           </button>
@@ -68,7 +70,7 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
             'transition-transform duration-300 ease-in-out',
           )}
         >
-          <div className="flex items-center justify-between border-gray-200 border-b px-4 py-4 dark:border-zinc-800">
+          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-zinc-800">
             <Link to="/" onClick={handleClose}>
               <Logo />
             </Link>
@@ -77,7 +79,7 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
                 <button
                   {...props}
                   type="button"
-                  className="flex size-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-gray-100 hover:text-primary dark:hover:bg-zinc-800"
+                  className="text-muted hover:text-primary flex size-8 items-center justify-center rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
                 >
                   <IconX />
                 </button>
@@ -85,13 +87,13 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
             />
           </div>
 
-          <div className="h-[stretch] overflow-y-auto border-gray-200 border-t px-4 dark:border-zinc-800">
+          <div className="h-[stretch] overflow-y-auto border-t border-gray-200 px-4 dark:border-zinc-800">
             {/* Main Navigation */}
-            <div className="space-y-3 border-gray-200 border-b py-6 dark:border-zinc-800">
+            <div className="space-y-3 border-b border-gray-200 py-6 dark:border-zinc-800">
               <Link
                 to="/search"
                 onClick={handleClose}
-                className="flex items-center gap-3 font-semibold text-lg text-primary hover:text-indigo-400"
+                className="text-primary flex items-center gap-3 text-lg font-semibold hover:text-indigo-400"
               >
                 <IconSearch className="size-6" />
                 <span>Search</span>
@@ -99,7 +101,7 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
               <Link
                 to="/"
                 onClick={handleClose}
-                className="flex items-center gap-3 font-semibold text-lg text-primary hover:text-indigo-400"
+                className="text-primary flex items-center gap-3 text-lg font-semibold hover:text-indigo-400"
               >
                 <IconCompass className="size-6" />
                 <span>Explore</span>
@@ -107,7 +109,7 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
               <Link
                 to="/following"
                 onClick={handleClose}
-                className="flex items-center gap-3 font-semibold text-lg text-primary hover:text-indigo-400"
+                className="text-primary flex items-center gap-3 text-lg font-semibold hover:text-indigo-400"
               >
                 <IconFlag className="size-6" />
                 <span>Following</span>
@@ -115,7 +117,7 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
               <Link
                 to="/churches"
                 onClick={handleClose}
-                className="flex items-center gap-3 font-semibold text-lg text-primary hover:text-indigo-400"
+                className="text-primary flex items-center gap-3 text-lg font-semibold hover:text-indigo-400"
               >
                 <IconBuildingChurch className="size-6" />
                 <span>Churches</span>
@@ -124,7 +126,7 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
                 to="/channels"
                 search={{ sort: 'subscribers' }}
                 onClick={handleClose}
-                className="flex items-center gap-3 font-semibold text-lg text-primary hover:text-indigo-400"
+                className="text-primary flex items-center gap-3 text-lg font-semibold hover:text-indigo-400"
               >
                 <IconUsers className="size-6" />
                 <span>Channels</span>
@@ -132,7 +134,7 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
               <Link
                 to="/library"
                 onClick={handleClose}
-                className="flex items-center gap-3 font-semibold text-lg text-primary hover:text-indigo-400"
+                className="text-primary flex items-center gap-3 text-lg font-semibold hover:text-indigo-400"
               >
                 <IconBookmark className="size-6" />
                 <span>Library</span>
@@ -144,65 +146,65 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
               <Link
                 to="/about"
                 onClick={handleClose}
-                className="block font-semibold text-lg text-primary hover:text-indigo-400"
+                className="text-primary block text-lg font-semibold hover:text-indigo-400"
               >
                 Our Mission
               </Link>
               <Link
                 to="/about/dorean"
                 onClick={handleClose}
-                className="block font-semibold text-lg text-primary hover:text-indigo-400"
+                className="text-primary block text-lg font-semibold hover:text-indigo-400"
               >
                 The Dorean Principle
               </Link>
               <Link
                 to="/about/add-content"
                 onClick={handleClose}
-                className="block font-semibold text-lg text-primary hover:text-indigo-400"
+                className="text-primary block text-lg font-semibold hover:text-indigo-400"
               >
                 How to Add Content
               </Link>
               <Link
                 to="/about/add-church"
                 onClick={handleClose}
-                className="block font-semibold text-lg text-primary hover:text-indigo-400"
+                className="text-primary block text-lg font-semibold hover:text-indigo-400"
               >
                 How to Add Your Church
               </Link>
             </div>
 
             {/* Theme Switcher */}
-            <div className="border-gray-200 border-t py-6 dark:border-zinc-800">
+            <div className="border-t border-gray-200 py-6 dark:border-zinc-800">
               <ThemeSwitcher />
             </div>
 
             {/* Legal Links */}
-            <div className="space-y-3 border-gray-200 border-t py-6 dark:border-zinc-800">
+            <div className="space-y-3 border-t border-gray-200 py-6 dark:border-zinc-800">
               <Link
                 to="/about/theology"
                 onClick={handleClose}
-                className="block font-medium text-primary text-sm hover:text-primary"
+                className="text-primary hover:text-primary block text-sm font-medium"
               >
                 Statement of Theology
               </Link>
               <Link
                 to="/about/terms"
                 onClick={handleClose}
-                className="block font-medium text-primary text-sm hover:text-primary"
+                className="text-primary hover:text-primary block text-sm font-medium"
               >
                 Terms of Service
               </Link>
               <Link
                 to="/about/privacy"
                 onClick={handleClose}
-                className="block font-medium text-primary text-sm hover:text-primary"
+                className="text-primary hover:text-primary block text-sm font-medium"
               >
                 Privacy Policy
               </Link>
               <Link
                 to="/about/dmca"
                 onClick={handleClose}
-                className="block font-medium text-primary text-sm hover:text-primary"
+                className="text-primary hover:text-primary block text-sm font-medium"
               >
                 DMCA
               </Link>

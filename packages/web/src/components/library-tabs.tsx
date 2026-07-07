@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router';
+
 import { cn } from '@/util/cn';
 
 type LibraryTabsProps = {
@@ -7,7 +8,7 @@ type LibraryTabsProps = {
 
 export function LibraryTabs({ activeTab }: LibraryTabsProps) {
   return (
-    <div className="flex gap-1 border-zinc-800 border-b">
+    <div className="flex gap-1 border-b border-zinc-800">
       <Link
         to="/library"
         className={cn(

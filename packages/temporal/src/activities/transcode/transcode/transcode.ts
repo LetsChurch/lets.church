@@ -1,6 +1,7 @@
 import { stat, unlink } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { setTimeout } from 'node:timers/promises';
+
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { Context } from '@temporalio/activity';
@@ -8,6 +9,7 @@ import { throttle } from 'es-toolkit';
 import fastGlob from 'fast-glob';
 import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
+
 import { updateUploadRecord } from '../../../client';
 import { CURRENT_PIPELINE_VERSION } from '../../../queues';
 import { amaBudgetEnabled, amaDeviceBudget } from '../../../util/ama-budget';
@@ -216,7 +218,7 @@ export default async function transcode(
       const frames = parseInt(match[1] ?? '', 10);
       const totalFrames = parseInt(
         // TODO: get progress when nb_frames is undefined
-        String(probe.streams.find((s) => s.nb_frames)?.nb_frames) ?? '',
+        String(probe.streams.find((s) => s.nb_frames)?.nb_frames),
         10,
       );
 

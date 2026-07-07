@@ -1,5 +1,6 @@
 import { createRouter as createTanStackRouter } from '@tanstack/react-router';
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query';
+
 import { NotFound } from './components/chrome';
 import { LocalSync } from './components/local-sync';
 import { routeTree } from './routeTree.gen';

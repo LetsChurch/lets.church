@@ -2,6 +2,7 @@ import { IconRefresh } from '@tabler/icons-react';
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
+
 import {
   ActionIcon,
   Badge,
@@ -16,7 +17,7 @@ import { formatDate } from '@/util/format';
 
 function Code({ children }: { children: ReactNode }) {
   return (
-    <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-[0.85em] text-primary dark:bg-zinc-800">
+    <code className="text-primary rounded bg-gray-100 px-1 py-0.5 font-mono text-[0.85em] dark:bg-zinc-800">
       {children}
     </code>
   );

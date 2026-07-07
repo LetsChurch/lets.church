@@ -4,9 +4,7 @@ import { expect, test } from '@playwright/test';
 
 test('LB-READ-01 John 1 opens with verse 1 text', async ({ page }) => {
   await page.goto('/bible/john/1');
-  await expect(
-    page.getByText('In the beginning was the Word'),
-  ).toBeVisible();
+  await expect(page.getByText('In the beginning was the Word')).toBeVisible();
 });
 
 test('LB-READ-12 reader header has a sign-in affordance when signed out', async ({

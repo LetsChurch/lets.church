@@ -18,7 +18,9 @@ import {
 } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import { asc, eq } from 'drizzle-orm';
+
 import {
   EMBED_DIMS,
   EMBED_MODEL,

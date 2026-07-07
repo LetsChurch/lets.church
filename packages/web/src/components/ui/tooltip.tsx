@@ -1,4 +1,5 @@
 import type { ComponentProps, ReactElement, ReactNode } from 'react';
+
 import { LcTooltip } from '@/components/lc-tooltip';
 
 type Side = ComponentProps<typeof LcTooltip>['side'];

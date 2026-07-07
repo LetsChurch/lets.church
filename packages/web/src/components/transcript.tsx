@@ -1,6 +1,7 @@
 import { useStore } from '@nanostores/react';
 import bSearch from 'binary-search';
 import { useEffect, useMemo, useRef } from 'react';
+
 import { $currentTime, $setPlayAt } from '@/stores/player';
 import { formatTime } from '@/util/format';
 import { scrollToCenterWithin } from '@/util/scroll-container';
@@ -59,9 +60,9 @@ export function Transcript({
         <div className="flex max-w-sm flex-col items-center gap-4 text-center">
           {isTranscriptProcessing ? (
             <>
-              <div className="size-10 animate-spin rounded-full border-4 border-zinc-200 border-t-brand dark:border-zinc-800 dark:border-t-brand" />
+              <div className="border-t-brand dark:border-t-brand size-10 animate-spin rounded-full border-4 border-zinc-200 dark:border-zinc-800" />
               <div className="flex flex-col gap-2">
-                <p className="font-medium text-primary text-sm">
+                <p className="text-primary text-sm font-medium">
                   Transcript Processing
                 </p>
                 <p className="text-secondary text-xs">
@@ -72,7 +73,7 @@ export function Transcript({
             </>
           ) : (
             <div className="flex flex-col gap-2">
-              <p className="font-medium text-primary text-sm">
+              <p className="text-primary text-sm font-medium">
                 No Transcript Available
               </p>
               <p className="text-secondary text-xs">
@@ -101,7 +102,7 @@ export function Transcript({
             onClick={() => handleClick(line.start)}
           >
             <div
-              className={`pt-1 text-[10px] tabular-nums leading-[1.4] tracking-[-0.2px] ${
+              className={`pt-1 text-[10px] leading-[1.4] tracking-[-0.2px] tabular-nums ${
                 i === currentI
                   ? 'text-brand'
                   : 'text-primary/50 group-hover:text-primary/70'

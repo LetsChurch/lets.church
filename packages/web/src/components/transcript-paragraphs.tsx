@@ -18,6 +18,7 @@ import {
   useRef,
   useState,
 } from 'react';
+
 import {
   LcMenu,
   MenuItemButton,
@@ -57,7 +58,7 @@ export type TranscriptAnnotation = {
   kind: 'OUTLINE' | 'BIBLE' | 'KEYWORD';
   startWord: number | null;
   endWord: number | null;
-  // biome-ignore lint/complexity/noBannedTypes: matches the JSON-safe shape from `getTranscriptParagraphs` (see comment in `trpc/procedures/media.ts`).
+  // oxlint-disable-next-line typescript/no-empty-object-type -- matches the JSON-safe shape from `getTranscriptParagraphs` (see comment in `trpc/procedures/media.ts`).
   metadata: { [key: string]: {} };
 };
 
@@ -253,7 +254,7 @@ function WordButton({
       // no layout jitter as the highlight advances.
       className={`cursor-pointer appearance-none rounded ${
         isMatched
-          ? 'bg-orange-400/40 text-primary'
+          ? 'text-primary bg-orange-400/40'
           : isActive
             ? 'bg-brand/20 text-brand dark:bg-primary/20 dark:text-primary'
             : 'hover:bg-primary/10'
@@ -463,7 +464,7 @@ const ParagraphView = memo(function ParagraphView({
       {outlineTitle && !isFirstParagraph ? (
         <div
           aria-hidden="true"
-          className="col-span-2 mt-4 border-zinc-200 border-t dark:border-zinc-800"
+          className="col-span-2 mt-4 border-t border-zinc-200 dark:border-zinc-800"
         />
       ) : null}
       {/* Single row per paragraph. Column 1 holds the timestamp (and
@@ -489,7 +490,7 @@ const ParagraphView = memo(function ParagraphView({
             type="button"
             data-p={paragraph.order}
             onClick={() => onSeek(paragraph.start)}
-            className={`cursor-pointer text-right text-[10px] tabular-nums leading-[1.4] tracking-[-0.2px] ${
+            className={`cursor-pointer text-right text-[10px] leading-[1.4] tracking-[-0.2px] tabular-nums ${
               isActive
                 ? 'text-brand dark:text-primary'
                 : 'text-primary/50 hover:text-primary/70'
@@ -508,7 +509,7 @@ const ParagraphView = memo(function ParagraphView({
               <button
                 type="button"
                 onClick={() => onSeek(paragraph.start)}
-                className="cursor-pointer text-left font-semibold text-base text-primary hover:text-primary/80"
+                className="text-primary hover:text-primary/80 cursor-pointer text-left text-base font-semibold"
               >
                 {outlineTitle}
               </button>
@@ -622,7 +623,7 @@ const ParagraphView = memo(function ParagraphView({
                     onMouseLeave={() => setHoveredPillKey(null)}
                     onFocus={() => setHoveredPillKey(pill.key)}
                     onBlur={() => setHoveredPillKey(null)}
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-primary/5 px-2 py-0.5 text-primary/70 text-xs hover:bg-primary/10 hover:text-primary dark:bg-primary/10 dark:hover:bg-primary/20"
+                    className="bg-primary/5 text-primary/70 hover:bg-primary/10 hover:text-primary dark:bg-primary/10 dark:hover:bg-primary/20 inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 text-xs"
                   >
                     <IconBible size={12} aria-hidden="true" />
                     {pill.ref}
@@ -642,7 +643,7 @@ const ParagraphView = memo(function ParagraphView({
                     onMouseLeave={() => setHoveredPillKey(null)}
                     onFocus={() => setHoveredPillKey(pill.key)}
                     onBlur={() => setHoveredPillKey(null)}
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-primary/5 px-2 py-0.5 text-primary/70 text-xs hover:bg-primary/10 hover:text-primary dark:bg-primary/10 dark:hover:bg-primary/20"
+                    className="bg-primary/5 text-primary/70 hover:bg-primary/10 hover:text-primary dark:bg-primary/10 dark:hover:bg-primary/20 inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 text-xs"
                   >
                     <IconSearch size={12} aria-hidden="true" />
                     {pill.text}
@@ -721,9 +722,9 @@ export function TranscriptParagraphs({
         <div className="flex max-w-sm flex-col items-center gap-4 text-center">
           {isTranscriptProcessing ? (
             <>
-              <div className="size-10 animate-spin rounded-full border-4 border-zinc-200 border-t-brand dark:border-zinc-800 dark:border-t-brand" />
+              <div className="border-t-brand dark:border-t-brand size-10 animate-spin rounded-full border-4 border-zinc-200 dark:border-zinc-800" />
               <div className="flex flex-col gap-2">
-                <p className="font-medium text-primary text-sm">
+                <p className="text-primary text-sm font-medium">
                   Transcript Processing
                 </p>
                 <p className="text-secondary text-xs">
@@ -734,7 +735,7 @@ export function TranscriptParagraphs({
             </>
           ) : (
             <div className="flex flex-col gap-2">
-              <p className="font-medium text-primary text-sm">
+              <p className="text-primary text-sm font-medium">
                 No Transcript Available
               </p>
               <p className="text-secondary text-xs">

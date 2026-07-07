@@ -7,6 +7,7 @@ import {
 import { Context } from '@temporalio/activity';
 import { asc, eq, inArray, sql } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
+
 import {
   ANNOTATE_MODEL,
   EMBED_DIMS,

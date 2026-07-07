@@ -1,4 +1,5 @@
 import { proxyActivities } from '@temporalio/workflow';
+
 import type * as processUploadActivities from '../../activities/background';
 import { BACKGROUND_QUEUE } from '../../queues';
 import type { UploadPostProcessValue } from '../../util/types';

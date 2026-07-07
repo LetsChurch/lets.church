@@ -2,6 +2,7 @@ import { db, TranscriptParagraph } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import { eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
+
 import logger from '../../util/logger';
 import {
   type TranscriptJsonSegment,

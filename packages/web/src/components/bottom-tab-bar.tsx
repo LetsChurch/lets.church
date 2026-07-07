@@ -72,7 +72,7 @@ export default function BottomTabBar() {
           <Link
             key={item.name}
             to={item.href}
-            className="relative flex min-w-0 flex-1 flex-col items-center justify-center p-3 text-muted transition-colors"
+            className="text-muted relative flex min-w-0 flex-1 flex-col items-center justify-center p-3 transition-colors"
           >
             <div className="flex h-6 w-6 items-center justify-center">
               {item.icon}
@@ -83,7 +83,7 @@ export default function BottomTabBar() {
         {indicator ? (
           <div
             aria-hidden="true"
-            className="glow-md pointer-events-none absolute top-0 h-0.5 rounded-full bg-brand transition-all duration-200"
+            className="glow-md bg-brand pointer-events-none absolute top-0 h-0.5 rounded-full transition-all duration-200"
             style={{ left: indicator.left, width: indicator.width }}
           />
         ) : null}

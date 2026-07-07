@@ -1,6 +1,7 @@
 import { useStore } from '@nanostores/react';
 import { IconSparkles, IconX } from '@tabler/icons-react';
 import { useEffect, useRef, useState } from 'react';
+
 import { VideoAnswerPanel } from '@/components/answer-panel';
 import { $setPlayAt } from '@/stores/player';
 import {
@@ -67,11 +68,11 @@ export function MediaAskAnswer({ mediaId }: { mediaId: string }) {
         e.preventDefault();
         askVideoQuestion(draft);
       }}
-      className="my-4 flex items-center gap-2 rounded-2xl border-fancy-pants bg-indigo-500/10 px-3 py-2"
+      className="border-fancy-pants my-4 flex items-center gap-2 rounded-2xl bg-indigo-500/10 px-3 py-2"
     >
       <IconSparkles
         size={16}
-        className="shrink-0 text-brand"
+        className="text-brand shrink-0"
         aria-hidden="true"
       />
       <input
@@ -80,12 +81,12 @@ export function MediaAskAnswer({ mediaId }: { mediaId: string }) {
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         placeholder="Ask a question about this video…"
-        className="min-w-0 flex-1 bg-transparent text-primary text-sm placeholder:text-secondary focus:outline-none"
+        className="text-primary placeholder:text-secondary min-w-0 flex-1 bg-transparent text-sm focus:outline-none"
       />
       <button
         type="submit"
         disabled={!draft.trim()}
-        className="shrink-0 rounded-full border-fancy-pants bg-gray-950/10 px-3 py-1 font-semibold text-primary/80 text-sm disabled:opacity-50 dark:bg-white/15"
+        className="border-fancy-pants text-primary/80 shrink-0 rounded-full bg-gray-950/10 px-3 py-1 text-sm font-semibold disabled:opacity-50 dark:bg-white/15"
       >
         Ask
       </button>
@@ -93,7 +94,7 @@ export function MediaAskAnswer({ mediaId }: { mediaId: string }) {
         type="button"
         onClick={closeVideoAsk}
         aria-label="Close"
-        className="shrink-0 rounded-lg p-1.5 text-secondary transition-colors hover:bg-white/10 hover:text-primary"
+        className="text-secondary hover:text-primary shrink-0 rounded-lg p-1.5 transition-colors hover:bg-white/10"
       >
         <IconX size={16} />
       </button>

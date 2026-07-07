@@ -1,5 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+
 import { resolveChannelNames } from '@/trpc/search/channels';
 
 export const resolveChannelTool = tool({

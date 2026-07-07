@@ -1,5 +1,6 @@
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { useEffect, useReducer, useState } from 'react';
+
 import { matchBooks } from '@/lib/book-search';
 import { bookBySlug, type CanonBook } from '@/lib/canon';
 import { parseReference } from '@/lib/reference';
@@ -15,6 +16,7 @@ import {
   subscribeIndexReady,
 } from '@/search/flex-client';
 import { useTRPC } from '@/trpc/react';
+
 import type { BookJumpModel } from './book-jump';
 import { type Scope, SearchBox, type Suggestion } from './search-box';
 

@@ -1,6 +1,7 @@
 import { IconChevronDown, IconWand } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
+
 import { LcMenu, MenuItemButton } from '@/components/lc-menu';
 import {
   MediaPreviewGroup,
@@ -16,6 +17,7 @@ import {
   Table,
   Text,
 } from '@/components/ui';
+
 import { usePaged } from './use-paged';
 
 const PAGE_SIZE = 25;
@@ -236,7 +238,7 @@ export function SpeakerLabelingQueue({
                           <LcMenu.Portal>
                             <LcMenu.Positioner side="bottom" align="end">
                               <LcMenu.Popup>
-                                <div className="px-3 py-1.5 font-medium text-secondary text-xs">
+                                <div className="text-secondary px-3 py-1.5 text-xs font-medium">
                                   Assign a different match
                                 </div>
                                 {r.alternatives.map((alt) => (

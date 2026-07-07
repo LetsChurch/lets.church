@@ -1,7 +1,9 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import superjson from 'superjson';
+
 import logger from '@/util/logger';
 import { getMaintenanceConfig } from '@/util/maintenance';
+
 import type { Context } from './context';
 
 const moduleLogger = logger.child({

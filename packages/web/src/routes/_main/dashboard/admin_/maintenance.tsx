@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
+
 import { Alert, Button, Text, Textarea, Title } from '@/components/ui';
 import { notifications } from '@/components/ui/notifications';
 import { useTRPC } from '@/trpc/react';
@@ -111,12 +112,12 @@ function MaintenancePage() {
         </Alert>
       ) : null}
 
-      {/* biome-ignore lint/a11y/noLabelWithoutControl: wraps a Base UI Switch (role=switch button) */}
+      {/* oxlint-disable-next-line jsx-a11y/label-has-associated-control -- wraps a Base UI Switch (role=switch button) */}
       <label className="flex items-start gap-3">
         <Switch.Root
           checked={enabled}
           onCheckedChange={(checked) => setEnabled(checked)}
-          className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full bg-gray-300 p-0.5 transition-colors data-[checked]:bg-brand dark:bg-zinc-700"
+          className="data-[checked]:bg-brand relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full bg-gray-300 p-0.5 transition-colors dark:bg-zinc-700"
         >
           <Switch.Thumb className="size-5 rounded-full bg-white shadow transition-transform data-[checked]:translate-x-5" />
         </Switch.Root>

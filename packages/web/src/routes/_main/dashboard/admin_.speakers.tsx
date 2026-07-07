@@ -6,10 +6,12 @@ import {
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
+
 import { ActionIcon, Badge, Button, Table, Text, Title } from '@/components/ui';
 import { useDisclosure } from '@/hooks/use-disclosure';
 import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
+
 import {
   type MergeSource,
   MergeSpeakerModal,
@@ -53,7 +55,7 @@ function Pagination({
       </ActionIcon>
       {paginationRange(value, total).map((page, i) =>
         page === 'dots' ? (
-          <span key={`dots-${i}`} className="px-2 text-secondary text-sm">
+          <span key={`dots-${i}`} className="text-secondary px-2 text-sm">
             …
           </span>
         ) : (

@@ -6,6 +6,7 @@ import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
 import { eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
+
 import { passwordChangeSchema, profileUpdateSchema } from '@/schemas/account';
 import {
   finalizeMultipartUploadSchema,
@@ -19,6 +20,7 @@ import { mantineAvatarLg2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { getPublicImageUrl } from '@/util/server-env';
 import testPassword from '@/util/zxcvbn';
+
 import { authProcedure } from '../trpc';
 
 const moduleLogger = logger.child({

@@ -15,6 +15,7 @@ import {
   useId,
   useState,
 } from 'react';
+
 import { cn } from '@/util/cn';
 
 // --- Shared control styling ------------------------------------------------
@@ -52,7 +53,7 @@ export function InputWrapper({
   return (
     <div className={cn('flex flex-col gap-1', className)}>
       {label ? (
-        <label htmlFor={htmlFor} className="font-medium text-primary text-sm">
+        <label htmlFor={htmlFor} className="text-primary text-sm font-medium">
           {label}
           {required ? <span className="ml-0.5 text-red-500">*</span> : null}
         </label>
@@ -62,7 +63,7 @@ export function InputWrapper({
       ) : null}
       {children}
       {error ? (
-        <p className="text-red-600 text-xs dark:text-red-400">{error}</p>
+        <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
       ) : null}
     </div>
   );
@@ -126,13 +127,13 @@ export function TextInput({
       {leftSection || rightSection ? (
         <div className="relative">
           {leftSection ? (
-            <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted">
+            <span className="text-muted pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
               {leftSection}
             </span>
           ) : null}
           {input}
           {rightSection ? (
-            <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted">
+            <span className="text-muted absolute inset-y-0 right-0 flex items-center pr-3">
               {rightSection}
             </span>
           ) : null}
@@ -185,7 +186,7 @@ export function PasswordInput({
           type="button"
           onClick={() => setVisible((v) => !v)}
           aria-label={visible ? 'Hide password' : 'Show password'}
-          className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted transition-colors hover:text-primary"
+          className="text-muted hover:text-primary absolute inset-y-0 right-0 flex items-center pr-3 transition-colors"
         >
           {visible ? <IconEyeOff size={18} /> : <IconEye size={18} />}
         </button>
@@ -408,10 +409,10 @@ export function Checkbox({
         {label || description ? (
           <label htmlFor={id} className="select-none">
             {label ? (
-              <span className="font-medium text-primary text-sm">{label}</span>
+              <span className="text-primary text-sm font-medium">{label}</span>
             ) : null}
             {description ? (
-              <span className="block text-secondary text-xs">
+              <span className="text-secondary block text-xs">
                 {description}
               </span>
             ) : null}
@@ -419,7 +420,7 @@ export function Checkbox({
         ) : null}
       </div>
       {error ? (
-        <p className="text-red-600 text-xs dark:text-red-400">{error}</p>
+        <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
       ) : null}
     </div>
   );
@@ -449,17 +450,17 @@ export function Radio({
         id={id}
         value={value}
         disabled={disabled}
-        className="mt-0.5 flex size-4.5 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors data-[checked]:border-brand dark:border-zinc-600 dark:bg-zinc-900"
+        className="data-[checked]:border-brand mt-0.5 flex size-4.5 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors dark:border-zinc-600 dark:bg-zinc-900"
       >
-        <BaseRadio.Indicator className="size-2.5 rounded-full bg-brand" />
+        <BaseRadio.Indicator className="bg-brand size-2.5 rounded-full" />
       </BaseRadio.Root>
       {label || description ? (
         <label htmlFor={id} className="select-none">
           {label ? (
-            <span className="font-medium text-primary text-sm">{label}</span>
+            <span className="text-primary text-sm font-medium">{label}</span>
           ) : null}
           {description ? (
-            <span className="block text-secondary text-xs">{description}</span>
+            <span className="text-secondary block text-xs">{description}</span>
           ) : null}
         </label>
       ) : null}
@@ -578,12 +579,12 @@ export function MultiSelect({
           {selected.map((opt) => (
             <Combobox.Chip
               key={opt.value}
-              className="flex items-center gap-1 rounded bg-brand/10 py-0.5 pr-1 pl-2 text-brand text-xs dark:text-indigo-300"
+              className="bg-brand/10 text-brand flex items-center gap-1 rounded py-0.5 pr-1 pl-2 text-xs dark:text-indigo-300"
             >
               {opt.label}
               <Combobox.ChipRemove
                 aria-label={`Remove ${opt.label}`}
-                className="rounded p-0.5 hover:bg-brand/20"
+                className="hover:bg-brand/20 rounded p-0.5"
               >
                 <IconX size={12} />
               </Combobox.ChipRemove>
@@ -591,13 +592,13 @@ export function MultiSelect({
           ))}
           <Combobox.Input
             placeholder={selected.length === 0 ? placeholder : undefined}
-            className="min-w-16 flex-1 bg-transparent text-primary text-sm outline-none placeholder:text-muted"
+            className="text-primary placeholder:text-muted min-w-16 flex-1 bg-transparent text-sm outline-none"
           />
         </Combobox.Chips>
         <Combobox.Portal>
           <Combobox.Positioner sideOffset={4} className="z-50">
-            <Combobox.Popup className="max-h-64 w-[var(--anchor-width)] overflow-y-auto rounded-lg border-fancy-pants bg-white p-1 shadow-lg dark:bg-zinc-900">
-              <Combobox.Empty className="px-3 py-2 text-secondary text-sm empty:hidden">
+            <Combobox.Popup className="border-fancy-pants max-h-64 w-[var(--anchor-width)] overflow-y-auto rounded-lg bg-white p-1 shadow-lg dark:bg-zinc-900">
+              <Combobox.Empty className="text-secondary px-3 py-2 text-sm empty:hidden">
                 Nothing found
               </Combobox.Empty>
               <Combobox.List>
@@ -605,7 +606,7 @@ export function MultiSelect({
                   <Combobox.Item
                     key={item.value}
                     value={item}
-                    className="flex cursor-default items-center justify-between rounded px-3 py-1.5 text-primary text-sm data-[highlighted]:bg-brand/10"
+                    className="text-primary data-[highlighted]:bg-brand/10 flex cursor-default items-center justify-between rounded px-3 py-1.5 text-sm"
                   >
                     {item.label}
                     <Combobox.ItemIndicator>

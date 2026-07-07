@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useId, useMemo, useRef, useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import { array, looseObject, string } from 'zod';
+
 import { Tag } from '@/components/tag';
 import type { ParsedFilters } from '@/routes/_main/churches';
 import { useTRPC } from '@/trpc/react';
@@ -390,7 +391,7 @@ export function ChurchCombobox({
         }
       }}
     >
-      <div className="flex flex-col gap-1 font-medium text-sm">
+      <div className="flex flex-col gap-1 text-sm font-medium">
         <label className="sr-only" htmlFor={id}>
           Search churches by name, address, doctrine, or practice
         </label>
@@ -444,7 +445,7 @@ export function ChurchCombobox({
                     ) : (
                       <Combobox.Chip
                         key={item.id}
-                        className="flex cursor-default items-center gap-1 rounded-full border-fancy-pants bg-white py-1 pr-1 pl-3 text-primary text-sm outline-none transition-colors focus-within:bg-white/10 dark:bg-zinc-900 dark:focus-within:bg-white/10 [@media(hover:hover)]:data-highlighted:bg-white/10 dark:[@media(hover:hover)]:data-highlighted:bg-white/10"
+                        className="border-fancy-pants text-primary flex cursor-default items-center gap-1 rounded-full bg-white py-1 pr-1 pl-3 text-sm transition-colors outline-none focus-within:bg-white/10 dark:bg-zinc-900 dark:focus-within:bg-white/10 [@media(hover:hover)]:data-highlighted:bg-white/10 dark:[@media(hover:hover)]:data-highlighted:bg-white/10"
                         aria-label={item.label}
                       >
                         {item.label}
@@ -462,7 +463,7 @@ export function ChurchCombobox({
                     placeholder={
                       visibleValues.length > 0 ? '' : 'Search churches...'
                     }
-                    className="h-8 flex-1 appearance-none border-0 bg-transparent px-1 pb-0.5 font-medium text-primary text-sm leading-none placeholder-gray-950/30 outline-none dark:placeholder-white/30"
+                    className="text-primary h-8 flex-1 appearance-none border-0 bg-transparent px-1 pb-0.5 text-sm leading-none font-medium placeholder-gray-950/30 outline-none dark:placeholder-white/30"
                   />
                 </>
               );
@@ -478,24 +479,24 @@ export function ChurchCombobox({
           sideOffset={8}
         >
           <Combobox.Popup
-            className="w-(--anchor-width) overflow-hidden rounded-2xl border-fancy-pants bg-white/90 shadow-xl backdrop-blur-lg dark:bg-black/90"
+            className="border-fancy-pants w-(--anchor-width) overflow-hidden rounded-2xl bg-white/90 shadow-xl backdrop-blur-lg dark:bg-black/90"
             aria-busy={isBusy || undefined}
           >
-            <Combobox.Empty className="box-border px-4 py-2 text-primary/80 text-sm leading-4 empty:hidden">
+            <Combobox.Empty className="text-primary/80 box-border px-4 py-2 text-sm leading-4 empty:hidden">
               {getEmptyMessage()}
             </Combobox.Empty>
             <Combobox.List className="max-h-80 overflow-y-auto py-2">
               <Combobox.Collection>
                 {(group: MenuGroup) => (
                   <Combobox.Group key={group.value}>
-                    <Combobox.GroupLabel className="px-4 py-2 font-semibold text-primary/60 text-xs uppercase">
+                    <Combobox.GroupLabel className="text-primary/60 px-4 py-2 text-xs font-semibold uppercase">
                       {group.value}
                     </Combobox.GroupLabel>
                     {group.items.map((item) => (
                       <Combobox.Item
                         key={item.id}
                         value={item}
-                        className="grid cursor-pointer select-none grid-cols-[0.75rem_0.5rem_1fr] items-start gap-2 py-2.5 text-primary/80 text-sm outline-none transition-colors hover:bg-white/10 hover:text-primary data-highlighted:bg-white/10 data-highlighted:text-primary"
+                        className="text-primary/80 hover:text-primary data-highlighted:text-primary grid cursor-pointer grid-cols-[0.75rem_0.5rem_1fr] items-start gap-2 py-2.5 text-sm transition-colors outline-none select-none hover:bg-white/10 data-highlighted:bg-white/10"
                       >
                         <Combobox.ItemIndicator className="col-start-1 mt-1">
                           <IconCheck className="size-3" />

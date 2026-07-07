@@ -2,6 +2,7 @@ import { db, UploadState } from '@letschurch/db';
 import { backupS3 } from '@letschurch/s3/backup';
 import { Context } from '@temporalio/activity';
 import { eq, sql } from 'drizzle-orm';
+
 import logger from '../../util/logger';
 
 const moduleLogger = logger.child({

@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
+
 import { buildLogout } from '@/server/oidc';
 
 export const Route = createFileRoute('/logout')({

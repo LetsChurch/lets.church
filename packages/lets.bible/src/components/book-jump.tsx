@@ -1,5 +1,6 @@
 import { Separator } from '@base-ui/react/separator';
 import { type MouseEvent, useState } from 'react';
+
 import { bookGlyph } from '@/lib/book-search';
 import { type CanonBook, NEW_TESTAMENT, OLD_TESTAMENT } from '@/lib/canon';
 
@@ -13,7 +14,7 @@ function Sep() {
   return (
     <Separator
       orientation="vertical"
-      className="select-none text-[11px] text-faint"
+      className="text-faint text-[11px] select-none"
       render={<span>›</span>}
     />
   );
@@ -78,7 +79,7 @@ export function BookList({
 }) {
   const group = (label: string, books: CanonBook[]) => (
     <div className="mb-2">
-      <div className="px-0.5 pt-2 pb-1.5 font-bold text-[10px] text-faint uppercase tracking-[0.1em]">
+      <div className="text-faint px-0.5 pt-2 pb-1.5 text-[10px] font-bold tracking-[0.1em] uppercase">
         {label}
       </div>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(48px,1fr))] gap-1.5">
@@ -91,7 +92,7 @@ export function BookList({
             title={b.name}
             aria-label={b.name}
             aria-current={b.slug === current ? 'true' : undefined}
-            className={`flex h-9 items-center justify-center rounded-[7px] border font-semibold text-[12.5px] transition ${
+            className={`flex h-9 items-center justify-center rounded-[7px] border text-[12.5px] font-semibold transition ${
               b.slug === current
                 ? 'border-gold bg-gold text-white'
                 : 'border-line bg-paper-raised text-ink hover:border-gold-soft hover:bg-paper-soft'
@@ -142,7 +143,7 @@ export function BookJump({
             onMouseDown={keepFocus}
             onClick={() => setBooksOpen((o) => !o)}
             aria-expanded={booksOpen}
-            className={`font-semibold text-[12.5px] ${
+            className={`text-[12.5px] font-semibold ${
               booksOpen ? 'text-gold' : 'text-muted-2 hover:text-gold'
             }`}
           >
@@ -155,14 +156,14 @@ export function BookJump({
                 type="button"
                 onMouseDown={keepFocus}
                 onClick={() => onFill(book.name)}
-                className="font-semibold text-[12.5px] text-gold"
+                className="text-gold text-[12.5px] font-semibold"
               >
                 {book.name}
               </button>
               {inVerse ? (
                 <>
                   <Sep />
-                  <span className="font-semibold text-[12.5px] text-gold">
+                  <span className="text-gold text-[12.5px] font-semibold">
                     Chapter {chapter}
                   </span>
                 </>
@@ -170,7 +171,7 @@ export function BookJump({
             </>
           )}
         </div>
-        <span className="whitespace-nowrap text-[11.5px] text-faint">
+        <span className="text-faint text-[11.5px] whitespace-nowrap">
           {booksOpen
             ? 'Choose a book'
             : inVerse
@@ -229,7 +230,7 @@ export function BookJump({
                   ? onNavigate(book.slug, chapter)
                   : onNavigate(book.slug, 1)
               }
-              className="font-semibold text-[12px] text-gold hover:underline"
+              className="text-gold text-[12px] font-semibold hover:underline"
             >
               {inVerse
                 ? `Read all of ${book.name} ${chapter}`
@@ -241,14 +242,14 @@ export function BookJump({
 
       {/* picked-verse preview */}
       {inVerse && verse != null ? (
-        <div className="flex items-center gap-3 border-line border-t bg-paper-raised px-4 py-3">
-          <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-gold" />
+        <div className="border-line bg-paper-raised flex items-center gap-3 border-t px-4 py-3">
+          <span className="bg-gold h-1.5 w-1.5 flex-shrink-0 rounded-full" />
           <div className="min-w-0 flex-1">
-            <div className="font-bold font-serif text-[16px] text-ink-strong">
+            <div className="text-ink-strong font-serif text-[16px] font-bold">
               {book.name} {chapter}:{verse}
             </div>
             {pickText ? (
-              <div className="truncate font-serif text-[14px] text-muted">
+              <div className="text-muted truncate font-serif text-[14px]">
                 {pickText}
               </div>
             ) : null}
@@ -257,7 +258,7 @@ export function BookJump({
             type="button"
             onMouseDown={keepFocus}
             onClick={() => onNavigate(book.slug, chapter, verse)}
-            className="flex-shrink-0 rounded-[9px] bg-ink-strong px-[14px] py-2 font-semibold text-[13px] text-white"
+            className="bg-ink-strong flex-shrink-0 rounded-[9px] px-[14px] py-2 text-[13px] font-semibold text-white"
           >
             Open
           </button>

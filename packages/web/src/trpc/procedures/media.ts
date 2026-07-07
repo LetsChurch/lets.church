@@ -28,6 +28,7 @@ import remarkRehype from 'remark-rehype';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
 import { unified } from 'unified';
 import { z } from 'zod';
+
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarXs2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
@@ -42,6 +43,7 @@ import {
 } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { ffprobeSchema } from '@/util/zod';
+
 import { generateSuggestedQuestions } from '../media/suggested-questions';
 import { authProcedure, publicProcedure } from '../trpc';
 
@@ -1160,7 +1162,7 @@ export const mediaProcedures = {
         kind: (typeof annotationRows)[number]['kind'];
         startWord: number | null;
         endWord: number | null;
-        // biome-ignore lint/complexity/noBannedTypes: see comment above — TanStack/tRPC inference uses `{}` for the JSON-safe metadata shape; matching here keeps the loader contract aligned.
+        // oxlint-disable-next-line typescript/no-empty-object-type -- see comment above — TanStack/tRPC inference uses `{}` for the JSON-safe metadata shape; matching here keeps the loader contract aligned.
         metadata: { [key: string]: {} };
       };
       const annotationsByParagraphId = new Map<string, Array<AnnotationOut>>();
@@ -1170,7 +1172,7 @@ export const mediaProcedures = {
           kind: a.kind,
           startWord: a.startWord,
           endWord: a.endWord,
-          // biome-ignore lint/complexity/noBannedTypes: see AnnotationOut type comment.
+          // oxlint-disable-next-line typescript/no-empty-object-type -- see AnnotationOut type comment.
           metadata: a.metadata as { [key: string]: {} },
         });
         annotationsByParagraphId.set(a.paragraphId, list);

@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
+
 import {
   type BookChapter,
   bibleBook,
@@ -22,6 +23,7 @@ import {
   loadOverlayIndex,
 } from '@/server/overlays/apply-tokens';
 import { defaultTranslationId, resolveTranslation } from '@/server/translation';
+
 import { publicProcedure } from '../trpc';
 
 // Tables address books by USFM code; the reader uses slugs. Resolve either.

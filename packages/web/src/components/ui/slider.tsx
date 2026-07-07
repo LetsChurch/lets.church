@@ -1,4 +1,5 @@
 import { Slider as BaseSlider } from '@base-ui/react/slider';
+
 import { cn } from '@/util/cn';
 
 type Mark = { value: number; label?: string };
@@ -48,8 +49,8 @@ export function Slider({
       >
         <BaseSlider.Control className="relative flex h-5 w-full items-center">
           <BaseSlider.Track className="h-1.5 w-full rounded-full bg-gray-200 dark:bg-zinc-700">
-            <BaseSlider.Indicator className="rounded-full bg-brand" />
-            <BaseSlider.Thumb className="size-4 rounded-full border-2 border-brand bg-white shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand/40 dark:bg-zinc-900" />
+            <BaseSlider.Indicator className="bg-brand rounded-full" />
+            <BaseSlider.Thumb className="border-brand focus-visible:ring-brand/40 size-4 rounded-full border-2 bg-white shadow-sm outline-none focus-visible:ring-2 dark:bg-zinc-900" />
           </BaseSlider.Track>
           {marks?.length ? (
             <div className="pointer-events-none absolute inset-x-0 top-6">
@@ -58,7 +59,7 @@ export function Slider({
                 return (
                   <span
                     key={mark.value}
-                    className="-translate-x-1/2 absolute text-secondary text-xs"
+                    className="text-secondary absolute -translate-x-1/2 text-xs"
                     style={{ left: `${pct}%` }}
                   >
                     {mark.label ?? mark.value}

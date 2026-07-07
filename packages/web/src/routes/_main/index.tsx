@@ -4,6 +4,7 @@ import type { EmblaCarouselType } from 'embla-carousel';
 import useEmblaCarousel from 'embla-carousel-react';
 import type { ComponentProps } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { CarouselNavigationButtons } from '@/components/carousel-navigation-buttons';
 import { DonateCard } from '@/components/donate-card';
 import { EmptyState } from '@/components/empty-state';
@@ -195,11 +196,11 @@ function ContentSection({
   return (
     <div className="mb-8">
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="font-medium text-lg text-primary">{title}</h2>
+        <h2 className="text-primary text-lg font-medium">{title}</h2>
         {showViewAll && uploads.length > 0 && viewAllText && viewAllHref ? (
           <Link
             to={viewAllHref}
-            className="text-muted text-sm transition-colors hover:text-primary"
+            className="text-muted hover:text-primary text-sm transition-colors"
           >
             {viewAllText}
           </Link>
@@ -282,11 +283,11 @@ function RecentlySaved() {
   return (
     <div className="mb-8">
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="font-medium text-lg text-primary">Recently Saved</h2>
+        <h2 className="text-primary text-lg font-medium">Recently Saved</h2>
         {hasSavedItems ? (
           <button
             type="button"
-            className="text-muted text-sm transition-colors hover:text-primary"
+            className="text-muted hover:text-primary text-sm transition-colors"
           >
             View all
           </button>
@@ -295,7 +296,7 @@ function RecentlySaved() {
       {hasSavedItems ? (
         <div className="relative isolate">
           <div
-            className="sm:-mx-16 relative overflow-visible sm:px-16"
+            className="relative overflow-visible sm:-mx-16 sm:px-16"
             ref={emblaRef}
             style={{
               maskImage:
@@ -662,7 +663,7 @@ function Home() {
       <div ref={loadMoreRef} className="h-4" />
 
       {isFetchingNextPage ? (
-        <div className="py-8 text-center text-muted">Loading more...</div>
+        <div className="text-muted py-8 text-center">Loading more...</div>
       ) : null}
     </MainLayout>
   );

@@ -1,0 +1,18 @@
+{
+  "$schema": "../../node_modules/oxlint/configuration_schema.json",
+  "extends": ["../../.oxlintrc.json"],
+  "plugins": ["typescript", "oxc"],
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["@letschurch/temporal/activities/*"],
+            "message": "Do not import temporal activities"
+          }
+        ]
+      }
+    ]
+  }
+}

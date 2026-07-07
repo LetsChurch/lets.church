@@ -2,6 +2,7 @@ import { Dialog } from '@base-ui/react/dialog';
 import { IconX } from '@tabler/icons-react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+
 import { cn } from '@/util/cn';
 
 type LcModalRootProps = ComponentPropsWithoutRef<typeof Dialog.Root>;
@@ -98,7 +99,7 @@ export function LcModalTitle({
 }: LcModalTitleProps) {
   return (
     <Dialog.Title
-      className={`font-semibold text-lg text-primary ${className}`}
+      className={`text-primary text-lg font-semibold ${className}`}
       {...props}
     >
       {children}
@@ -133,7 +134,7 @@ export function LcModalClose({ className = '', ...props }: LcModalCloseProps) {
   return (
     <Dialog.Close
       {...props}
-      className={`flex size-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-primary dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-primary ${className}`}
+      className={`hover:text-primary dark:hover:text-primary flex size-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 dark:text-zinc-400 dark:hover:bg-zinc-800 ${className}`}
     >
       <IconX size={20} />
     </Dialog.Close>

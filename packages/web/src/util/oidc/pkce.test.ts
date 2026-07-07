@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+
 import { verifyPkceS256 } from './pkce';
 
 // RFC 7636 Appendix B worked example.

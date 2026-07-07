@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+
 import { Passage } from './passage';
 import { CONTEXT, MODES, philippians4 } from './sample';
 
@@ -15,10 +16,10 @@ export const VerseRenderingModes: Story = {
   render: () => (
     <div className="w-[1100px] max-w-full">
       <div className="mb-5">
-        <h2 className="font-serif text-[26px] text-ink-strong">
+        <h2 className="text-ink-strong font-serif text-[26px]">
           Verse rendering modes
         </h2>
-        <p className="mt-1 text-[14px] text-muted">
+        <p className="text-muted mt-1 text-[14px]">
           How the type system shifts by genre — one renderer, driven by the
           passage markup.
         </p>
@@ -27,22 +28,22 @@ export const VerseRenderingModes: Story = {
         {MODES.map((m) => (
           <div
             key={m.id}
-            className="rounded-[14px] border border-line bg-paper-raised p-5"
+            className="border-line bg-paper-raised rounded-[14px] border p-5"
           >
             <div className="mb-3 flex items-baseline justify-between gap-2.5">
               <span
-                className={`font-mono text-[10.5px] uppercase tracking-[0.05em] ${
+                className={`font-mono text-[10.5px] tracking-[0.05em] uppercase ${
                   m.id === 'red-letter' ? 'text-redletter' : 'text-gold'
                 }`}
               >
                 {m.label}
               </span>
-              <span className="font-bold font-serif text-[13px] text-muted">
+              <span className="text-muted font-serif text-[13px] font-bold">
                 {m.ref}
               </span>
             </div>
             <Passage blocks={m.blocks} size="base" />
-            <div className="mt-3 text-[12px] text-faint leading-snug">
+            <div className="text-faint mt-3 text-[12px] leading-snug">
               {m.note}
             </div>
           </div>
@@ -58,10 +59,10 @@ export const ContextVariants: Story = {
   render: () => (
     <div className="w-[720px] max-w-full">
       <div className="mb-3">
-        <h2 className="font-serif text-[26px] text-ink-strong">
+        <h2 className="text-ink-strong font-serif text-[26px]">
           Context variants
         </h2>
-        <p className="mt-1 text-[14px] text-muted">
+        <p className="text-muted mt-1 text-[14px]">
           The faded-context treatment applied to each genre.
         </p>
       </div>
@@ -70,13 +71,13 @@ export const ContextVariants: Story = {
           key={c.id}
           className="border-line py-6 [&:not(:first-child)]:border-t"
         >
-          <div className="mb-[14px] font-bold font-serif text-[19px] text-ink-strong">
+          <div className="text-ink-strong mb-[14px] font-serif text-[19px] font-bold">
             {c.ref}
           </div>
           <Passage blocks={c.blocks} />
         </div>
       ))}
-      <div className="border-line border-t pt-4 text-[12.5px] text-faint">
+      <div className="border-line text-faint border-t pt-4 text-[12.5px]">
         Matched line stays full-contrast; surrounding verses recede — the same
         signature treatment, whatever the genre.
       </div>
@@ -89,10 +90,10 @@ export const ReadingView: Story = {
   render: () => (
     <div className="w-[660px] max-w-full">
       <div className="mb-[34px] text-center">
-        <div className="font-bold text-[12px] text-gold-soft uppercase tracking-[0.16em]">
+        <div className="text-gold-soft text-[12px] font-bold tracking-[0.16em] uppercase">
           Philippians
         </div>
-        <div className="mt-1.5 font-serif text-[46px] text-ink-strong leading-none">
+        <div className="text-ink-strong mt-1.5 font-serif text-[46px] leading-none">
           Chapter 4
         </div>
       </div>

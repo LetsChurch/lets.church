@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router';
+
 import { Avatar } from '@/components/avatar';
 import { MediaActions } from '@/components/media-actions';
 
@@ -71,7 +72,7 @@ export function MediaHeader({
   return (
     <div className="mt-8 flex flex-col gap-3">
       {/* Title */}
-      <h1 className="font-bold text-lg text-primary leading-normal">
+      <h1 className="text-primary text-lg leading-normal font-bold">
         {title ? title : 'Untitled'}
       </h1>
 
@@ -106,11 +107,11 @@ export function MediaHeader({
             <Avatar
               src={channel.avatarUrl}
               alt={channel.name}
-              className="size-7 border-fancy-pants"
+              className="border-fancy-pants size-7"
               fallbackClassName="bg-brand font-bold text-xs"
             />
             <div className="flex flex-col gap-0.5">
-              <div className="font-semibold text-primary text-xs">
+              <div className="text-primary text-xs font-semibold">
                 {channel.name}
               </div>
               <div className="text-[10px] text-zinc-400">

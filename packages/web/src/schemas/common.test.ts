@@ -1,5 +1,6 @@
 import short from 'short-uuid';
 import { describe, expect, test } from 'vitest';
+
 import { IncomingIdSchema, OutgoingIdSchema } from './common';
 
 const idTranslator = short(short.constants.flickrBase58);

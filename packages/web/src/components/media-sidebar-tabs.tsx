@@ -8,6 +8,7 @@ import {
   IconX,
 } from '@tabler/icons-react';
 import { useMemo } from 'react';
+
 import { PlaylistSidebar } from '@/components/playlist-sidebar';
 import { Transcript } from '@/components/transcript';
 import {
@@ -112,14 +113,14 @@ export function MediaSidebarTabs({
     <div className="h-full">
       <Tabs.Root
         defaultValue={hasPlaylist ? 'playlist' : 'transcript'}
-        className="sticky top-4 bottom-4 isolate flex h-[calc(100vh-6rem)] flex-col overflow-hidden rounded-2xl border-fancy-pants bg-zinc-100 dark:bg-zinc-900"
+        className="border-fancy-pants sticky top-4 bottom-4 isolate flex h-[calc(100vh-6rem)] flex-col overflow-hidden rounded-2xl bg-zinc-100 dark:bg-zinc-900"
       >
         {/* Tabs Header */}
         {hasPlaylist ? (
-          <Tabs.List className="relative flex border-zinc-200 border-b dark:border-zinc-800">
+          <Tabs.List className="relative flex border-b border-zinc-200 dark:border-zinc-800">
             <Tabs.Tab
               value="playlist"
-              className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-secondary text-sm transition-colors hover:text-primary data-[active]:text-primary"
+              className="text-secondary hover:text-primary data-[active]:text-primary flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-sm transition-colors"
             >
               <IconListNumbers size={16} />
               <span>
@@ -128,7 +129,7 @@ export function MediaSidebarTabs({
             </Tabs.Tab>
             <Tabs.Tab
               value="transcript"
-              className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-secondary text-sm transition-colors hover:text-primary data-[active]:text-primary"
+              className="text-secondary hover:text-primary data-[active]:text-primary flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-sm transition-colors"
             >
               <IconTextCaption size={16} />
               <span>Transcript</span>
@@ -136,7 +137,7 @@ export function MediaSidebarTabs({
             {/* Sliding active-tab underline (replaces the previous static
                 per-tab border) so switching tabs animates like elsewhere. */}
             <Tabs.Indicator
-              className="absolute bottom-0 h-[2px] bg-brand transition-all duration-200"
+              className="bg-brand absolute bottom-0 h-[2px] transition-all duration-200"
               style={{
                 left: 'var(--active-tab-left)',
                 width: 'var(--active-tab-width)',
@@ -151,7 +152,7 @@ export function MediaSidebarTabs({
           className="flex min-h-0 flex-1 flex-col overflow-hidden"
         >
           {/* Transcript Header */}
-          <div className="flex items-center gap-2 border-zinc-200 border-b px-5 py-2.5 dark:border-zinc-800">
+          <div className="flex items-center gap-2 border-b border-zinc-200 px-5 py-2.5 dark:border-zinc-800">
             {isSearchActive ? (
               <>
                 <div className="relative flex-1">
@@ -160,12 +161,12 @@ export function MediaSidebarTabs({
                     value={searchQuery}
                     onChange={handleSearchChange}
                     placeholder="Search transcript..."
-                    className="w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1.5 pr-8 text-primary text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-800"
-                    // biome-ignore lint/a11y/noAutofocus: this is rendered by user interaction
+                    className="text-primary w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1.5 pr-8 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-zinc-800"
+                    // oxlint-disable-next-line jsx-a11y/no-autofocus -- this is rendered by user interaction
                     autoFocus
                   />
                   {hasQuery ? (
-                    <div className="-translate-y-1/2 absolute top-1/2 right-2 text-gray-400 text-xs">
+                    <div className="absolute top-1/2 right-2 -translate-y-1/2 text-xs text-gray-400">
                       {searchResults.length}
                     </div>
                   ) : null}
@@ -181,7 +182,7 @@ export function MediaSidebarTabs({
               </>
             ) : (
               <>
-                <h3 className="flex-1 font-medium text-primary text-sm">
+                <h3 className="text-primary flex-1 text-sm font-medium">
                   Transcript
                 </h3>
                 <button
@@ -201,7 +202,7 @@ export function MediaSidebarTabs({
             <button
               type="button"
               onClick={() => askVideoQuestion(searchQuery)}
-              className="flex w-full shrink-0 items-center gap-2 border-zinc-200 border-b px-5 py-2.5 text-left text-primary text-sm transition-colors hover:bg-white/10 dark:border-zinc-800"
+              className="text-primary flex w-full shrink-0 items-center gap-2 border-b border-zinc-200 px-5 py-2.5 text-left text-sm transition-colors hover:bg-white/10 dark:border-zinc-800"
             >
               <IconSparkles
                 size={16}

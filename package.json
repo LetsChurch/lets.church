@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "check": "pnpm run /^check:/",
-    "check:biome": "biome check",
+    "check:fmt": "oxfmt --check scripts",
+    "check:lint": "oxlint scripts",
     "check:ts": "tsc --noEmit",
-    "fix": "biome check --write",
-    "fix!": "biome check --write --unsafe",
+    "fix": "oxfmt scripts && oxlint --fix scripts",
+    "fix!": "oxfmt scripts && oxlint --fix-dangerously scripts",
     "s3:prune-multipart-uploads": "bun ./scripts/s3-prune-multipart-uploads.ts",
     "knip": "knip",
     "ncu": "ncu -iw --format group"
@@ -19,7 +20,8 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@biomejs/biome": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
     "@types/node": "catalog:",
     "knip": "^5.69.1",
     "npm-check-updates": "^19.2.0",

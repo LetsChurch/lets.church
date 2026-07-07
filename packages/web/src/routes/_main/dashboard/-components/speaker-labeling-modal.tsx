@@ -15,6 +15,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { type CSSProperties, type ReactNode, useMemo, useState } from 'react';
+
 import { LcMenu, MenuItemButton } from '@/components/lc-menu';
 import { LcModal } from '@/components/lc-modal';
 import {
@@ -29,8 +30,10 @@ import { showFailure, showSuccess } from '@/components/ui/notifications';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
-import styles from './speaker-labeling-modal.module.css';
+
 import { PickerRow } from './speaker-picker';
+
+import styles from './speaker-labeling-modal.module.css';
 
 type SpeakerLabelingModalProps = {
   opened: boolean;
@@ -449,7 +452,7 @@ export function SpeakerLabelingModal({
       <LcModal.Portal>
         <LcModal.Backdrop />
         <LcModal.Popup size="full" className="flex h-dvh flex-col">
-          <div className="flex items-center justify-between border-gray-200 border-b px-4 py-3 dark:border-zinc-800">
+          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-zinc-800">
             <LcModal.Title>Label speakers</LcModal.Title>
             <LcModal.Close />
           </div>
@@ -568,7 +571,7 @@ export function SpeakerLabelingModal({
                 </div>
 
                 {/* People */}
-                <div className="flex min-h-0 w-80 flex-col border-gray-200 border-l dark:border-zinc-800">
+                <div className="flex min-h-0 w-80 flex-col border-l border-gray-200 dark:border-zinc-800">
                   <Text fw={600} size="sm" className="px-4 pt-4 pb-2.5">
                     People
                   </Text>
@@ -597,7 +600,7 @@ export function SpeakerLabelingModal({
               </div>
 
               {/* Footer — nothing is written until Save. */}
-              <div className="flex flex-wrap items-center justify-between gap-4 border-gray-200 border-t px-5 py-3 dark:border-zinc-800">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-t border-gray-200 px-5 py-3 dark:border-zinc-800">
                 <Text size="xs" c="dimmed">
                   {hasChanges
                     ? 'Unsaved changes — saving re-indexes this upload once.'
@@ -927,7 +930,7 @@ function SpeakerAssignPopover({
       />
       <Popover.Portal>
         <Popover.Positioner side={side} align="start" sideOffset={4}>
-          <Popover.Popup className="w-75 overflow-hidden rounded-lg border-fancy-pants bg-white shadow-xl transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:bg-zinc-900">
+          <Popover.Popup className="border-fancy-pants w-75 overflow-hidden rounded-lg bg-white shadow-xl transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:bg-zinc-900">
             <div className="p-2">
               {/* The detected diarization label is surfaced only here — once
                   assigned, the transcript/sidebar show the person's name. */}
@@ -1150,7 +1153,7 @@ function ParagraphSplitControl({
             {otherLabels.length > 0 ? (
               <>
                 <LcMenu.Separator />
-                <div className="px-3 py-1.5 font-medium text-secondary text-xs">
+                <div className="text-secondary px-3 py-1.5 text-xs font-medium">
                   Move to
                 </div>
                 {otherLabels.map((l) => (

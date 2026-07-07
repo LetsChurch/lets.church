@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+
 import {
   readWhisperJsonFile,
   stitchTranscript,
@@ -7,9 +8,8 @@ import {
 
 describe('stitchTranscript', () => {
   test('empty transcript', () => {
-    expect(
-      stitchTranscript({ text: '', segments: [], language: 'English' }),
-    ).toMatchInlineSnapshot(`
+    expect(stitchTranscript({ text: '', segments: [], language: 'English' }))
+      .toMatchInlineSnapshot(`
         {
           "segments": [],
           "text": "",

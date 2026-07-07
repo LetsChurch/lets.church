@@ -24,6 +24,7 @@ import { invariant } from 'es-toolkit';
 import { map } from 'nanostores';
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
+
 import { LcMenu, MenuItemButton } from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import {
@@ -551,7 +552,7 @@ function ChannelUploadsPage() {
                   <LcMenu.Portal>
                     <LcMenu.Positioner sideOffset={4}>
                       <LcMenu.Popup>
-                        <div className="px-3 py-1.5 text-secondary text-xs">
+                        <div className="text-secondary px-3 py-1.5 text-xs">
                           Change visibility for {selection.length} upload
                           {selection.length > 1 ? 's' : ''}
                         </div>
@@ -1122,7 +1123,7 @@ function ChannelUploadsPage() {
                                           to: `/dashboard/channels/${data.channel.id}/uploads/${upload.id}`,
                                         });
                                       }}
-                                      className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-primary text-sm hover:bg-gray-100 dark:hover:bg-zinc-800"
+                                      className="text-primary flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-zinc-800"
                                     >
                                       <IconEdit size={16} />
                                       Edit
@@ -1150,7 +1151,7 @@ function ChannelUploadsPage() {
                                           uploadId: upload.id,
                                         });
                                       }}
-                                      className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-primary text-sm hover:bg-gray-100 dark:hover:bg-zinc-800"
+                                      className="text-primary flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-zinc-800"
                                     >
                                       <IconDownload size={16} />
                                       Download Original
@@ -1172,7 +1173,7 @@ function ChannelUploadsPage() {
                                         uploadId: upload.id,
                                       });
                                     }}
-                                    className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-primary text-sm hover:bg-gray-100 dark:hover:bg-zinc-800"
+                                    className="text-primary flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-zinc-800"
                                   >
                                     {upload.isFeatured ? (
                                       <IconStarFilled size={16} />
@@ -1205,7 +1206,7 @@ function ChannelUploadsPage() {
                                               upload.title || 'Untitled Upload',
                                           });
                                         }}
-                                        className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-red-600 text-sm hover:bg-gray-100 dark:hover:bg-zinc-800"
+                                        className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-zinc-800"
                                       >
                                         <IconTrash size={16} />
                                         Delete

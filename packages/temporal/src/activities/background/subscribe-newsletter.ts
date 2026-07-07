@@ -1,6 +1,7 @@
 import { db, NewsletterMailingList } from '@letschurch/db';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
+
 import logger from '../../util/logger';
 
 const { LISTMONK_INTERNAL_URL } = z

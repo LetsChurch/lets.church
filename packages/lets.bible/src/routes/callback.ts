@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
+
 import { completeLogin } from '@/server/oidc';
 
 export const Route = createFileRoute('/callback')({

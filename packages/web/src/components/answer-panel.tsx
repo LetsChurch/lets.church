@@ -10,6 +10,7 @@ import {
   useState,
 } from 'react';
 import { Streamdown } from 'streamdown';
+
 import { type AnswerSource, SOURCES_DELIMITER } from '@/ai/answer-stream';
 import { Avatar } from '@/components/avatar';
 import {
@@ -176,18 +177,18 @@ function CitationBadge({
 // the answer reads like the rest of the app rather than a spaced-out article.
 const MARKDOWN_BLOCKS = {
   h1: ({ children }: ComponentProps<'h1'>) => (
-    <h1 className="mt-4 mb-1 font-semibold text-base text-white">{children}</h1>
+    <h1 className="mt-4 mb-1 text-base font-semibold text-white">{children}</h1>
   ),
   h2: ({ children }: ComponentProps<'h2'>) => (
-    <h2 className="mt-4 mb-1 font-semibold text-[15px] text-white">
+    <h2 className="mt-4 mb-1 text-[15px] font-semibold text-white">
       {children}
     </h2>
   ),
   h3: ({ children }: ComponentProps<'h3'>) => (
-    <h3 className="mt-3 mb-1 font-semibold text-sm text-white">{children}</h3>
+    <h3 className="mt-3 mb-1 text-sm font-semibold text-white">{children}</h3>
   ),
   h4: ({ children }: ComponentProps<'h4'>) => (
-    <h4 className="mt-3 mb-1 font-semibold text-sm text-white">{children}</h4>
+    <h4 className="mt-3 mb-1 text-sm font-semibold text-white">{children}</h4>
   ),
   p: ({ children }: ComponentProps<'p'>) => (
     <p className="my-2 text-sm leading-relaxed">{children}</p>
@@ -207,7 +208,7 @@ const MARKDOWN_BLOCKS = {
     <strong className="font-semibold text-white">{children}</strong>
   ),
   blockquote: ({ children }: ComponentProps<'blockquote'>) => (
-    <blockquote className="my-2 border-white/30 border-l-2 pl-3 text-white/80 italic">
+    <blockquote className="my-2 border-l-2 border-white/30 pl-3 text-white/80 italic">
       {children}
     </blockquote>
   ),
@@ -233,7 +234,7 @@ function SourceChip({
       <button
         type="button"
         onClick={() => onCite(s.startSeconds)}
-        className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 font-medium text-white/80 text-xs tabular-nums transition-colors hover:bg-white/25"
+        className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium text-white/80 tabular-nums transition-colors hover:bg-white/25"
       >
         <IconClockHour3 size={12} className="shrink-0" aria-hidden="true" />
         {formatTime(s.startSeconds * 1000)}
@@ -280,13 +281,13 @@ function SourceChips({
         <button
           type="button"
           onClick={() => setExpanded((e) => !e)}
-          className="inline-flex items-center gap-1.5 rounded-full bg-white/15 py-1 pr-3 pl-1 font-medium text-white/80 text-xs transition-colors hover:bg-white/25"
+          className="inline-flex items-center gap-1.5 rounded-full bg-white/15 py-1 pr-3 pl-1 text-xs font-medium text-white/80 transition-colors hover:bg-white/25"
         >
           {expanded ? (
             <span className="px-1.5">Show less</span>
           ) : (
             <>
-              <span className="-space-x-1.5 flex">
+              <span className="flex -space-x-1.5">
                 {hidden.slice(0, 2).map((s) => (
                   <Avatar
                     key={s.id}
@@ -510,9 +511,9 @@ export function AnswerCard({
   if (status === 'done' && !answer) return null;
 
   return (
-    <div className="rounded-2xl border-fancy-pants bg-indigo-500/90 p-5 text-white shadow-sm dark:bg-indigo-500/40">
+    <div className="border-fancy-pants rounded-2xl bg-indigo-500/90 p-5 text-white shadow-sm dark:bg-indigo-500/40">
       {heading ? (
-        <h2 className="mb-2 pr-6 font-semibold text-base text-white leading-snug">
+        <h2 className="mb-2 pr-6 text-base leading-snug font-semibold text-white">
           {heading}
         </h2>
       ) : null}
@@ -528,14 +529,14 @@ export function AnswerCard({
             ref={contentRef}
             className={
               collapsed
-                ? 'overflow-hidden [-webkit-mask-image:linear-gradient(to_bottom,black_60%,transparent)] [mask-image:linear-gradient(to_bottom,black_60%,transparent)]'
+                ? 'overflow-hidden [mask-image:linear-gradient(to_bottom,black_60%,transparent)] [-webkit-mask-image:linear-gradient(to_bottom,black_60%,transparent)]'
                 : undefined
             }
             style={collapsed ? { maxHeight: COLLAPSED_HEIGHT } : undefined}
           >
             <MarkdownBoundary
               fallback={
-                <p className="max-w-none whitespace-pre-wrap text-sm text-white leading-relaxed">
+                <p className="max-w-none text-sm leading-relaxed whitespace-pre-wrap text-white">
                   {renderedAnswer}
                 </p>
               }
@@ -543,7 +544,7 @@ export function AnswerCard({
               <Streamdown
                 parseIncompleteMarkdown
                 components={components}
-                className="max-w-none text-sm text-white leading-relaxed [&>*+*]:mt-2.5!"
+                className="max-w-none text-sm leading-relaxed text-white [&>*+*]:mt-2.5!"
               >
                 {renderedAnswer}
               </Streamdown>
@@ -553,7 +554,7 @@ export function AnswerCard({
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
-              className="mt-1 font-medium text-white/80 text-xs transition-colors hover:text-white"
+              className="mt-1 text-xs font-medium text-white/80 transition-colors hover:text-white"
             >
               {expanded ? 'See less' : 'See more'}
             </button>
@@ -566,10 +567,10 @@ export function AnswerCard({
       ) : (
         <p className="text-shimmer text-sm">{shimmerWord}…</p>
       )}
-      <p className="mt-3 flex items-center gap-1.5 text-white/75 text-xs">
+      <p className="mt-3 flex items-center gap-1.5 text-xs text-white/75">
         <IconSparkles size={12} aria-hidden="true" className="shrink-0" />
         Generated by AI. Please verify important details.
-        <span className="rounded bg-white/15 px-1 py-px font-semibold text-[10px] text-white/90 uppercase tracking-wide">
+        <span className="rounded bg-white/15 px-1 py-px text-[10px] font-semibold tracking-wide text-white/90 uppercase">
           Beta
         </span>
       </p>

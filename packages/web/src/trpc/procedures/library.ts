@@ -3,6 +3,7 @@ import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
+
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarXs2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
@@ -13,6 +14,7 @@ import {
 } from '@/util/media-visibility';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
+
 import { authProcedure } from '../trpc';
 
 const moduleLogger = logger.child({

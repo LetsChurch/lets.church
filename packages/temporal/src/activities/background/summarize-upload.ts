@@ -8,6 +8,7 @@ import {
 import { and, asc, eq, isNotNull } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 import { z } from 'zod';
+
 import {
   createChatCompletionTracked,
   SUMMARY_FALLBACK_MODEL,

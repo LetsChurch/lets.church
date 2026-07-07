@@ -6,11 +6,7 @@ export { Avatar } from '@/components/avatar';
 export type { LcColor } from './_colors';
 export { ActionIcon, Button } from './button';
 export { Alert, Badge, Loader, LoadingOverlay } from './feedback';
-export type {
-  SelectData,
-  SelectGroup,
-  SelectOption,
-} from './input';
+export type { SelectData, SelectGroup, SelectOption } from './input';
 export {
   Checkbox,
   InputWrapper,

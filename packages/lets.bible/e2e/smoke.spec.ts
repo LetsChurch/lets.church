@@ -10,9 +10,7 @@ test('LB-SMOKE-01 home renders', async ({ page }) => {
 test('LB-SMOKE-02 reader renders a chapter', async ({ page }) => {
   await page.goto('/bible/john/1');
   // The big chapter heading (the ChapterPicker button also contains "Chapter 1").
-  await expect(
-    page.getByText('In the beginning was the Word'),
-  ).toBeVisible();
+  await expect(page.getByText('In the beginning was the Word')).toBeVisible();
 });
 
 test('LB-SMOKE-03 bare /bible redirects to a default passage', async ({

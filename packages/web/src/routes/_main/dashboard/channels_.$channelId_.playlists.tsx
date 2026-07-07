@@ -5,6 +5,7 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
+
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { ActionIcon, Badge, Button, Text, Title } from '@/components/ui';
 import { modals } from '@/components/ui/confirm-modal';
@@ -13,6 +14,7 @@ import { notifications } from '@/components/ui/notifications';
 import { useDisclosure } from '@/hooks/use-disclosure';
 import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
+
 import styles from './-styles.module.css';
 
 export const Route = createFileRoute(
@@ -146,7 +148,7 @@ function PlaylistsPage() {
         {playlists.map((playlist) => (
           <div
             key={playlist.id}
-            className="overflow-hidden rounded-lg border-fancy-pants bg-white p-5 dark:bg-zinc-900"
+            className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 dark:bg-zinc-900"
           >
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div style={{ flex: 1 }} className="flex flex-col gap-2.5">

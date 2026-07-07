@@ -10,7 +10,9 @@
 //   - remote: `just lb-index-remote <host>` to (re)build an index from the
 //             committed embeddings; seed the target DB out-of-band.
 import { execFileSync } from 'node:child_process';
+
 import { z } from 'zod';
+
 import { createPool } from './pool';
 
 const { LETS_BIBLE_DATABASE_URL } = z

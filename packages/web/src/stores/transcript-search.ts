@@ -1,6 +1,7 @@
 import type { Document } from 'flexsearch';
 import { atom } from 'nanostores';
 import PLazy from 'p-lazy';
+
 import { escapeHtml } from '@/util/html-escape';
 
 export type TranscriptLine = {

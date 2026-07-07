@@ -5,7 +5,6 @@ catalog:
   "@aws-sdk/client-s3": 3.948.0
   "@aws-sdk/s3-request-presigner": 3.948.0
   "@base-ui/react": "^1.6.0"
-  "@biomejs/biome": "2.3.4"
   "@chromatic-com/storybook": "^5.2.1"
   "@elastic/elasticsearch": "^8.19.1"
   "@sentry/node": "^10.25.0"
@@ -40,6 +39,8 @@ catalog:
   "es-toolkit": "^1.41.0"
   "fast-xml-parser": "^5.2.5"
   "jose": "^6.1.1"
+  "oxfmt": "0.58.0"
+  "oxlint": "1.73.0"
   "p-map": "^7.0.3"
   "p-retry": "^7.1.0"
   "pg": "^8.13.0"

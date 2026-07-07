@@ -13,6 +13,7 @@ import {
 import { TRPCError } from '@trpc/server';
 import { and, eq, notExists, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
+
 import { startIndexMediaDocument } from '@/temporal';
 
 export async function mergeSpeakers({

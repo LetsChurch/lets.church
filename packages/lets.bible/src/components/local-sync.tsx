@@ -1,6 +1,7 @@
 import { Dialog } from '@base-ui/react/dialog';
 import { useQuery } from '@tanstack/react-query';
 import { type ReactNode, useEffect, useState } from 'react';
+
 import {
   clearLocalData,
   hasLocalData,
@@ -130,11 +131,11 @@ export function LocalSync({ children }: { children: ReactNode }) {
       <Dialog.Root open={prompt}>
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[1px]" />
-          <Dialog.Popup className="-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-50 w-[min(420px,calc(100vw-32px))] rounded-2xl border border-line-strong bg-paper-raised p-6 shadow-[0_30px_60px_-24px_rgba(40,34,18,0.5)] outline-none">
-            <Dialog.Title className="font-serif text-[21px] text-ink-strong">
+          <Dialog.Popup className="border-line-strong bg-paper-raised fixed top-1/2 left-1/2 z-50 w-[min(420px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 rounded-2xl border p-6 shadow-[0_30px_60px_-24px_rgba(40,34,18,0.5)] outline-none">
+            <Dialog.Title className="text-ink-strong font-serif text-[21px]">
               Sync your library
             </Dialog.Title>
-            <Dialog.Description className="mt-2 text-[14px] text-muted leading-relaxed">
+            <Dialog.Description className="text-muted mt-2 text-[14px] leading-relaxed">
               You have {counts.highlights} highlight
               {counts.highlights === 1 ? '' : 's'} and {counts.notes} note
               {counts.notes === 1 ? '' : 's'} saved on this device. Merge them
@@ -145,7 +146,7 @@ export function LocalSync({ children }: { children: ReactNode }) {
                 type="button"
                 disabled={busy}
                 onClick={() => choose('merge')}
-                className="rounded-[10px] bg-ink-strong px-4 py-2.5 font-semibold text-[14px] text-white disabled:opacity-50 dark:text-paper"
+                className="bg-ink-strong dark:text-paper rounded-[10px] px-4 py-2.5 text-[14px] font-semibold text-white disabled:opacity-50"
               >
                 Merge with my account
               </button>
@@ -153,7 +154,7 @@ export function LocalSync({ children }: { children: ReactNode }) {
                 type="button"
                 disabled={busy}
                 onClick={() => choose('discard')}
-                className="rounded-[10px] border border-line-strong px-4 py-2.5 font-semibold text-[14px] text-muted hover:bg-paper-soft disabled:opacity-50"
+                className="border-line-strong text-muted hover:bg-paper-soft rounded-[10px] border px-4 py-2.5 text-[14px] font-semibold disabled:opacity-50"
               >
                 Use my account’s data instead
               </button>

@@ -10,12 +10,14 @@ import { createServerFn } from '@tanstack/react-start';
 import posthog from 'posthog-js';
 import { type ReactNode, useEffect } from 'react';
 import '@fontsource-variable/inter';
-import appCss from '@/app.css?url';
+
 import { ModalsProvider } from '@/components/ui/confirm-modal';
 import { NotificationsProvider } from '@/components/ui/notifications';
 import type { AppContextType } from '@/router';
 import { setBrowserSize } from '@/stores/browser-size';
 import { getInitialTheme, initializeTheme } from '@/stores/theme';
+
+import appCss from '@/app.css?url';
 
 const brand = '#6366f1';
 // Brand colors from the translucent gradient over the page background

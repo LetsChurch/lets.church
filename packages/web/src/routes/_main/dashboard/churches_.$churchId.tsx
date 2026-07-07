@@ -1,10 +1,13 @@
 import { IconShield, IconUsers, IconVideo } from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
+
 import { Avatar, Badge, Button, Text, Title, Tooltip } from '@/components/ui';
 import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
+
 import { StatCard } from './-components/stat-card';
+
 import styles from './-styles.module.css';
 
 export const Route = createFileRoute('/_main/dashboard/churches_/$churchId')({

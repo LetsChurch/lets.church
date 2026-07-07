@@ -1,4 +1,5 @@
 import { Avatar as BaseAvatar } from '@base-ui/react/avatar';
+
 import { cn } from '@/util/cn';
 import { getInitials } from '@/util/misc';
 

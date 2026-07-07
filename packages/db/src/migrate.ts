@@ -7,9 +7,11 @@
  */
 
 import { join } from 'node:path';
+
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { z } from 'zod';
+
 import { createPool } from './pool';
 
 const { DATABASE_URL } = z

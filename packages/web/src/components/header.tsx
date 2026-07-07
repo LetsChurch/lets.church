@@ -3,6 +3,7 @@ import { IconMenu2, IconSearch, IconX } from '@tabler/icons-react';
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { type PropsWithChildren, useState } from 'react';
+
 import { Avatar } from '@/components/avatar';
 import {
   LcMenu,
@@ -13,6 +14,7 @@ import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { $headerBackgroundImage } from '@/stores/header';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
+
 import Logo from './logo';
 import MobileMenu from './mobile-menu';
 import SearchBar from './search-bar';
@@ -105,21 +107,21 @@ export default function Header({
     <div className="relative">
       {/* Background with gradient overlay - only show when there are children */}
       {hasBackground ? (
-        <div className="-top-16 absolute inset-0 h-[244px]">
-          <div className="absolute inset-0 bg-brand opacity-60">
+        <div className="absolute inset-0 -top-16 h-[244px]">
+          <div className="bg-brand absolute inset-0 opacity-60">
             <div
-              className="mask-[linear-gradient(to_bottom,black_0%,black_70%,transparent_100%)] absolute inset-0 bg-center bg-cover blur-lg brightness-200 transition-all duration-1000 ease-in-out"
+              className="absolute inset-0 mask-[linear-gradient(to_bottom,black_0%,black_70%,transparent_100%)] bg-cover bg-center blur-lg brightness-200 transition-all duration-1000 ease-in-out"
               style={{
                 backgroundImage: `url('${backgroundImageUrl}')`,
               }}
             />
           </div>
-          <div className="absolute inset-0 bg-linear-to-b from-page/0 via-page/90 to-page" />
+          <div className="from-page/0 via-page/90 to-page absolute inset-0 bg-linear-to-b" />
         </div>
       ) : null}
 
       {/* Theme gradient - uses ::after pseudo-element via CSS class */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-60 bg-linear-to-b from-brand/40 to-transparent" />
+      <div className="from-brand/40 pointer-events-none absolute inset-x-0 top-0 h-60 bg-linear-to-b to-transparent" />
 
       {/* Top Navigation Bar */}
       <div className="relative flex h-(--header-height) items-center justify-between p-4">
@@ -275,7 +277,7 @@ export default function Header({
                           <button
                             {...props}
                             type="submit"
-                            className="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-red-400 text-sm transition-colors hover:bg-gray-100 focus:bg-gray-100 data-highlighted:bg-gray-100 dark:data-highlighted:bg-zinc-800 dark:focus:bg-zinc-800 dark:hover:bg-zinc-800"
+                            className="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-sm text-red-400 transition-colors hover:bg-gray-100 focus:bg-gray-100 data-highlighted:bg-gray-100 dark:hover:bg-zinc-800 dark:focus:bg-zinc-800 dark:data-highlighted:bg-zinc-800"
                           >
                             Logout
                           </button>
@@ -327,7 +329,7 @@ export default function Header({
                     params={{ channelId: channel.id }}
                     search={{ upload: true, page: 1, limit: 20 }}
                     onClick={() => setChannelPickerOpen(false)}
-                    className="rounded-md px-3 py-2 text-primary text-sm transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
+                    className="text-primary rounded-md px-3 py-2 text-sm transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
                   >
                     {channel.name}
                   </Link>

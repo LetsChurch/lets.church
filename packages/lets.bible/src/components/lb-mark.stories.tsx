@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+
 import { LbMark, type LbTreatment } from './lb-mark';
 
 // Compare the candidate "lB" icon treatments. The problem: isolated, the l's
@@ -45,19 +46,19 @@ function OptionRow({
   note: string;
 }) {
   return (
-    <div className="flex items-center gap-6 border-line border-b py-6 last:border-b-0">
+    <div className="border-line flex items-center gap-6 border-b py-6 last:border-b-0">
       <div className="flex w-30 flex-shrink-0 justify-center">
-        <LbMark treatment={treatment} className="h-16 text-ink-strong" />
+        <LbMark treatment={treatment} className="text-ink-strong h-16" />
       </div>
       {/* favicon-scale legibility check */}
       <div className="flex items-end gap-4">
-        <LbMark treatment={treatment} className="h-8 text-ink-strong" />
-        <LbMark treatment={treatment} className="h-6 text-ink-strong" />
-        <LbMark treatment={treatment} className="h-4 text-ink-strong" />
+        <LbMark treatment={treatment} className="text-ink-strong h-8" />
+        <LbMark treatment={treatment} className="text-ink-strong h-6" />
+        <LbMark treatment={treatment} className="text-ink-strong h-4" />
       </div>
       <div className="flex-1">
-        <div className="font-semibold text-[14px] text-ink-strong">{title}</div>
-        <div className="text-[13px] text-muted">{note}</div>
+        <div className="text-ink-strong text-[14px] font-semibold">{title}</div>
+        <div className="text-muted text-[13px]">{note}</div>
       </div>
     </div>
   );
@@ -68,10 +69,10 @@ export const Compare: Story = {
   render: () => (
     <div className="w-[760px] max-w-full">
       <div className="mb-5">
-        <h2 className="font-serif text-[26px] text-ink-strong">
+        <h2 className="text-ink-strong font-serif text-[26px]">
           lB icon — treatment options
         </h2>
-        <p className="mt-1 text-[14px] text-muted">
+        <p className="text-muted mt-1 text-[14px]">
           Large preview, then favicon sizes (32 / 24 / 16px) to check small-size
           legibility.
         </p>

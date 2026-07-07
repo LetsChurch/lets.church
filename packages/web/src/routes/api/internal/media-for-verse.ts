@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
+
 import { annotationCoversVerse } from '@/util/bible-annotations';
 import logger from '@/util/logger';
 

@@ -2,6 +2,7 @@ import { Turnstile } from '@marsidev/react-turnstile';
 import { IconMail } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { useTRPC } from '@/trpc/react';
 
@@ -58,11 +59,11 @@ export function NewsletterCard() {
 
   return (
     <>
-      <div className="flex aspect-video flex-col gap-2 rounded-lg border-fancy-pants bg-emerald-500 p-4">
-        <h3 className="font-bold text-base text-white">
+      <div className="border-fancy-pants flex aspect-video flex-col gap-2 rounded-lg bg-emerald-500 p-4">
+        <h3 className="text-base font-bold text-white">
           Want updates about Let's Church?
         </h3>
-        <p className="text-white text-xs leading-relaxed">
+        <p className="text-xs leading-relaxed text-white">
           Subscribe to our newsletter to get updates on new features, platform
           improvements, and upcoming changes. No spam, just the important stuff.
         </p>
@@ -76,12 +77,12 @@ export function NewsletterCard() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
-                className="flex-1 appearance-none bg-transparent font-medium text-sm text-white outline-none placeholder:text-white/50"
+                className="flex-1 appearance-none bg-transparent text-sm font-medium text-white outline-none placeholder:text-white/50"
                 required
               />
               <button
                 type="submit"
-                className="rounded-full bg-white px-3 py-1 font-bold text-emerald-600 text-xs transition-colors hover:bg-gray-50"
+                className="rounded-full bg-white px-3 py-1 text-xs font-bold text-emerald-600 transition-colors hover:bg-gray-50"
               >
                 Subscribe
               </button>
@@ -118,7 +119,7 @@ export function NewsletterCard() {
                   </LcModal.Description>
 
                   {error ? (
-                    <p className="text-red-600 text-sm">{error}</p>
+                    <p className="text-sm text-red-600">{error}</p>
                   ) : null}
 
                   <div className="flex justify-center">

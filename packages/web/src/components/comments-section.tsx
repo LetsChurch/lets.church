@@ -5,6 +5,7 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { useState } from 'react';
+
 import { Comment } from '@/components/comment';
 import { CommentInput } from '@/components/comment-input';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
@@ -80,10 +81,10 @@ export function CommentsSection({
       )}
     >
       {/* Comments Header */}
-      <div className="flex items-center gap-1 border-zinc-200 border-b px-5 pt-1.5 pb-2 dark:border-zinc-800">
-        <span className="font-medium text-primary text-sm">Comments</span>
+      <div className="flex items-center gap-1 border-b border-zinc-200 px-5 pt-1.5 pb-2 dark:border-zinc-800">
+        <span className="text-primary text-sm font-medium">Comments</span>
         <div className="flex h-[18px] min-w-6 items-center justify-center rounded-[9px] bg-gray-950/10 px-1.5 dark:bg-white/10">
-          <span className="font-bold text-[10px] text-primary/70 leading-none">
+          <span className="text-primary/70 text-[10px] leading-none font-bold">
             {comments.length}
           </span>
         </div>
@@ -92,7 +93,7 @@ export function CommentsSection({
       {commentsEnabled ? (
         <>
           {/* Comment Input */}
-          <div className="border-zinc-200 border-b p-5 dark:border-zinc-800">
+          <div className="border-b border-zinc-200 p-5 dark:border-zinc-800">
             <CommentInput
               onSubmit={handleSubmitComment}
               placeholder={isLoggedIn ? 'Add a comment' : 'Sign in to comment'}
@@ -106,7 +107,7 @@ export function CommentsSection({
           {/* Comments List */}
           <div className="p-5">
             {comments.length === 0 ? (
-              <div className="py-8 text-center text-primary/50 text-sm">
+              <div className="text-primary/50 py-8 text-center text-sm">
                 No comments yet. Be the first to comment!
               </div>
             ) : (
@@ -128,10 +129,10 @@ export function CommentsSection({
         <div className="flex flex-col items-center justify-center px-5 py-12">
           <IconMessageCircle2
             size={48}
-            className="mb-4 text-primary/20"
+            className="text-primary/20 mb-4"
             strokeWidth={1.5}
           />
-          <p className="text-center text-primary/50 text-sm">
+          <p className="text-primary/50 text-center text-sm">
             Comments are turned off for this media
           </p>
         </div>

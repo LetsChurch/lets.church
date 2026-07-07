@@ -14,6 +14,7 @@ import {
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
+
 import {
   Alert,
   Badge,
@@ -287,12 +288,12 @@ function RouteComponent() {
       </div>
 
       {/* Stats Overview */}
-      <div className="overflow-hidden rounded-xl border-fancy-pants bg-white dark:bg-zinc-900">
+      <div className="border-fancy-pants overflow-hidden rounded-xl bg-white dark:bg-zinc-900">
         <div className="flex flex-col gap-4">
           <Title order={3}>Backup Statistics</Title>
 
           <div className="flex flex-nowrap items-center justify-start gap-4 [&>*]:flex-1">
-            <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-4 dark:bg-zinc-900">
+            <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-4 dark:bg-zinc-900">
               <Text size="sm" c="dimmed">
                 Total Tracked
               </Text>
@@ -300,7 +301,7 @@ function RouteComponent() {
                 {status.stats.total.toLocaleString()}
               </Text>
             </div>
-            <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-4 dark:bg-zinc-900">
+            <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-4 dark:bg-zinc-900">
               <Text size="sm" c="dimmed">
                 Total Storage
               </Text>
@@ -313,7 +314,7 @@ function RouteComponent() {
                 </Text>
               )}
             </div>
-            <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-4 dark:bg-zinc-900">
+            <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-4 dark:bg-zinc-900">
               <Text size="sm" c="dimmed">
                 Not Backed Up
               </Text>
@@ -321,7 +322,7 @@ function RouteComponent() {
                 {status.stats.notBackedUp.toLocaleString()}
               </Text>
             </div>
-            <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-4 dark:bg-zinc-900">
+            <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-4 dark:bg-zinc-900">
               <Text size="sm" c="dimmed">
                 Backed Up
               </Text>
@@ -329,7 +330,7 @@ function RouteComponent() {
                 {status.stats.backedUp.toLocaleString()}
               </Text>
             </div>
-            <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-4 dark:bg-zinc-900">
+            <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-4 dark:bg-zinc-900">
               <Text size="sm" c="dimmed">
                 Failed
               </Text>
@@ -361,7 +362,7 @@ function RouteComponent() {
       </div>
 
       {/* Backfill Section */}
-      <div className="overflow-hidden rounded-xl border-fancy-pants bg-white dark:bg-zinc-900">
+      <div className="border-fancy-pants overflow-hidden rounded-xl bg-white dark:bg-zinc-900">
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <Title order={3}>
@@ -381,7 +382,7 @@ function RouteComponent() {
           {isBackfillRunning && status.backfillStatus ? (
             <>
               <div className="flex flex-nowrap items-center justify-start gap-4 [&>*]:flex-1">
-                <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-3 dark:bg-zinc-900">
+                <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-3 dark:bg-zinc-900">
                   <Text size="xs" c="dimmed">
                     Created
                   </Text>
@@ -389,7 +390,7 @@ function RouteComponent() {
                     {status.backfillStatus.totalCreated?.toLocaleString() ?? 0}
                   </Text>
                 </div>
-                <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-3 dark:bg-zinc-900">
+                <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-3 dark:bg-zinc-900">
                   <Text size="xs" c="dimmed">
                     Remaining
                   </Text>
@@ -397,7 +398,7 @@ function RouteComponent() {
                     {status.backfillStatus.remaining?.toLocaleString() ?? 0}
                   </Text>
                 </div>
-                <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-3 dark:bg-zinc-900">
+                <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-3 dark:bg-zinc-900">
                   <Text size="xs" c="dimmed">
                     Batches
                   </Text>
@@ -474,7 +475,7 @@ function RouteComponent() {
       </div>
 
       {/* Cleanup Stale Upload States Section */}
-      <div className="overflow-hidden rounded-xl border-fancy-pants bg-white dark:bg-zinc-900">
+      <div className="border-fancy-pants overflow-hidden rounded-xl bg-white dark:bg-zinc-900">
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <Title order={3}>
@@ -495,7 +496,7 @@ function RouteComponent() {
           {isCleanupRunning && status.cleanupStatus ? (
             <>
               <div className="flex flex-nowrap items-center justify-start gap-4 [&>*]:flex-1">
-                <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-3 dark:bg-zinc-900">
+                <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-3 dark:bg-zinc-900">
                   <Text size="xs" c="dimmed">
                     Deleted
                   </Text>
@@ -503,7 +504,7 @@ function RouteComponent() {
                     {status.cleanupStatus.totalDeleted?.toLocaleString() ?? 0}
                   </Text>
                 </div>
-                <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-3 dark:bg-zinc-900">
+                <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-3 dark:bg-zinc-900">
                   <Text size="xs" c="dimmed">
                     Remaining
                   </Text>
@@ -511,7 +512,7 @@ function RouteComponent() {
                     {status.cleanupStatus.remaining?.toLocaleString() ?? 0}
                   </Text>
                 </div>
-                <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-3 dark:bg-zinc-900">
+                <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-3 dark:bg-zinc-900">
                   <Text size="xs" c="dimmed">
                     Batches
                   </Text>
@@ -610,7 +611,7 @@ function RouteComponent() {
 
       {/* Backfill File Sizes Section */}
       {status.stats.nullSizeBytesCount > 0 && (
-        <div className="overflow-hidden rounded-xl border-fancy-pants bg-white dark:bg-zinc-900">
+        <div className="border-fancy-pants overflow-hidden rounded-xl bg-white dark:bg-zinc-900">
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <Title order={3}>
@@ -631,7 +632,7 @@ function RouteComponent() {
             {isSizesRunning && status.backfillSizesStatus ? (
               <>
                 <div className="flex flex-nowrap items-center justify-start gap-4 [&>*]:flex-1">
-                  <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-3 dark:bg-zinc-900">
+                  <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-3 dark:bg-zinc-900">
                     <Text size="xs" c="dimmed">
                       Updated
                     </Text>
@@ -640,7 +641,7 @@ function RouteComponent() {
                         0}
                     </Text>
                   </div>
-                  <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-3 dark:bg-zinc-900">
+                  <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-3 dark:bg-zinc-900">
                     <Text size="xs" c="dimmed">
                       Skipped
                     </Text>
@@ -649,7 +650,7 @@ function RouteComponent() {
                         0}
                     </Text>
                   </div>
-                  <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-3 dark:bg-zinc-900">
+                  <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-3 dark:bg-zinc-900">
                     <Text size="xs" c="dimmed">
                       Remaining
                     </Text>
@@ -658,7 +659,7 @@ function RouteComponent() {
                         0}
                     </Text>
                   </div>
-                  <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-3 dark:bg-zinc-900">
+                  <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-3 dark:bg-zinc-900">
                     <Text size="xs" c="dimmed">
                       Batches
                     </Text>
@@ -743,7 +744,7 @@ function RouteComponent() {
       )}
 
       {/* Bulk Backup Section */}
-      <div className="overflow-hidden rounded-xl border-fancy-pants bg-white dark:bg-zinc-900">
+      <div className="border-fancy-pants overflow-hidden rounded-xl bg-white dark:bg-zinc-900">
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <Title order={3}>
@@ -771,7 +772,7 @@ function RouteComponent() {
           ) : isBackupRunning && status.bulkBackupStatus ? (
             <>
               <div className="flex flex-nowrap items-center justify-start gap-4 [&>*]:flex-1">
-                <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-3 dark:bg-zinc-900">
+                <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-3 dark:bg-zinc-900">
                   <Text size="xs" c="dimmed">
                     Jobs Started
                   </Text>
@@ -780,7 +781,7 @@ function RouteComponent() {
                       0}
                   </Text>
                 </div>
-                <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-3 dark:bg-zinc-900">
+                <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-3 dark:bg-zinc-900">
                   <Text size="xs" c="dimmed">
                     Remaining
                   </Text>
@@ -788,7 +789,7 @@ function RouteComponent() {
                     {status.bulkBackupStatus.remaining?.toLocaleString() ?? 0}
                   </Text>
                 </div>
-                <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-3 dark:bg-zinc-900">
+                <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-3 dark:bg-zinc-900">
                   <Text size="xs" c="dimmed">
                     Batches
                   </Text>
@@ -877,7 +878,7 @@ function RouteComponent() {
 
       {/* Failed Backups Section */}
       {failedBackups.totalCount > 0 && (
-        <div className="overflow-hidden rounded-xl border-fancy-pants bg-white dark:bg-zinc-900">
+        <div className="border-fancy-pants overflow-hidden rounded-xl bg-white dark:bg-zinc-900">
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <Title order={3}>

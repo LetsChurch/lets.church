@@ -1,6 +1,7 @@
 import { useStore } from '@nanostores/react';
 import bSearch from 'binary-search';
 import { useMemo, useRef } from 'react';
+
 import { $currentTime, $setPlayAt } from '@/stores/player';
 import { $searchResults, type SearchResult } from '@/stores/transcript-search';
 import { formatTime } from '@/util/format';
@@ -32,7 +33,7 @@ export function TranscriptSearchResults() {
   if (searchResults.length === 0) {
     return (
       <div className="flex size-full items-center justify-center p-5">
-        <p className="text-gray-500 text-sm">No results found</p>
+        <p className="text-sm text-gray-500">No results found</p>
       </div>
     );
   }
@@ -48,7 +49,7 @@ export function TranscriptSearchResults() {
             onClick={() => handleClick(line.start)}
           >
             <div
-              className={`pt-1 text-[10px] tabular-nums leading-[1.4] tracking-[-0.2px] ${
+              className={`pt-1 text-[10px] leading-[1.4] tracking-[-0.2px] tabular-nums ${
                 i === currentI
                   ? 'text-brand'
                   : 'text-primary/50 group-hover:text-primary/70'
@@ -59,7 +60,7 @@ export function TranscriptSearchResults() {
             </div>
             <div className="flex flex-col gap-1.5">
               <p
-                className="[&_mark]:-my-0.5 [&_mark]:-mx-1 text-primary text-sm leading-[1.4] [&_mark]:rounded-sm [&_mark]:bg-orange-400/40 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:text-primary"
+                className="text-primary [&_mark]:text-primary text-sm leading-[1.4] [&_mark]:-mx-1 [&_mark]:-my-0.5 [&_mark]:rounded-sm [&_mark]:bg-orange-400/40 [&_mark]:px-1 [&_mark]:py-0.5"
                 dangerouslySetInnerHTML={{ __html: line.highlighted }}
               />
             </div>

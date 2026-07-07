@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
+
 import { Alert, Button, Loader, Text, Title } from '@/components/ui';
 import { useTRPC } from '@/trpc/react';
 
@@ -229,9 +230,9 @@ function RouteComponent() {
     declineChannelMutation.isPending;
 
   return (
-    <div className="flex min-h-screen justify-center bg-page px-4 py-8">
+    <div className="bg-page flex min-h-screen justify-center px-4 py-8">
       <div className="w-full max-w-[600px]">
-        <div className="overflow-hidden rounded-lg border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900">
+        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
           <div className="flex flex-col gap-4">
             <Title order={2}>You've Been Invited!</Title>
 

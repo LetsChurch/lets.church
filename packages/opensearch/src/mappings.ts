@@ -1,6 +1,7 @@
 import { logger as baseLogger } from '@letschurch/util';
 import { diff } from 'jest-diff';
 import pc from 'picocolors';
+
 import { client, waitForOpenSearch } from './client';
 import { RRF_PIPELINE } from './media-search';
 

@@ -1,5 +1,6 @@
 import { IconFlag } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
+
 import { getPillButtonClasses } from './pill-button';
 
 export type Props = {
@@ -20,7 +21,7 @@ export function EmptyState({
   const color = variant === 'standard' ? '#6366F1' : '#EF4444';
 
   return (
-    <div className="flex h-60 flex-col items-center justify-center rounded-2xl border border-gray-950/15 border-dashed px-4 text-center dark:border-white/15">
+    <div className="flex h-60 flex-col items-center justify-center rounded-2xl border border-dashed border-gray-950/15 px-4 text-center dark:border-white/15">
       <div className="mb-4">
         <svg
           width="78"
@@ -115,10 +116,10 @@ export function EmptyState({
       </div>
       {emptyTitle && emptyBody ? (
         <>
-          <h2 className="mb-1 text-center font-bold text-base text-primary leading-[140%]">
+          <h2 className="text-primary mb-1 text-center text-base leading-[140%] font-bold">
             {emptyTitle}
           </h2>
-          <h3 className="text-center font-normal text-primary text-xs leading-[140%]">
+          <h3 className="text-primary text-center text-xs leading-[140%] font-normal">
             {emptyBody}
           </h3>
           {emptyCta ? (

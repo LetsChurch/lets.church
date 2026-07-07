@@ -1,4 +1,5 @@
 import { z } from 'zod';
+
 import { escapeDocument } from './utils';
 
 export { escapeDocument };

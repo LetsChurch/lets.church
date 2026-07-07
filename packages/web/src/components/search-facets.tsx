@@ -7,6 +7,7 @@ import {
 } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+
 import { useSearchFilters } from '@/hooks/use-search-filters';
 import {
   bibleBookName,
@@ -17,6 +18,7 @@ import {
   parseVerseRef,
 } from '@/util/bible-url';
 import { cn } from '@/util/cn';
+
 import { LcTooltip } from './lc-tooltip';
 import { MobileDrawer } from './mobile-drawer';
 
@@ -152,7 +154,7 @@ function ClampedRows({
         <button
           type="button"
           onClick={() => setExpanded((e) => !e)}
-          className="mt-1 cursor-pointer font-medium text-muted text-xs transition-colors hover:text-primary"
+          className="text-muted hover:text-primary mt-1 cursor-pointer text-xs font-medium transition-colors"
         >
           {expanded ? 'See less' : 'See more'}
         </button>
@@ -234,7 +236,7 @@ type SectionProps = { title: string; children: ReactNode };
 
 function SectionHeading({ children }: { children: ReactNode }) {
   return (
-    <h3 className="px-1 font-bold text-[10px] text-gray-500 uppercase tracking-[1px] dark:text-zinc-400">
+    <h3 className="px-1 text-[10px] font-bold tracking-[1px] text-gray-500 uppercase dark:text-zinc-400">
       {children}
     </h3>
   );
@@ -243,7 +245,7 @@ function SectionHeading({ children }: { children: ReactNode }) {
 // Desktop: each section is its own bordered card (the sidebar).
 function FacetBlock({ title, children }: SectionProps) {
   return (
-    <div className="rounded-2xl border-fancy-pants bg-zinc-100 p-4 dark:bg-zinc-900">
+    <div className="border-fancy-pants rounded-2xl bg-zinc-100 p-4 dark:bg-zinc-900">
       <div className="mb-2">
         <SectionHeading>{title}</SectionHeading>
       </div>
@@ -283,7 +285,7 @@ function FacetOption({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-1 py-[7px] text-left font-medium text-primary text-sm transition-colors hover:bg-primary/10"
+      className="text-primary hover:bg-primary/10 flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-1 py-[7px] text-left text-sm font-medium transition-colors"
     >
       <span className="flex min-w-0 items-center gap-1.5">
         <span className="truncate">{children}</span>
@@ -531,7 +533,7 @@ export function SearchFacets({
                         size={14}
                         className={
                           bookSelected
-                            ? 'shrink-0 text-brand'
+                            ? 'text-brand shrink-0'
                             : 'shrink-0 opacity-0'
                         }
                       />
@@ -637,7 +639,7 @@ export function SearchFacets({
           type="button"
           onClick={() => setCustomOpen((o) => !o)}
           aria-expanded={showCustom}
-          className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-1 py-[7px] text-left font-medium text-primary text-sm transition-colors hover:bg-primary/10"
+          className="text-primary hover:bg-primary/10 flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-1 py-[7px] text-left text-sm font-medium transition-colors"
         >
           <span className="min-w-0 truncate">
             {hasCustomDates
@@ -651,7 +653,7 @@ export function SearchFacets({
           <span className="flex shrink-0 items-center gap-1.5">
             {hasCustomDates ? (
               <span
-                className="size-1.5 rounded-full bg-brand"
+                className="bg-brand size-1.5 rounded-full"
                 aria-hidden="true"
               />
             ) : null}
@@ -668,7 +670,7 @@ export function SearchFacets({
         {showCustom ? (
           <div className="mt-1 w-full space-y-2 px-1">
             <div className="grid grid-cols-2 gap-2">
-              <label className="flex flex-col gap-1 font-medium text-muted text-xs">
+              <label className="text-muted flex flex-col gap-1 text-xs font-medium">
                 From
                 <input
                   type="date"
@@ -680,10 +682,10 @@ export function SearchFacets({
                       dateEnd || undefined,
                     )
                   }
-                  className="h-8 rounded-lg border border-gray-950/10 bg-gray-950/5 px-2 text-primary text-sm outline-none dark:border-white/10 dark:bg-white/5 dark:[color-scheme:dark]"
+                  className="text-primary h-8 rounded-lg border border-gray-950/10 bg-gray-950/5 px-2 text-sm outline-none dark:border-white/10 dark:bg-white/5 dark:[color-scheme:dark]"
                 />
               </label>
-              <label className="flex flex-col gap-1 font-medium text-muted text-xs">
+              <label className="text-muted flex flex-col gap-1 text-xs font-medium">
                 To
                 <input
                   type="date"
@@ -695,7 +697,7 @@ export function SearchFacets({
                       e.target.value || undefined,
                     )
                   }
-                  className="h-8 rounded-lg border border-gray-950/10 bg-gray-950/5 px-2 text-primary text-sm outline-none dark:border-white/10 dark:bg-white/5 dark:[color-scheme:dark]"
+                  className="text-primary h-8 rounded-lg border border-gray-950/10 bg-gray-950/5 px-2 text-sm outline-none dark:border-white/10 dark:bg-white/5 dark:[color-scheme:dark]"
                 />
               </label>
             </div>
@@ -706,7 +708,7 @@ export function SearchFacets({
                   setCustomDates(undefined, undefined);
                   setCustomOpen(false);
                 }}
-                className="cursor-pointer font-medium text-red-500 text-xs transition-colors hover:text-red-400"
+                className="cursor-pointer text-xs font-medium text-red-500 transition-colors hover:text-red-400"
               >
                 Clear dates
               </button>
@@ -719,7 +721,7 @@ export function SearchFacets({
             range. Selecting one applies that calendar-year range; selecting it
             again clears it. */}
         {availableYears.length > 0 ? (
-          <div className="mt-2 w-full border-gray-950/10 border-t pt-2 dark:border-white/10">
+          <div className="mt-2 w-full border-t border-gray-950/10 pt-2 dark:border-white/10">
             <div className="max-h-44 w-full overflow-y-auto">
               {availableYears.map((y) => {
                 const yearStart = `${y.year}-01-01`;
@@ -754,7 +756,7 @@ export function SearchFacets({
         <button
           type="button"
           onClick={clearFilters}
-          className="w-full cursor-pointer px-1 py-2 text-left font-medium text-red-500 text-sm transition-colors hover:text-red-400"
+          className="w-full cursor-pointer px-1 py-2 text-left text-sm font-medium text-red-500 transition-colors hover:text-red-400"
         >
           Clear all filters
         </button>
@@ -811,7 +813,7 @@ export function MobileFacets({
         <IconAdjustmentsHorizontal size={18} />
         Filters
         {suggestionCount > 0 ? (
-          <span className="inline-flex items-center gap-0.5 rounded-full bg-indigo-500/15 py-0.5 pr-1.5 pl-1 font-semibold text-[11px] text-indigo-600 dark:text-indigo-300">
+          <span className="inline-flex items-center gap-0.5 rounded-full bg-indigo-500/15 py-0.5 pr-1.5 pl-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-300">
             <IconSparkles size={11} aria-hidden="true" />
             <span aria-hidden="true">{suggestionCount}</span>
             <span className="sr-only">
@@ -828,8 +830,8 @@ export function MobileFacets({
             {/* Fixed, non-scrolling header — matches the transcript/playlist
                 drawers, so the whole top is a draggable (swipe-to-dismiss)
                 surface, not just the grab handle. */}
-            <div className="flex h-10 items-center gap-2 border-zinc-200 border-b border-solid px-5 dark:border-zinc-800">
-              <MobileDrawer.Title className="grow font-bold text-base text-primary">
+            <div className="flex h-10 items-center gap-2 border-b border-solid border-zinc-200 px-5 dark:border-zinc-800">
+              <MobileDrawer.Title className="text-primary grow text-base font-bold">
                 Filters
               </MobileDrawer.Title>
               <MobileDrawer.Close

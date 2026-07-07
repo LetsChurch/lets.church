@@ -14,6 +14,7 @@ import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { heartbeat } from '@temporalio/activity';
 import { eq, sql } from 'drizzle-orm';
+
 import { emailHtml, sanitizeForHtml } from '../../util/email';
 import { collectReferencedHlsKeys } from '../../util/hls';
 import logger from '../../util/logger';

@@ -1,4 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router';
+
 import { DEFAULT_BOOK, DEFAULT_CHAPTER } from '@/lib/canon';
 
 // Bare /bible sends the reader to a sensible default passage.

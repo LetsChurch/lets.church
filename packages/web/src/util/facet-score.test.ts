@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+
 import { facetMatchScore } from './facet-score';
 
 describe('facetMatchScore', () => {

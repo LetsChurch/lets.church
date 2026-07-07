@@ -19,9 +19,11 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
+
 import { and, eq, inArray } from 'drizzle-orm';
-import { findBook, NEW_TESTAMENT, OLD_TESTAMENT } from '../lib/canon';
+
 import { bibleSourceToken, db } from '.';
+import { findBook, NEW_TESTAMENT, OLD_TESTAMENT } from '../lib/canon';
 
 const TRANSLATION_ID = process.env.TRANSLATION_ID ?? 'BSB';
 

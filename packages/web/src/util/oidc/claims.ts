@@ -1,5 +1,6 @@
 import { AppUser, AppUserEmail, db } from '@letschurch/db';
 import { eq, sql } from 'drizzle-orm';
+
 import { getPublicImageUrl } from '@/util/server-env';
 
 // Resolve the OIDC claims for a user, gated by the granted scopes. `sub` is the

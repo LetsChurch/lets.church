@@ -26,6 +26,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import { CANON } from '../../lib/canon';
 import { parseUsxBook } from '../usx/parse';
 

@@ -3,6 +3,7 @@ import { IconBuilding, IconX } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useDebounce } from 'use-debounce';
+
 import { ActionIcon, Badge, Table, Text } from '@/components/ui';
 import { controlClasses, InputWrapper } from '@/components/ui/input';
 import { useTRPC } from '@/trpc/react';
@@ -94,7 +95,7 @@ export function OrganizationAutocomplete({
           }
         >
           <div className="relative">
-            <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted">
+            <span className="text-muted pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
               <IconBuilding size={16} />
             </span>
             <Autocomplete.Input
@@ -104,8 +105,8 @@ export function OrganizationAutocomplete({
           </div>
           <Autocomplete.Portal>
             <Autocomplete.Positioner sideOffset={4} className="z-50">
-              <Autocomplete.Popup className="max-h-64 w-[var(--anchor-width)] overflow-y-auto rounded-lg border-fancy-pants bg-white p-1 shadow-lg dark:bg-zinc-900">
-                <Autocomplete.Empty className="px-3 py-2 text-secondary text-sm empty:hidden">
+              <Autocomplete.Popup className="border-fancy-pants max-h-64 w-[var(--anchor-width)] overflow-y-auto rounded-lg bg-white p-1 shadow-lg dark:bg-zinc-900">
+                <Autocomplete.Empty className="text-secondary px-3 py-2 text-sm empty:hidden">
                   {debouncedSearchValue.length >= 2
                     ? 'No organizations found'
                     : 'Type to search…'}
@@ -116,7 +117,7 @@ export function OrganizationAutocomplete({
                       key={item.value}
                       value={item}
                       onClick={() => handleSelect(item.value)}
-                      className="cursor-default rounded px-3 py-1.5 text-primary text-sm data-[highlighted]:bg-brand/10"
+                      className="text-primary data-[highlighted]:bg-brand/10 cursor-default rounded px-3 py-1.5 text-sm"
                     >
                       {item.label}
                     </Autocomplete.Item>

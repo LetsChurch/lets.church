@@ -6,6 +6,7 @@ import {
   UploadRecord,
 } from '@letschurch/db';
 import { and, eq, isNotNull } from 'drizzle-orm';
+
 import logger from '../../util/logger';
 import sendEmail from './send-email';
 

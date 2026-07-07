@@ -19,6 +19,7 @@ import {
 } from '@letschurch/opensearch';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
+
 import {
   bibleBookFromMetadata,
   bibleRefsFromMetadata,

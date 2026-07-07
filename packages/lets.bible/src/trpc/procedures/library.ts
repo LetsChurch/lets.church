@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
+
 import {
   bibleTranslation,
   bibleVerse,
@@ -12,6 +13,7 @@ import {
 import { bookBySlug, findBook } from '@/lib/canon';
 import { HIGHLIGHT_COLORS } from '@/lib/highlight-colors';
 import { resolvePreferences } from '@/server/preferences';
+
 import type { Context } from '../context';
 import { publicProcedure } from '../trpc';
 

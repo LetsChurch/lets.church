@@ -1,4 +1,5 @@
 import { db } from '@letschurch/db';
+
 import { isChannelRoutable } from './media-visibility-rules';
 
 // DB-backed media/channel visibility helpers. The pure predicates live in

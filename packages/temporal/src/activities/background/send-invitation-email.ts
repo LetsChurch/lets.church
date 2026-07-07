@@ -11,6 +11,7 @@ import { eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 import { stripIndent } from 'proper-tags';
 import { z } from 'zod';
+
 import { client } from '../../client';
 import { BACKGROUND_QUEUE } from '../../queues';
 import { emailHtml, sanitizeForHtml } from '../../util/email';
@@ -162,7 +163,9 @@ export default async function sendInvitationEmailActivity(
 
     const html = emailHtml(`Invitation to ${organization.name}`, htmlBody).html;
 
-    await (await client).workflow.start(sendEmailWorkflow, {
+    await (
+      await client
+    ).workflow.start(sendEmailWorkflow, {
       args: [
         {
           from: 'hello@lets.church',
@@ -293,7 +296,9 @@ export default async function sendInvitationEmailActivity(
 
     const html = emailHtml(`Invitation to ${channel.name}`, htmlBody).html;
 
-    await (await client).workflow.start(sendEmailWorkflow, {
+    await (
+      await client
+    ).workflow.start(sendEmailWorkflow, {
       args: [
         {
           from: 'hello@lets.church',

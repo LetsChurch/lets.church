@@ -2,6 +2,7 @@ import { IconPhoto, IconUpload, IconX } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useState } from 'react';
+
 import {
   ActionIcon,
   Button,

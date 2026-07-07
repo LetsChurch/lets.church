@@ -4,6 +4,7 @@
 // a deterministic re-rank orders them (exact name → name prefix → alias/code →
 // substring, then canonical order) so the top match is stable as the user types.
 import { Charset, Index } from 'flexsearch';
+
 import { CANON, type CanonBook } from './canon';
 
 const norm = (s: string) =>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+
 import { cn } from '@/util/cn';
 
 type WindowSplitterProps = {
@@ -124,7 +125,7 @@ export function WindowSplitter({
   };
 
   return (
-    // biome-ignore lint/a11y/useSemanticElements: window splitter requires interactive div with ref for drag handling
+    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- window splitter requires interactive div with ref for drag handling
     <div
       ref={splitterRef}
       role="separator"
@@ -143,7 +144,7 @@ export function WindowSplitter({
       {/* Visual indicator */}
       <div
         className={cn(
-          `before:-left-2 before:-right-2 h-full w-1 rounded-full transition-colors before:absolute before:inset-y-0 before:content-[''] group-focus:bg-blue-500`,
+          `h-full w-1 rounded-full transition-colors group-focus:bg-blue-500 before:absolute before:inset-y-0 before:-right-2 before:-left-2 before:content-['']`,
           isDragging
             ? 'bg-blue-500'
             : 'bg-transparent group-hover:bg-zinc-400 dark:group-hover:bg-zinc-700',

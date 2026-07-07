@@ -7,8 +7,10 @@ import {
   useMemo,
   useRef,
 } from 'react';
+
 import { highlightVarStyle } from '@/lib/highlight-colors';
 import { passageHref } from '@/lib/reference';
+
 import type {
   Block,
   Footnote,
@@ -207,7 +209,7 @@ function VerseNum({ n, tone }: { n: number; tone?: Tone }) {
   }
   return (
     <sup
-      className={`mr-[3px] align-[0.5em] font-bold font-sans text-[11px] ${numClass(tone)}`}
+      className={`mr-[3px] align-[0.5em] font-sans text-[11px] font-bold ${numClass(tone)}`}
     >
       {n}
     </sup>
@@ -241,8 +243,8 @@ function SharedHoverCard({
               <PreviewCard.Popup
                 className={
                   payload.tone === 'footnote'
-                    ? 'max-w-[320px] rounded-xl border border-line-strong bg-paper-raised px-3.5 py-2.5 text-[13px] text-muted leading-relaxed shadow-[0_26px_50px_-28px_rgba(40,34,18,0.45)]'
-                    : 'max-w-[260px] rounded-lg bg-[#26251f] px-3 py-1.5 text-[#f3efe6] text-[12.5px] leading-snug shadow-[0_14px_34px_-12px_rgba(20,16,8,0.55)]'
+                    ? 'border-line-strong bg-paper-raised text-muted max-w-[320px] rounded-xl border px-3.5 py-2.5 text-[13px] leading-relaxed shadow-[0_26px_50px_-28px_rgba(40,34,18,0.45)]'
+                    : 'max-w-[260px] rounded-lg bg-[#26251f] px-3 py-1.5 text-[12.5px] leading-snug text-[#f3efe6] shadow-[0_14px_34px_-12px_rgba(20,16,8,0.55)]'
                 }
               >
                 {payload.content}
@@ -260,7 +262,7 @@ function footnoteBody(note: Footnote): ReactNode {
   return (
     <>
       {note.origin ? (
-        <span className="mr-1 font-semibold text-faint">{note.origin}</span>
+        <span className="text-faint mr-1 font-semibold">{note.origin}</span>
       ) : null}
       <FootnoteSegments segments={note.segments} />
     </>
@@ -286,7 +288,7 @@ function FootnoteMarker({
   const handle = useContext(HoverCardHandleContext);
   const label = labels.get(note) ?? '*';
   const marker = (
-    <span className="ml-px cursor-help select-none align-[0.45em] font-sans text-[11px] text-gold italic outline-none hover:underline">
+    <span className="text-gold ml-px cursor-help align-[0.45em] font-sans text-[11px] italic outline-none select-none hover:underline">
       {label}
     </span>
   );
@@ -366,7 +368,7 @@ function overlayTooltip(
               chapter: r.chapter,
               verse: r.verse ?? undefined,
             })}
-            className="font-semibold text-gold-soft underline underline-offset-2 hover:text-gold"
+            className="text-gold-soft hover:text-gold font-semibold underline underline-offset-2"
           >
             {r.label}
           </a>
@@ -502,7 +504,7 @@ function Runs({ runs, verse }: { runs: Run[]; verse?: number }) {
             {notes.map((note, k) => (
               <span
                 key={`qn${k}`}
-                className="mt-1.5 block border-white/15 border-t pt-1.5 text-[#d8d2c4]"
+                className="mt-1.5 block border-t border-white/15 pt-1.5 text-[#d8d2c4]"
               >
                 <FootnoteSegments segments={note.segments} />
               </span>
@@ -510,7 +512,7 @@ function Runs({ runs, verse }: { runs: Run[]; verse?: number }) {
           </>
         }
         trigger={
-          <span className="cursor-help underline decoration-muted-2/80 decoration-dotted underline-offset-[3px]">
+          <span className="decoration-muted-2/80 cursor-help underline decoration-dotted underline-offset-[3px]">
             {buf}
           </span>
         }
@@ -611,8 +613,7 @@ function Runs({ runs, verse }: { runs: Run[]; verse?: number }) {
             otQuote: r.otQuote,
           });
         node = (
-          // biome-ignore lint/a11y/useKeyWithClickEvents: words are a pointer-only enhancement; keyboard users select the verse and open Study
-          // biome-ignore lint/a11y/noStaticElementInteractions: same — the verse span is the keyboard target
+          // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- words are a pointer-only enhancement; keyboard users select the verse and open Study, which is the keyboard target
           <span
             key={`k${i}`}
             data-strong={r.strong}
@@ -774,7 +775,7 @@ function ProseParagraph({
             <Runs runs={v.runs} verse={vnum} />
             {isNoted ? (
               <span
-                className="ml-[2px] select-none align-[0.4em] text-[10px] text-gold"
+                className="text-gold ml-[2px] align-[0.4em] text-[10px] select-none"
                 title="Has a note"
               >
                 ✎
@@ -792,7 +793,7 @@ function ProseParagraph({
           // a <button> can't contain another <button>. The toolbar popover
           // anchors to the verse with [data-verse-selected] = "true".
           return (
-            // biome-ignore lint/a11y/useSemanticElements: must stay a span so inline footnote buttons can nest
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- must stay a span so inline footnote buttons can nest
             <span
               key={key}
               role="button"
@@ -803,7 +804,7 @@ function ProseParagraph({
               // underline) are on different CSS properties, so both show at once
               // when a verse is highlighted AND selected.
               style={hl ? highlightVarStyle(hl) : undefined}
-              className={`cursor-pointer rounded-[3px] text-ink ${
+              className={`text-ink cursor-pointer rounded-[3px] ${
                 hl ? 'verse-highlight' : ''
               } ${isSel ? 'verse-selected' : ''} ${
                 flashVerse === num ? 'verse-flash' : ''
@@ -863,7 +864,7 @@ function PoetryStanza({
     const isSel = selectedVerses?.includes(verse) ?? false;
     const hl = marks.highlights[verse];
     return (
-      // biome-ignore lint/a11y/useSemanticElements: must stay a span so inline footnote buttons can nest
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- must stay a span so inline footnote buttons can nest
       <span
         role="button"
         tabIndex={0}
@@ -905,7 +906,7 @@ function PoetryStanza({
           return (
             <div
               key={key}
-              className="-ml-5 my-[6px] border-scripture-edge border-l-2 pl-[42px] text-ink [text-indent:-22px]"
+              className="border-scripture-edge text-ink my-[6px] -ml-5 border-l-2 pl-[42px] [text-indent:-22px]"
             >
               {selectableLine(verse, inner)}
             </div>
@@ -938,7 +939,7 @@ function PoetryStanza({
   );
   if (hymn) {
     return (
-      <div className="mb-[22px] ml-1.5 border-gold-soft/40 border-l-2 pl-4">
+      <div className="border-gold-soft/40 mb-[22px] ml-1.5 border-l-2 pl-4">
         {body}
       </div>
     );
@@ -1039,7 +1040,7 @@ export function Passage({
                           return (
                             <h3
                               key={`k${i}`}
-                              className="mt-1 mb-[14px] font-normal font-serif text-[21px] text-gold italic"
+                              className="text-gold mt-1 mb-[14px] font-serif text-[21px] font-normal italic"
                             >
                               {b.text}
                             </h3>
@@ -1050,23 +1051,23 @@ export function Passage({
                               key={`k${i}`}
                               className="mb-[10px] flex items-center gap-3"
                             >
-                              <span className="font-hebrew text-[30px] text-gold leading-none">
+                              <span className="font-hebrew text-gold text-[30px] leading-none">
                                 {b.letter}
                               </span>
-                              <span className="font-mono text-[11px] text-faint uppercase tracking-[0.08em]">
+                              <span className="text-faint font-mono text-[11px] tracking-[0.08em] uppercase">
                                 {b.name}
                               </span>
-                              <span className="h-px flex-1 bg-line" />
+                              <span className="bg-line h-px flex-1" />
                             </div>
                           );
                         case 'chip':
                           return (
                             <div key={`k${i}`} className="mb-[14px]">
                               <span
-                                className={`inline-flex items-center gap-[6px] rounded-full border bg-paper-soft px-[10px] py-[3px] font-semibold text-[11.5px] ${CHIP_VARIANT[b.variant ?? 'neutral']}`}
+                                className={`bg-paper-soft inline-flex items-center gap-[6px] rounded-full border px-[10px] py-[3px] text-[11.5px] font-semibold ${CHIP_VARIANT[b.variant ?? 'neutral']}`}
                               >
                                 {b.dot ? (
-                                  <span className="size-[5px] rounded-full bg-gold" />
+                                  <span className="bg-gold size-[5px] rounded-full" />
                                 ) : null}
                                 {b.text}
                               </span>
@@ -1076,7 +1077,7 @@ export function Passage({
                           return (
                             <div
                               key={`k${i}`}
-                              className="mb-[14px] text-[13px] text-muted-2"
+                              className="text-muted-2 mb-[14px] text-[13px]"
                             >
                               {b.runs.map((r, j) =>
                                 r.ref ? (
@@ -1139,7 +1140,7 @@ export function Passage({
                             <div
                               key={`k${i}`}
                               data-verse={fv}
-                              className={`-ml-5 border-scripture-edge border-l-2 pl-[18px] ${fv != null && flashVerse === fv ? 'verse-flash' : ''}`}
+                              className={`border-scripture-edge -ml-5 border-l-2 pl-[18px] ${fv != null && flashVerse === fv ? 'verse-flash' : ''}`}
                             >
                               <p
                                 className={`font-serif ${size === 'reading' ? 'text-[21px]' : 'text-[19px]'} leading-[1.7] ${b.verse.redletter ? 'text-redletter' : 'text-ink'}`}
@@ -1159,7 +1160,7 @@ export function Passage({
                           return (
                             <div
                               key={`k${i}`}
-                              className="mt-1 text-right font-serif text-gold italic"
+                              className="text-gold mt-1 text-right font-serif italic"
                             >
                               {b.text ?? 'Selah'}
                             </div>

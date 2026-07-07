@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
+
 import { Alert, Badge, Button, Text, Title } from '@/components/ui';
 import { showFailure } from '@/components/ui/notifications';
 import { IncomingIdSchema } from '@/schemas/common';
@@ -206,7 +207,7 @@ function AcceptInvitationRoute() {
         {invitation.type === 'organization' ? 'Organization' : 'Channel'}
       </Title>
 
-      <div className="overflow-hidden rounded-xl border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900">
+      <div className="border-fancy-pants overflow-hidden rounded-xl bg-white p-5 shadow-sm dark:bg-zinc-900">
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-start gap-4">
             <Text fw={500} size="xl">

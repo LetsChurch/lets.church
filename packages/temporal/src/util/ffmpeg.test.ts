@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from 'vitest';
+
 import {
   encodeSessionCount,
   extraDecodeArgs,
@@ -331,18 +332,16 @@ describe('getVariants', () => {
   });
 
   test('video without audio stream', () => {
-    expect(
-      getVariants(mockProbe(1920, 1080, 'h264', false)),
-    ).toMatchInlineSnapshot(`
+    expect(getVariants(mockProbe(1920, 1080, 'h264', false)))
+      .toMatchInlineSnapshot(`
       [
         "VIDEO_1080P",
         "VIDEO_720P",
         "VIDEO_480P",
       ]
     `);
-    expect(
-      getVariants(mockProbe(500, 500, 'h264', false)),
-    ).toMatchInlineSnapshot(`
+    expect(getVariants(mockProbe(500, 500, 'h264', false)))
+      .toMatchInlineSnapshot(`
       []
     `);
   });
@@ -848,9 +847,8 @@ describe('getVariants', () => {
 });
 
 test('variantsToMasterVideoPlaylist', () => {
-  expect(
-    variantsToMasterVideoPlaylist(['VIDEO_4K', 'VIDEO_1080P', 'AUDIO']),
-  ).toMatchInlineSnapshot(`
+  expect(variantsToMasterVideoPlaylist(['VIDEO_4K', 'VIDEO_1080P', 'AUDIO']))
+    .toMatchInlineSnapshot(`
     "#EXTM3U
     #EXT-X-VERSION:6
 
@@ -920,9 +918,8 @@ describe('extraDecodeArgs', () => {
 
   describe('hwAccel ma35d', () => {
     test('h264', () => {
-      expect(
-        extraDecodeArgs(mockProbe(1920, 1080, 'h264'), 'ama:0'),
-      ).toMatchInlineSnapshot(`
+      expect(extraDecodeArgs(mockProbe(1920, 1080, 'h264'), 'ama:0'))
+        .toMatchInlineSnapshot(`
           [
             "-hwaccel",
             "ama",
@@ -935,9 +932,8 @@ describe('extraDecodeArgs', () => {
     });
 
     test('hevc', () => {
-      expect(
-        extraDecodeArgs(mockProbe(1920, 1080, 'hevc'), 'ama:0'),
-      ).toMatchInlineSnapshot(`
+      expect(extraDecodeArgs(mockProbe(1920, 1080, 'hevc'), 'ama:0'))
+        .toMatchInlineSnapshot(`
           [
             "-hwaccel",
             "ama",
@@ -950,9 +946,8 @@ describe('extraDecodeArgs', () => {
     });
 
     test('av1', () => {
-      expect(
-        extraDecodeArgs(mockProbe(1920, 1080, 'av1'), 'ama:0'),
-      ).toMatchInlineSnapshot(`
+      expect(extraDecodeArgs(mockProbe(1920, 1080, 'av1'), 'ama:0'))
+        .toMatchInlineSnapshot(`
           [
             "-hwaccel",
             "ama",
@@ -1102,9 +1097,8 @@ test('ffmpegEncodingArgs software 4K+1080P', () => {
 });
 
 test('ffmpegEncodingArgs audio-only', () => {
-  expect(
-    ffmpegEncodingArgs(['AUDIO'], mockProbe(0, 0), 'none'),
-  ).toMatchInlineSnapshot(`
+  expect(ffmpegEncodingArgs(['AUDIO'], mockProbe(0, 0), 'none'))
+    .toMatchInlineSnapshot(`
     [
       "-map",
       "0:a",

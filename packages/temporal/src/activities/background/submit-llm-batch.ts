@@ -1,5 +1,6 @@
 import { Channel, db, TranscriptParagraph, UploadRecord } from '@letschurch/db';
 import { asc, eq, inArray } from 'drizzle-orm';
+
 import {
   ANNOTATE_MODEL,
   EMBED_MAX_INPUTS,

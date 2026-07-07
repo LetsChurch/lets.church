@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+
 import { AmaDeviceBudget, Notifier } from './ama-budget';
 
 // Lets a microtask-scheduled acquire settle so we can assert on ordering.

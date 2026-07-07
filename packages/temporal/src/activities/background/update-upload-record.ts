@@ -1,5 +1,6 @@
 import { db, UploadRecord } from '@letschurch/db';
 import { eq } from 'drizzle-orm';
+
 import type { UploadRecordUpdateData } from '../../client';
 
 const DATE_FIELDS: ReadonlyArray<keyof UploadRecordUpdateData> = [

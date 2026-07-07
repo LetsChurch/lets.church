@@ -1,6 +1,7 @@
 import { logger as baseLogger } from '@letschurch/util';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { z } from 'zod';
+
 import { createPool } from './pool';
 import * as schema from './schema';
 

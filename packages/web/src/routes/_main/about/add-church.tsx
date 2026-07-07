@@ -62,7 +62,7 @@ function RouteComponent() {
       <div className="not-prose my-8 text-center">
         <a
           href="/dashboard"
-          className="inline-block rounded-lg bg-brand px-8 py-4 font-semibold text-lg text-white shadow-lg transition-colors hover:bg-brand-700"
+          className="bg-brand hover:bg-brand-700 inline-block rounded-lg px-8 py-4 text-lg font-semibold text-white shadow-lg transition-colors"
         >
           Go to Dashboard
         </a>

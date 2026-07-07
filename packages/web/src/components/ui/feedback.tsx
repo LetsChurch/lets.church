@@ -1,5 +1,7 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+
 import { cn } from '@/util/cn';
+
 import {
   ALERT,
   ALERT_ACCENT,
@@ -34,7 +36,7 @@ type LoaderProps = {
 export function Loader({ size, className, color }: LoaderProps) {
   const px = resolveSize(size, 20);
   return (
-    // biome-ignore lint/a11y/useSemanticElements: an SVG spinner with role=status is the correct live-region pattern
+    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- an SVG spinner with role=status is the correct live-region pattern
     <svg
       className={cn('animate-spin text-brand', className)}
       style={color ? { color } : undefined}

@@ -1,10 +1,12 @@
 import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
+
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { Context } from '@temporalio/activity';
 import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
+
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import logger from '../../../util/logger';
 

@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { useSyncExternalStore } from 'react';
+
 import { LcModal } from '@/components/lc-modal';
+
 import type { LcColor } from './_colors';
 import { Button } from './button';
 

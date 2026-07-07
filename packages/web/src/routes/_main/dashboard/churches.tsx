@@ -6,6 +6,7 @@ import {
 } from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
+
 import {
   LcMenu,
   MenuItemButton,
@@ -21,6 +22,7 @@ import {
 } from '@/components/ui';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
+
 import classes from './-churches.module.css';
 import styles from './-styles.module.css';
 

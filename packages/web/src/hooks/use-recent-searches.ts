@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
 import { useTRPC } from '@/trpc/react';
+
 import { useIsLoggedIn } from './use-is-logged-in';
 
 export type RecentSearch = {

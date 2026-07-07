@@ -2,6 +2,7 @@ import { useInfiniteQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useRef } from 'react';
+
 import { Avatar } from '@/components/avatar';
 import { EmptyState } from '@/components/empty-state';
 import LcLink from '@/components/lc-link';
@@ -216,7 +217,7 @@ function RouteComponent() {
     <MainLayout containerClassName="px-16 pb-8">
       {/* Series Header */}
       <div className="mb-8">
-        <h1 className="mb-4 font-bold text-3xl text-primary">{series.title}</h1>
+        <h1 className="text-primary mb-4 text-3xl font-bold">{series.title}</h1>
 
         <div className="flex flex-wrap items-center gap-4 text-sm">
           {series.channel ? (
@@ -228,7 +229,7 @@ function RouteComponent() {
               <Avatar
                 src={series.channel.avatarUrl || undefined}
                 alt={series.channel.name}
-                className="size-8 border-fancy-pants"
+                className="border-fancy-pants size-8"
                 fallbackClassName="bg-brand font-bold text-xs"
               />
               <span className="text-primary">{series.channel.name}</span>
@@ -238,7 +239,7 @@ function RouteComponent() {
               <Avatar
                 src={series.author.avatarUrl || undefined}
                 alt={series.author.username}
-                className="size-8 border-fancy-pants"
+                className="border-fancy-pants size-8"
                 fallbackClassName="bg-brand font-bold text-xs"
               />
               <span className="text-primary">{series.author.username}</span>

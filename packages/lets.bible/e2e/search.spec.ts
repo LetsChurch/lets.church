@@ -22,7 +22,9 @@ test('LB-SR-02 reference query shows a go-to-reference card', async ({
 // Requires the v3 index built WITH embeddings + OPENAI_API_KEY configured on the
 // server (the hybrid semantic branch); degrades to lexical-only otherwise, where
 // this paraphrase does NOT surface Genesis 50:20 and the test would fail.
-test('LB-SR-12 hybrid search surfaces a paraphrased verse', async ({ page }) => {
+test('LB-SR-12 hybrid search surfaces a paraphrased verse', async ({
+  page,
+}) => {
   // "they meant bad but God meant good" shares almost no words with Genesis
   // 50:20 ("what you intended against me for evil, God intended for good") — a
   // lexical-only search misses it entirely. The semantic branch of hybrid search
@@ -78,6 +80,9 @@ test('LB-AC autocomplete mixes entry kinds', async ({ page }) => {
     page.getByRole('option').filter({ hasText: 'John 3' }).first(),
   ).toBeVisible({ timeout: 15000 });
   await expect(
-    page.getByRole('option').filter({ hasText: /Search/ }).first(),
+    page
+      .getByRole('option')
+      .filter({ hasText: /Search/ })
+      .first(),
   ).toBeVisible();
 });

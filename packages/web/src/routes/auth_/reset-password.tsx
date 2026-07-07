@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
 import { z } from 'zod';
+
 import { Alert, Text } from '@/components/ui';
 import { useAppForm } from '@/components/ui/form';
 import { useTRPC } from '@/trpc/react';
@@ -81,7 +82,7 @@ function ResetPasswordRoute() {
   });
 
   return (
-    <div className="rounded-lg border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900">
+    <div className="border-fancy-pants rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
       <Text size="lg" fw={500}>
         Reset your password
       </Text>

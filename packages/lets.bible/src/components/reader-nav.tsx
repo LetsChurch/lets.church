@@ -3,9 +3,11 @@ import { Popover } from '@base-ui/react/popover';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
+
 import { type CanonBook, NEW_TESTAMENT, OLD_TESTAMENT } from '@/lib/canon';
 import { useIsDesktop } from '@/lib/use-media-query';
 import { useTRPC } from '@/trpc/react';
+
 import { PickerDrawer } from './picker-drawer';
 
 const triggerClass =
@@ -99,7 +101,7 @@ export function BookPicker({ book }: { book: CanonBook }) {
   const isDesktop = useIsDesktop();
   const trigger = (
     <>
-      <span className="text-[14px] text-faint">{book.name}</span>
+      <span className="text-faint text-[14px]">{book.name}</span>
       <Chevron />
     </>
   );
@@ -119,7 +121,7 @@ export function BookPicker({ book }: { book: CanonBook }) {
               current={book.slug}
               close={close}
             />
-            <div className="my-1 h-px bg-line" />
+            <div className="bg-line my-1 h-px" />
             <div className={groupLabelClass}>New Testament</div>
             <BookDrawerList
               books={NEW_TESTAMENT}
@@ -146,7 +148,7 @@ export function BookPicker({ book }: { book: CanonBook }) {
               </Menu.GroupLabel>
               <BookList books={OLD_TESTAMENT} current={book.slug} />
             </Menu.Group>
-            <Menu.Separator className="my-1 h-px bg-line" />
+            <Menu.Separator className="bg-line my-1 h-px" />
             <Menu.Group>
               <Menu.GroupLabel className={groupLabelClass}>
                 New Testament
@@ -178,7 +180,7 @@ export function ChapterPicker({
   const chapters = Array.from({ length: book.chapterCount }, (_, i) => i + 1);
   const trigger = (
     <>
-      <span className="font-bold font-serif text-[17px] text-ink-strong">
+      <span className="text-ink-strong font-serif text-[17px] font-bold">
         Chapter {chapter}
       </span>
       <Chevron />
@@ -289,7 +291,7 @@ function TranslationRows({
               params={{ book, chapter: String(chapter) }}
               search={{ translation: t.id }}
               onClick={onAction}
-              className="flex min-w-0 flex-1 flex-col rounded-md py-1 text-[13.5px] outline-none focus-visible:ring-2 focus-visible:ring-gold/40"
+              className="focus-visible:ring-gold/40 flex min-w-0 flex-1 flex-col rounded-md py-1 text-[13.5px] outline-none focus-visible:ring-2"
             >
               <span className="flex items-baseline gap-2">
                 <span
@@ -297,12 +299,12 @@ function TranslationRows({
                 >
                   {t.id}
                 </span>
-                <span className="truncate text-[12px] text-muted-2">
+                <span className="text-muted-2 truncate text-[12px]">
                   {t.name}
                 </span>
               </span>
               {t.attribution ? (
-                <span className="truncate text-[10.5px] text-faint">
+                <span className="text-faint truncate text-[10.5px]">
                   {t.attribution}
                 </span>
               ) : null}
@@ -343,8 +345,8 @@ function TranslationRows({
       {/* Legend — the "Aα" row action is icon-only, so name what it does for
           sighted users (it already carries a title/aria description). */}
       {anyInterlinear ? (
-        <div className="mt-1 flex items-center gap-2 border-line border-t px-2.5 pt-2.5 pb-1 text-[11.5px] text-muted-2">
-          <span className="font-semibold font-serif text-ink">
+        <div className="border-line text-muted-2 mt-1 flex items-center gap-2 border-t px-2.5 pt-2.5 pb-1 text-[11.5px]">
+          <span className="text-ink font-serif font-semibold">
             A<span className="text-gold-soft">α</span>
           </span>
           <span>
@@ -381,7 +383,7 @@ export function TranslationPicker({
     <>
       {current}
       {interlinear ? (
-        <span className="font-serif text-gold-soft text-xs">Aα</span>
+        <span className="text-gold-soft font-serif text-xs">Aα</span>
       ) : null}
       <Chevron />
     </>

@@ -7,6 +7,7 @@ import {
 } from '@letschurch/db';
 import { heartbeat } from '@temporalio/activity';
 import { asc, isNotNull, sql } from 'drizzle-orm';
+
 import logger from '../../util/logger';
 import indexDocument from './index-document';
 import { syncSpeakerVectors } from './sync-speaker-vectors';

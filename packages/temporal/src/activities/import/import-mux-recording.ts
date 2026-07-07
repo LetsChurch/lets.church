@@ -1,4 +1,5 @@
 import { extname, join } from 'node:path';
+
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { Context } from '@temporalio/activity';
 import mime from 'mime';
@@ -6,6 +7,7 @@ import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
 import sanitizeFilename from 'sanitize-filename';
 import { v4 as uuid } from 'uuid';
+
 import { updateUploadRecord } from '../../client';
 import { downloadFromUrl } from '../../util/import';
 import logger from '../../util/logger';

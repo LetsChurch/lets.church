@@ -70,6 +70,7 @@ import type {
 export type { ReindexKind } from '@letschurch/temporal/activities/background/reindex';
 
 import { createRequire } from 'node:module';
+
 // Runtime signal/query refs (plain { type, name } objects — no @temporalio/workflow dep).
 import {
   completeResetPasswordSignal,
@@ -111,6 +112,7 @@ import type {
 import PLazy from 'p-lazy';
 import waitOn from 'wait-on';
 import { z } from 'zod';
+
 import logger from '../util/logger';
 import type { UploadPostProcessValue } from '../util/types';
 
@@ -971,7 +973,9 @@ export async function startImportSourceScheduler(importSourceId: string) {
   const scheduleId = `import:${importSource.channel.slug}:${importSourceId}`;
 
   // Create a Temporal Schedule
-  const schedule = await (await client).schedule.create({
+  const schedule = await (
+    await client
+  ).schedule.create({
     scheduleId,
     spec: {
       cronExpressions: [

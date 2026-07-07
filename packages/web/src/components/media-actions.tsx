@@ -29,6 +29,7 @@ import { Link } from '@tanstack/react-router';
 import posthog from 'posthog-js';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import LcButton from '@/components/lc-button';
 import LcButtonGroup from '@/components/lc-button-group';
 import { LcMenu, MenuItemButton, MenuItemLink } from '@/components/lc-menu';
@@ -379,7 +380,7 @@ export function MediaActions({
 
   return (
     <LcTooltip.Provider>
-      <div className="-mx-4 sm:-mx-4 flex min-w-0 items-center gap-2">
+      <div className="-mx-4 flex min-w-0 items-center gap-2 sm:-mx-4">
         {/* Scrollable area with shadows */}
         <div className="relative isolate min-w-0">
           {/* Left fade shadow */}
@@ -449,7 +450,7 @@ export function MediaActions({
                     ratingData.userRating === 'DISLIKE' ? (
                       <IconThumbDownFilled
                         size={16}
-                        className="-top-px relative"
+                        className="relative -top-px"
                       />
                     ) : (
                       <IconThumbDown size={16} />
@@ -505,7 +506,7 @@ export function MediaActions({
             ) : null}
 
             {/* Divider */}
-            <div className="h-7 w-px shrink-0 bg-vertical-divider" />
+            <div className="bg-vertical-divider h-7 w-px shrink-0" />
 
             {/* Save */}
             <LcButton
@@ -556,7 +557,7 @@ export function MediaActions({
             {/* Ask — main segment focuses the transcript search; the caret opens
                 AI-generated, video-specific suggested questions. */}
             <LcMenu.Root open={askMenuOpen} onOpenChange={setAskMenuOpen}>
-              <div className="isolate inline-flex shrink-0 overflow-clip rounded-full border-fancy-pants bg-gray-950/10 font-semibold text-primary/80 text-sm dark:bg-white/15">
+              <div className="border-fancy-pants text-primary/80 isolate inline-flex shrink-0 overflow-clip rounded-full bg-gray-950/10 text-sm font-semibold dark:bg-white/15">
                 <button
                   type="button"
                   onClick={openVideoAsk}
@@ -571,7 +572,7 @@ export function MediaActions({
                       {...props}
                       type="button"
                       aria-label="Suggested questions"
-                      className="-ml-px inline-flex items-center border-gray-950/5 border-l px-1.5 py-1.5 dark:border-white/10"
+                      className="-ml-px inline-flex items-center border-l border-gray-950/5 px-1.5 py-1.5 dark:border-white/10"
                     >
                       <IconChevronDown size={16} />
                     </button>
@@ -581,7 +582,7 @@ export function MediaActions({
               <LcMenu.Portal>
                 <LcMenu.Positioner sideOffset={8} align="end">
                   <LcMenu.Popup className="max-w-[20rem]">
-                    <div className="px-3 pt-1.5 pb-1 font-medium text-secondary text-xs">
+                    <div className="text-secondary px-3 pt-1.5 pb-1 text-xs font-medium">
                       Ask about this video
                     </div>
                     {suggestedQuestions.length > 0 ? (
@@ -600,14 +601,14 @@ export function MediaActions({
                           <span className="flex w-full items-start gap-2 text-left">
                             <IconSparkles
                               size={14}
-                              className="mt-0.5 shrink-0 text-brand"
+                              className="text-brand mt-0.5 shrink-0"
                             />
                             {q}
                           </span>
                         </MenuItemButton>
                       ))
                     ) : (
-                      <div className="px-3 py-2 text-secondary text-sm">
+                      <div className="text-secondary px-3 py-2 text-sm">
                         {isLoadingQuestions
                           ? 'Thinking of questions…'
                           : 'No suggestions for this video.'}
@@ -634,7 +635,7 @@ export function MediaActions({
             <Link
               to="/dashboard/channels/$channelId/uploads/$uploadId"
               params={{ channelId: channelData.id, uploadId }}
-              className="inline-flex items-center gap-0.5 rounded-full border-fancy-pants bg-gray-950/10 px-3 py-1.5 font-semibold text-primary/80 text-sm active:scale-[0.97] dark:bg-white/15"
+              className="border-fancy-pants text-primary/80 inline-flex items-center gap-0.5 rounded-full bg-gray-950/10 px-3 py-1.5 text-sm font-semibold active:scale-[0.97] dark:bg-white/15"
             >
               <IconEdit size={16} />
               Edit
@@ -732,12 +733,12 @@ export function MediaActions({
                           <IconCode size={24} className="text-primary" />
                         </div>
                         {copySuccess === 'embed-video' ? (
-                          <div className="-right-1 -top-1 absolute flex size-5 items-center justify-center rounded-full bg-green-600 ring-2 ring-white dark:ring-zinc-900">
+                          <div className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-green-600 ring-2 ring-white dark:ring-zinc-900">
                             <IconCheck size={14} className="text-white" />
                           </div>
                         ) : null}
                       </div>
-                      <span className="relative text-primary text-xs">
+                      <span className="text-primary relative text-xs">
                         <span
                           className={cn(
                             'transition-opacity',
@@ -775,12 +776,12 @@ export function MediaActions({
                           <IconCode size={24} className="text-primary" />
                         </div>
                         {copySuccess === 'embed-audio' ? (
-                          <div className="-right-1 -top-1 absolute flex size-5 items-center justify-center rounded-full bg-green-600 ring-2 ring-white dark:ring-zinc-900">
+                          <div className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-green-600 ring-2 ring-white dark:ring-zinc-900">
                             <IconCheck size={14} className="text-white" />
                           </div>
                         ) : null}
                       </div>
-                      <span className="relative text-primary text-xs">
+                      <span className="text-primary relative text-xs">
                         <span
                           className={cn(
                             'transition-opacity',
@@ -808,7 +809,7 @@ export function MediaActions({
                   type="text"
                   readOnly
                   value={getShareUrl(shareData.url)}
-                  className="min-w-0 flex-1 truncate bg-transparent font-mono text-primary text-sm outline-none"
+                  className="text-primary min-w-0 flex-1 truncate bg-transparent font-mono text-sm outline-none"
                 />
                 <div className="relative">
                   <button
@@ -836,7 +837,7 @@ export function MediaActions({
                     ) : null}
                   </button>
                   {copySuccess === 'link' ? (
-                    <div className="-right-1 -top-1 absolute flex size-5 items-center justify-center rounded-full bg-green-600 ring-2 ring-white dark:ring-zinc-900">
+                    <div className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-green-600 ring-2 ring-white dark:ring-zinc-900">
                       <IconCheck size={14} className="text-white" />
                     </div>
                   ) : null}

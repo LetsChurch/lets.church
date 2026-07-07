@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
+
 import { PageShell } from '@/components/chrome';
 import { useTRPC } from '@/trpc/react';
 
@@ -44,15 +45,15 @@ function ToggleRow({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-line border-t py-[14px]">
+    <div className="border-line flex items-center justify-between gap-4 border-t py-[14px]">
       <div>
-        <div className="font-semibold text-[14.5px] text-ink">{label}</div>
-        <div className="text-[12.5px] text-muted-2">{hint}</div>
+        <div className="text-ink text-[14.5px] font-semibold">{label}</div>
+        <div className="text-muted-2 text-[12.5px]">{hint}</div>
       </div>
       <Switch.Root
         checked={checked}
         onCheckedChange={onChange}
-        className="relative flex h-6 w-11 shrink-0 items-center rounded-full bg-line-strong p-0.5 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-gold/40 data-[checked]:bg-gold"
+        className="bg-line-strong focus-visible:ring-gold/40 data-[checked]:bg-gold relative flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors outline-none focus-visible:ring-2"
       >
         <Switch.Thumb className="aspect-square h-full rounded-full bg-white shadow-sm transition-transform data-[checked]:translate-x-5" />
       </Switch.Root>
@@ -99,17 +100,17 @@ function Settings() {
 
   return (
     <PageShell>
-      <div className="mx-auto max-w-[560px] animate-fade px-6 pt-[34px] pb-16">
-        <h1 className="mb-[18px] font-serif text-[26px] text-ink-strong">
+      <div className="animate-fade mx-auto max-w-[560px] px-6 pt-[34px] pb-16">
+        <h1 className="text-ink-strong mb-[18px] font-serif text-[26px]">
           Settings
         </h1>
-        <div className="mb-3 font-serif text-[20px] text-ink-strong">
+        <div className="text-ink-strong mb-3 font-serif text-[20px]">
           Reading
         </div>
 
         <label
           htmlFor="translation"
-          className="mb-[7px] block font-semibold text-[13px] text-muted"
+          className="text-muted mb-[7px] block text-[13px] font-semibold"
         >
           Default translation
         </label>
@@ -124,18 +125,18 @@ function Settings() {
             save.mutate({ translation: value });
           }}
         >
-          <Select.Trigger className="mb-6 flex h-11 w-full items-center gap-2 rounded-[11px] border border-line-strong bg-paper-raised px-[14px] text-[15px] text-ink outline-none focus-visible:ring-2 focus-visible:ring-gold/40">
+          <Select.Trigger className="border-line-strong bg-paper-raised text-ink focus-visible:ring-gold/40 mb-6 flex h-11 w-full items-center gap-2 rounded-[11px] border px-[14px] text-[15px] outline-none focus-visible:ring-2">
             <Select.Value className="flex-1 text-left" />
-            <Select.Icon className="text-[11px] text-faint">▾</Select.Icon>
+            <Select.Icon className="text-faint text-[11px]">▾</Select.Icon>
           </Select.Trigger>
           <Select.Portal>
             <Select.Positioner className="z-40" sideOffset={6}>
-              <Select.Popup className="min-w-[var(--anchor-width)] rounded-xl border border-line-strong bg-paper-raised p-1 shadow-[0_26px_50px_-28px_rgba(40,34,18,0.45)]">
+              <Select.Popup className="border-line-strong bg-paper-raised min-w-[var(--anchor-width)] rounded-xl border p-1 shadow-[0_26px_50px_-28px_rgba(40,34,18,0.45)]">
                 {translations.map((t) => (
                   <Select.Item
                     key={t.id}
                     value={t.id}
-                    className="flex cursor-pointer items-baseline gap-2 rounded-md px-3 py-2 text-[14px] text-ink outline-none data-highlighted:bg-paper-soft data-selected:text-gold"
+                    className="text-ink data-highlighted:bg-paper-soft data-selected:text-gold flex cursor-pointer items-baseline gap-2 rounded-md px-3 py-2 text-[14px] outline-none"
                   >
                     <Select.ItemText>
                       {t.name} <span className="text-muted-2">· {t.id}</span>
@@ -149,7 +150,7 @@ function Settings() {
 
         <label
           htmlFor="divineName"
-          className="mb-[7px] block font-semibold text-[13px] text-muted"
+          className="text-muted mb-[7px] block text-[13px] font-semibold"
         >
           Divine name (YHWH)
         </label>
@@ -164,20 +165,20 @@ function Settings() {
             save.mutate({ divineName: value });
           }}
         >
-          <Select.Trigger className="mb-6 flex h-11 w-full items-center gap-2 rounded-[11px] border border-line-strong bg-paper-raised px-[14px] text-[15px] text-ink outline-none focus-visible:ring-2 focus-visible:ring-gold/40">
+          <Select.Trigger className="border-line-strong bg-paper-raised text-ink focus-visible:ring-gold/40 mb-6 flex h-11 w-full items-center gap-2 rounded-[11px] border px-[14px] text-[15px] outline-none focus-visible:ring-2">
             <Select.Value className="flex-1 text-left">
               {DIVINE_NAME_LABELS[divineName]}
             </Select.Value>
-            <Select.Icon className="text-[11px] text-faint">▾</Select.Icon>
+            <Select.Icon className="text-faint text-[11px]">▾</Select.Icon>
           </Select.Trigger>
           <Select.Portal>
             <Select.Positioner className="z-40" sideOffset={6}>
-              <Select.Popup className="min-w-[var(--anchor-width)] rounded-xl border border-line-strong bg-paper-raised p-1 shadow-[0_26px_50px_-28px_rgba(40,34,18,0.45)]">
+              <Select.Popup className="border-line-strong bg-paper-raised min-w-[var(--anchor-width)] rounded-xl border p-1 shadow-[0_26px_50px_-28px_rgba(40,34,18,0.45)]">
                 {(['lord', 'yhwh', 'yahweh'] as const).map((opt) => (
                   <Select.Item
                     key={opt}
                     value={opt}
-                    className="flex cursor-pointer items-baseline gap-2 rounded-md px-3 py-2 text-[14px] text-ink outline-none data-highlighted:bg-paper-soft data-selected:text-gold"
+                    className="text-ink data-highlighted:bg-paper-soft data-selected:text-gold flex cursor-pointer items-baseline gap-2 rounded-md px-3 py-2 text-[14px] outline-none"
                   >
                     <Select.ItemText>{DIVINE_NAME_LABELS[opt]}</Select.ItemText>
                   </Select.Item>
@@ -188,10 +189,10 @@ function Settings() {
         </Select.Root>
 
         <div className="mb-[11px] flex items-baseline justify-between">
-          <span className="font-semibold text-[13px] text-muted">
+          <span className="text-muted text-[13px] font-semibold">
             Text size
           </span>
-          <span className="font-mono text-[12px] text-muted-2">
+          <span className="text-muted-2 font-mono text-[12px]">
             {textSize} px
           </span>
         </div>
@@ -206,14 +207,14 @@ function Settings() {
           }
           className="mb-[6px] flex items-center gap-[14px]"
         >
-          <span className="font-serif text-[14px] text-faint">A</span>
+          <span className="text-faint font-serif text-[14px]">A</span>
           <Slider.Control className="relative flex h-5 flex-1 items-center">
-            <Slider.Track className="h-[5px] w-full rounded-full bg-line-strong">
-              <Slider.Indicator className="rounded-full bg-gold-soft" />
+            <Slider.Track className="bg-line-strong h-[5px] w-full rounded-full">
+              <Slider.Indicator className="bg-gold-soft rounded-full" />
             </Slider.Track>
-            <Slider.Thumb className="size-5 rounded-full border border-line-strong bg-white shadow-[0_2px_5px_rgba(120,96,40,0.28)] outline-none focus-visible:ring-2 focus-visible:ring-gold/40" />
+            <Slider.Thumb className="border-line-strong focus-visible:ring-gold/40 size-5 rounded-full border bg-white shadow-[0_2px_5px_rgba(120,96,40,0.28)] outline-none focus-visible:ring-2" />
           </Slider.Control>
-          <span className="font-serif text-[24px] text-muted">A</span>
+          <span className="text-muted font-serif text-[24px]">A</span>
         </Slider.Root>
 
         <div className="mt-[18px]">
@@ -246,10 +247,10 @@ function Settings() {
           />
         </div>
 
-        <div className="mt-9 mb-3 font-serif text-[20px] text-ink-strong">
+        <div className="text-ink-strong mt-9 mb-3 font-serif text-[20px]">
           Offline
         </div>
-        <p className="text-[13px] text-muted">
+        <p className="text-muted text-[13px]">
           lets.bible works offline automatically — every translation, search,
           and your highlights, notes, and reading position are cached on this
           device. No download needed.

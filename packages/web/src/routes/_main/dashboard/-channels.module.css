@@ -7,7 +7,7 @@
   text-decoration: none;
   &::after {
     display: block;
-    content: "";
+    content: '';
     position: absolute;
     inset: 0;
   }
@@ -33,7 +33,7 @@
   background-color: #e7f5ff;
 }
 
-[data-theme="dark"] .uploadsTile {
+[data-theme='dark'] .uploadsTile {
   border-color: rgba(34, 139, 230, 0.35);
   background-color: rgba(34, 139, 230, 0.12);
 }
@@ -42,7 +42,7 @@
   color: #228be6;
 }
 
-[data-theme="dark"] .uploadsTile .icon {
+[data-theme='dark'] .uploadsTile .icon {
   color: #4dabf7;
 }
 
@@ -50,7 +50,7 @@
   color: #1971c2;
 }
 
-[data-theme="dark"] .uploadsTile .title {
+[data-theme='dark'] .uploadsTile .title {
   color: #74c0fc;
 }
 
@@ -58,17 +58,17 @@
   color: #1864ab;
 }
 
-[data-theme="dark"] .uploadsTile .value {
+[data-theme='dark'] .uploadsTile .value {
   color: #a5d8ff;
 }
 
-.uploadsTile .value .mantine-Text-root[data-c="dimmed"] {
-  /* biome-ignore lint/complexity/noImportantStyles: mantine override */
+.uploadsTile .value .mantine-Text-root[data-c='dimmed'] {
+  /* !important -- mantine override */
   color: #1c7ed6 !important;
 }
 
-[data-theme="dark"] .uploadsTile .value .mantine-Text-root[data-c="dimmed"] {
-  /* biome-ignore lint/complexity/noImportantStyles: mantine override */
+[data-theme='dark'] .uploadsTile .value .mantine-Text-root[data-c='dimmed'] {
+  /* !important -- mantine override */
   color: #4dabf7 !important;
 }
 
@@ -77,7 +77,7 @@
   background-color: #ebfbee;
 }
 
-[data-theme="dark"] .subscribersTile {
+[data-theme='dark'] .subscribersTile {
   border-color: rgba(64, 192, 87, 0.35);
   background-color: rgba(64, 192, 87, 0.12);
 }
@@ -86,7 +86,7 @@
   color: #40c057;
 }
 
-[data-theme="dark"] .subscribersTile .icon {
+[data-theme='dark'] .subscribersTile .icon {
   color: #69db7c;
 }
 
@@ -94,7 +94,7 @@
   color: #2f9e44;
 }
 
-[data-theme="dark"] .subscribersTile .title {
+[data-theme='dark'] .subscribersTile .title {
   color: #8ce99a;
 }
 
@@ -102,7 +102,7 @@
   color: #2b8a3e;
 }
 
-[data-theme="dark"] .subscribersTile .value {
+[data-theme='dark'] .subscribersTile .value {
   color: #b2f2bb;
 }
 
@@ -111,7 +111,7 @@
   background-color: #f3f0ff;
 }
 
-[data-theme="dark"] .membersTile {
+[data-theme='dark'] .membersTile {
   border-color: rgba(112, 72, 232, 0.4);
   background-color: rgba(112, 72, 232, 0.15);
 }
@@ -120,7 +120,7 @@
   color: #7048e8;
 }
 
-[data-theme="dark"] .membersTile .icon {
+[data-theme='dark'] .membersTile .icon {
   color: #9775fa;
 }
 
@@ -128,7 +128,7 @@
   color: #5f3dc4;
 }
 
-[data-theme="dark"] .membersTile .title {
+[data-theme='dark'] .membersTile .title {
   color: #b197fc;
 }
 
@@ -136,6 +136,6 @@
   color: #4a1fb0;
 }
 
-[data-theme="dark"] .membersTile .value {
+[data-theme='dark'] .membersTile .value {
   color: #d0bfff;
 }

@@ -1,6 +1,7 @@
 import { IconHeadphones } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import type { PropsWithChildren } from 'react';
+
 import { Avatar } from '@/components/avatar';
 import { formatTime } from '@/util/format';
 import { joinAdjacentMarks } from '@/util/highlight';
@@ -33,7 +34,7 @@ export function SearchRow({
   return (
     <div className="group relative flex cursor-pointer items-stretch gap-3 md:gap-4">
       <div className="relative aspect-video h-16 shrink-0 md:h-24 lg:h-32">
-        <div className="-translate-y-1/2 absolute top-1/2 right-0 left-0 aspect-video overflow-hidden rounded-lg border-fancy-pants bg-zinc-100 dark:bg-zinc-900">
+        <div className="border-fancy-pants absolute top-1/2 right-0 left-0 aspect-video -translate-y-1/2 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-900">
           {thumbnailUrl ? (
             <img
               src={thumbnailUrl}
@@ -41,7 +42,7 @@ export function SearchRow({
               className="size-full object-cover"
             />
           ) : (
-            <div className="relative flex size-full items-center justify-center bg-linear-to-b from-brand/20 via-33% via-transparent to-transparent">
+            <div className="from-brand/20 relative flex size-full items-center justify-center bg-linear-to-b via-transparent via-33% to-transparent">
               <IconHeadphones
                 size={64}
                 className="text-zinc-400 dark:text-zinc-600"
@@ -51,7 +52,7 @@ export function SearchRow({
         </div>
         <div className="absolute right-1.5 bottom-1.5 left-1.5 flex flex-col items-end gap-1 md:right-2 md:bottom-2 md:left-2">
           {duration ? (
-            <div className="flex h-4 items-center justify-center rounded-full bg-gray-950/50 px-1.5 font-medium text-[10px] text-shadow text-white tabular-nums leading-none tracking-tight backdrop-blur-sm md:h-5 md:px-2 md:text-xs dark:bg-white/50 dark:text-gray-950">
+            <div className="text-shadow flex h-4 items-center justify-center rounded-full bg-gray-950/50 px-1.5 text-[10px] leading-none font-medium tracking-tight text-white tabular-nums backdrop-blur-sm md:h-5 md:px-2 md:text-xs dark:bg-white/50 dark:text-gray-950">
               {duration}
             </div>
           ) : null}
@@ -59,7 +60,7 @@ export function SearchRow({
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-2 pb-px">
         <div className="space-y-2">
-          <h4 className="line-clamp-2 font-bold text-primary text-sm md:text-base lg:text-lg">
+          <h4 className="text-primary line-clamp-2 text-sm font-bold md:text-base lg:text-lg">
             <Link
               to="/media/$mediaId"
               params={{ mediaId: id }}
@@ -89,13 +90,13 @@ export function SearchRow({
             className="size-4 shrink-0 md:size-5 lg:size-6"
             fallbackClassName="bg-gray-200 text-gray-600 text-[8px] md:text-[10px] lg:text-xs"
           />
-          <p className="overflow-hidden text-ellipsis whitespace-nowrap text-muted text-xs md:text-sm">
+          <p className="text-muted overflow-hidden text-xs text-ellipsis whitespace-nowrap md:text-sm">
             {channelName}
           </p>
           {timestamp ? (
             <>
               <div className="size-[3px] shrink-0 rounded-xs bg-zinc-400 opacity-50" />
-              <p className="whitespace-nowrap text-muted text-xs md:text-sm">
+              <p className="text-muted text-xs whitespace-nowrap md:text-sm">
                 {timestamp}
               </p>
             </>

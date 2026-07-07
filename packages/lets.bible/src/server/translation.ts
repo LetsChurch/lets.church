@@ -4,6 +4,7 @@
 // circular dependency that leaves the named export undefined at call time.
 
 import { eq } from 'drizzle-orm';
+
 import { bibleTranslation, db } from '@/db';
 import { resolvePreferences } from '@/server/preferences';
 import type { Context } from '@/trpc/context';

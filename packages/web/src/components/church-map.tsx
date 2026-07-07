@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
-import 'mapbox-gl/dist/mapbox-gl.css';
 import { useQuery } from '@tanstack/react-query';
+
+import 'mapbox-gl/dist/mapbox-gl.css';
 import { invariant } from 'es-toolkit';
 import mapboxgl from 'mapbox-gl';
+import { useEffect, useRef, useState } from 'react';
+
 import type { ParsedFilters } from '@/routes/_main/churches';
 import { getInitialTheme, THEME_CHANGE_EVENT } from '@/stores/theme';
 import { useTRPC } from '@/trpc/react';
@@ -615,7 +617,7 @@ export function ChurchMap({
           />
           {/* Center circle */}
           <div
-            className="-translate-x-1/2 -translate-y-1/2 pointer-events-none absolute size-4 rounded-full border-2 border-red-500 bg-red-500/20"
+            className="pointer-events-none absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-red-500 bg-red-500/20"
             style={{
               left: `${vanishingPoint.x}px`,
               top: `${vanishingPoint.y}px`,
@@ -623,7 +625,7 @@ export function ChurchMap({
           />
           {/* Label */}
           <div
-            className="-translate-y-full pointer-events-none absolute bg-red-500 px-2 py-1 font-mono text-white text-xs"
+            className="pointer-events-none absolute -translate-y-full bg-red-500 px-2 py-1 font-mono text-xs text-white"
             style={{
               left: `${vanishingPoint.x + 10}px`,
               top: `${vanishingPoint.y - 10}px`,

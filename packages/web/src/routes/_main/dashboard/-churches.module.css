@@ -9,7 +9,7 @@
   min-width: 0;
   &::after {
     display: block;
-    content: "";
+    content: '';
     position: absolute;
     inset: 0;
   }

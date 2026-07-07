@@ -22,6 +22,7 @@ import {
 } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import { CANON } from '../../src/lib/canon';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -46,7 +47,7 @@ function tokenize(usfm: string): Tok[] {
   const re = /\\(\+?[a-z][a-z0-9]*)(\*)?/gi;
   let last = 0;
   let m: RegExpExecArray | null;
-  // biome-ignore lint/suspicious/noAssignInExpressions: standard regex scan
+  // Standard regex scan: the assignment in the while-condition is intentional.
   while ((m = re.exec(usfm)) !== null) {
     if (m.index > last) {
       toks.push({ kind: 'text', v: usfm.slice(last, m.index) });

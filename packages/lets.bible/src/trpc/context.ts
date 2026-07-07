@@ -1,4 +1,5 @@
 import type { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch';
+
 import { getSessionFromRequest } from '@/server/oidc';
 
 export async function createContext({

@@ -3,6 +3,7 @@ import {
   proxyActivities,
   setHandler,
 } from '@temporalio/workflow';
+
 import type * as activities from '../../activities/background';
 import type { ReindexKind } from '../../activities/background/reindex';
 import { BACKGROUND_QUEUE } from '../../queues';

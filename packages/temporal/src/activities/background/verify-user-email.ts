@@ -1,5 +1,6 @@
 import { AppUserEmail, db } from '@letschurch/db';
 import { and, eq } from 'drizzle-orm';
+
 import logger from '../../util/logger';
 
 const moduleLogger = logger.child({

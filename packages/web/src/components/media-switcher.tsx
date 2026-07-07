@@ -1,6 +1,7 @@
 import { Toggle } from '@base-ui/react/toggle';
 import { ToggleGroup } from '@base-ui/react/toggle-group';
 import { IconHeadphones, IconVideo } from '@tabler/icons-react';
+
 import { cn } from '@/util/cn';
 
 export type MediaType = 'video' | 'audio';

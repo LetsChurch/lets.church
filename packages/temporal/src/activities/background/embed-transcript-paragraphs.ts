@@ -1,6 +1,7 @@
 import { db, TranscriptParagraph } from '@letschurch/db';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
+
 import {
   createEmbeddingsTracked,
   EMBED_DIMS,

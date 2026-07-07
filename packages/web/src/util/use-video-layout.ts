@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+
 import { getInitialBrowserSize } from '@/stores/browser-size';
 import {
   getInitialSidebarCollapsed,

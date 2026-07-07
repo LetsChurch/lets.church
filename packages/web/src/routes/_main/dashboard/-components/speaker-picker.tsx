@@ -2,11 +2,13 @@ import { Combobox } from '@base-ui/react/combobox';
 import { IconCheck, IconPlus, IconSparkles } from '@tabler/icons-react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { type ReactNode, useState } from 'react';
+
 import { Badge, Loader, Text } from '@/components/ui';
 import { controlClasses } from '@/components/ui/input';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
+
 import styles from './speaker-picker.module.css';
 
 export type PickedSpeaker = {
@@ -183,8 +185,8 @@ export function SpeakerPicker({
       </div>
       <Combobox.Portal>
         <Combobox.Positioner sideOffset={4} className="z-[60]">
-          <Combobox.Popup className="max-h-72 w-[var(--anchor-width)] overflow-y-auto rounded-lg border-fancy-pants bg-white p-1 shadow-lg dark:bg-zinc-900">
-            <Combobox.Empty className="px-3 py-2 text-secondary text-xs empty:hidden">
+          <Combobox.Popup className="border-fancy-pants max-h-72 w-[var(--anchor-width)] overflow-y-auto rounded-lg bg-white p-1 shadow-lg dark:bg-zinc-900">
+            <Combobox.Empty className="text-secondary px-3 py-2 text-xs empty:hidden">
               {!enabled
                 ? 'Type at least two characters to search.'
                 : speakersQuery.isFetching
@@ -197,7 +199,7 @@ export function SpeakerPicker({
                   <Combobox.Item
                     key="__create__"
                     value={item}
-                    className="flex cursor-default items-center gap-1.5 rounded-md px-2 py-1.5 text-brand text-sm data-[highlighted]:bg-brand/10"
+                    className="text-brand data-[highlighted]:bg-brand/10 flex cursor-default items-center gap-1.5 rounded-md px-2 py-1.5 text-sm"
                   >
                     <IconPlus size={14} />
                     <span>
@@ -208,7 +210,7 @@ export function SpeakerPicker({
                   <Combobox.Item
                     key={item.speaker.speakerId}
                     value={item}
-                    className="flex cursor-default flex-col rounded-md px-2 py-1.5 data-[highlighted]:bg-brand/10"
+                    className="data-[highlighted]:bg-brand/10 flex cursor-default flex-col rounded-md px-2 py-1.5"
                   >
                     <Text size="sm" truncate>
                       {item.speaker.name}

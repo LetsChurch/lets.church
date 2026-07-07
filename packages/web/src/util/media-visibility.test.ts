@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 // Import from the db-free rules module so the test doesn't pull in @letschurch/db
 // (which parses DATABASE_URL at load) — `just test` runs without a database.
 import { canViewMedia, isChannelRoutable } from './media-visibility-rules';

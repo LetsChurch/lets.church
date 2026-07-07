@@ -2,7 +2,9 @@ import { Dialog } from '@base-ui/react/dialog';
 import { IconCheck } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
+
 import { cn } from '@/util/cn';
+
 import { MobileDrawer } from './mobile-drawer';
 
 type ChannelFiltersModalProps = {
@@ -15,7 +17,7 @@ type ChannelFiltersModalProps = {
 // Common Components
 function SectionHeading({ children }: { children: ReactNode }) {
   return (
-    <h3 className="px-1 font-bold text-[10px] text-gray-500 uppercase tracking-[1px] dark:text-zinc-400">
+    <h3 className="px-1 text-[10px] font-bold tracking-[1px] text-gray-500 uppercase dark:text-zinc-400">
       {children}
     </h3>
   );
@@ -34,12 +36,12 @@ function SelectableOption({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full cursor-pointer items-center justify-between rounded-lg px-1 py-[7px] font-medium text-primary text-sm transition-colors hover:bg-primary/10"
+      className="text-primary hover:bg-primary/10 flex w-full cursor-pointer items-center justify-between rounded-lg px-1 py-[7px] text-sm font-medium transition-colors"
     >
       {children}
       <IconCheck
         size={16}
-        className={selected ? 'shrink-0 text-primary' : 'shrink-0 opacity-0'}
+        className={selected ? 'text-primary shrink-0' : 'shrink-0 opacity-0'}
       />
     </button>
   );
@@ -105,8 +107,8 @@ export function ChannelFiltersModal({
 
               {/* Home Indicator */}
               <div className="relative h-[34px] w-full shrink-0">
-                <div className="-translate-x-1/2 absolute bottom-2 left-1/2 flex h-[5px] w-36 items-center justify-center">
-                  <div className="flex-none rotate-180 scale-y-[-100%]">
+                <div className="absolute bottom-2 left-1/2 flex h-[5px] w-36 -translate-x-1/2 items-center justify-center">
+                  <div className="flex-none scale-y-[-100%] rotate-180">
                     <div className="h-[5px] w-36 rounded-[100px] bg-gray-950 dark:bg-white" />
                   </div>
                 </div>

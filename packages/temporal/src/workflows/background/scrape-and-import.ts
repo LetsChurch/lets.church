@@ -3,6 +3,7 @@ import {
   proxyActivities,
   startChild,
 } from '@temporalio/workflow';
+
 import type * as backgroundActivities from '../../activities/background';
 import type * as importSourceActivities from '../../activities/import-source';
 import { BACKGROUND_QUEUE, IMPORT_QUEUE, PRIORITY_IMPORT } from '../../queues';

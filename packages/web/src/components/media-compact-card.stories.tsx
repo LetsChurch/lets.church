@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+
 import { MediaCompactCard } from './media-compact-card';
 
 const meta = {

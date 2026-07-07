@@ -17,10 +17,9 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import { eq } from 'drizzle-orm';
-import { CANON } from '../lib/canon';
-import { loadCrossRefs } from '../server/overlays';
-import { parseUsxBook } from '../server/usx/parse';
+
 import {
   bibleBook,
   bibleCrossReference,
@@ -29,6 +28,9 @@ import {
   bibleVerse,
   db,
 } from '.';
+import { CANON } from '../lib/canon';
+import { loadCrossRefs } from '../server/overlays';
+import { parseUsxBook } from '../server/usx/parse';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -50,7 +52,7 @@ const usxDir =
 
 // Insert rows in chunks small enough to stay under Postgres' parameter limit.
 async function insertChunked<T>(
-  // biome-ignore lint/suspicious/noExplicitAny: drizzle table types vary per call
+  // oxlint-disable-next-line typescript/no-explicit-any -- drizzle table types vary per call
   table: any,
   rows: T[],
   chunkSize: number,

@@ -2,6 +2,7 @@ import { Autocomplete } from '@base-ui/react/autocomplete';
 import { IconSearch } from '@tabler/icons-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
+
 import { controlClasses } from '@/components/ui/input';
 import { cn } from '@/util/cn';
 
@@ -191,7 +192,7 @@ export function DashboardSearchBar({
       itemToStringValue={(item: SearchItem) => item.label}
     >
       <div className="relative">
-        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted">
+        <span className="text-muted pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
           <IconSearch size={16} />
         </span>
         <Autocomplete.Input
@@ -201,14 +202,14 @@ export function DashboardSearchBar({
       </div>
       <Autocomplete.Portal>
         <Autocomplete.Positioner sideOffset={4} className="z-50">
-          <Autocomplete.Popup className="max-h-100 w-[var(--anchor-width)] min-w-[350px] overflow-y-auto rounded-lg border-fancy-pants bg-white p-1 shadow-lg dark:bg-zinc-900">
-            <Autocomplete.Empty className="px-3 py-2 text-secondary text-sm empty:hidden">
+          <Autocomplete.Popup className="border-fancy-pants max-h-100 w-[var(--anchor-width)] min-w-[350px] overflow-y-auto rounded-lg bg-white p-1 shadow-lg dark:bg-zinc-900">
+            <Autocomplete.Empty className="text-secondary px-3 py-2 text-sm empty:hidden">
               No pages found
             </Autocomplete.Empty>
             <Autocomplete.List>
               {groupNames.map((groupName, index) => (
                 <div key={groupName} className={index > 0 ? 'mt-2' : undefined}>
-                  <div className="px-3 pt-1 pb-1 font-semibold text-secondary text-xs uppercase tracking-wide">
+                  <div className="text-secondary px-3 pt-1 pb-1 text-xs font-semibold tracking-wide uppercase">
                     {groupName}
                   </div>
                   {groupedItems[groupName].map((item) => (
@@ -216,9 +217,9 @@ export function DashboardSearchBar({
                       key={item.id}
                       value={item}
                       onClick={() => handleItemSelect(item)}
-                      className="cursor-default rounded px-3 py-1.5 data-[highlighted]:bg-brand/10"
+                      className="data-[highlighted]:bg-brand/10 cursor-default rounded px-3 py-1.5"
                     >
-                      <div className="font-medium text-primary text-sm">
+                      <div className="text-primary text-sm font-medium">
                         {item.label}
                       </div>
                       {item.description ? (

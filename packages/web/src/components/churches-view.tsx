@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { ClientOnly, Link } from '@tanstack/react-router';
 import { useEffect, useMemo, useState } from 'react';
+
 import type { ChurchComboboxProps } from '@/components/church-combobox';
 import { ChurchCombobox } from '@/components/church-combobox';
 import { ChurchMap } from '@/components/church-map';
@@ -126,10 +127,10 @@ export function ChurchesView({
       <ClientOnly
         fallback={
           <div className="mx-auto mt-16 size-full max-w-2xl text-center">
-            <h1 className="font-bold text-4xl text-primary tracking-tight sm:text-6xl">
+            <h1 className="text-primary text-4xl font-bold tracking-tight sm:text-6xl">
               Loading
             </h1>
-            <p className="mt-6 text-lg text-primary leading-8">
+            <p className="text-primary mt-6 text-lg leading-8">
               "It is the glory of God to conceal a matter and the glory of kings
               to search it out."
               <br />- Proverbs 25:2 (BSB)
@@ -229,7 +230,7 @@ function Pane({
                         'dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-white',
                     )}
                   >
-                    <h3 className="font-semibold text-primary">
+                    <h3 className="text-primary font-semibold">
                       {church.name}
                     </h3>
                     {location ? (

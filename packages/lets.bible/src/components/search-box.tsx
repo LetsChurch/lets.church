@@ -2,6 +2,7 @@ import { Autocomplete } from '@base-ui/react/autocomplete';
 import { Menu } from '@base-ui/react/menu';
 import { useNavigate } from '@tanstack/react-router';
 import { type FormEvent, useRef, useState } from 'react';
+
 import { BookJump, type BookJumpModel, BookList } from './book-jump';
 
 // A single autocomplete entry. Entries are grouped into labeled sections by
@@ -233,11 +234,11 @@ export function SearchBox({
       <form onSubmit={onSubmit} className="relative z-10 text-left">
         <div
           ref={barRef}
-          className={`flex items-center border border-line-strong bg-paper-raised shadow-sm transition focus-within:border-line-strong focus-within:shadow-[0_0_0_3px_rgba(154,123,63,0.14)] ${
+          className={`border-line-strong bg-paper-raised focus-within:border-line-strong flex items-center border shadow-sm transition focus-within:shadow-[0_0_0_3px_rgba(154,123,63,0.14)] ${
             compact ? 'gap-2 pr-2 pl-3.5' : 'gap-3 pr-[10px] pl-[18px]'
           } ${heightCls} ${connected ? 'rounded-t-2xl rounded-b-none' : 'rounded-2xl'}`}
         >
-          <span className="flex flex-shrink-0 text-gold">
+          <span className="text-gold flex flex-shrink-0">
             <SearchIcon size={lg ? 19 : compact ? 16 : 17} />
           </span>
           <Autocomplete.Input
@@ -248,7 +249,7 @@ export function SearchBox({
               setOpen(true);
               onInputFocus?.();
             }}
-            className={`min-w-0 flex-1 border-none bg-transparent text-ink outline-none placeholder:text-faint-2 ${
+            className={`text-ink placeholder:text-faint-2 min-w-0 flex-1 border-none bg-transparent outline-none ${
               compact ? 'text-[14.5px]' : 'text-[16.5px]'
             }`}
           />
@@ -257,20 +258,20 @@ export function SearchBox({
             scopes.length > 1 &&
             onScopeChange ? (
             <Menu.Root>
-              <Menu.Trigger className="inline-flex flex-shrink-0 items-center gap-1 rounded-md border border-line-strong bg-paper px-2 py-[5px] font-semibold text-[12px] text-muted outline-none hover:bg-paper-soft focus-visible:ring-2 focus-visible:ring-gold/40">
+              <Menu.Trigger className="border-line-strong bg-paper text-muted hover:bg-paper-soft focus-visible:ring-gold/40 inline-flex flex-shrink-0 items-center gap-1 rounded-md border px-2 py-[5px] text-[12px] font-semibold outline-none focus-visible:ring-2">
                 {scope.label}
-                <span className="text-[9px] text-faint">▾</span>
+                <span className="text-faint text-[9px]">▾</span>
               </Menu.Trigger>
               <Menu.Portal>
                 <Menu.Positioner sideOffset={6} align="end" className="z-50">
-                  <Menu.Popup className="min-w-[160px] rounded-xl border border-line-strong bg-paper-raised p-1 shadow-[0_26px_50px_-28px_rgba(40,34,18,0.45)]">
+                  <Menu.Popup className="border-line-strong bg-paper-raised min-w-[160px] rounded-xl border p-1 shadow-[0_26px_50px_-28px_rgba(40,34,18,0.45)]">
                     {scopes.map((sc) => (
                       <Menu.Item
                         key={sc.id}
                         onClick={() => onScopeChange(sc.id)}
-                        className={`cursor-pointer rounded-md px-3 py-1.5 text-[13px] outline-none data-highlighted:bg-paper-soft ${
+                        className={`data-highlighted:bg-paper-soft cursor-pointer rounded-md px-3 py-1.5 text-[13px] outline-none ${
                           sc.id === scope.id
-                            ? 'font-semibold text-gold'
+                            ? 'text-gold font-semibold'
                             : 'text-ink'
                         }`}
                       >
@@ -282,7 +283,7 @@ export function SearchBox({
               </Menu.Portal>
             </Menu.Root>
           ) : (
-            <span className="hidden flex-shrink-0 rounded-md border border-line-strong px-[7px] py-[3px] font-mono text-[11px] text-faint-2 sm:flex">
+            <span className="border-line-strong text-faint-2 hidden flex-shrink-0 rounded-md border px-[7px] py-[3px] font-mono text-[11px] sm:flex">
               ⌘K
             </span>
           )}
@@ -303,7 +304,7 @@ export function SearchBox({
           // UI's list-emptiness doesn't account for.
           className={`z-40 w-(--anchor-width) ${hasWidget ? '' : 'data-empty:hidden'}`}
         >
-          <Autocomplete.Popup className="max-h-[min(70vh,520px)] overflow-y-auto rounded-t-none rounded-b-2xl border border-line-strong border-t-0 bg-paper-raised shadow-[0_24px_48px_-30px_rgba(40,34,18,0.4)]">
+          <Autocomplete.Popup className="border-line-strong bg-paper-raised max-h-[min(70vh,520px)] overflow-y-auto rounded-t-none rounded-b-2xl border border-t-0 shadow-[0_24px_48px_-30px_rgba(40,34,18,0.4)]">
             {bookJump ? (
               <BookJump
                 key={bookJump.book.slug}
@@ -318,11 +319,11 @@ export function SearchBox({
                 className="border-line border-b"
               >
                 <div className="flex items-center gap-2 px-4 pt-3 pb-2.5">
-                  <span className="font-semibold text-[12.5px] text-gold">
+                  <span className="text-gold text-[12.5px] font-semibold">
                     Books
                   </span>
                   <span className="flex-1" />
-                  <span className="text-[11.5px] text-faint">
+                  <span className="text-faint text-[11.5px]">
                     Choose a book
                   </span>
                 </div>
@@ -332,7 +333,7 @@ export function SearchBox({
               </section>
             ) : null}
             {hasWidget ? null : (
-              <Autocomplete.Empty className="px-4 py-3 text-[13px] text-muted-2 empty:m-0 empty:p-0">
+              <Autocomplete.Empty className="text-muted-2 px-4 py-3 text-[13px] empty:m-0 empty:p-0">
                 No matches — press Enter to search anyway.
               </Autocomplete.Empty>
             )}
@@ -344,7 +345,7 @@ export function SearchBox({
                   className="border-line border-b last:border-b-0"
                 >
                   {group.value ? (
-                    <Autocomplete.GroupLabel className="px-4 pt-3 pb-1 font-bold text-[10.5px] text-faint uppercase tracking-[0.1em]">
+                    <Autocomplete.GroupLabel className="text-faint px-4 pt-3 pb-1 text-[10.5px] font-bold tracking-[0.1em] uppercase">
                       {group.value}
                     </Autocomplete.GroupLabel>
                   ) : null}
@@ -354,27 +355,27 @@ export function SearchBox({
                         key={s.id ?? s.label}
                         value={s}
                         onClick={() => go(s)}
-                        className="flex cursor-pointer items-center gap-3 px-4 py-[10px] data-highlighted:bg-paper-soft"
+                        className="data-highlighted:bg-paper-soft flex cursor-pointer items-center gap-3 px-4 py-[10px]"
                       >
-                        <span className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-[7px] bg-paper text-[12px] text-muted-2">
+                        <span className="bg-paper text-muted-2 flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-[7px] text-[12px]">
                           {glyphFor(s)}
                         </span>
-                        <span className="line-clamp-1 min-w-0 flex-1 text-[15px] text-ink">
+                        <span className="text-ink line-clamp-1 min-w-0 flex-1 text-[15px]">
                           {s.label}
                           {s.detail ? (
-                            <span className="text-[13px] text-faint">
+                            <span className="text-faint text-[13px]">
                               {' · '}
                               {s.detail}
                             </span>
                           ) : null}
                         </span>
                         {s.badge ? (
-                          <span className="flex-shrink-0 rounded-full border border-gold-soft/40 bg-gold/[0.08] px-[9px] py-[2px] font-semibold text-[11px] text-gold">
-                            <span className="mr-1 inline-block h-[5px] w-[5px] rounded-full bg-gold align-middle" />
+                          <span className="border-gold-soft/40 bg-gold/[0.08] text-gold flex-shrink-0 rounded-full border px-[9px] py-[2px] text-[11px] font-semibold">
+                            <span className="bg-gold mr-1 inline-block h-[5px] w-[5px] rounded-full align-middle" />
                             {s.badge}
                           </span>
                         ) : s.meta ? (
-                          <span className="flex-shrink-0 whitespace-nowrap text-[11.5px] text-faint-2">
+                          <span className="text-faint-2 flex-shrink-0 text-[11.5px] whitespace-nowrap">
                             {s.meta}
                           </span>
                         ) : null}
@@ -384,16 +385,16 @@ export function SearchBox({
                 </Autocomplete.Group>
               )}
             </Autocomplete.List>
-            <div className="border-line border-t bg-paper-soft px-4 py-3 text-[12px] text-muted-2">
+            <div className="border-line bg-paper-soft text-muted-2 border-t px-4 py-3 text-[12px]">
               <div>
                 Press{' '}
-                <span className="rounded border border-line-strong bg-paper-raised px-[5px] py-px font-mono text-[11px]">
+                <span className="border-line-strong bg-paper-raised rounded border px-[5px] py-px font-mono text-[11px]">
                   Enter
                 </span>{' '}
                 to search everything — exact text, cross-references, and related
                 passages, each labeled.
               </div>
-              <div className="mt-1.5 flex items-center gap-1.5 text-faint">
+              <div className="text-faint mt-1.5 flex items-center gap-1.5">
                 <span aria-hidden="true" className="text-gold">
                   ✦
                 </span>
@@ -411,7 +412,7 @@ export function SearchBox({
               type="button"
               key={c}
               onClick={() => searchEverything(c)}
-              className="rounded-full border border-line bg-paper-soft px-[14px] py-[7px] text-[13px] text-muted"
+              className="border-line bg-paper-soft text-muted rounded-full border px-[14px] py-[7px] text-[13px]"
             >
               {c}
             </button>

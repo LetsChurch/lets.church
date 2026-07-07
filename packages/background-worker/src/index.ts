@@ -1,4 +1,5 @@
 import path from 'node:path';
+
 import * as activities from '@letschurch/temporal/activities/background';
 import {
   validateGeocodeConfig,

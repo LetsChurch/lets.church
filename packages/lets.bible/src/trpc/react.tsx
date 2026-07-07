@@ -7,6 +7,7 @@ import {
   createTRPCOptionsProxy,
 } from '@trpc/tanstack-react-query';
 import superjson from 'superjson';
+
 import type { AppRouter } from '@/trpc';
 
 export const { TRPCProvider, useTRPC } = createTRPCContext<AppRouter>();

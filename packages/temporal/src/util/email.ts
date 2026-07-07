@@ -61,7 +61,7 @@ export function sanitizeEmailBody(unsafe: string): string {
   return xss(unsafe, emailBodyXssOptions);
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: mjml types are not well defined
+// oxlint-disable-next-line typescript/no-explicit-any -- mjml types are not well defined
 export function emailHtml(title: string, body: string, minifyOp = true): any {
   // Sanitize inputs to prevent XSS. The title is plain text (strip all markup);
   // the body may contain trusted formatting/links (allow a safe tag subset).

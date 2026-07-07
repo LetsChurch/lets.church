@@ -1,6 +1,7 @@
 import { ChannelLiveStream, ChannelSimulcastTarget, db } from '@letschurch/db';
 import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
+
 import {
   addSimulcastTargetSchema,
   removeSimulcastTargetSchema,
@@ -8,6 +9,7 @@ import {
 } from '@/schemas/dashboard/live-streaming';
 import logger from '@/util/logger';
 import { getMux, MUX_RTMP_URL, MUX_RTMPS_URL } from '@/util/mux';
+
 import { router } from '../../trpc';
 import { channelAdminProcedure } from './channels';
 

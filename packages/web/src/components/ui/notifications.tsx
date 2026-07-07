@@ -6,6 +6,7 @@ import {
   IconX,
 } from '@tabler/icons-react';
 import type { PropsWithChildren, ReactNode } from 'react';
+
 import { cn } from '@/util/cn';
 
 // A global toast manager so `showSuccess` / `showFailure` / `notifications.show`
@@ -116,7 +117,7 @@ function ToastList() {
         {customIcon ?? <TypeIcon type={type} />}
         <div className="min-w-0 flex-1">
           {toast.title ? (
-            <Toast.Title className="font-semibold text-primary text-sm" />
+            <Toast.Title className="text-primary text-sm font-semibold" />
           ) : null}
           {toast.description ? (
             <Toast.Description className="text-secondary text-sm" />
@@ -124,7 +125,7 @@ function ToastList() {
         </div>
         <Toast.Close
           aria-label="Dismiss"
-          className="shrink-0 rounded p-0.5 text-secondary transition-colors hover:text-primary"
+          className="text-secondary hover:text-primary shrink-0 rounded p-0.5 transition-colors"
         >
           <IconX size={16} />
         </Toast.Close>

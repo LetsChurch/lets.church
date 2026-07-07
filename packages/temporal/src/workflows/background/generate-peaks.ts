@@ -1,4 +1,5 @@
 import { proxyActivities } from '@temporalio/workflow';
+
 import type * as transcodeActivities from '../../activities/transcode';
 import { TRANSCODE_QUEUE } from '../../queues';
 

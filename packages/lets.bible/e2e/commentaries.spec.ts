@@ -20,7 +20,9 @@ async function openCommentaries(
   return panel;
 }
 
-test('LB-CM-01 verse view has Verse and Commentaries tabs', async ({ page }) => {
+test('LB-CM-01 verse view has Verse and Commentaries tabs', async ({
+  page,
+}) => {
   await page.goto('/bible/john/3');
   const panel = page.getByLabel('Verse actions');
   await expect(async () => {
@@ -31,7 +33,9 @@ test('LB-CM-01 verse view has Verse and Commentaries tabs', async ({ page }) => 
   await expect(panel.getByRole('tab', { name: 'Commentaries' })).toBeVisible();
 });
 
-test('LB-CM-02 Commentaries tab lists works for the verse', async ({ page }) => {
+test('LB-CM-02 Commentaries tab lists works for the verse', async ({
+  page,
+}) => {
   const panel = await openCommentaries(page, 'john', 3, 16);
   // John 3:16 is covered by multiple works (ordinal order starts with Calvin).
   await expect(

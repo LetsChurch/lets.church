@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* Generate the utility classes Streamdown uses to style streamed markdown. */
 @source "../node_modules/streamdown/dist/index.js";
@@ -6,7 +6,7 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme {
-  --font-sans: "Inter Variable", sans-serif;
+  --font-sans: 'Inter Variable', sans-serif;
 
   /* Light theme - default values */
   --color-primary: var(--color-gray-950);
@@ -28,7 +28,7 @@
 }
 
 /* Dark theme */
-:root[data-theme="dark"] {
+:root[data-theme='dark'] {
   --color-primary: var(--color-white);
   --color-secondary: var(--color-zinc-300);
   --color-muted: var(--color-zinc-400);
@@ -39,7 +39,7 @@
 @utility border-fancy-pants {
   position: relative;
   &::after {
-    content: "";
+    content: '';
     position: absolute;
     inset: 0;
     border-radius: inherit;
@@ -58,7 +58,7 @@
     z-index: 10;
   }
 
-  &:where([data-theme="dark"], [data-theme="dark"] *)::after {
+  &:where([data-theme='dark'], [data-theme='dark'] *)::after {
     background: linear-gradient(
       to bottom,
       rgba(255, 255, 255, 0.1) 0%,
@@ -111,7 +111,7 @@
 }
 
 /* Dark mode card is a deeper indigo, so a lower base reads + shimmers more. */
-[data-theme="dark"] .text-shimmer {
+[data-theme='dark'] .text-shimmer {
   background-image: linear-gradient(
     100deg,
     rgba(255, 255, 255, 0.45) 0%,
@@ -129,7 +129,7 @@
 @utility fade-bottom {
   position: relative;
   &::after {
-    content: "";
+    content: '';
     position: absolute;
     right: 0;
     bottom: 0;
@@ -219,7 +219,7 @@
   }
 
   & a[data-timestamp] {
-    @apply underline decoration-dotted text-brand dark:text-white hover:text-brand dark:hover:text-white;
+    @apply text-brand hover:text-brand underline decoration-dotted dark:text-white dark:hover:text-white;
   }
 
   & strong {
@@ -275,7 +275,7 @@
 }
 
 @layer base {
-  input[type="search"] {
+  input[type='search'] {
     &::-webkit-search-cancel-button {
       -webkit-appearance: none;
       appearance: none;

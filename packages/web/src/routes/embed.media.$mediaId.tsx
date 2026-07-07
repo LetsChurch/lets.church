@@ -2,6 +2,7 @@ import { UploadViewSource } from '@letschurch/db/types';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, notFound } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
+
 import { Player } from '@/components/player';
 import { trpcClient, useTRPC } from '@/trpc/react';
 
@@ -9,7 +10,7 @@ export const Route = createFileRoute('/embed/media/$mediaId')({
   component: RouteComponent,
   notFoundComponent: () => (
     <div className="flex min-h-screen items-center justify-center bg-black px-4 text-center">
-      <p className="text-gray-300 text-sm">Media not found.</p>
+      <p className="text-sm text-gray-300">Media not found.</p>
     </div>
   ),
   validateSearch: (search: Record<string, unknown>) => {

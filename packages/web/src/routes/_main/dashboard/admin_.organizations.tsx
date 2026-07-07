@@ -12,6 +12,7 @@ import {
 } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
+
 import { DeleteOrganizationModal } from '@/components/delete-organization-modal';
 import {
   ActionIcon,
@@ -368,7 +369,7 @@ function OrganizationsAdminPage() {
                                 <Link
                                   to="/dashboard/churches/$churchId"
                                   params={{ churchId: org.id }}
-                                  className="font-medium text-primary hover:underline"
+                                  className="text-primary font-medium hover:underline"
                                 >
                                   {org.name}
                                 </Link>
@@ -376,7 +377,7 @@ function OrganizationsAdminPage() {
                                 <Link
                                   to="/dashboard/organizations/$orgId"
                                   params={{ orgId: org.id }}
-                                  className="font-medium text-primary hover:underline"
+                                  className="text-primary font-medium hover:underline"
                                 >
                                   {org.name}
                                 </Link>

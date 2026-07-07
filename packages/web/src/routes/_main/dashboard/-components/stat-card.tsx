@@ -6,8 +6,10 @@ import {
 } from '@tanstack/react-router';
 import { clsx } from 'clsx';
 import type { ReactNode } from 'react';
+
 import { ActionIcon, Text, Tooltip } from '@/components/ui';
 import { cn } from '@/util/cn';
+
 import classes from './stat-card.module.css';
 
 type StatCardProps = {

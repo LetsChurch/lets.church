@@ -1,5 +1,6 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
+
 import { PageShell } from '@/components/chrome';
 import { highlightDotStyle } from '@/lib/highlight-colors';
 import { chapterLink } from '@/lib/reference';
@@ -34,7 +35,7 @@ function relativeDay(ms: number): string {
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <div className="mb-1.5 font-bold text-[11px] text-faint uppercase tracking-[0.1em]">
+    <div className="text-faint mb-1.5 text-[11px] font-bold tracking-[0.1em] uppercase">
       {children}
     </div>
   );
@@ -53,7 +54,7 @@ function OfflineCommentaries() {
   return (
     <section>
       <SectionLabel>Offline commentaries</SectionLabel>
-      <p className="mb-1.5 text-[12.5px] text-faint">
+      <p className="text-faint mb-1.5 text-[12.5px]">
         Download a commentator to read it in the study panel without a
         connection.
       </p>
@@ -63,13 +64,13 @@ function OfflineCommentaries() {
         return (
           <div
             key={w.id}
-            className="flex items-center gap-3 border-line border-t py-[14px]"
+            className="border-line flex items-center gap-3 border-t py-[14px]"
           >
             <div className="min-w-0">
-              <div className="font-bold font-serif text-[16px] text-ink-strong">
+              <div className="text-ink-strong font-serif text-[16px] font-bold">
                 {w.name}
               </div>
-              <div className="text-[12px] text-faint">
+              <div className="text-faint text-[12px]">
                 {w.author} · {mb} MB
               </div>
             </div>
@@ -78,19 +79,19 @@ function OfflineCommentaries() {
                 <button
                   type="button"
                   onClick={() => void removeWork(w.id)}
-                  className="rounded-lg px-3 py-1.5 font-semibold text-[12.5px] text-redletter hover:bg-paper-soft"
+                  className="text-redletter hover:bg-paper-soft rounded-lg px-3 py-1.5 text-[12.5px] font-semibold"
                 >
                   Remove
                 </button>
               ) : status.state === 'downloading' ? (
-                <span className="font-semibold text-[12.5px] text-muted-2 tabular-nums">
+                <span className="text-muted-2 text-[12.5px] font-semibold tabular-nums">
                   {Math.round((status.progress ?? 0) * 100)}%
                 </span>
               ) : (
                 <button
                   type="button"
                   onClick={() => void downloadWork(w.id)}
-                  className="rounded-lg border border-gold-soft/50 px-3 py-1.5 font-semibold text-[12.5px] text-gold hover:bg-gold/5"
+                  className="border-gold-soft/50 text-gold hover:bg-gold/5 rounded-lg border px-3 py-1.5 text-[12.5px] font-semibold"
                 >
                   Download
                 </button>
@@ -119,18 +120,18 @@ function Library() {
 
   return (
     <PageShell>
-      <div className="mx-auto max-w-[760px] animate-fade px-6 pt-[34px] pb-16">
+      <div className="animate-fade mx-auto max-w-[760px] px-6 pt-[34px] pb-16">
         <div className="flex items-baseline justify-between gap-4">
-          <h1 className="font-serif text-[30px] text-ink-strong">Library</h1>
-          <span className="text-[13px] text-muted-2">
+          <h1 className="text-ink-strong font-serif text-[30px]">Library</h1>
+          <span className="text-muted-2 text-[13px]">
             {highlights.length} highlights · {notes.length} notes
           </span>
         </div>
 
         {!signedIn ? (
-          <p className="mt-4 rounded-xl border border-line bg-paper-soft px-4 py-3 text-[13px] text-muted">
+          <p className="border-line bg-paper-soft text-muted mt-4 rounded-xl border px-4 py-3 text-[13px]">
             You’re reading as a guest — your library is saved on this device.{' '}
-            <Link to="/login" className="font-semibold text-gold">
+            <Link to="/login" className="text-gold font-semibold">
               Sign in
             </Link>{' '}
             to sync it across devices.
@@ -139,7 +140,7 @@ function Library() {
 
         <div className="mt-7 space-y-9">
           {empty ? (
-            <p className="text-[14px] text-faint">
+            <p className="text-faint text-[14px]">
               Highlight a verse or add a note in the reader and it’ll show up
               here.
             </p>
@@ -148,7 +149,7 @@ function Library() {
               <section>
                 <SectionLabel>Highlights</SectionLabel>
                 {highlights.length === 0 ? (
-                  <p className="border-line border-t py-4 text-[13.5px] text-faint">
+                  <p className="border-line text-faint border-t py-4 text-[13.5px]">
                     Select a verse in the reader and pick a color to highlight
                     it.
                   </p>
@@ -157,16 +158,16 @@ function Library() {
                     <Link
                       key={h.ref}
                       {...chapterLink(h.slug, h.chapter, h.verse)}
-                      className="flex items-center gap-[13px] border-line border-t py-[14px] transition-colors hover:bg-paper-soft"
+                      className="border-line hover:bg-paper-soft flex items-center gap-[13px] border-t py-[14px] transition-colors"
                     >
                       <span
                         className="size-2.5 flex-shrink-0 rounded-full"
                         style={highlightDotStyle(h.color)}
                       />
-                      <span className="font-bold font-serif text-[16px] text-ink-strong">
+                      <span className="text-ink-strong font-serif text-[16px] font-bold">
                         {h.name} {h.chapter}:{h.verse}
                       </span>
-                      <span className="ml-auto text-[12px] text-faint">
+                      <span className="text-faint ml-auto text-[12px]">
                         {relativeDay(h.updatedAt)}
                       </span>
                     </Link>
@@ -177,7 +178,7 @@ function Library() {
               <section>
                 <SectionLabel>Notes</SectionLabel>
                 {notes.length === 0 ? (
-                  <p className="border-line border-t py-4 text-[13.5px] text-faint">
+                  <p className="border-line text-faint border-t py-4 text-[13.5px]">
                     Add a note to any verse from the reader toolbar.
                   </p>
                 ) : (
@@ -185,17 +186,17 @@ function Library() {
                     <Link
                       key={n.ref}
                       {...chapterLink(n.slug, n.chapter, n.verse)}
-                      className="block border-line border-t py-[15px] transition-colors hover:bg-paper-soft"
+                      className="border-line hover:bg-paper-soft block border-t py-[15px] transition-colors"
                     >
                       <div className="flex items-baseline gap-2.5">
-                        <span className="font-bold font-serif text-[16px] text-ink-strong">
+                        <span className="text-ink-strong font-serif text-[16px] font-bold">
                           {n.name} {n.chapter}:{n.verse}
                         </span>
-                        <span className="text-[12px] text-faint">
+                        <span className="text-faint text-[12px]">
                           {relativeDay(n.updatedAt)}
                         </span>
                       </div>
-                      <p className="mt-1.5 whitespace-pre-wrap text-[14.5px] text-ink leading-relaxed">
+                      <p className="text-ink mt-1.5 text-[14.5px] leading-relaxed whitespace-pre-wrap">
                         {n.body}
                       </p>
                     </Link>
@@ -206,7 +207,7 @@ function Library() {
               <section>
                 <SectionLabel>History</SectionLabel>
                 {history.length === 0 ? (
-                  <p className="border-line border-t py-4 text-[13.5px] text-faint">
+                  <p className="border-line text-faint border-t py-4 text-[13.5px]">
                     Chapters you read will appear here.
                   </p>
                 ) : (
@@ -216,12 +217,12 @@ function Library() {
                       to="/bible/$book/$chapter"
                       params={{ book: r.slug, chapter: String(r.chapter) }}
                       search={r.verse != null ? { v: r.verse } : {}}
-                      className="flex items-center justify-between border-line border-t py-3 hover:text-gold"
+                      className="border-line hover:text-gold flex items-center justify-between border-t py-3"
                     >
-                      <span className="font-serif text-[16px] text-ink-strong">
+                      <span className="text-ink-strong font-serif text-[16px]">
                         {r.name} {r.chapter}
                       </span>
-                      <span className="text-[12px] text-faint-2">
+                      <span className="text-faint-2 text-[12px]">
                         {relativeDay(r.updatedAt)}
                       </span>
                     </Link>

@@ -1,5 +1,6 @@
 import { Accordion } from '@base-ui/react/accordion';
 import { IconChevronDown } from '@tabler/icons-react';
+
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { List, Text } from '@/components/ui';
 
@@ -27,7 +28,7 @@ export function HelpModal({ opened, onClose }: HelpModalProps) {
             >
               <Accordion.Item
                 value="channels"
-                className="rounded-lg border-fancy-pants"
+                className="border-fancy-pants rounded-lg"
               >
                 <Accordion.Header>
                   <Accordion.Trigger className="group flex w-full items-center justify-between px-4 py-3 text-left">
@@ -68,7 +69,7 @@ export function HelpModal({ opened, onClose }: HelpModalProps) {
 
               <Accordion.Item
                 value="churches"
-                className="rounded-lg border-fancy-pants"
+                className="border-fancy-pants rounded-lg"
               >
                 <Accordion.Header>
                   <Accordion.Trigger className="group flex w-full items-center justify-between px-4 py-3 text-left">
@@ -110,7 +111,7 @@ export function HelpModal({ opened, onClose }: HelpModalProps) {
 
               <Accordion.Item
                 value="organizations"
-                className="rounded-lg border-fancy-pants"
+                className="border-fancy-pants rounded-lg"
               >
                 <Accordion.Header>
                   <Accordion.Trigger className="group flex w-full items-center justify-between px-4 py-3 text-left">
@@ -147,7 +148,7 @@ export function HelpModal({ opened, onClose }: HelpModalProps) {
 
               <Accordion.Item
                 value="roles"
-                className="rounded-lg border-fancy-pants"
+                className="border-fancy-pants rounded-lg"
               >
                 <Accordion.Header>
                   <Accordion.Trigger className="group flex w-full items-center justify-between px-4 py-3 text-left">
@@ -213,7 +214,7 @@ export function HelpModal({ opened, onClose }: HelpModalProps) {
 
               <Accordion.Item
                 value="visibility"
-                className="rounded-lg border-fancy-pants"
+                className="border-fancy-pants rounded-lg"
               >
                 <Accordion.Header>
                   <Accordion.Trigger className="group flex w-full items-center justify-between px-4 py-3 text-left">

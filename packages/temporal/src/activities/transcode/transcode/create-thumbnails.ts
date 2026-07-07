@@ -1,5 +1,6 @@
 import { stat } from 'node:fs/promises';
 import { basename, join } from 'node:path';
+
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { Context } from '@temporalio/activity';
@@ -9,6 +10,7 @@ import { mkdirp } from 'mkdirp';
 import pMap from 'p-map';
 import pRetry from 'p-retry';
 import { rimraf } from 'rimraf';
+
 import { updateUploadRecord } from '../../../client';
 import { amaDeviceBudget } from '../../../util/ama-budget';
 import {

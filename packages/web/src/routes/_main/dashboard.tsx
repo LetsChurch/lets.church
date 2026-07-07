@@ -7,12 +7,14 @@ import {
   redirect,
   useLocation,
 } from '@tanstack/react-router';
+
 import EmailVerificationBanner from '@/components/email-verification-banner';
 import PendingInvitationsBanner from '@/components/pending-invitations-banner';
 import { useDisclosure } from '@/hooks/use-disclosure';
 import { useTRPC } from '@/trpc/react';
 import { BackButton } from '@/util/back-navigation';
 import { cn } from '@/util/cn';
+
 import { HelpModal } from './dashboard/-components/help-modal';
 import { DashboardSearchBar } from './dashboard/-components/search-bar';
 
@@ -75,14 +77,14 @@ function DashboardLayout() {
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-page">
+    <div className="bg-page flex min-h-screen flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-gray-100 border-b bg-page/80 px-4 backdrop-blur dark:border-zinc-900">
+      <header className="bg-page/80 sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-gray-100 px-4 backdrop-blur dark:border-zinc-900">
         <button
           type="button"
           onClick={toggleNav}
           aria-label="Toggle navigation"
-          className="flex size-9 items-center justify-center rounded-lg text-secondary transition-colors hover:bg-gray-950/5 hover:text-primary md:hidden dark:hover:bg-white/5"
+          className="text-secondary hover:text-primary flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-gray-950/5 md:hidden dark:hover:bg-white/5"
         >
           <IconMenu2 size={20} />
         </button>
@@ -101,11 +103,11 @@ function DashboardLayout() {
           )}
         >
           <div className="flex-1">{navLinks}</div>
-          <div className="mt-auto border-gray-100 border-t pt-4 dark:border-zinc-900">
+          <div className="mt-auto border-t border-gray-100 pt-4 dark:border-zinc-900">
             <button
               type="button"
               onClick={openHelp}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 font-medium text-secondary text-sm transition-colors hover:bg-gray-950/5 hover:text-primary dark:hover:bg-white/5"
+              className="text-secondary hover:text-primary flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-gray-950/5 dark:hover:bg-white/5"
             >
               <IconHelp size={16} />
               <span>Help</span>

@@ -1,5 +1,6 @@
 import { IconX } from '@tabler/icons-react';
 import { createFileRoute, Link } from '@tanstack/react-router';
+
 import { Alert, List, Text, Title } from '@/components/ui';
 
 export const Route = createFileRoute('/invitations_/invalid')({
@@ -8,9 +9,9 @@ export const Route = createFileRoute('/invitations_/invalid')({
 
 function RouteComponent() {
   return (
-    <div className="flex min-h-screen justify-center bg-page px-4 py-8">
+    <div className="bg-page flex min-h-screen justify-center px-4 py-8">
       <div className="w-full max-w-[600px]">
-        <div className="overflow-hidden rounded-lg border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900">
+        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
           <div className="flex flex-col gap-4">
             <Alert
               icon={<IconX size={24} />}

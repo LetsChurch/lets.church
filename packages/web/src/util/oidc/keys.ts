@@ -4,6 +4,7 @@ import {
   importJWK,
   type JWK,
 } from 'jose';
+
 import { getRawSigningJwk } from './config';
 
 // All OIDC tokens are signed with ES256 (EC P-256). Satellites verify them via

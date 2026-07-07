@@ -1,4 +1,5 @@
 import { z } from 'zod';
+
 import { IncomingIdSchema } from '../common';
 
 export const organizationIdSchema = IncomingIdSchema;

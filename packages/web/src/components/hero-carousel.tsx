@@ -4,8 +4,10 @@ import Autoplay from 'embla-carousel-autoplay';
 import useEmblaCarousel from 'embla-carousel-react';
 import WheelGestures from 'embla-carousel-wheel-gestures';
 import { useCallback, useEffect, useState } from 'react';
+
 import { $headerBackgroundImage } from '@/stores/header';
 import { cn } from '@/util/cn';
+
 import { Avatar } from './avatar';
 import { CarouselNavigationButtons } from './carousel-navigation-buttons';
 import { CarouselPagination } from './carousel-pagination';
@@ -41,10 +43,10 @@ function CarouselItem({
     >
       <div className="space-y-5">
         {/* Image Container */}
-        <div className="relative aspect-video overflow-hidden rounded-2xl border-fancy-pants bg-zinc-100 dark:bg-zinc-900">
+        <div className="border-fancy-pants relative aspect-video overflow-hidden rounded-2xl bg-zinc-100 dark:bg-zinc-900">
           {imageUrl ? (
             <div
-              className="absolute inset-0 bg-center bg-cover transition-transform duration-300 ease-out-expo will-change-transform group-hover:scale-[1.01]"
+              className="ease-out-expo absolute inset-0 bg-cover bg-center transition-transform duration-300 will-change-transform group-hover:scale-[1.01]"
               style={{
                 backgroundImage: `url('${imageUrl}')`,
               }}
@@ -57,7 +59,7 @@ function CarouselItem({
           {/* Badge */}
           <div className="absolute top-2 left-2">
             <div className="flex items-center rounded-full bg-gray-950/50 px-2 backdrop-blur-sm dark:bg-white/50">
-              <span className="font-medium text-shadow text-white text-xs dark:text-gray-950">
+              <span className="text-shadow text-xs font-medium text-white dark:text-gray-950">
                 {badge}
               </span>
             </div>
@@ -66,7 +68,7 @@ function CarouselItem({
 
         {/* Content */}
         <div className="space-y-2 text-center">
-          <h3 className="line-clamp-1 font-bold text-lg text-primary">
+          <h3 className="text-primary line-clamp-1 text-lg font-bold">
             <Link
               to="/media/$mediaId"
               params={{ mediaId: id }}
