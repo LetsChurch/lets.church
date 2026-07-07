@@ -332,14 +332,10 @@ function Reader() {
   // scrolls to and flashes the verse (see flashVerse below); the reader taps to
   // select.
   const [selection, setSelection] = useState<StudySelection | null>(null);
-  const selectedVerse = selection?.kind === 'verse' ? selection.verse : null;
+  // Verses stack — several can be selected at once, each getting its own study
+  // section. Word study stays single.
+  const selectedVerses = selection?.kind === 'verse' ? selection.verses : [];
   const selectedWord = selection?.kind === 'word' ? selection.word : null;
-  // The verse providing context for the panel (the selected verse, or the verse
-  // a selected word belongs to).
-  const contextVerse =
-    selection?.kind === 'verse'
-      ? selection.verse
-      : (selection?.word.verse ?? null);
   // Clear any selection when navigating to a different passage or verse ref, so
   // a deep-link visit starts clean (nothing selected, just the flash below).
   useEffect(() => {
@@ -427,6 +423,44 @@ function Reader() {
     }
   };
 
+  // Tap a verse in the text: add it to the stack if new, remove it if already
+  // selected (toggle), and start a fresh verse selection when a word is being
+  // studied. Removing the last verse closes the panel.
+  const toggleVerse = (n: number) =>
+    setSelection((cur) => {
+      if (cur?.kind !== 'verse') {
+        return { kind: 'verse', verses: [n] };
+      }
+      const verses = cur.verses.includes(n)
+        ? cur.verses.filter((x) => x !== n)
+        : [...cur.verses, n];
+      return verses.length ? { kind: 'verse', verses } : null;
+    });
+  // Drop one verse's section from the stack (its × button).
+  const removeVerse = (n: number) =>
+    setSelection((cur) => {
+      if (cur?.kind !== 'verse') {
+        return cur;
+      }
+      const verses = cur.verses.filter((x) => x !== n);
+      return verses.length ? { kind: 'verse', verses } : null;
+    });
+
+  // Per-verse study data — one entry per selected verse, stacked in the panel.
+  const versePanelData = data
+    ? selectedVerses.map((vnum) => ({
+        verse: vnum,
+        verseText: data.verses[String(vnum)] ?? '',
+        verseRuns: verseRunsFor(data.blocks, vnum),
+        // Footnotes (with their chapter letters), cross-references, and
+        // source-text overlays for this verse — listed in its verse view.
+        verseFootnotes: footnotesForVerse(data.blocks, vnum),
+        verseCrossRefs: crossRefs[String(vnum)] ?? [],
+        color: marks.highlights[String(vnum)] ?? null,
+        hasNote: marks.notes.includes(vnum),
+      }))
+    : [];
+
   // Shared study-panel props — rendered as a side rail (desktop) or a bottom
   // drawer (mobile) from the same state.
   const studyPanelProps = {
@@ -435,37 +469,25 @@ function Reader() {
     book: bookSlug,
     bookName: book.name,
     chapter: chapterNum,
-    verseText:
-      contextVerse != null ? (data?.verses[String(contextVerse)] ?? '') : '',
-    verseRuns:
-      contextVerse != null && data
-        ? verseRunsFor(data.blocks, contextVerse)
-        : [],
-    // Footnotes (with their chapter letters), cross-references, and source-text
-    // overlays for the selected verse — listed in the study panel's verse view.
-    verseFootnotes:
-      contextVerse != null && data
-        ? footnotesForVerse(data.blocks, contextVerse)
-        : [],
-    verseCrossRefs:
-      contextVerse != null ? (crossRefs[String(contextVerse)] ?? []) : [],
-    color:
-      contextVerse != null
-        ? (marks.highlights[String(contextVerse)] ?? null)
-        : null,
-    hasNote: contextVerse != null ? marks.notes.includes(contextVerse) : false,
+    verses: versePanelData,
+    wordVerseText:
+      selectedWord != null
+        ? (data?.verses[String(selectedWord.verse)] ?? '')
+        : '',
     onClose: () => setSelection(null),
-    onSelectVerse: (n: number) => setSelection({ kind: 'verse', verse: n }),
+    // Word view's "back to verse" collapses to that single verse.
+    onSelectVerse: (n: number) => setSelection({ kind: 'verse', verses: [n] }),
     onSelectWord: (word: WordRef) => setSelection({ kind: 'word', word }),
-    onStudyFirstWord: () => {
-      if (selectedVerse == null || !data) {
+    onStudyFirstWord: (verse: number) => {
+      if (!data) {
         return;
       }
-      const w = firstWordOfVerse(data.blocks, selectedVerse);
+      const w = firstWordOfVerse(data.blocks, verse);
       if (w) {
         setSelection({ kind: 'word', word: w });
       }
     },
+    onRemoveVerse: removeVerse,
   };
 
   return (
@@ -526,8 +548,13 @@ function Reader() {
         onTouchEnd={onTouchEnd}
       >
         <div className="min-w-0 flex-1 px-6 pt-[46px] pb-16">
+          {/* select-none on the reading column: verse/word selection is driven by
+              taps (and long-press for word study), so native text selection isn't
+              a supported affordance — disabling it avoids stray highlights and the
+              mobile long-press selection callout. The study panel (rendered
+              outside this column) stays selectable for copying. */}
           <div
-            className={`mx-auto ${interlinearView ? 'max-w-[880px]' : 'max-w-[660px]'}`}
+            className={`mx-auto select-none ${interlinearView ? 'max-w-[880px]' : 'max-w-[660px]'}`}
           >
             {/* Reading mode shows the serif chapter heading (design element);
                 interlinear omits it — the header pickers + controls bar already
@@ -583,10 +610,8 @@ function Reader() {
             ) : data ? (
               <Passage
                 blocks={data.blocks}
-                selectedVerse={selectedVerse}
-                onSelectVerse={(n) =>
-                  setSelection(n == null ? null : { kind: 'verse', verse: n })
-                }
+                selectedVerses={selectedVerses}
+                onSelectVerse={toggleVerse}
                 selectedWord={
                   selectedWord
                     ? {
@@ -620,7 +645,9 @@ function Reader() {
               />
               <span className="min-w-0 flex-1 text-center text-[12.5px] text-faint">
                 {selection?.kind === 'verse'
-                  ? `Verse ${selection.verse} selected`
+                  ? selection.verses.length === 1
+                    ? `Verse ${selection.verses[0]} selected`
+                    : `${selection.verses.length} verses selected`
                   : selection?.kind === 'word'
                     ? `Studying “${selection.word.surface}” (${book.name} ${chapterNum}:${selection.word.verse})`
                     : 'Tap a verse to copy, compare, or open it in Study.'}

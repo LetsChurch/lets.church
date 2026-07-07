@@ -78,19 +78,34 @@ In scope (everything implemented to date):
   name rendering, source-text overlays).
 - A single contextual **study panel**, built on the dedicated **Base UI Drawer** (`@base-ui/react`):
   a non-shifting overlay rail fixed under the header on desktop (non-modal, so the
-  reading stays put and clicking another verse just updates it), a modal bottom
-  sheet on mobile. It overlays the page, so the reading column never shifts when
-  it opens/closes (the column stays centered in the viewport). Verse and word
-  selection are mutually exclusive; the panel renders the matching view:
-  - verse view: a **Base UI tabbed interface** with three tabs — **Verse**,
-    **Commentaries**, and **Media** (see below). The **Verse** tab holds the verse text (each
-    Strong's-tagged word is clickable into its word study, like the reading text)
-    + actions (highlight, note, copy, share, compare, "study a word") + the
-    verse's **annotations** (footnotes with their reading letters,
-    cross-references, source-text overlay entries). The highlight palette has 6
-    colors (gold, sage, slate, rose, sky, plum). A highlighted verse that is also
-    selected shows both — the color fill plus a gold underline for the selection.
-    The active tab persists for the session (clicking another verse keeps the tab).
+  reading stays put and clicking another verse just updates it), a **non-modal,
+  backdrop-less** bottom sheet on mobile (the text stays visible and tappable
+  underneath, so verses keep stacking; dismiss by swipe-down). The mobile sheet
+  uses **Base UI Drawer snap points** — it rests at **~a third of the viewport**
+  (`~34dvh`) so it does **not grow** as more verses are added (content
+  scrolls/peeks); the reader can **drag it up** to full height (~92dvh) to read
+  comfortably. It overlays the
+  page, so the reading column never shifts when it opens/closes (the column stays
+  centered in the viewport). Verse and word selection are mutually exclusive; the
+  panel renders the matching view:
+  - verse view: **multiple verses can be selected at once** — tapping additional
+    verses **stacks** a study section for each (tapping a selected verse again
+    removes it; removing the last closes the panel). Word study stays **single**
+    (one Strong's word at a time). Each verse section is a **Base UI tabbed
+    interface** with three tabs — **Verse**, **Commentaries**, and **Media** (see
+    below). The **Verse** tab holds the verse text (each Strong's-tagged word is
+    clickable into its word study, like the reading text) + actions (highlight,
+    note, copy, share, compare, "study a word") + the verse's **annotations**
+    (footnotes with their reading letters, cross-references, source-text overlay
+    entries) + a per-section close (×) that removes just that verse. The highlight
+    palette has 6 colors (gold, sage, slate, rose, sky, plum). A highlighted verse
+    that is also selected shows both — the color fill plus a gold underline for the
+    selection. The active tab persists for the session and is shared across the
+    stacked sections (clicking another verse keeps the tab).
+- The **scripture reading column is `select-none`** — verse/word selection is
+  tap/long-press driven, so native text selection is disabled to avoid stray
+  highlights and the mobile long-press selection callout. The study panel itself
+  (rendered outside the column) stays selectable for copying.
   - word view: Greek/Hebrew lexicon + concordance + source-text sections, with
     the verse it came from shown as context (click to return to the verse view).
   A word is studied with two clicks (desktop) or a press-and-hold (touch) — there
@@ -229,9 +244,11 @@ In scope (everything implemented to date):
 - Forms built on TanStack Form (the verse note editor) with validation.
 - Homepage (signed-out + returning) and the OIDC sign-in/out flow.
 - Mobile responsiveness: below `lg` the study panel and the book/chapter/
-  translation pickers become **Base UI Drawer** bottom-sheet drawers; words are
-  studied with a press-and-hold; headers, the compare grid, and the homepage
-  collapse to fit a phone. (Suite Q.)
+  translation pickers become **Base UI Drawer** bottom-sheet drawers; the study
+  sheet is **non-modal with no backdrop** so the text stays visible/tappable
+  (verses keep stacking while the sheet is open); words are studied with a
+  press-and-hold; headers, the compare grid, and the homepage collapse to fit a
+  phone. (Suite Q.)
 - Cross-cutting: SSR/hydration, anonymous vs signed-in, accessibility, responsive.
 
 **Known mocked / not-yet-implemented** (do NOT file as bugs — see §18):
@@ -475,10 +492,13 @@ cookie) > default. Defaults: red letter ON, verse numbers ON, text size 21px.
 | --- | --- | --- |
 | LB-VS-01 | Click a verse in a prose chapter | Verse highlights (`data-verse-selected="true"`); the study panel opens in **verse view** (`aria-label="Verse actions"`) showing the reference, verse text, and actions (highlight / copy / share / compare / add note). |
 | LB-VS-02 | Press Esc, or click the panel × | Selection clears; the panel empties (the rail keeps its width — no reflow). |
-| LB-VS-03 | Select a verse, then select a different verse | Panel re-targets the new verse; only one verse selected. |
-| LB-VS-04 | Keyboard: Tab to a verse, press Enter/Space | Verse selects (verse is `role=button`, keyboard-operable). |
-| LB-VS-05 | Select a verse; observe bottom status line | Shows "Verse N selected". |
-| LB-VS-06 | Select a verse, then click a word in it | Selection switches to the word (mutually exclusive) — the panel becomes the word view; no verse stays selected. |
+| LB-VS-03 | Select a verse, then select a different verse | **Both verses stay selected and stack** — each keeps its `data-verse-selected="true"` highlight and the panel shows a **stacked study section per verse** (one under the other, the panel scrolling as a whole, separated by a divider). Verses append in click order. |
+| LB-VS-03b | Select verses 3, 5, 7, then click verse 5 again | Verse 5 **toggles off** — its highlight clears and its panel section is removed; verses 3 and 7 remain. Clicking an already-selected verse removes it (does not re-add). |
+| LB-VS-03c | With several verses stacked, click the **×** on one section's header | That verse only is removed from the stack (its highlight clears); the rest stay. Removing the **last** remaining section empties the selection and closes the panel. |
+| LB-VS-04 | Keyboard: Tab to a verse, press Enter/Space | Verse selects (verse is `role=button`, keyboard-operable); Enter/Space on an already-selected verse toggles it off (same as click). |
+| LB-VS-05 | Select one verse, then a second; observe bottom status line | One verse → "Verse N selected"; two or more → "K verses selected". |
+| LB-VS-06 | Select a verse (or several), then click a word in one | Selection switches to the word (verse and word are mutually exclusive) — the whole verse stack collapses to the single word view; no verse stays selected. The word view's `‹ Ref` back link returns to a **single**-verse selection of the word's verse. |
+| LB-VS-09 | Try to drag-select / highlight the scripture text with the mouse (desktop) or long-press-to-select (mobile) | **No native text selection** — the reading column is `select-none`, so no browser highlight appears and (mobile) no long-press selection callout. Verse tap / word long-press selection still works. The study panel's own text (verse words, commentary, lexicon) **remains selectable** for copying. |
 | LB-VS-07 [E2E: study] | In the verse view, click a word **in the panel's verse text** | The verse text in the panel renders each Strong's-tagged word as a clickable control (`role="button"`, like the reading text); clicking one opens that word's study (word view, `aria-label="Word study"`) — the panel's hierarchical navigation (verse → word, with the `‹ Ref` back link returning to the verse view). |
 | LB-VS-08 [E2E: study] | Select a verse that has annotations | The verse view lists the verse's annotations in dedicated sections (each shown only when non-empty): **Footnotes** — each with its reading letter (a, b, c…) + the note body (e.g. John 1:5 → "a — Or comprehended"); **Cross-references** — links to the cited passages (e.g. Matthew 1:23 → "Isaiah 7:14" → `/bible/isaiah/7?v=14`); **Source text** — overlay explanations present in the verse (Divine name / Old Testament quotation / Hallelujah; e.g. Genesis 2:4 → "Divine name — the LORD renders the Tetragrammaton YHWH"). |
 
@@ -965,7 +985,9 @@ controls stay in the DOM, so they're checked with `toBeHidden`).
 
 | ID | Steps | Expected |
 | --- | --- | --- |
-| LB-MOB-01 [E2E: mobile] | Phone viewport; open `/bible/john/3` and **tap verse 16** (a direct `?v=16` only scrolls + flashes now, see LB-READ-08) | The study panel is a **bottom-sheet drawer** (`[data-drawer]`) — verse view with "John 3:16" + verse text **visible**, and all actions visible (highlight swatches, Copy, Share, Compare, Add note, Study a word). Esc dismisses it. |
+| LB-MOB-01 [E2E: mobile] | Phone viewport; open `/bible/john/3` and **tap verse 16** (a direct `?v=16` only scrolls + flashes now, see LB-READ-08) | The study panel is a **bottom-sheet drawer** (`[data-drawer]`) — verse view with "John 3:16" + verse text **visible**, and all actions visible (highlight swatches, Copy, Share, Compare, Add note, Study a word). The sheet is **non-modal with NO backdrop/scrim** — the reading text behind it is **not dimmed** and stays visible; swipe-down (or Esc) dismisses it. |
+| LB-MOB-01b [E2E: mobile] | With the sheet open on verse 16, **tap another verse** (e.g. 17) in the text behind/above the sheet | The tap reaches the text (no backdrop blocking it) and **stacks** verse 17's section into the sheet — both v16 and v17 sections are present; tapping a selected verse again removes its section (LB-VS-03/03b/03c behavior on mobile). |
+| LB-MOB-01c [E2E: mobile] | Open the sheet, then select several more verses (e.g. 5+); observe the sheet height, then **drag the grab handle up** | The sheet **rests at ~34dvh** (Base UI snap point) and **stays that height** as verses are added — it does **not grow** to fit; extra sections scroll/peek. Dragging the grab handle **up** snaps it to full height (~92dvh) with the stacked sections scrolling internally; dragging/swiping back **down** returns to ~34dvh, and past it dismisses. |
 | LB-MOB-02 [E2E: mobile] | Press-and-hold a word ("God", G2316) | The word-study drawer opens directly (no verse step) — visible lemma θεός, "G2316", "Greek", the verse it came from as context, and "Other occurrences". |
 | LB-MOB-03 [E2E: mobile] | In the word drawer, tap the "‹ John 1:1" context | Returns to the verse view in the same drawer (mutually exclusive — the word is deselected; "Add note" visible; "G2316" gone). |
 | LB-MOB-04 [E2E: mobile] | Tap the chapter trigger in the reader header | A bottom-sheet drawer opens with the chapter grid (chapter links visible); tapping a chapter navigates and closes the sheet. |
@@ -1051,7 +1073,7 @@ A fast pass to run after any change:
 2. Translation switch to MSB works; the version picker lists **four** translations (BSB/KJV/MSB/WEB), each with a muted attribution line. `/bible/john/3?translation=KJV` renders KJV prose (v16 "For God so loved the world…"); two-clicking "God" → θεός / G2316. KJV **red-letter** works (John 14 mostly red; Matthew 4:4 intro black + speech red), projected from BSB. (KJV is prose-only — no poetry/cross-refs; see §18.)
 2b. **WEB** (`?translation=WEB`): John 3 renders with paragraphs + translator footnotes (a–d hover cards) + red-letter; v16 "…his only born Son…". Two-clicking a word does **not** open word study (no `bible_token`). `Aα` interlinear shows **Original only** (no "English (reverse)" toggle): John 3 Greek (Byzantine), Genesis 1 Hebrew RTL (OT fallback). Compare WEB↔KJV works. Attribution line at the reader bottom + on `/about`.
 3. Double-click "God" in John 1 → study panel shows θεός / G2316.
-4. One study panel: reading column is centered while idle; select a verse → verse view (highlight/copy/share/compare/note); click a word twice (or press-and-hold on touch) → word view with the verse as context, single highlight. Selecting a word clears the verse and vice-versa (mutually exclusive).
+4. One study panel: reading column is centered while idle; select a verse → verse view (highlight/copy/share/compare/note). **Multi-verse**: tapping more verses **stacks** a section per verse (tap again or the section × to remove; last removal closes); status line reads "K verses selected". Click a word twice (or press-and-hold on touch) → word view with the verse as context, single highlight (verse stack collapses to the one word). Selecting a word clears the verse(s) and vice-versa (mutually exclusive). The reading column is **`select-none`** (no native text selection / long-press callout); the panel text stays selectable.
 4b. Commentaries tab: select John 3:16 → verse view has **Verse**/**Commentaries**/**Media** tabs; Commentaries tab lists Calvin, Matthew Henry (×2, "on vv. 1–21"), Geneva, Wesley; click Calvin → detail (body + Source + back). Click verse 17 → still on Commentaries tab, still following Calvin (his note on v.17) — tab + work persist. (Requires `just lb-seed-commentaries`.)
 4c. Media tab: select a verse the web corpus teaches (pick via preflight) → **Media** tab shows thumbnailed cards (title / channel · views / duration) ranked by views+recency; a card opens the lets.church media page at the verse's timestamp (`#t=`); "Search {ref} on lets.church →" opens `/search?bibleRefs=<token>`. A verse with none → empty state + search link. (Requires web `lc_media_v1` + `WEB_INTERNAL_URL`; degrades gracefully when web is unreachable.)
 5. Autocomplete (client-side FlexSearch, no debounce): `john` → book-jump widget (21-chapter grid); `john 3` → 36-verse grid; `john 3:16` → verse 16 + preview; click chapter fills bar, click verse navigates. `for God so loved the world` → JHN.3.16 ranked first in **Verses**; `in the beginning` → **Exact phrase** pill + **Creation** topic; scope dropdown switches BSB↔MSB. (Requires `public/search/*` from `just lb-flex`.)
@@ -1068,7 +1090,7 @@ A fast pass to run after any change:
 12b. `/library` → Offline commentaries: Download a work (e.g. Geneva) → % then Remove; IndexedDB `commentary:*` keys appear. Simulate offline → that verse's Commentaries tab shows only the downloaded work (from IDB); online still shows all. Remove → keys gone, back to Download.
 13. Select verse → Add note (TanStack Form): Save disabled while empty; type + Save → ✎ marker + persists.
 14. `/callback?state=x&code=y` (no cookie) → `/?error=state`.
-14b. Phone viewport (≈390px): select a verse → study panel is a bottom-sheet drawer; press-and-hold a word → word-study drawer; tap the version trigger → picker drawer with Compare + interlinear (Aα) buttons per row; compare + homepage fit without horizontal scroll. Desktop (≥1024px): study panel is a non-modal overlay rail that doesn't shift the reading; two-click word study; reading centered while idle.
+14b. Phone viewport (≈390px): select a verse → study panel is a bottom-sheet drawer that is **non-modal with no backdrop** (the text behind isn't dimmed and stays tappable — tapping another verse stacks it) and **rests at ~34dvh** (snap point) so it doesn't grow as verses are added; drag the grab handle up → snaps to ~full height; press-and-hold a word → word-study drawer; tap the version trigger → picker drawer with Compare + interlinear (Aα) buttons per row; compare + homepage fit without horizontal scroll. Desktop (≥1024px): study panel is a non-modal overlay rail that doesn't shift the reading; two-click word study; reading centered while idle.
 14c. Header `Aα` toggle → `?view=interlinear`. **Original** (default): true source order — John 3 starts Ἦν δὲ ἄνθρωπος; toggle **Parsing** on → morph codes + decoded hover; Genesis 1 flows RTL (בְּרֵאשִׁית rightmost). **English (reverse)**: reading order (English over lemmas), Parsing chip inert. MSB John 3:16 includes αὐτοῦ (Byzantine); BSB omits it. Tapping a word opens the study panel (with a Parsing section) — rail desktop / drawer mobile.
 15. `tsc` + `biome` clean; no console errors on the main routes.
 ```

@@ -54,14 +54,14 @@ export type WordRef = {
   language?: string; // 'greek' | 'hebrew' — how to decode `morph`
 };
 
-// Word-selection wiring, read by the word runs. `selectedVerse` lets a word
+// Word-selection wiring, read by the word runs. `selectedVerses` lets a word
 // know whether its verse is already selected (so a click selects the word
-// instead of re-selecting the verse). `studyOpen` is true while the study panel
-// is showing — in that mode a single click on ANY word switches the study to
-// it, so the panel stays open as you read across verses. Null when word
-// selection is disabled.
+// instead of re-selecting the verse) — several verses can be selected at once.
+// `studyOpen` is true while a word study is showing — in that mode a single
+// click on ANY word switches the study to it, so the panel stays open as you
+// read across verses. Null when word selection is disabled.
 type WordSelection = {
-  selectedVerse: number | null;
+  selectedVerses: number[];
   selected: { verse: number; position: number } | null;
   studyOpen: boolean;
   onSelectWord: (word: WordRef) => void;
@@ -537,7 +537,9 @@ function Runs({ runs, verse }: { runs: Run[]; verse?: number }) {
       // open. Otherwise a click just selects the verse, so the word shouldn't
       // look individually clickable. (Touch long-press still works regardless.)
       const wordStudyable =
-        isWord && !!ws && (ws.studyOpen || ws.selectedVerse === verse);
+        isWord &&
+        !!ws &&
+        (ws.studyOpen || (verse != null && ws.selectedVerses.includes(verse)));
       const isSelectedWord =
         isWord &&
         ws?.selected?.verse === verse &&
@@ -666,7 +668,7 @@ function Runs({ runs, verse }: { runs: Run[]; verse?: number }) {
               // (verse already selected, or the panel already open) selects the
               // word. Two deliberate clicks — no double-click gesture, which
               // would double-fire and double-highlight.
-              if (ws.studyOpen || ws.selectedVerse === wordVerse) {
+              if (ws.studyOpen || ws.selectedVerses.includes(wordVerse)) {
                 e.stopPropagation();
                 select();
               }
@@ -746,13 +748,13 @@ function Runs({ runs, verse }: { runs: Run[]; verse?: number }) {
 function ProseParagraph({
   verses,
   size,
-  selectedVerse,
+  selectedVerses,
   onSelectVerse,
 }: {
   verses: ProseVerse[];
   size: Size;
-  selectedVerse?: number | null;
-  onSelectVerse?: (num: number | null) => void;
+  selectedVerses?: number[];
+  onSelectVerse?: (num: number) => void;
 }) {
   const { textSize } = useContext(ReadingPrefsContext);
   const marks = useContext(MarksContext);
@@ -784,7 +786,7 @@ function ProseParagraph({
         const selectable = !!onSelectVerse && vnum != null;
         if (selectable && vnum != null) {
           const num = vnum;
-          const isSel = selectedVerse != null && vnum === selectedVerse;
+          const isSel = selectedVerses?.includes(vnum) ?? false;
           const hl = marks.highlights[num];
           // A span (not <button>) so inline footnote buttons can nest validly:
           // a <button> can't contain another <button>. The toolbar popover
@@ -832,14 +834,14 @@ function PoetryStanza({
   lines,
   hymn,
   size,
-  selectedVerse,
+  selectedVerses,
   onSelectVerse,
 }: {
   lines: PoetryLine[];
   hymn?: boolean;
   size: Size;
-  selectedVerse?: number | null;
-  onSelectVerse?: (num: number | null) => void;
+  selectedVerses?: number[];
+  onSelectVerse?: (num: number) => void;
 }) {
   const { textSize } = useContext(ReadingPrefsContext);
   const marks = useContext(MarksContext);
@@ -858,7 +860,7 @@ function PoetryStanza({
     if (!onSelectVerse || verse == null) {
       return inner;
     }
-    const isSel = selectedVerse != null && verse === selectedVerse;
+    const isSel = selectedVerses?.includes(verse) ?? false;
     const hl = marks.highlights[verse];
     return (
       // biome-ignore lint/a11y/useSemanticElements: must stay a span so inline footnote buttons can nest
@@ -953,7 +955,7 @@ const CHIP_VARIANT = {
 export function Passage({
   blocks,
   size = 'reading',
-  selectedVerse,
+  selectedVerses,
   onSelectVerse,
   selectedWord,
   onSelectWord,
@@ -969,8 +971,8 @@ export function Passage({
 }: {
   blocks: Block[];
   size?: Size;
-  selectedVerse?: number | null;
-  onSelectVerse?: (num: number | null) => void;
+  selectedVerses?: number[];
+  onSelectVerse?: (num: number) => void;
   selectedWord?: { verse: number; position: number } | null;
   onSelectWord?: (word: WordRef) => void;
   redLetter?: boolean;
@@ -998,13 +1000,13 @@ export function Passage({
     () =>
       onSelectWord
         ? {
-            selectedVerse: selectedVerse ?? null,
+            selectedVerses: selectedVerses ?? [],
             selected: selectedWord ?? null,
             studyOpen: selectedWord != null,
             onSelectWord,
           }
         : null,
-    [onSelectWord, selectedVerse, selectedWord],
+    [onSelectWord, selectedVerses, selectedWord],
   );
   const footnoteLabels = useMemo(() => {
     const map = new Map<Footnote, string>();
@@ -1116,7 +1118,7 @@ export function Passage({
                               key={`k${i}`}
                               verses={b.verses}
                               size={size}
-                              selectedVerse={selectedVerse}
+                              selectedVerses={selectedVerses}
                               onSelectVerse={onSelectVerse}
                             />
                           );
@@ -1127,7 +1129,7 @@ export function Passage({
                               lines={b.lines}
                               hymn={b.hymn}
                               size={size}
-                              selectedVerse={selectedVerse}
+                              selectedVerses={selectedVerses}
                               onSelectVerse={onSelectVerse}
                             />
                           );

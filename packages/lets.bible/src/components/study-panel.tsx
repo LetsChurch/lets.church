@@ -39,14 +39,28 @@ import {
 } from './passage/passage';
 import type { Footnote, Run } from './passage/types';
 
-// What the reader currently has selected. Verse and word are mutually exclusive,
-// so a single discriminated union models the whole selection — the study panel
-// renders the matching view and always knows the verse for context.
+// What the reader currently has selected. Verses stack (you can select several
+// at once — the panel shows a section per verse), while word study stays
+// single (one Strong's word at a time). The two are mutually exclusive, so a
+// discriminated union models the whole selection — the study panel renders the
+// matching view and a word still knows its verse for context.
 export type StudySelection =
-  | { kind: 'verse'; verse: number }
+  | { kind: 'verse'; verses: number[] }
   | { kind: 'word'; word: WordRef };
 
 const NOTE_MAX = 10000;
+
+// Everything the panel needs to render one verse's study section. The reader
+// supplies one of these per selected verse; the panel stacks them.
+export type VersePanelData = {
+  verse: number;
+  verseText: string; // text of the verse
+  verseRuns: Run[]; // runs of the verse (for clickable words)
+  verseFootnotes: { label: string; note: Footnote }[]; // footnotes (a,b,c)
+  verseCrossRefs: CrossRef[]; // cross-references
+  color: string | null; // highlight color
+  hasNote: boolean; // has a note
+};
 
 type StudyPanelProps = {
   selection: StudySelection | null;
@@ -54,16 +68,16 @@ type StudyPanelProps = {
   book: string; // slug
   bookName: string;
   chapter: number;
-  verseText: string; // text of the selection's verse
-  verseRuns: Run[]; // runs of the selection's verse (for clickable words)
-  verseFootnotes: { label: string; note: Footnote }[]; // verse's footnotes (a,b,c)
-  verseCrossRefs: CrossRef[]; // verse's cross-references
-  color: string | null; // highlight color of the selection's verse
-  hasNote: boolean; // selection's verse has a note
+  // Verse selection: one entry per selected verse, stacked in the panel. Empty
+  // for a word selection.
+  verses: VersePanelData[];
+  // Word selection: the text of the word's verse, shown as context.
+  wordVerseText: string;
   onClose: () => void;
-  onSelectVerse: (verse: number) => void; // switch context to a verse
+  onSelectVerse: (verse: number) => void; // switch context to a single verse
   onSelectWord: (word: WordRef) => void; // open a word's study (Strong's)
-  onStudyFirstWord: () => void; // open the first studyable word of the verse
+  onStudyFirstWord: (verse: number) => void; // open a verse's first studyable word
+  onRemoveVerse: (verse: number) => void; // drop one verse from the stack
 };
 
 // The verse/word view switch — shared by the desktop rail and the mobile drawer.
@@ -71,63 +85,74 @@ function StudyPanelInner({
   selection,
   translation,
   book,
+  bookName,
   chapter,
-  verseText,
-  verseRuns,
-  verseFootnotes,
-  verseCrossRefs,
-  color,
-  hasNote,
+  verses,
+  wordVerseText,
   onClose,
   onSelectVerse,
   onSelectWord,
   onStudyFirstWord,
-  reference,
-}: StudyPanelProps & { selection: StudySelection; reference: string }) {
+  onRemoveVerse,
+}: StudyPanelProps & { selection: StudySelection }) {
   if (selection.kind === 'word') {
+    const { word } = selection;
     return (
       <WordView
-        word={selection.word}
-        reference={reference}
-        verseText={verseText}
+        word={word}
+        reference={`${bookName} ${chapter}:${word.verse}`}
+        verseText={wordVerseText}
         translation={translation}
         book={book}
         chapter={chapter}
         onClose={onClose}
-        onBackToVerse={() => onSelectVerse(selection.word.verse)}
+        onBackToVerse={() => onSelectVerse(word.verse)}
       />
     );
   }
+  // Verse selection — stack a section per selected verse, the whole panel
+  // scrolling as one. Each section's close removes just that verse; removing the
+  // last one empties the selection and closes the panel.
   return (
-    <VerseView
-      book={book}
-      chapter={chapter}
-      verse={selection.verse}
-      reference={reference}
-      verseText={verseText}
-      verseRuns={verseRuns}
-      verseFootnotes={verseFootnotes}
-      verseCrossRefs={verseCrossRefs}
-      color={color}
-      hasNote={hasNote}
-      onClose={onClose}
-      onSelectWord={onSelectWord}
-      onStudyFirstWord={onStudyFirstWord}
-    />
+    <div className="flex min-h-0 flex-1 flex-col divide-y-4 divide-line overflow-y-auto">
+      {verses.map((vd) => (
+        <VerseView
+          key={vd.verse}
+          book={book}
+          chapter={chapter}
+          verse={vd.verse}
+          reference={`${bookName} ${chapter}:${vd.verse}`}
+          verseText={vd.verseText}
+          verseRuns={vd.verseRuns}
+          verseFootnotes={vd.verseFootnotes}
+          verseCrossRefs={vd.verseCrossRefs}
+          color={vd.color}
+          hasNote={vd.hasNote}
+          onClose={() => onRemoveVerse(vd.verse)}
+          onSelectWord={onSelectWord}
+          onStudyFirstWord={() => onStudyFirstWord(vd.verse)}
+        />
+      ))}
+    </div>
   );
 }
 
-function selectionVerse(selection: StudySelection): number {
-  return selection.kind === 'word' ? selection.word.verse : selection.verse;
-}
+// Mobile bottom-sheet snap points (fractions of the viewport height): the sheet
+// rests at ~a third of the screen so it doesn't grow as more verses are selected
+// (content scrolls / peeks instead), and the reader can drag it up to full height
+// to read comfortably. Module-scope so the array identity is stable across
+// renders.
+const MOBILE_SNAP_POINTS = [0.34, 1];
+const MOBILE_DEFAULT_SNAP_POINT = 0.34;
 
 // The single contextual study panel, built on the **Base UI Drawer**:
 //   • Desktop (≥ lg): a non-modal side drawer fixed under the header on the right
 //     (swipe-right to dismiss). Non-modal + `disablePointerDismissal`, so it
 //     overlays the page without shifting the reading — clicking the text to
 //     select another verse/word keeps the panel open and just updates it.
-//   • Mobile (< lg): a modal bottom sheet (swipe-down to dismiss, dimmed
-//     backdrop). The panel renders verse actions for a selected verse, or the
+//   • Mobile (< lg): a non-modal bottom sheet (swipe-down to dismiss, no
+//     backdrop — the text stays visible and tappable so verses keep stacking).
+//     The panel renders verse actions for the selected verse(s), or the
 //     Greek/Hebrew lexicon for a selected word (with its verse as context).
 export function StudyPanel(
   props: StudyPanelProps & { belowControls?: boolean },
@@ -136,11 +161,8 @@ export function StudyPanel(
   const { selection, onClose } = inner;
   const isDesktop = useIsDesktop();
   const ariaLabel = selection?.kind === 'word' ? 'Word study' : 'Verse actions';
-  const reference = selection
-    ? `${inner.bookName} ${inner.chapter}:${selectionVerse(selection)}`
-    : '';
   const body = selection ? (
-    <StudyPanelInner {...inner} selection={selection} reference={reference} />
+    <StudyPanelInner {...inner} selection={selection} />
   ) : null;
 
   if (isDesktop) {
@@ -183,14 +205,28 @@ export function StudyPanel(
           onClose();
         }
       }}
+      swipeDirection="down"
+      modal={false}
+      disablePointerDismissal
+      snapPoints={MOBILE_SNAP_POINTS}
+      defaultSnapPoint={MOBILE_DEFAULT_SNAP_POINT}
     >
       <Drawer.Portal>
-        <Drawer.Backdrop className="fixed inset-0 z-40 bg-ink-strong/40 transition-opacity duration-300 ease-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 data-[swiping]:duration-0" />
-        <Drawer.Viewport className="fixed inset-0 z-50 flex items-end justify-center">
+        {/* No backdrop: the bottom sheet floats over the reading without dimming
+            or covering the text, so verses stay visible and tappable while the
+            panel is open (mirrors the non-modal desktop rail). Non-modal +
+            disablePointerDismissal so tapping another verse in the text stacks it
+            into the panel instead of dismissing the sheet. */}
+        <Drawer.Viewport className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center">
+          {/* Rests at the ~34dvh snap point (see MOBILE_SNAP_POINTS) so the sheet
+              doesn't grow as verses are added — content scrolls/peeks and the
+              reader drags up to expand. The transform composes the snap offset
+              with the live swipe movement (Base UI's documented pattern for a
+              down-swiping snap drawer). */}
           <Drawer.Popup
             aria-label={ariaLabel}
             data-drawer
-            className="flex max-h-[88dvh] w-full flex-col rounded-t-2xl border-line-strong border-t bg-paper-raised outline-none transition-transform duration-300 ease-out [transform:translateY(var(--drawer-swipe-movement-y))] data-[ending-style]:translate-y-full data-[starting-style]:translate-y-full data-[swiping]:duration-0"
+            className="pointer-events-auto flex max-h-[92dvh] w-full flex-col rounded-t-2xl border-line-strong border-t bg-paper-raised outline-none transition-transform duration-300 ease-out [transform:translateY(calc(var(--drawer-snap-point-offset,0px)+var(--drawer-swipe-movement-y,0px)))] data-[ending-style]:translate-y-full data-[starting-style]:translate-y-full data-[swiping]:duration-0"
           >
             <div className="flex flex-shrink-0 cursor-grab justify-center pt-2.5 pb-1 active:cursor-grabbing">
               <div className="h-1.5 w-10 rounded-full bg-line-strong" />
@@ -295,12 +331,14 @@ function VerseView({
     'relative cursor-pointer pt-1 pb-2.5 font-semibold text-[11px] text-muted-2 uppercase tracking-[0.12em] outline-none hover:text-ink data-selected:text-gold';
 
   return (
-    <>
+    // Auto-height section (the panel body scrolls as a whole so several selected
+    // verses can stack) rather than a full-height flex view.
+    <section className="flex flex-col">
       <PanelHeader eyebrow="Verse" title={reference} onClose={onClose} />
       <Tabs.Root
         value={tab}
         onValueChange={(value) => setStudyTab(value as StudyTab)}
-        className="flex min-h-0 flex-1 flex-col"
+        className="flex flex-col"
       >
         <Tabs.List className="relative flex gap-5 border-line border-b px-5">
           <Tabs.Tab value="verse" className={tabClass}>
@@ -321,10 +359,7 @@ function VerseView({
           />
         </Tabs.List>
 
-        <Tabs.Panel
-          value="verse"
-          className="min-h-0 flex-1 overflow-y-auto px-5 py-5"
-        >
+        <Tabs.Panel value="verse" className="px-5 py-5">
           <VerseWords
             runs={verseRuns}
             verse={verse}
@@ -426,10 +461,7 @@ function VerseView({
           </button>
         </Tabs.Panel>
 
-        <Tabs.Panel
-          value="commentaries"
-          className="min-h-0 flex-1 overflow-y-auto px-5 py-5"
-        >
+        <Tabs.Panel value="commentaries" className="px-5 py-5">
           <CommentariesTab
             book={book}
             chapter={chapter}
@@ -438,10 +470,7 @@ function VerseView({
           />
         </Tabs.Panel>
 
-        <Tabs.Panel
-          value="media"
-          className="min-h-0 flex-1 overflow-y-auto px-5 py-5"
-        >
+        <Tabs.Panel value="media" className="px-5 py-5">
           <RelatedMediaTab
             book={book}
             chapter={chapter}
@@ -450,7 +479,7 @@ function VerseView({
           />
         </Tabs.Panel>
       </Tabs.Root>
-    </>
+    </section>
   );
 }
 
