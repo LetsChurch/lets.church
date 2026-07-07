@@ -2374,7 +2374,9 @@ export const channelRouter = router({
           originalFileName: input.originalFileName,
           // Pre-fill the title from the file name so the new upload's edit page
           // opens with a sensible default the user can accept or tweak.
-          title: titleFromFileName(input.originalFileName) || null,
+          title: input.originalFileName
+            ? titleFromFileName(input.originalFileName) || null
+            : null,
           channelId: input.channelId,
           appUserId: ctx.session.appUser.id,
           uploadFinalized: false,
