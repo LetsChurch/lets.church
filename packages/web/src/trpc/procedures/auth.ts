@@ -9,7 +9,7 @@ import {
   postUserRegistration,
   resetPassword,
 } from '@/temporal';
-import { login } from '@/util/auth';
+import { BannedError, login } from '@/util/auth';
 import { createSessionJwt, parsePasswordResetJwt } from '@/util/jwt';
 import logger from '@/util/logger';
 import { getClientIpAddress } from '@/util/request-ip';
@@ -64,6 +64,18 @@ export const authProcedures = {
 
           return { error: false };
         } catch (e) {
+          if (e instanceof BannedError) {
+            moduleLogger.warn(
+              { context: { userId: id, clientIp } },
+              'Login failed - account banned',
+            );
+            return {
+              error: e.reason
+                ? `This account has been banned. Reason: ${e.reason}`
+                : 'This account has been banned.',
+            };
+          }
+
           moduleLogger.warn(
             {
               context: {

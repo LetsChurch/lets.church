@@ -1,4 +1,5 @@
 import { relations, sql } from 'drizzle-orm';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import {
   bigint,
   boolean,
@@ -199,6 +200,9 @@ export const AppUser = pgTable('app_user', {
   updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
   deletedAt: timestamp('deleted_at', { precision: 3 }),
   role: AppUserRole('role').notNull().default('USER'),
+  bannedAt: timestamp('banned_at', { precision: 3 }),
+  banReason: text('ban_reason'),
+  bannedById: uuid('banned_by_id').references((): AnyPgColumn => AppUser.id),
 });
 
 export const AppUserEmail = pgTable(

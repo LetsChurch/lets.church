@@ -1,7 +1,9 @@
 import {
+  IconBan,
   IconDots,
   IconEdit,
   IconKey,
+  IconLockOpen,
   IconMail,
   IconPlus,
 } from '@tabler/icons-react';
@@ -10,7 +12,15 @@ import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
 import { LcMenu, MenuItemButton } from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
-import { ActionIcon, Badge, Button, Table, Text, Title } from '@/components/ui';
+import {
+  ActionIcon,
+  Badge,
+  Button,
+  Table,
+  Text,
+  Textarea,
+  Title,
+} from '@/components/ui';
 import { modals } from '@/components/ui/confirm-modal';
 import { useAppForm } from '@/components/ui/form';
 import { useDisclosure } from '@/hooks/use-disclosure';
@@ -61,6 +71,8 @@ type User = {
   fullName: string | null;
   role: string;
   createdAt: Date;
+  bannedAt: Date | null;
+  banReason: string | null;
   emails: { email: string; verifiedAt: Date | null }[];
 };
 
@@ -68,6 +80,9 @@ function UsersPage() {
   const trpc = useTRPC();
   const [opened, { open, close }] = useDisclosure(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [banOpened, { open: openBan, close: closeBan }] = useDisclosure(false);
+  const [banningUser, setBanningUser] = useState<User | null>(null);
+  const [banReason, setBanReason] = useState('');
 
   const { data: users, refetch } = useSuspenseQuery(
     trpc.dashboard.admin.getUsers.queryOptions(),
@@ -201,6 +216,66 @@ function UsersPage() {
     });
   };
 
+  const handleBan = (user: User) => {
+    setBanningUser(user);
+    setBanReason('');
+    openBan();
+  };
+
+  const submitBan = async () => {
+    if (!banningUser) return;
+    try {
+      await trpcClient.dashboard.admin.banUser.mutate({
+        appUserId: banningUser.id,
+        reason: banReason.trim() || undefined,
+      });
+      closeBan();
+      setBanningUser(null);
+      refetch();
+    } catch (error) {
+      console.error('Failed to ban user:', error);
+      modals.open({
+        title: 'Error',
+        children: (
+          <Text size="sm" c="red">
+            Failed to ban user. Please try again.
+          </Text>
+        ),
+      });
+    }
+  };
+
+  const handleUnban = (user: User) => {
+    modals.openConfirmModal({
+      title: 'Unban User',
+      children: (
+        <Text size="sm">
+          Are you sure you want to unban <strong>{user.username}</strong>? They
+          will be able to log in again.
+        </Text>
+      ),
+      labels: { confirm: 'Unban User', cancel: 'Cancel' },
+      onConfirm: async () => {
+        try {
+          await trpcClient.dashboard.admin.unbanUser.mutate({
+            appUserId: user.id,
+          });
+          refetch();
+        } catch (error) {
+          console.error('Failed to unban user:', error);
+          modals.open({
+            title: 'Error',
+            children: (
+              <Text size="sm" c="red">
+                Failed to unban user. Please try again.
+              </Text>
+            ),
+          });
+        }
+      },
+    });
+  };
+
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'ADMIN':
@@ -259,9 +334,16 @@ function UsersPage() {
                   </div>
                 </Table.Td>
                 <Table.Td>
-                  <Badge color={getRoleBadgeColor(user.role)} size="sm">
-                    {user.role}
-                  </Badge>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge color={getRoleBadgeColor(user.role)} size="sm">
+                      {user.role}
+                    </Badge>
+                    {user.bannedAt ? (
+                      <Badge color="red" size="sm">
+                        Banned
+                      </Badge>
+                    ) : null}
+                  </div>
                 </Table.Td>
                 <Table.Td>
                   <Text size="sm" c="dimmed">
@@ -302,6 +384,21 @@ function UsersPage() {
                               Resend Verification Email
                             </MenuItemButton>
                           ) : null}
+                          {user.bannedAt ? (
+                            <MenuItemButton
+                              icon={<IconLockOpen size={14} />}
+                              onClick={() => handleUnban(user)}
+                            >
+                              Unban User
+                            </MenuItemButton>
+                          ) : (
+                            <MenuItemButton
+                              icon={<IconBan size={14} />}
+                              onClick={() => handleBan(user)}
+                            >
+                              Ban User
+                            </MenuItemButton>
+                          )}
                         </LcMenu.Popup>
                       </LcMenu.Positioner>
                     </LcMenu.Portal>
@@ -399,6 +496,52 @@ function UsersPage() {
                 </div>
               </div>
             </form>
+          </LcModal.Popup>
+        </LcModal.Portal>
+      </LcModal.Root>
+
+      <LcModal.Root
+        open={banOpened}
+        onOpenChange={(o) => {
+          if (!o) {
+            closeBan();
+            setBanningUser(null);
+          }
+        }}
+      >
+        <LcModal.Portal>
+          <LcModal.Backdrop />
+          <LcModal.Popup size="md">
+            <ModalHeader
+              title={banningUser ? `Ban ${banningUser.username}` : 'Ban User'}
+            />
+            <div className="flex flex-col gap-4">
+              <Text size="sm">
+                Banning this user will immediately log them out and prevent them
+                from logging back in until they are unbanned.
+              </Text>
+              <Textarea
+                label="Reason (optional)"
+                placeholder="Reason for the ban"
+                value={banReason}
+                onChange={(e) => setBanReason(e.target.value)}
+                minRows={3}
+              />
+              <div className="mt-4 flex flex-wrap items-center justify-end gap-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    closeBan();
+                    setBanningUser(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button color="red" onClick={submitBan}>
+                  Ban User
+                </Button>
+              </div>
+            </div>
           </LcModal.Popup>
         </LcModal.Portal>
       </LcModal.Root>

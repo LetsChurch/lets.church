@@ -1,4 +1,5 @@
 import {
+  AppSession,
   AppUser,
   AppUserEmail,
   Channel,
@@ -1337,6 +1338,8 @@ export const adminRouter = router({
         fullName: true,
         role: true,
         createdAt: true,
+        bannedAt: true,
+        banReason: true,
       },
       with: {
         emails: {
@@ -1551,6 +1554,157 @@ export const adminRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to update user',
+        });
+      }
+    }),
+
+  banUser: adminProcedure
+    .input(
+      z.object({
+        appUserId: z.string(),
+        reason: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          targetId: input.appUserId,
+        },
+        'Banning user',
+      );
+
+      if (input.appUserId === ctx.session.appUserId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'You cannot ban yourself.',
+        });
+      }
+
+      try {
+        await db.transaction(async (tx) => {
+          const [updatedUser] = await tx
+            .update(AppUser)
+            .set({
+              bannedAt: new Date(),
+              banReason: input.reason ?? null,
+              bannedById: ctx.session.appUserId,
+              updatedAt: new Date(),
+            })
+            .where(eq(AppUser.id, input.appUserId))
+            .returning({ id: AppUser.id });
+
+          if (!updatedUser) {
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'User not found',
+            });
+          }
+
+          // Immediately revoke all of the banned user's active sessions so the
+          // ban takes effect on their next request rather than at cookie expiry.
+          await tx
+            .update(AppSession)
+            .set({ deletedAt: new Date() })
+            .where(
+              and(
+                eq(AppSession.appUserId, input.appUserId),
+                isNull(AppSession.deletedAt),
+              ),
+            );
+        });
+
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.appUserId,
+          },
+          'User banned successfully',
+        );
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to ban user',
+        );
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to ban user',
+        });
+      }
+    }),
+
+  unbanUser: adminProcedure
+    .input(
+      z.object({
+        appUserId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          targetId: input.appUserId,
+        },
+        'Unbanning user',
+      );
+
+      try {
+        const [updatedUser] = await db
+          .update(AppUser)
+          .set({
+            bannedAt: null,
+            banReason: null,
+            bannedById: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(AppUser.id, input.appUserId))
+          .returning({ id: AppUser.id });
+
+        if (!updatedUser) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+        }
+
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.appUserId,
+          },
+          'User unbanned successfully',
+        );
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to unban user',
+        );
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to unban user',
         });
       }
     }),

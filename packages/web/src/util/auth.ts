@@ -4,6 +4,23 @@ import argon2 from 'argon2';
 import { eq } from 'drizzle-orm';
 import { parseSessionJwt } from './jwt';
 
+/**
+ * Thrown by {@link login} when valid credentials belong to a banned account.
+ * Distinct from the generic invalid-credentials error so callers can surface a
+ * clear "banned" message — this only ever reaches a caller who supplied the
+ * correct password, so it doesn't leak account existence to guessers. Carries
+ * the admin-supplied ban reason (if any) so it can be shown to the user.
+ */
+export class BannedError extends Error {
+  readonly reason: string | null;
+
+  constructor(reason: string | null = null) {
+    super('This account has been banned.');
+    this.name = 'BannedError';
+    this.reason = reason;
+  }
+}
+
 export async function login(id: string, password: string) {
   const lookupByUsername = () =>
     db
@@ -39,6 +56,10 @@ export async function login(id: string, password: string) {
     throw new Error('Error logging in. Please try again.');
   }
 
+  if (user.bannedAt) {
+    throw new BannedError(user.banReason);
+  }
+
   const [session] = await db
     .insert(AppSession)
     .values({ appUserId: user.id, updatedAt: new Date() })
@@ -71,10 +92,17 @@ export async function getSession() {
       and(eq(t.id, jwt.sub), gt(t.expiresAt, new Date()), isNull(t.deletedAt)),
     with: {
       appUser: {
-        columns: { id: true, role: true },
+        columns: { id: true, role: true, bannedAt: true },
       },
     },
   });
+
+  // Treat a banned user as having no session so the ban takes effect on their
+  // very next request (role/ban state is read fresh from the DB here), rather
+  // than waiting for the session cookie to expire.
+  if (session?.appUser?.bannedAt) {
+    return null;
+  }
 
   return session ?? null;
 }
