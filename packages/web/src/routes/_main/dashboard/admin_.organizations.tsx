@@ -364,13 +364,23 @@ function OrganizationsAdminPage() {
                               className="size-8"
                             />
                             <div>
-                              <Link
-                                to="/dashboard/churches/$churchId"
-                                params={{ churchId: org.id }}
-                                className="font-medium text-primary hover:underline"
-                              >
-                                {org.name}
-                              </Link>
+                              {org.type === 'CHURCH' ? (
+                                <Link
+                                  to="/dashboard/churches/$churchId"
+                                  params={{ churchId: org.id }}
+                                  className="font-medium text-primary hover:underline"
+                                >
+                                  {org.name}
+                                </Link>
+                              ) : (
+                                <Link
+                                  to="/dashboard/organizations/$orgId"
+                                  params={{ orgId: org.id }}
+                                  className="font-medium text-primary hover:underline"
+                                >
+                                  {org.name}
+                                </Link>
+                              )}
                               <Text size="xs" c="dimmed">
                                 @{org.slug}
                               </Text>
