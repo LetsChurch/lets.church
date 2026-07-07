@@ -126,11 +126,22 @@ function AdminPage() {
         ) : null}
       </div>
       {isLoadingQueueStats ? (
-        <div className="mb-8 flex flex-wrap items-center gap-2.5">
-          <Loader size="sm" />
-          <Text size="sm" c="dimmed">
-            Loading queue stats…
-          </Text>
+        <div
+          className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          aria-hidden="true"
+        >
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="overflow-hidden rounded-lg border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900"
+            >
+              <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
+                <div className="h-5 w-32 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+                <div className="h-5 w-16 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" />
+              </div>
+              <div className="h-4 w-40 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+            </div>
+          ))}
         </div>
       ) : queueStats && queueStats.length > 0 ? (
         <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
