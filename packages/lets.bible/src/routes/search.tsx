@@ -87,13 +87,27 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function VerseRow({ hit, html }: { hit: VerseHit; html?: boolean }) {
+function VerseRow({
+  hit,
+  html,
+  query,
+  translation,
+}: {
+  hit: VerseHit;
+  html?: boolean;
+  query: string;
+  translation?: string;
+}) {
   return (
     <li>
       <Link
         to="/bible/$book/$chapter"
         params={{ book: hit.slug, chapter: String(hit.chapter) }}
-        search={{ v: hit.verse }}
+        search={{
+          v: hit.verse,
+          fromSearch: query,
+          ...(translation ? { fromTranslation: translation } : {}),
+        }}
         // Verse deep-link: don't reset scroll to top — the reader scrolls the
         // verse into view (see chapterLink in lib/reference.ts).
         resetScroll={false}
@@ -154,6 +168,11 @@ function Results({
       {reference ? (
         <Link
           {...chapterLink(reference.book, reference.chapter, reference.verse)}
+          search={{
+            ...(reference.verse != null ? { v: reference.verse } : {}),
+            fromSearch: query,
+            ...(translation ? { fromTranslation: translation } : {}),
+          }}
           className="border-gold-soft/50 bg-paper-raised hover:border-gold-soft flex items-center justify-between rounded-2xl border px-5 py-4 shadow-sm transition"
         >
           <span>
@@ -176,6 +195,11 @@ function Results({
               <li key={x.label}>
                 <Link
                   {...chapterLink(x.slug, x.chapter, x.verse ?? undefined)}
+                  search={{
+                    ...(x.verse != null ? { v: x.verse } : {}),
+                    fromSearch: query,
+                    ...(translation ? { fromTranslation: translation } : {}),
+                  }}
                   className="hover:bg-paper-soft block rounded-xl px-4 py-3 transition"
                 >
                   <span className="text-gold text-[13px] font-semibold">
@@ -200,7 +224,13 @@ function Results({
           </SectionLabel>
           <ul className="space-y-1">
             {verses.map((v) => (
-              <VerseRow key={v.ref} hit={v} html />
+              <VerseRow
+                key={v.ref}
+                hit={v}
+                html
+                query={query}
+                translation={translation}
+              />
             ))}
           </ul>
         </section>
@@ -211,7 +241,12 @@ function Results({
           <SectionLabel>Related passages</SectionLabel>
           <ul className="space-y-1">
             {related.map((v) => (
-              <VerseRow key={v.ref} hit={v} />
+              <VerseRow
+                key={v.ref}
+                hit={v}
+                query={query}
+                translation={translation}
+              />
             ))}
           </ul>
         </section>

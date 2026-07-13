@@ -13,7 +13,7 @@ const COLLAPSED_HEIGHT = 220;
 // Anything that doesn't parse to a real reference (e.g. a hallucinated ref) is
 // left as plain text — never linked — so a bad citation can't send the reader to
 // a fabricated place.
-function renderParagraph(text: string) {
+function renderParagraph(text: string, q: string, translation?: string) {
   const parts = text.split(/(\[[^\]\n]+\])/g);
   return parts.map((part, i) => {
     const m = part.match(/^\[([^\]\n]+)\]$/);
@@ -22,6 +22,11 @@ function renderParagraph(text: string) {
         <Link
           key={i}
           {...passageLink(m[1])}
+          search={(previous) => ({
+            ...previous,
+            fromSearch: q,
+            ...(translation ? { fromTranslation: translation } : {}),
+          })}
           className="bg-gold-soft/15 text-gold hover:bg-gold-soft/25 rounded px-1 font-medium whitespace-nowrap no-underline"
         >
           {m[1]}
@@ -144,7 +149,7 @@ export function AiAnswer({
             style={collapsed ? { maxHeight: COLLAPSED_HEIGHT } : undefined}
           >
             {paragraphs.map((p, i) => (
-              <p key={i}>{renderParagraph(p)}</p>
+              <p key={i}>{renderParagraph(p, trimmed, translation)}</p>
             ))}
           </div>
           {overflowing ? (

@@ -66,6 +66,8 @@ const searchSchema = z.object({
   v: z.coerce.number().int().positive().optional().catch(undefined),
   translation: z.string().optional().catch(undefined),
   view: z.enum(['reading', 'interlinear']).optional().catch(undefined),
+  fromSearch: z.string().optional().catch(undefined),
+  fromTranslation: z.string().optional().catch(undefined),
 });
 
 export const Route = createFileRoute('/bible/$book/$chapter')({
@@ -245,7 +247,8 @@ function chapterNavLink(
 
 function Reader() {
   const { book: bookSlug, chapter: chapterStr } = Route.useParams();
-  const { v, translation, view } = Route.useSearch();
+  const { v, translation, view, fromSearch, fromTranslation } =
+    Route.useSearch();
   const trpc = useTRPC();
   const navigate = useNavigate();
   // Start point of an in-progress touch, for the mobile swipe-to-page gesture.
@@ -495,14 +498,29 @@ function Reader() {
     <div className="bg-paper-soft flex min-h-screen flex-col">
       {/* reading chrome */}
       <header className="border-line bg-paper-soft/85 sticky top-0 z-30 flex h-15 flex-shrink-0 items-center gap-2 border-b px-3 backdrop-blur-sm sm:gap-[18px] sm:px-[26px]">
-        <Link
-          to="/"
-          title="Home"
-          className="text-muted inline-flex items-center gap-[7px] text-[13.5px] font-semibold"
-        >
-          <span className="text-[15px]">←</span>
-          <span className="hidden sm:inline">Home</span>
-        </Link>
+        {fromSearch ? (
+          <Link
+            to="/search"
+            search={{
+              q: fromSearch,
+              ...(fromTranslation ? { translation: fromTranslation } : {}),
+            }}
+            title="Back to search results"
+            className="text-muted inline-flex items-center gap-[7px] text-[13.5px] font-semibold"
+          >
+            <span className="text-[15px]">←</span>
+            <span className="hidden sm:inline">Search results</span>
+          </Link>
+        ) : (
+          <Link
+            to="/"
+            title="Home"
+            className="text-muted inline-flex items-center gap-[7px] text-[13.5px] font-semibold"
+          >
+            <span className="text-[15px]">←</span>
+            <span className="hidden sm:inline">Home</span>
+          </Link>
+        )}
         {/* The header search bar doubles as the navigator: typing a book/
             reference opens the same book→chapter→verse quick-pick the homepage
             search uses, replacing the old book/chapter dropdowns. */}

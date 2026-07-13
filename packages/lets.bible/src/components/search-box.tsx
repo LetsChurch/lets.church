@@ -134,6 +134,7 @@ export function SearchBox({
   const navigate = useNavigate();
   const [internalQuery, setInternalQuery] = useState('');
   const [open, setOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   // The dropdown anchors to the whole bar (not the inner input) so it matches
   // the bar's width and left edge, reading as one continuous control.
   const barRef = useRef<HTMLDivElement>(null);
@@ -242,6 +243,7 @@ export function SearchBox({
             <SearchIcon size={lg ? 19 : compact ? 16 : 17} />
           </span>
           <Autocomplete.Input
+            ref={inputRef}
             placeholder={placeholder}
             onFocus={() => {
               // Open the dropdown on focus so clicking the bar reveals the
@@ -253,6 +255,32 @@ export function SearchBox({
               compact ? 'text-[14.5px]' : 'text-[16.5px]'
             }`}
           />
+          {query ? (
+            <button
+              type="button"
+              aria-label="Clear search"
+              title="Clear search"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                setQuery('');
+                setOpen(true);
+                inputRef.current?.focus();
+              }}
+              className="text-faint hover:bg-paper-soft hover:text-ink focus-visible:ring-gold/40 inline-flex size-7 flex-shrink-0 items-center justify-center rounded-full transition-colors outline-none focus-visible:ring-2"
+            >
+              <svg
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                aria-hidden="true"
+                className="size-3.5"
+              >
+                <path d="M3.5 3.5l9 9m0-9-9 9" />
+              </svg>
+            </button>
+          ) : null}
           {compact ? null : scope &&
             scopes &&
             scopes.length > 1 &&
