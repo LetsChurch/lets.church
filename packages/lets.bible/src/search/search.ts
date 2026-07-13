@@ -99,15 +99,28 @@ function buildLexicalVerseQuery(
   };
 }
 
-// Highlight config shared by lexical + hybrid search — verses are short, so the
-// whole field is highlighted; `encoder: 'html'` makes fragments safe to render.
-const VERSE_HIGHLIGHT = {
-  pre_tags: ['<mark>'],
-  post_tags: ['</mark>'],
-  encoder: 'html',
-  number_of_fragments: 0,
-  fields: { text: {}, 'text.exact': {} },
-};
+// Request both highlights so exact phrases include their stop words (for
+// example, the whole "belt of truth"). Constrain the exact field with its own
+// phrase query; without this, the highlighter marks individual query terms such
+// as "of" even when the complete phrase did not match.
+// Verses are short, so the whole field is highlighted; `encoder: 'html'` makes
+// fragments safe to render.
+function verseHighlight(trimmed: string) {
+  return {
+    pre_tags: ['<mark>'],
+    post_tags: ['</mark>'],
+    encoder: 'html',
+    number_of_fragments: 0,
+    fields: {
+      text: {},
+      'text.exact': {
+        highlight_query: {
+          match_phrase: { 'text.exact': { query: trimmed } },
+        },
+      },
+    },
+  };
+}
 
 // Pure-lexical (BM25) verse search within a single translation. Still used for
 // the instant paths (no OpenAI round-trip): it is the fallback when embeddings
@@ -128,14 +141,14 @@ export async function searchVerses(params: {
     from: params.from ?? 0,
     size: params.size ?? 20,
     query: buildLexicalVerseQuery(trimmed, params.translationId),
-    highlight: VERSE_HIGHLIGHT,
+    highlight: verseHighlight(trimmed),
   });
 
   return mapVerseHits(res);
 }
 
-// Map raw OpenSearch hits to VerseHit, preferring the exact-field highlight then
-// the stemmed-field highlight, falling back to the plain verse text.
+// Prefer a true exact-phrase highlight, then a meaningful English-analyzed term,
+// falling back to plain text for semantic-only hits.
 function mapVerseHits(res: OsHits<VerseSource>): VerseHit[] {
   return res.hits.hits.flatMap((hit) => {
     const s = hit._source;
@@ -235,7 +248,7 @@ export async function hybridSearchVerses(params: {
         ],
       },
     },
-    highlight: VERSE_HIGHLIGHT,
+    highlight: verseHighlight(trimmed),
   });
 
   return mapVerseHits(res);
