@@ -13,10 +13,12 @@ import { EMBED_DIMS } from '../ai/embed';
 // translation is just adding its two files. Returns null when no artifact exists
 // (the indexer then live-embeds, given a key).
 
-const DIR = join(
-  dirname(fileURLToPath(import.meta.url)),
-  '../../seed/embeddings',
-);
+const SEED_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../seed');
+// Verse vectors live under seed/embeddings; the parallel thought-unit (passage)
+// vectors under seed/passage-embeddings. Both share the byte layout + manifest
+// shape, so one loader serves both (keyed by `${translationId}:${ref}`).
+const VERSE_DIR = join(SEED_ROOT, 'embeddings');
+const PASSAGE_DIR = join(SEED_ROOT, 'passage-embeddings');
 const MANIFEST_SUFFIX = '.manifest.json';
 
 type TranslationManifest = {
@@ -40,11 +42,11 @@ export type CommittedEmbeddings = {
   get(id: string): number[] | undefined;
 };
 
-export function loadCommittedEmbeddings(): CommittedEmbeddings | null {
-  if (!existsSync(DIR)) {
+function loadFrom(dir: string, regenHint: string): CommittedEmbeddings | null {
+  if (!existsSync(dir)) {
     return null;
   }
-  const manifests = readdirSync(DIR).filter((f) => f.endsWith(MANIFEST_SUFFIX));
+  const manifests = readdirSync(dir).filter((f) => f.endsWith(MANIFEST_SUFFIX));
   if (manifests.length === 0) {
     return null;
   }
@@ -54,14 +56,14 @@ export function loadCommittedEmbeddings(): CommittedEmbeddings | null {
   let count = 0;
   for (const file of manifests) {
     const m = JSON.parse(
-      readFileSync(join(DIR, file), 'utf8'),
+      readFileSync(join(dir, file), 'utf8'),
     ) as TranslationManifest;
     if (m.dims !== EMBED_DIMS) {
       throw new Error(
-        `Committed embeddings for ${m.translationId} are ${m.dims}-d but EMBED_DIMS is ${EMBED_DIMS} — regenerate seed/embeddings (\`just lb-embed\`).`,
+        `Committed embeddings for ${m.translationId} are ${m.dims}-d but EMBED_DIMS is ${EMBED_DIMS} — regenerate (\`${regenHint}\`).`,
       );
     }
-    const buf = readFileSync(join(DIR, `${m.translationId}.f16.bin`));
+    const buf = readFileSync(join(dir, `${m.translationId}.f16.bin`));
     // Guard against a git-LFS pointer / truncated file masquerading as data — a
     // ~130-byte pointer would otherwise yield empty vectors and a cryptic
     // downstream "knn_vector dimension mismatch" at index time.
@@ -103,4 +105,15 @@ export function loadCommittedEmbeddings(): CommittedEmbeddings | null {
       return Array.from(t.f16.subarray(start, start + EMBED_DIMS));
     },
   };
+}
+
+// Committed VERSE embeddings (seed/embeddings), keyed `${translationId}:${ref}`.
+export function loadCommittedEmbeddings(): CommittedEmbeddings | null {
+  return loadFrom(VERSE_DIR, 'just lb-embed');
+}
+
+// Committed PASSAGE (thought-unit) embeddings (seed/passage-embeddings), keyed
+// `${translationId}:${passageRef}` (e.g. `BSB:GAL.5.22-23`).
+export function loadCommittedPassageEmbeddings(): CommittedEmbeddings | null {
+  return loadFrom(PASSAGE_DIR, 'just lb-embed-passages');
 }

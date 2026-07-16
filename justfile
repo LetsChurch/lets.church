@@ -169,12 +169,20 @@ lb-seed-source books="JHN" translation="BSB":
 lb-index:
   docker compose exec letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:index-verses'
 
-# Build/refresh the verse index against a REMOTE OpenSearch (pass its base URL as
-# `host`) using the committed seed/embeddings vectors — deterministic, no OpenAI
-# key. Reads verse rows from the local dev Postgres (so seed it fully first —
-# `just lb-up` — the index mirrors local rows) and upserts to `host`; idempotent (creates the index +
+# Index all thought-unit passages (translator paragraphs) into lets_bible_passages
+# — the verse-finder's spanning-thought recall lane (after seed + es-push). Uses
+# the committed seed/passage-embeddings vectors; lexical-only if absent.
+lb-index-passages:
+  docker compose exec letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:index-passages'
+
+# Build/refresh BOTH the verse index AND the thought-unit passage index against a
+# REMOTE OpenSearch (pass its base URL as `host`) using the committed
+# seed/embeddings + seed/passage-embeddings vectors — deterministic, no OpenAI
+# key. Reads rows from the local dev Postgres (so seed it fully first —
+# `just lb-up` — the indices mirror local rows) and upserts to `host`; idempotent (creates both indices +
 # `lets_bible_hybrid` pipeline if missing). Rare/manual: prod images ship without
-# the vectors, so this is how a remote index gets them. Auth is OPTIONAL — export
+# the vectors, so this is how a remote index gets them (run `git lfs pull` first).
+# Auth is OPTIONAL — export
 # OPENSEARCH_USERNAME/PASSWORD only for a secured target; omit them for a
 # non-secure cluster (client.ts sends no auth when they're empty). NOTE: the run
 # is inside the letsbible container, which isn't on your tailnet — pass a routable
@@ -184,7 +192,7 @@ lb-index-remote host:
     -e OPENSEARCH_URL='{{host}}' \
     -e OPENSEARCH_USERNAME="${OPENSEARCH_USERNAME:-}" \
     -e OPENSEARCH_PASSWORD="${OPENSEARCH_PASSWORD:-}" \
-    letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:push-mappings && pnpm --filter @letschurch/lets.bible run es:index-verses'
+    letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:push-mappings && pnpm --filter @letschurch/lets.bible run es:index-verses && pnpm --filter @letschurch/lets.bible run es:index-passages'
 
 # Generate the committed verse-embedding artifact (packages/lets.bible/seed/
 # embeddings/*, git-lfs) by embedding verse text via OpenAI — the ONE manual
@@ -195,6 +203,17 @@ lb-index-remote host:
 #   just lb-embed BSB      # one
 lb-embed tid='':
   docker compose exec -e TRANSLATION_ID='{{tid}}' letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:embed-verses'
+
+# Generate the committed PASSAGE (thought-unit) embedding artifact
+# (packages/lets.bible/seed/passage-embeddings/*, git-lfs) by embedding each
+# translator paragraph via OpenAI — the manual corpus-embed step for the passage
+# lane (index-passages only reads it). Rare: run once, then commit. Pass a
+# translation id to embed just one (default: BSB/MSB/WEB — KJV is prose-only, no
+# paragraphs). Needs OPENAI_API_KEY + a seeded DB.
+#   just lb-embed-passages          # all paragraphed translations
+#   just lb-embed-passages BSB      # one
+lb-embed-passages tid='':
+  docker compose exec -e TRANSLATION_ID='{{tid}}' letsbible sh -c 'cd /usr/src/app && pnpm --filter @letschurch/lets.bible run es:embed-passages'
 
 # Build the client-side FlexSearch search assets per translation (public/search/*)
 lb-flex:
@@ -207,7 +226,7 @@ lb-flex:
 # BSB (NT critical Greek + shared Masoretic OT), then each translation's NT under
 # its own Greek basis — KJV=Textus Receptus, MSB/WEB=Byzantine — matching what the
 # prod provision init container seeds.)
-lb-up: lb-migrate lb-es-push lb-seed-bible lb-seed-lexicon lb-seed-crossrefs lb-seed-commentaries (lb-seed-source "ALL" "BSB") (lb-seed-source "NT" "KJV") (lb-seed-source "NT" "MSB") (lb-seed-source "NT" "WEB") lb-index lb-flex
+lb-up: lb-migrate lb-es-push lb-seed-bible lb-seed-lexicon lb-seed-crossrefs lb-seed-commentaries (lb-seed-source "ALL" "BSB") (lb-seed-source "NT" "KJV") (lb-seed-source "NT" "MSB") (lb-seed-source "NT" "WEB") lb-index lb-index-passages lb-flex
 
 os-push-mappings:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/opensearch run push-mappings'

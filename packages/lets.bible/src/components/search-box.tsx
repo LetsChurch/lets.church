@@ -426,7 +426,8 @@ export function SearchBox({
                 <span aria-hidden="true" className="text-gold">
                   ✦
                 </span>
-                AI-assisted answers coming to results.
+                AI finds the verse you half-remember — and answers your
+                questions.
               </div>
             </div>
           </Autocomplete.Popup>

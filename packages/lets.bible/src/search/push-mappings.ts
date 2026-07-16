@@ -5,10 +5,16 @@
 import {
   client,
   HYBRID_PIPELINE,
+  PASSAGE_INDEX,
   VERSE_INDEX,
   waitForOpenSearch,
 } from './client';
-import { verseProperties, verseSettings } from './mappings';
+import {
+  passageProperties,
+  passageSettings,
+  verseProperties,
+  verseSettings,
+} from './mappings';
 
 await waitForOpenSearch();
 
@@ -66,4 +72,24 @@ if (!exists) {
 }
 
 console.log(`Pushed mappings for ${VERSE_INDEX}.`);
+
+// The passage (thought-unit) index — same idempotent create-or-update as above.
+const passageExists = (await client.indices.exists({ index: PASSAGE_INDEX }))
+  .body;
+if (!passageExists) {
+  console.log(`Creating index ${PASSAGE_INDEX}`);
+  await client.indices.create({
+    index: PASSAGE_INDEX,
+    body: {
+      settings: passageSettings,
+      mappings: { properties: passageProperties },
+    },
+  });
+} else {
+  await client.indices.putMapping({
+    index: PASSAGE_INDEX,
+    body: { properties: passageProperties },
+  });
+}
+console.log(`Pushed mappings for ${PASSAGE_INDEX}.`);
 process.exit(0);

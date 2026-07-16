@@ -28,6 +28,8 @@
     "es:push-mappings": "tsx src/search/push-mappings.ts",
     "es:index-verses": "LETS_BIBLE_DB_LOG=0 tsx src/search/index-verses.ts",
     "es:embed-verses": "LETS_BIBLE_DB_LOG=0 tsx src/search/embed-verses.ts",
+    "es:index-passages": "LETS_BIBLE_DB_LOG=0 tsx src/search/index-passages.ts",
+    "es:embed-passages": "LETS_BIBLE_DB_LOG=0 tsx src/search/embed-passages.ts",
     "flex:build": "LETS_BIBLE_DB_LOG=0 tsx src/search/build-flex-index.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"

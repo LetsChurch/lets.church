@@ -287,3 +287,71 @@
     animation-duration: 0.6s;
   }
 }
+
+/* AI answer — streamed "thinking" ticker (the verse-finder detective loop) and
+   the settled answer. Each new reasoning line slides up + fades into place
+   (Grok-style); the answer then fades/slides in once it starts. */
+@keyframes lb-thought-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.55rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.lb-thought-in {
+  animation: lb-thought-in 340ms cubic-bezier(0.22, 0.61, 0.24, 1) both;
+}
+@keyframes lb-answer-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.375rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.lb-answer-in {
+  animation: lb-answer-in 300ms cubic-bezier(0.22, 0.61, 0.24, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lb-thought-in,
+  .lb-answer-in {
+    animation: none;
+  }
+}
+
+/* Shimmering "Searching…" label while the loop runs. Gold gradient sweep on the
+   text, theme-aware via --color-gold. */
+@keyframes lb-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+@utility text-shimmer {
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--color-gold) 55%, transparent) 0%,
+    color-mix(in srgb, var(--color-gold) 55%, transparent) 40%,
+    var(--color-gold) 50%,
+    color-mix(in srgb, var(--color-gold) 55%, transparent) 60%,
+    color-mix(in srgb, var(--color-gold) 55%, transparent) 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: lb-shimmer 4s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .text-shimmer {
+    animation: none;
+  }
+}

@@ -32,6 +32,16 @@ const {
 // `index-verses.ts`.
 export const VERSE_INDEX = 'lets_bible_verses';
 
+// Companion index of multi-verse THOUGHT UNITS: the translators' own paragraphs
+// (reading blocks), embedded whole. Verse boundaries (Stephanus 1551) routinely
+// split a single thought — "the fruit of the Spirit" spans Galatians 5:22-23,
+// Romans 8:28's thought completes at 8:29-30 — so a paraphrase of a thought
+// often matches no single verse's wording. Embedding the translator's paragraph
+// gives the verse-finder a recall lane for spanning thoughts (the model then
+// cites the anchor verse inside the passage). Same cluster, own index. See
+// search/passages.ts + index-passages.ts.
+export const PASSAGE_INDEX = 'lets_bible_passages';
+
 // Search pipeline that fuses the two branches of a `hybrid` query — the lexical
 // bool and the semantic knn — via min-max score normalization + a weighted
 // arithmetic mean (created by push-mappings.ts). Passed as the `search_pipeline`
