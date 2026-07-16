@@ -70,7 +70,12 @@ export const getBackfillProgressQuery = query<
 
 export type ReindexProgress = {
   totalIndexed: number;
-  offset: number;
+  /**
+   * Shards still walking their keyset cursor. Replaces the old single `offset`:
+   * the reindex fans out across disjoint uuid ranges that advance
+   * independently, so there's no one scan position to report.
+   */
+  activeShards: number;
   total: number;
 };
 

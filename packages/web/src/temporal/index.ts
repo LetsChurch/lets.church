@@ -1255,7 +1255,7 @@ export async function getReindexProgress(kind: ReindexWorkflowParams['kind']) {
       return {
         status: 'completed' as const,
         totalIndexed: 0,
-        offset: 0,
+        activeShards: 0,
         total: 0,
       };
     }
@@ -1267,7 +1267,7 @@ export async function getReindexProgress(kind: ReindexWorkflowParams['kind']) {
         | 'terminated'
         | 'timed_out',
       totalIndexed: 0,
-      offset: 0,
+      activeShards: 0,
       total: 0,
     };
   } catch {

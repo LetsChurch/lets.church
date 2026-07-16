@@ -1,3 +1,7 @@
+import { createHash } from 'node:crypto';
+
+import { db, TranscriptWindow } from '@letschurch/db';
+import { and, eq, notInArray, sql } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 
 import {
@@ -6,6 +10,9 @@ import {
   EMBED_MAX_INPUTS,
   EMBED_MODEL,
 } from './llm';
+import logger from './logger';
+
+const moduleLogger = logger.child({ module: 'temporal/util/windows' });
 
 // Rolling "story window" construction — a direct port of the Go reference
 // (services/search/windows.go on the qdrant-backend branch). A window
@@ -93,12 +100,188 @@ export function buildWindows(
   return windows;
 }
 
+/** sha256 of a window's concatenated text — the `transcript_window` reuse key. */
+export function windowTextHash(text: string): string {
+  return createHash('sha256').update(text).digest('hex');
+}
+
+/**
+ * Embed windows, reusing any vector already persisted in `transcript_window`
+ * whose `textHash` still matches. Only the misses hit OpenAI; the hits come back
+ * from Postgres. On a re-index of an upload whose transcript hasn't changed this
+ * is a pure DB read — no embed call, no `llm_call` row — which is what makes a
+ * full reindex cheap rather than a corpus-wide re-embed.
+ *
+ * Freshly embedded windows are upserted, and rows whose `startOrder` is no longer
+ * produced by `buildWindows` (transcript got shorter) are pruned, so the table
+ * tracks the current transcript exactly.
+ *
+ * Failures to persist are swallowed: the vectors are already in hand, so a write
+ * hiccup should cost the next reindex a re-embed, not fail this index.
+ */
+export async function embedWindowsCached(
+  windows: BuiltWindow[],
+  uploadRecordId: string,
+): Promise<EmbeddedWindow[]> {
+  if (windows.length === 0) {
+    // No windows: drop any rows left from a previous, longer transcript.
+    await db
+      .delete(TranscriptWindow)
+      .where(eq(TranscriptWindow.uploadRecordId, uploadRecordId));
+    return [];
+  }
+
+  const hashByStartOrder = new Map(
+    windows.map((w) => [w.startOrder, windowTextHash(w.text)]),
+  );
+
+  const cachedRows = await db
+    .select({
+      startOrder: TranscriptWindow.startOrder,
+      textHash: TranscriptWindow.textHash,
+      embedding: TranscriptWindow.embedding,
+    })
+    .from(TranscriptWindow)
+    .where(eq(TranscriptWindow.uploadRecordId, uploadRecordId));
+
+  const cached = new Map(
+    cachedRows
+      .filter(
+        (r) =>
+          r.textHash === hashByStartOrder.get(r.startOrder) &&
+          r.embedding.length === EMBED_DIMS,
+      )
+      .map((r) => [r.startOrder, r.embedding]),
+  );
+
+  const misses = windows.filter((w) => !cached.has(w.startOrder));
+
+  // Any vector we hold for this upload, hash-match or not. Used only to survive
+  // an embed failure (see below), never in place of a fresh embed.
+  const salvageable = new Map(
+    cachedRows
+      .filter((r) => r.embedding.length === EMBED_DIMS)
+      .map((r) => [r.startOrder, r.embedding]),
+  );
+
+  let embedded: EmbeddedWindow[] = [];
+  let embedFailed = false;
+  if (misses.length > 0) {
+    try {
+      embedded = await embedWindows(misses, uploadRecordId);
+    } catch (err) {
+      // Typically a sustained 429: the embeddings TPM budget is org-wide, and a
+      // wide reindex can exhaust it for longer than the client's retries cover.
+      embedFailed = true;
+      moduleLogger.warn(
+        {
+          uploadRecordId,
+          context: {
+            missing: misses.length,
+            error: err instanceof Error ? err.message : String(err),
+          },
+        },
+        'Window embedding failed; falling back to previously stored vectors',
+      );
+    }
+  }
+
+  const freshByStartOrder = new Map(
+    embedded.map((w) => [w.startOrder, w.embedding]),
+  );
+
+  // Resolution order: exact cache hit, then a fresh embed, then — only if the
+  // embed failed — whatever we stored last time.
+  //
+  // That last fallback is what stops a reindex from *destroying* data. The
+  // caller treats an empty window list as "index the doc without windows", which
+  // is right for a doc's first index but catastrophic on a re-index: it would
+  // overwrite a doc's existing windows with nothing, silently degrading
+  // story-run recall for as long as it takes someone to notice. A stale vector
+  // is a far smaller error than a missing one, and the next successful reindex
+  // corrects it.
+  const out: EmbeddedWindow[] = [];
+  for (const w of windows) {
+    const embedding =
+      cached.get(w.startOrder) ??
+      freshByStartOrder.get(w.startOrder) ??
+      (embedFailed ? salvageable.get(w.startOrder) : undefined);
+    if (embedding) {
+      out.push({ ...w, embedding });
+    }
+  }
+  invariant(
+    embedFailed || out.length === windows.length,
+    `resolved ${out.length}/${windows.length} window embeddings without an embed failure`,
+  );
+
+  try {
+    await db.transaction(async (tx) => {
+      if (embedded.length > 0) {
+        await tx
+          .insert(TranscriptWindow)
+          .values(
+            embedded.map((w) => ({
+              uploadRecordId,
+              startOrder: w.startOrder,
+              endOrder: w.endOrder,
+              start: w.start,
+              end: w.end,
+              textHash: windowTextHash(w.text),
+              embedding: w.embedding,
+            })),
+          )
+          .onConflictDoUpdate({
+            target: [
+              TranscriptWindow.uploadRecordId,
+              TranscriptWindow.startOrder,
+            ],
+            set: {
+              endOrder: sql`excluded.end_order`,
+              start: sql`excluded.start`,
+              end: sql`excluded.end`,
+              textHash: sql`excluded.text_hash`,
+              embedding: sql`excluded.embedding`,
+            },
+          });
+      }
+      // Prune windows the current transcript no longer produces.
+      await tx
+        .delete(TranscriptWindow)
+        .where(
+          and(
+            eq(TranscriptWindow.uploadRecordId, uploadRecordId),
+            notInArray(TranscriptWindow.startOrder, [
+              ...hashByStartOrder.keys(),
+            ]),
+          ),
+        );
+    });
+  } catch (err) {
+    // Non-fatal — `out` is complete either way, so don't fail the index over a
+    // cache write. Log loudly all the same: if this keeps failing the cache
+    // never populates and every reindex silently re-embeds the whole corpus,
+    // which looks like nothing more than "reindex is slow again".
+    moduleLogger.warn(
+      {
+        uploadRecordId,
+        context: {
+          error: err instanceof Error ? err.message : String(err),
+        },
+      },
+      'Failed to persist window embeddings; next reindex will re-embed',
+    );
+  }
+
+  return out;
+}
+
 /**
  * Embed each window's concatenated text with `text-embedding-3-small` (1536-d),
- * batched at OpenAI's per-request input cap, and attach the vector. Unlike
- * paragraph embeddings (precomputed and stored on `transcript_paragraph`),
- * window embeddings are computed fresh at index time — a story window's text has
- * no persisted vector. One `llm_call` row is recorded per chunk.
+ * batched at OpenAI's per-request input cap, and attach the vector. A window's
+ * text has no persisted vector of its own, so this is the cold path; prefer
+ * `embedWindowsCached`, which only calls this for windows whose text changed.
+ * One `llm_call` row is recorded per chunk.
  */
 export async function embedWindows(
   windows: BuiltWindow[],

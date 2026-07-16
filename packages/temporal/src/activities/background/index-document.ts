@@ -25,7 +25,7 @@ import {
   bibleRefsFromMetadata,
 } from '../../util/bible-refs';
 import logger from '../../util/logger';
-import { buildWindows, embedWindows } from '../../util/windows';
+import { buildWindows, embedWindowsCached } from '../../util/windows';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/index-document',
@@ -329,17 +329,17 @@ async function getDocument(
       );
 
       // Story-run "windows": rolling 4-paragraph, stride-2 spans whose
-      // concatenated text is embedded fresh (paragraph vectors are precomputed
-      // in Postgres, but a window's text has no persisted vector). Stored as a
-      // nested field for the exact-cosine rerank signal, the contiguous-span
-      // snippet, and the agent's on-demand semantic recall. See
+      // concatenated text is embedded and cached in `transcript_window` (keyed
+      // by text hash, so an unchanged transcript re-indexes without any embed
+      // call). Stored as a nested field for the exact-cosine rerank signal, the
+      // contiguous-span snippet, and the agent's on-demand semantic recall. See
       // docs/agentic-search-overview.md. Windows are an enhancement, not a
-      // prerequisite: if the fresh embed fails (e.g. OpenAI unavailable), index
-      // the doc WITHOUT windows rather than failing the whole media write — a
-      // later reindex backfills them.
-      let windows: Awaited<ReturnType<typeof embedWindows>> = [];
+      // prerequisite: if the embed fails (e.g. OpenAI unavailable), index the
+      // doc WITHOUT windows rather than failing the whole media write — a later
+      // reindex backfills them.
+      let windows: Awaited<ReturnType<typeof embedWindowsCached>> = [];
       try {
-        windows = await embedWindows(
+        windows = await embedWindowsCached(
           buildWindows(
             paragraphs.map((p) => ({
               order: p.order,
@@ -437,9 +437,23 @@ async function getDocument(
   }
 }
 
+export type IndexDocumentOptions = {
+  /**
+   * Force a Lucene refresh on the `lc_speaker_vectors` writes so they're
+   * immediately visible. Correct for interactive single-document writes
+   * (read-your-writes after an upload/edit), which is why it defaults on.
+   *
+   * Bulk callers should pass `false` and refresh once at the end: a refresh is
+   * a segment flush, and at two per document a full reindex of the corpus would
+   * force ~100k of them.
+   */
+  refresh?: boolean;
+};
+
 export default async function indexDocument(
   kind: DocumentKind,
   uploadRecordId: string,
+  { refresh = true }: IndexDocumentOptions = {},
 ) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'indexDocument',
@@ -479,12 +493,12 @@ export default async function indexDocument(
     try {
       await client.deleteByQuery({
         index: SPEAKER_VECTOR_INDEX,
-        refresh: true,
+        refresh,
         body: { query: { term: { uploadRecordId } } },
       });
       if (speakerVectors.length > 0) {
         await client.bulk({
-          refresh: true,
+          refresh,
           body: speakerVectors.flatMap((sv) => [
             { index: { _index: SPEAKER_VECTOR_INDEX, _id: sv.id } },
             sv.document,

@@ -17,5 +17,11 @@ export function createPool(connectionString: string) {
       ssl = { rejectUnauthorized: false };
     }
   }
-  return new Pool({ connectionString, ssl });
+  // pg defaults to max: 10, which is well under what the sharded reindex needs
+  // — it drives SHARDS * CONCURRENCY (32) documents at once and each one runs
+  // several sequential queries, so a 10-connection pool would serialize the
+  // fan-out back down on connection checkout. Override with DATABASE_POOL_MAX.
+  const max = Number(process.env.DATABASE_POOL_MAX ?? 40);
+
+  return new Pool({ connectionString, ssl, max });
 }

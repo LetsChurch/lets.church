@@ -102,9 +102,11 @@ export {
 } from './process-llm-batch-output';
 export {
   getReindexCount,
+  type ReindexBatchParams,
   type ReindexBatchResult,
   type ReindexKind,
   reindexBatch,
+  refreshReindexTargets,
 } from './reindex';
 export { default as sendEmail, validateSendEmailConfig } from './send-email';
 export {

@@ -1086,6 +1086,48 @@ export const TranscriptParagraph = pgTable(
   }),
 );
 
+// Persisted "story window" embeddings. A window concatenates WINDOW_SIZE
+// consecutive paragraphs (see temporal/src/util/windows.ts); its text has no
+// vector of its own, so before this table every reindex re-embedded every
+// window of every upload from scratch — the dominant cost of a full pass.
+//
+// `textHash` makes reuse self-invalidating: the cache key is the window's
+// concatenated text, so any paragraph rewrite (re-transcribe, diarization
+// merge) changes the hash and forces a re-embed without the paragraph writers
+// needing to know this table exists. Rows for windows that no longer exist are
+// pruned at index time.
+export const TranscriptWindow = pgTable(
+  'transcript_window',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    uploadRecordId: uuid('upload_record_id').notNull(),
+    // Paragraph `order` bounds of the window, inclusive. `startOrder` is the
+    // stable per-upload identity of a window (stride is fixed).
+    startOrder: integer('start_order').notNull(),
+    endOrder: integer('end_order').notNull(),
+    // Seconds, mirroring transcript_paragraph.start/end.
+    start: doublePrecision('start').notNull(),
+    end: doublePrecision('end').notNull(),
+    // sha256 of the window's concatenated text — the reuse key (see above).
+    textHash: text('text_hash').notNull(),
+    // 1536-dim OpenAI text-embedding-3-small vector. Same JSONB-now /
+    // pgvector-later pattern as transcript_paragraph.embedding.
+    embedding: jsonb('embedding').$type<number[]>().notNull(),
+  },
+  (TranscriptWindow) => ({
+    transcript_window_uploadRecord_fkey: foreignKey({
+      name: 'transcript_window_uploadRecord_fkey',
+      columns: [TranscriptWindow.uploadRecordId],
+      foreignColumns: [UploadRecord.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    TranscriptWindow_uploadRecordId_startOrder_idx: uniqueIndex(
+      'transcript_window_upload_record_id_start_order_idx',
+    ).on(TranscriptWindow.uploadRecordId, TranscriptWindow.startOrder),
+  }),
+);
+
 export const Annotation = pgTable(
   'annotation',
   {

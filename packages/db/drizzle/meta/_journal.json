@@ -148,6 +148,13 @@
       "when": 1783386039838,
       "tag": "0020_add-user-ban",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1784211660719,
+      "tag": "0021_transcript_window",
+      "breakpoints": true
     }
   ]
 }

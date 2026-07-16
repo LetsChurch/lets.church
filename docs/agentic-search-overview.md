@@ -7,8 +7,10 @@ Supersedes the parallel-Qdrant experiment (see
 ## What shipped
 
 - **Windows in OpenSearch** — nested `windows` field on `lc_media_v1`
-  (`packages/opensearch/src/mappings.ts`); built + embedded at ingest
-  (`packages/temporal/src/util/windows.ts`, wired into `index-document.ts`); an
+  (`packages/opensearch/src/mappings.ts`); built at ingest and embedded through a
+  `transcript_window` cache keyed by the window text's sha256
+  (`packages/temporal/src/util/windows.ts`, wired into `index-document.ts` — see
+  [Window embedding cache](#window-embedding-cache)); an
   exact-cosine window rerank signal RRF-fused alongside the paragraph signal and
   a contiguous-span snippet (`buildWindowCosineBody`, `rerankByCosineSignals`,
   `windowSpanSegment`/`mergeSnippets` in `media-search.ts`). Default lane is
@@ -146,6 +148,37 @@ windows: {                      // nested
   embedding: knn_vector(1536),  // exact-cosine reranked (script_score), NOT ANN by default
 }
 ```
+
+### Window embedding cache
+
+A window's text has no vector of its own (paragraph vectors are precomputed on
+`transcript_paragraph`, but a window concatenates four of them), so windows were
+originally embedded fresh on every index. That made a full reindex a re-embed of
+the entire corpus — the dominant cost of the pass by a wide margin.
+
+Window vectors now persist in **`transcript_window`**, keyed by
+`(uploadRecordId, startOrder)` with a **sha256 of the window's concatenated
+text** as the reuse key. `embedWindowsCached` reuses any row whose hash still
+matches and only embeds the rest. Two consequences worth knowing:
+
+- **The hash is what invalidates.** Nothing else has to. Re-transcribe an upload
+  or merge diarization and the text changes, the hash changes, the window
+  re-embeds. Paragraph writers don't need to know this table exists. Windows the
+  current transcript no longer produces are pruned at index time.
+- **Cold vs warm reindex are different animals.** Cold (empty cache) is bound by
+  the OpenAI embeddings **TPM budget**, which is org-wide — roughly 25k tokens
+  per sermon puts the ceiling near 400 docs/min on a 10M TPM budget, regardless
+  of fan-out. Push past it and you get 429s, backoff, and heartbeat timeouts that
+  make batches retry and do *less* work. Warm issues no embed calls at all
+  (~60ms/doc, measured) and isn't TPM-bound. `reindexWorkflow`'s
+  `SHARDS × CONCURRENCY` default is sized for the cold pass.
+
+If an embed fails, `embedWindowsCached` falls back to the vectors it stored last
+time rather than returning none. This is load-bearing: `index-document` treats an
+empty window list as "index the doc without windows", which is right for a first
+index but would otherwise let a rate-limited reindex **overwrite good docs with
+windowless ones** and silently degrade story-run recall. A stale vector is a much
+smaller error than a missing one, and the next successful reindex corrects it.
 
 Windows serve two distinct jobs; keep them separate because they have different
 memory profiles:
