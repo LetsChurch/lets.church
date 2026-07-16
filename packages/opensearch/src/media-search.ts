@@ -421,8 +421,14 @@ export type BuildMediaSearchArgs = {
    * ("Conley") matches the stored full name ("Conley Owens").
    */
   paragraphSpeakers?: string[] | null;
-  /** 1536-dim query embedding (text-embedding-3-small). */
-  queryVector: number[];
+  /**
+   * 1536-dim query embedding (text-embedding-3-small). Omit (or pass empty) for
+   * the **lexical** path — the instant results list — which runs pure BM25 with
+   * no query embed, no doc-summary kNN, and no cosine rerank. Present only on the
+   * AI/agent path, which keeps the full hybrid: semantics now live in the AI
+   * overview, not the instant results (see `runMediaHybridSearch`).
+   */
+  queryVector?: number[] | null;
   from?: number;
   size?: number;
   /**
@@ -588,6 +594,15 @@ export function buildMediaHybridBody({
         query: trimmed,
         fields: ['title^2', 'description', 'summary', 'channelName'],
         analyzer: LEXICAL_QUERY_ANALYZER,
+        // Require a real term overlap (matches the nested paragraph clause's
+        // rule): `multi_match` defaults to OR, so without this a single stray
+        // common word ("term") matches a whole doc — off-topic/gibberish queries
+        // then surface loose OR-token noise. On the hybrid path the kNN relevance
+        // probe used to suppress that; the lexical instant-results path (no
+        // probe) relies on this floor instead. `2<70%`: ≤2 terms → all required,
+        // >2 → 70% (stopwords already dropped by the `stop` analyzer). Applied to
+        // both the result query and the facet query so facets match the results.
+        minimum_should_match: '2<70%',
       },
     },
     {
@@ -669,6 +684,22 @@ export function buildMediaHybridBody({
     bool: { filter, should: lexicalShould, minimum_should_match: 1 },
   };
 
+  // LEXICAL path (instant results): no query vector → a single BM25 query, NOT
+  // the `hybrid` wrapper. So no doc-summary kNN, no RRF pipeline, and no
+  // cosine rerank downstream — the whole semantic apparatus is skipped. BM25's
+  // `minimum_should_match` is the relevance gate (no match → no results), so the
+  // separate kNN relevance probe isn't needed either.
+  if (!(Array.isArray(queryVector) && queryVector.length > 0)) {
+    return {
+      from,
+      size,
+      _source: false,
+      query: bm25Query,
+      ...(facets.length > 0 ? { aggs: facetAggs(facets) } : {}),
+      ...(sort ? { sort } : {}),
+    };
+  }
+
   // (2) document-level kNN over searchSummaryEmbedding. Access/date filter is
   // applied as a parent-level bool filter alongside the knn clause.
   const summaryKnnQuery: OsQuery = {
@@ -745,11 +776,16 @@ export function buildMediaSnippetBody(
         inner_hits: paragraphInnerHits(PARA_BM25, innerHitsSize, highlight),
       },
     },
-    // Semantic snippet: the best paragraph by exact cosine (script_score, never
-    // loads the HNSW graph — see PARAGRAPH_COSINE_SCRIPT). Surfaces the relevant
-    // moment for docs the reranker pulled in on meaning with no keyword overlap.
-    // Scoped to the page's uploadIds, so it only scores those docs' paragraphs.
-    {
+  ];
+
+  // Semantic snippet: the best paragraph by exact cosine (script_score, never
+  // loads the HNSW graph — see PARAGRAPH_COSINE_SCRIPT). Surfaces the relevant
+  // moment for docs the reranker pulled in on meaning with no keyword overlap.
+  // Scoped to the page's uploadIds, so it only scores those docs' paragraphs.
+  // Only on the hybrid (vector) path — the lexical results list has no semantic
+  // moments to surface.
+  if (Array.isArray(args.queryVector) && args.queryVector.length > 0) {
+    should.push({
       nested: {
         path: 'paragraphs',
         query: {
@@ -767,8 +803,8 @@ export function buildMediaSnippetBody(
         score_mode: 'max',
         inner_hits: paragraphInnerHits(PARA_KNN, knnInnerHitsSize, false),
       },
-    },
-  ];
+    });
+  }
 
   return {
     size: uploadIds.length,
@@ -911,14 +947,21 @@ export async function runMediaHybridSearch(
 }> {
   const from = args.from ?? 0;
   const size = args.size ?? 20;
-  // Rerank only for relevance order, and only when the page is within the pool.
-  const rerankable = !args.sort && from + size <= RERANK_POOL;
+  // Lexical path when no query vector: plain BM25, no RRF pipeline, no rerank.
+  const qv =
+    Array.isArray(args.queryVector) && args.queryVector.length > 0
+      ? args.queryVector
+      : null;
+  // Rerank only on the hybrid (vector) path, in relevance order, within the pool.
+  const rerankable = qv !== null && !args.sort && from + size <= RERANK_POOL;
   const fetchSize = rerankable ? RERANK_POOL : from + size;
 
-  // Stage 1: retrieve the candidate pool (no aggregations / inner_hits).
+  // Stage 1: retrieve the candidate pool (no aggregations / inner_hits). The RRF
+  // normalization pipeline only applies to the multi-clause `hybrid` query, so
+  // it's skipped on the single-clause lexical path.
   const raw = await osSearch({
     index: MEDIA_INDEX,
-    search_pipeline: RRF_PIPELINE,
+    ...(qv ? { search_pipeline: RRF_PIPELINE } : {}),
     ...buildMediaHybridBody({
       ...args,
       from: 0,
@@ -934,14 +977,15 @@ export async function runMediaHybridSearch(
   // Stage 2: exact-cosine rerank over the pool (paragraph + window signals),
   // then take the page. Both signals are `script_score` (no HNSW graph load), and
   // we fetch them in ONE msearch round-trip rather than two parallel searches.
+  // Skipped entirely on the lexical path (BM25 order is final).
   let pageHits: MediaHit[];
-  if (rerankable && candidates.length > 0) {
+  if (rerankable && qv && candidates.length > 0) {
     const ids = candidates.map((h) => h._id);
     const msRaw = await osMsearch([
       { index: MEDIA_INDEX },
-      buildParagraphCosineBody(args.queryVector, ids),
+      buildParagraphCosineBody(qv, ids),
       { index: MEDIA_INDEX },
-      buildWindowCosineBody(args.queryVector, ids),
+      buildWindowCosineBody(qv, ids),
     ]);
     const responses = (msRaw as { responses?: unknown[] }).responses ?? [];
     const cosineByIdFrom = (resp: unknown) =>
@@ -1176,6 +1220,15 @@ export function buildMediaFacetBody(
         query: trimmed,
         fields: ['title^2', 'description', 'summary', 'channelName'],
         analyzer: LEXICAL_QUERY_ANALYZER,
+        // Require a real term overlap (matches the nested paragraph clause's
+        // rule): `multi_match` defaults to OR, so without this a single stray
+        // common word ("term") matches a whole doc — off-topic/gibberish queries
+        // then surface loose OR-token noise. On the hybrid path the kNN relevance
+        // probe used to suppress that; the lexical instant-results path (no
+        // probe) relies on this floor instead. `2<70%`: ≤2 terms → all required,
+        // >2 → 70% (stopwords already dropped by the `stop` analyzer). Applied to
+        // both the result query and the facet query so facets match the results.
+        minimum_should_match: '2<70%',
       },
     },
     {

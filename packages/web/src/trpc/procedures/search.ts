@@ -1,6 +1,5 @@
 import { db, SearchLogEntry } from '@letschurch/db';
 import {
-  hasStrongLexicalMatch,
   type MediaSegment,
   MSearchResponseSchema,
   mergeParagraphSnippets,
@@ -9,11 +8,9 @@ import {
   runMediaFacets,
   runMediaFilterSearch,
   runMediaHybridSearch,
-  runMediaKnnProbe,
   suggestMediaPalette,
 } from '@letschurch/opensearch';
 import { publicS3 } from '@letschurch/s3/public';
-import { TRPCError } from '@trpc/server';
 import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -40,14 +37,6 @@ import { authProcedure, publicProcedure } from '../trpc';
 const moduleLogger = logger.child({
   module: 'trpc/procedures/search',
 });
-
-// Whole-set relevance gate for hybrid results: when the best video's absolute
-// cosine (recovered from the doc-level searchSummaryEmbedding kNN score as
-// 2*score - 1) is below this floor, nothing in the library is actually on-topic,
-// so we suppress the (semantically-vague) result list rather than show noise.
-// Set a touch below the answer gate's 0.3 — showing a few related videos is less
-// committal than asserting an answer. Tunable; the decision is logged.
-const RESULTS_RELEVANCE_COSINE_FLOOR = 0.25;
 
 // Cap on how many faceted channels are handed to the parser as grounding
 // candidates for its channel suggestion (facets are doc_count-ordered).
@@ -444,33 +433,21 @@ export const searchProcedures = {
         };
       }
 
-      // Embed the query once with the model the index was built with. The
-      // structured LLM parse + related-search generation are NOT on this path —
-      // they're deliberately decoupled into `searchMeta` (a separate client
-      // query) so a navigation renders results the moment retrieval returns,
-      // without waiting on the (slower) nano LLM calls. Quote phrase-boosting
-      // therefore uses the deterministic regex extractor instead of the parse.
-      // Served from the warm-embed cache when the search bar speculatively
-      // embedded this query on a typing pause (see `warmEmbed`); otherwise
-      // embeds live. Either way the vector is the same model the index was built
-      // with. A warm hit removes the ~226 ms embed from the hot path.
-      let queryVector: number[];
-      try {
-        queryVector = await getQueryEmbeddingCached(q);
-      } catch {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to embed search query',
-        });
-      }
-
       // Quoted phrases drive `match_phrase` boosts in the retriever. Prefer
       // explicit input quotes; otherwise extract them deterministically from the
       // raw query (stable across pages, no LLM dependency).
       const quoteList =
         quotes && quotes.length > 0 ? quotes : extractQuotedPhrases(q);
 
-      const [hybrid, facets, channelsRaw, probeScore] = await Promise.all([
+      // Instant results are LEXICAL (BM25) only — no query embed, no doc-summary
+      // kNN, no cosine rerank, and no kNN relevance probe. The query's semantics
+      // are served by the AI overview (the answer panel embeds + digs on its own,
+      // in parallel), so paying for kNN here too was redundant: it added ~800 ms
+      // warm plus the cold faiss-graph tail to every navigation for signal the
+      // overview already provides. BM25's `minimum_should_match` is the relevance
+      // gate now (no lexical match → no results). The structured LLM parse +
+      // related searches stay decoupled in `searchMeta`.
+      const [hybrid, facets, channelsRaw] = await Promise.all([
         runMediaHybridSearch({
           lexicalText: q,
           quotes: quoteList,
@@ -479,15 +456,11 @@ export const searchProcedures = {
           bibleRefs,
           bibleBooks,
           speakers,
-          queryVector,
           from: cursor,
           size: limit,
           sort: hybridSort,
-          // Surface (nearly) all of a video's lexical matches under "show more",
-          // while keeping the semantic-kNN snippets to just the best moments so
-          // the list isn't padded with unhighlighted neighbors.
+          // Surface (nearly) all of a video's lexical matches under "show more".
           innerHitsSize: 25,
-          knnInnerHitsSize: 3,
         }),
         // All facet lists (channels, speakers, verses, years) with leave-one-out
         // scoping: each facet drops its OWN selection but respects the others, so
@@ -495,8 +468,8 @@ export const searchProcedures = {
         // channel while the channel facet still lists alternatives. Every offered
         // option is guaranteed to return results when combined with the current
         // selections. The result set is still the AND of all selections (the main
-        // hybrid query above). Only page 0 consumes the facets, so skip on later
-        // pages.
+        // lexical query above). Only page 0 consumes the facets, so skip on later
+        // pages. Facets are computed lexically (BM25 min_score floor) — no vector.
         cursor === 0
           ? runMediaFacets({
               lexicalText: q,
@@ -506,21 +479,9 @@ export const searchProcedures = {
               bibleRefs,
               bibleBooks,
               speakers,
-              queryVector,
             }).catch(() => null)
           : Promise.resolve(null),
         osMsearch(msearchChannels(q, 0, 10)),
-        // Absolute relevance probe (reuses the same query embedding). A probe
-        // failure shouldn't suppress results, so fail open to null (= relevant).
-        //
-        // Intentionally NOT filtered by the user's facet selections: the gate
-        // asks "is this query on-topic for the library at all", a property of
-        // the query, not the filtered subset. Applying a facet (e.g. one verse)
-        // shrinks the subset and would drop its top cosine below the floor —
-        // which previously flipped `relevant` off and emptied every facet list,
-        // collapsing the panel to just the selected value. Access control still
-        // applies (runMediaKnnProbe always carries it).
-        runMediaKnnProbe({ queryVector }).catch(() => null),
       ]);
 
       const channelFacetBuckets = facets?.channels ?? [];
@@ -528,65 +489,34 @@ export const searchProcedures = {
       const verseFacetBuckets = facets?.verses ?? [];
       const yearFacetBuckets = facets?.years ?? [];
 
-      // Whole-set relevance gate: when the best video isn't close enough, the
-      // RRF list is just semantically-vague noise — drop the media results
-      // (channels carousel still shows). Null probe → treat as relevant.
-      const topCosine = probeScore == null ? null : 2 * probeScore - 1;
-      let relevant =
-        topCosine == null || topCosine >= RESULTS_RELEVANCE_COSINE_FLOOR;
-      if (!relevant) {
-        // Second chance: a distinctive lexical match (a title-word overlap or an
-        // exact transcript phrase) means the query genuinely exists in the
-        // library even though it's semantically isolated — e.g. "colabor" is a
-        // chapter title but sits below the cosine floor. Don't suppress those.
-        const lexicalHit = await hasStrongLexicalMatch({
-          lexicalText: q,
-          channelIds,
-          publishedAt,
-          bibleRefs,
-          bibleBooks,
-          speakers,
-        }).catch(() => false);
-        if (lexicalHit) relevant = true;
-        moduleLogger.info(
-          { context: { query: q, cosine: topCosine, lexicalHit } },
-          lexicalHit
-            ? 'Below cosine floor but kept (strong lexical match)'
-            : 'Hybrid results gated off (below relevance floor)',
-        );
-      }
-
-      const mediaCount = relevant ? hybrid.total : 0;
+      const mediaCount = hybrid.total;
       // Ranking (incl. the phrase-proximity boost for quoted + multi-word
       // queries) lives entirely in the OpenSearch hybrid query — no Node-side
       // re-rank — so the order here is already final.
-      const gatedHits = relevant ? hybrid.hits : [];
-      const uploadIds = gatedHits.map((h) => h._id);
+      const uploadIds = hybrid.hits.map((h) => h._id);
 
       const segmentsByUploadId = new Map<string, MediaSegment[]>();
-      for (const hit of gatedHits) {
+      for (const hit of hybrid.hits) {
         segmentsByUploadId.set(hit._id, mergeParagraphSnippets(hit));
       }
 
-      const facetBuckets = relevant ? channelFacetBuckets : [];
+      const facetBuckets = channelFacetBuckets;
       // Speaker facet rows: resolved name (filter value + label) + doc_count,
       // most-frequent first (doc_count order from OpenSearch).
-      const facetedSpeakers = (relevant ? speakerFacetBuckets : []).map(
-        (b) => ({
-          name: b.key,
-          count: b.doc_count,
-        }),
-      );
+      const facetedSpeakers = speakerFacetBuckets.map((b) => ({
+        name: b.key,
+        count: b.doc_count,
+      }));
       // Verse facet rows: token (for the filter) + human label (for display) +
       // doc_count. Already doc_count-ordered by OpenSearch (most-cited first).
-      const facetedVerses = (relevant ? verseFacetBuckets : []).map((b) => ({
+      const facetedVerses = verseFacetBuckets.map((b) => ({
         ref: b.key,
         label: formatVerseRef(b.key),
         count: b.doc_count,
       }));
       // Year facet rows: the year string + real per-year count (date_histogram,
       // newest-first). Drives the absolute-year options in the Date facet.
-      const facetedYears = (relevant ? yearFacetBuckets : []).map((b) => ({
+      const facetedYears = yearFacetBuckets.map((b) => ({
         year: b.year,
         count: b.doc_count,
       }));
