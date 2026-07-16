@@ -13,10 +13,6 @@ import {
   suggestMediaPalette,
 } from '@letschurch/opensearch';
 import { publicS3 } from '@letschurch/s3/public';
-import {
-  createEmbeddingsTracked,
-  EMBED_MODEL,
-} from '@letschurch/temporal/util/llm';
 import { TRPCError } from '@trpc/server';
 import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -27,6 +23,7 @@ import { bibleBookName, formatVerseRef } from '@/util/bible-url';
 import { facetMatchScore } from '@/util/facet-score';
 import logger from '@/util/logger';
 import { isChannelRoutable } from '@/util/media-visibility';
+import { getQueryEmbeddingCached, shouldWarmEmbed } from '@/util/query-embed';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { getVerseParagraphsByUpload } from '@/util/verse-paragraphs';
@@ -453,13 +450,14 @@ export const searchProcedures = {
       // query) so a navigation renders results the moment retrieval returns,
       // without waiting on the (slower) nano LLM calls. Quote phrase-boosting
       // therefore uses the deterministic regex extractor instead of the parse.
-      const embedRes = await createEmbeddingsTracked({
-        model: EMBED_MODEL,
-        input: q,
-        tracking: { activity: 'searchEmbedQuery' },
-      });
-      const queryVector = embedRes.data[0]?.embedding;
-      if (!queryVector) {
+      // Served from the warm-embed cache when the search bar speculatively
+      // embedded this query on a typing pause (see `warmEmbed`); otherwise
+      // embeds live. Either way the vector is the same model the index was built
+      // with. A warm hit removes the ~226 ms embed from the hot path.
+      let queryVector: number[];
+      try {
+        queryVector = await getQueryEmbeddingCached(q);
+      } catch {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to embed search query',
@@ -780,6 +778,35 @@ export const searchProcedures = {
           dateLabel: parsed.dateLabel,
         },
       };
+    }),
+
+  // Speculative query embed: the search bar fires this (debounced) on a typing
+  // pause so the ~226 ms embed happens WHILE the user is still typing, not as a
+  // blocking prefix to retrieval on submit. Fire-and-forget — the vector lands
+  // in the warm-embed cache keyed by the normalized query, and `hybridSearch`
+  // (and the answer agent) read it from there. Only warms natural-language-ish
+  // queries (`shouldWarmEmbed`) so we don't burn an embed per keystroke of a
+  // navigational search. Never throws — an embed/cache hiccup just means the
+  // vector is cold on submit (today's behavior). See docs/agentic-search-overview.md.
+  warmEmbed: publicProcedure
+    .input(z.object({ q: z.string() }))
+    .mutation(async ({ input }) => {
+      const q = input.q.trim();
+      if (!shouldWarmEmbed(q)) return { warmed: false };
+      try {
+        await getQueryEmbeddingCached(q, 'searchEmbedQueryWarm');
+        return { warmed: true };
+      } catch (err) {
+        moduleLogger.warn(
+          {
+            context: {
+              error: err instanceof Error ? err.message : String(err),
+            },
+          },
+          'warmEmbed failed (query will embed on submit)',
+        );
+        return { warmed: false };
+      }
     }),
 
   // Powers the whole search-bar command palette from ONE OpenSearch query (see

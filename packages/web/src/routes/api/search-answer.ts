@@ -22,6 +22,11 @@ const GATED_ANSWER = "I couldn't find anything about that in the library.";
 // repeated query is deterministic and skips retrieval + the agent entirely.
 const ANSWER_CACHE_TTL_SECONDS = 60 * 60 * 24;
 
+// Tool-call budget for the detective (dig) loop — higher than the cheap path's 8
+// because it runs multiple retrieval strategies (grep + windows + hybrid),
+// reconciles them, and re-queries after a pivot. Still bounded (a cost control).
+const DIG_STEP_BUDGET = 12;
+
 const bodySchema = z.object({
   query: z.string().min(1),
   // The parser's reformulated question (e.g. "Bible examples of grace-based
@@ -47,6 +52,11 @@ const bodySchema = z.object({
   // topical relevance, so skip the relevance-floor decline and always give an
   // overview of the (facet-scoped) sources rather than gating them off.
   facetOnly: z.boolean().optional(),
+  // Manual "dig deeper / search by meaning" override from the answer card. Forces
+  // the expensive detective loop (multi-strategy retrieval + streamed reasoning)
+  // even when the recollection gate wouldn't have auto-triggered it. Never digs
+  // for a single-video ask or a facet browse. See docs/agentic-search-overview.md.
+  deepen: z.boolean().optional(),
   // Filters pre-filled on the search URL when this query loaded (e.g. a channel
   // slug when searching from a channel page). The answer's grounding retrieval
   // is scoped to them so it reflects the same corpus as the results. The client
@@ -104,6 +114,88 @@ const STREAM_HEADERS = {
   'X-Accel-Buffering': 'no',
 };
 
+// Read a string field off a tool's (untyped) input/output for the reasoning
+// narration, defensively — the parts are typed as a broad union.
+function strField(obj: unknown, key: string): string | null {
+  if (obj && typeof obj === 'object' && key in obj) {
+    const v = (obj as Record<string, unknown>)[key];
+    return typeof v === 'string' ? v : null;
+  }
+  return null;
+}
+function arrLen(obj: unknown, key: string): number | null {
+  if (obj && typeof obj === 'object' && key in obj) {
+    const v = (obj as Record<string, unknown>)[key];
+    return Array.isArray(v) ? v.length : null;
+  }
+  return null;
+}
+
+// SERVER-authored reasoning lines derived from OBSERVABLE tool calls/results —
+// not the model's prose. This keeps the streamed "thinking" legible and immune
+// to prompt injection (untrusted transcript text never becomes reasoning).
+function describeToolCall(toolName: string, input: unknown): string {
+  switch (toolName) {
+    case 'grepTranscript': {
+      const phrase = strField(input, 'phrase');
+      return phrase
+        ? `Searching transcripts for the exact quote “${phrase}”…`
+        : 'Searching transcripts for an exact quote…';
+    }
+    case 'recallWindows': {
+      const q = strField(input, 'query');
+      return q
+        ? `Searching by meaning for the story: “${q}”…`
+        : 'Searching by meaning for the story…';
+    }
+    case 'searchMedia': {
+      const q = strField(input, 'query');
+      return q ? `Searching the library for “${q}”…` : 'Searching the library…';
+    }
+    case 'aggregateMedia': {
+      const q = strField(input, 'query');
+      return q ? `Counting matches for “${q}”…` : 'Counting matches…';
+    }
+    case 'resolveChannel':
+      return 'Resolving a ministry/channel name…';
+    default:
+      return 'Searching…';
+  }
+}
+function describeToolResult(toolName: string, output: unknown): string {
+  switch (toolName) {
+    case 'grepTranscript': {
+      const n = arrLen(output, 'matches') ?? 0;
+      return n > 0
+        ? `Found ${n} exact quote match${n === 1 ? '' : 'es'}.`
+        : 'No exact matches for that quote — the wording or a label may be off.';
+    }
+    case 'recallWindows': {
+      const n = arrLen(output, 'spans') ?? 0;
+      return n > 0
+        ? `Recall surfaced ${n} candidate passage${n === 1 ? '' : 's'}.`
+        : 'No semantically similar stories surfaced.';
+    }
+    case 'searchMedia': {
+      const n = arrLen(output, 'results') ?? 0;
+      return n > 0
+        ? `Found ${n} related video${n === 1 ? '' : 's'}.`
+        : 'No related videos.';
+    }
+    case 'aggregateMedia': {
+      const count =
+        output && typeof output === 'object' && 'count' in output
+          ? (output as { count?: unknown }).count
+          : null;
+      return typeof count === 'number'
+        ? `${count} total match${count === 1 ? '' : 'es'}.`
+        : 'Counted matches.';
+    }
+    default:
+      return 'Done.';
+  }
+}
+
 export const Route = createFileRoute('/api/search-answer')({
   component: () => null,
   server: {
@@ -156,9 +248,9 @@ export const Route = createFileRoute('/api/search-answer')({
         // Server-only deps loaded lazily so pg / opensearch / db never enter the
         // client bundle (this route file is part of the shared route tree).
         const [
-          { searchTools, INSTRUCTIONS },
+          { searchTools, INSTRUCTIONS, detectiveTools, DETECTIVE_INSTRUCTIONS },
           { runAgentMediaSearch },
-          { classifyAnswerMode },
+          { classifyAnswerMode, recollectionGate, classifyRecollection },
           { SEARCH_AGENT_MODEL, agentModel },
           { runMediaKnnProbe },
           { recordLlmCall },
@@ -169,6 +261,7 @@ export const Route = createFileRoute('/api/search-answer')({
           { parseSearchQuery },
           { resolveChannelSlugs },
           { streamText, stepCountIs },
+          { channelChunk },
         ] = await Promise.all([
           import('@/ai/agent'),
           import('@/ai/tools/search-media'),
@@ -183,6 +276,7 @@ export const Route = createFileRoute('/api/search-answer')({
           import('@/trpc/search/parse-query'),
           import('@/trpc/search/channels'),
           import('ai'),
+          import('@/ai/answer-stream'),
         ]);
 
         // Parse the query for intent + a reformulated question, concurrently with
@@ -252,18 +346,26 @@ export const Route = createFileRoute('/api/search-answer')({
         };
 
         const encoder = new TextEncoder();
-        // The wire format is `<sources JSON><DELIMITER><answer markdown>`. Used
-        // for cache hits and declines (the live agent path streams it instead).
+        // The wire format is `<sources JSON><DELIMITER><body>`, where <body> is
+        // plain answer markdown, or — when `reasoning` is present (a cached dig
+        // answer) — the channel-tagged form `<r-chunk><a-chunk>` the live dig
+        // path streams. Used for cache hits and declines (the live agent path
+        // streams it instead).
         const payloadResponse = (
           answerSources: AnswerSource[],
           answer: string,
-        ) =>
-          new Response(
+          reasoning?: string | null,
+        ) => {
+          const body = reasoning
+            ? channelChunk('r', reasoning) + channelChunk('a', answer)
+            : answer;
+          return new Response(
             encoder.encode(
-              JSON.stringify(answerSources) + SOURCES_DELIMITER + answer,
+              JSON.stringify(answerSources) + SOURCES_DELIMITER + body,
             ),
             { headers: STREAM_HEADERS },
           );
+        };
 
         // Answer cache (day-scoped TTL, like the parse). Keyed by (model, day,
         // filters, query) only. Answers are single-turn and deterministic for a
@@ -274,14 +376,21 @@ export const Route = createFileRoute('/api/search-answer')({
         // fresh threadId per session, so a refresh missed and regenerated. Bump
         // v1 -> v2 so old thread-scoped keys are ignored. Dropping them also
         // dedups identical queries across users — a cost win with no downside
-        // (the answer is grounded in public content, not personalized).
-        const answerCacheKey = `search-answer:v2:${SEARCH_AGENT_MODEL}:${new Date()
+        // (the answer is grounded in public content, not personalized). Bumped
+        // v2 -> v3: the payload gained an optional `reasoning` field (dig path)
+        // and the gate can now route a query to the detective loop, so old
+        // v2 entries (answer-only, non-dig) must not be replayed as dig answers.
+        const answerCacheKey = `search-answer:v3:${SEARCH_AGENT_MODEL}:${new Date()
           .toISOString()
           .slice(0, 10)}:${filterSig}:${parsed.query.trim()}`;
-        const cacheAnswer = (answerSources: AnswerSource[], answer: string) =>
+        const cacheAnswer = (
+          answerSources: AnswerSource[],
+          answer: string,
+          reasoning?: string | null,
+        ) =>
           cacheSetJson(
             answerCacheKey,
-            { sources: answerSources, answer },
+            { sources: answerSources, answer, reasoning: reasoning ?? null },
             ANSWER_CACHE_TTL_SECONDS,
           );
 
@@ -299,6 +408,7 @@ export const Route = createFileRoute('/api/search-answer')({
         const cachedAnswer = await cacheGetJson<{
           sources: AnswerSource[];
           answer: string;
+          reasoning?: string | null;
         }>(answerCacheKey);
         if (cachedAnswer) {
           void recordAnswer(cachedAnswer.answer, cachedAnswer.sources);
@@ -306,7 +416,11 @@ export const Route = createFileRoute('/api/search-answer')({
             { context: { query: parsed.query, cached: true } },
             'Served cached search answer',
           );
-          return payloadResponse(cachedAnswer.sources, cachedAnswer.answer);
+          return payloadResponse(
+            cachedAnswer.sources,
+            cachedAnswer.answer,
+            cachedAnswer.reasoning,
+          );
         }
 
         try {
@@ -401,21 +515,12 @@ export const Route = createFileRoute('/api/search-answer')({
             );
           }
 
-          // Nothing retrieved at all — there's nothing to answer OR overview,
-          // so this is the only genuine decline.
-          if (sources.length === 0) {
-            moduleLogger.info(
-              { context: { query: parsed.query, reason: 'no-results' } },
-              'Answer gated off',
-            );
-            return declineResponse();
-          }
-
           // The parser separates an answer-worthy need ("what does Scripture
           // say about X", a question) from a browse/topic/navigational query
           // (a bare keyword, a channel name) — `questions` is populated only for
           // the former. We frame an answer on its reformulated question, and let
-          // a topic query default to an overview rather than a decline.
+          // a topic query default to an overview rather than a decline. Computed
+          // before the dig gate AND the decline gate, since both read it.
           const parsedQuery = await parsePromise;
           const reformulated = parsedQuery?.questions[0]?.trim();
           const framingQuestion =
@@ -424,7 +529,295 @@ export const Route = createFileRoute('/api/search-answer')({
             reformulated || parsed.question?.trim(),
           );
 
-          // --- Decide ANSWER vs OVERVIEW vs DECLINE. ---
+          // Absolute kNN cosine of the closest video (recovered from the probe
+          // score as 2*score - 1). Computed ONCE here and reused by both the dig
+          // gate (thin Lane-1 is a dig signal) and the cheap-path cosine-floor
+          // decline below. Skipped for facet browses (their synthesized query
+          // would spuriously fail the floor).
+          let topCosine: number | null = null;
+          if (queryVector && !parsed.facetOnly) {
+            try {
+              const score = await runMediaKnnProbe({
+                queryVector,
+                uploadIds: internalUploadId ? [internalUploadId] : undefined,
+              });
+              topCosine = score == null ? null : 2 * score - 1;
+              moduleLogger.info(
+                { context: { query: parsed.query, score, cosine: topCosine } },
+                'Answer relevance probe',
+              );
+            } catch (err) {
+              // Probe failure shouldn't downgrade a possibly-good answer.
+              moduleLogger.warn(
+                {
+                  context: {
+                    error: err instanceof Error ? err.message : String(err),
+                  },
+                },
+                'Relevance probe failed; skipping cosine gate',
+              );
+            }
+          }
+
+          // --- Decide whether to run the expensive detective (dig) loop, and
+          // which FLAVOR. --- Single-video asks and facet browses never dig.
+          // Otherwise the deterministic gate hands NL-question / thin-Lane-1
+          // queries to the nano recollection classifier: an AUTO-dig fires only
+          // for an actual recollection (a specific remembered moment). A manual
+          // "dig deeper" always digs (the user asked for a deep search) — we
+          // still classify it so the prompt matches (recollection vs question),
+          // since a genuine question dug through the recollection playbook
+          // produces forced corrections / false "no story" declines.
+          let wantDig = false;
+          let digIsRecollection = false;
+          if (!internalUploadId && !parsed.facetOnly) {
+            const gate = recollectionGate({
+              query: parsed.query,
+              isAnswerWorthy,
+              topCosine,
+            });
+            if (gate === 'ambiguous' || parsed.deepen === true) {
+              digIsRecollection = await classifyRecollection(parsed.query);
+              wantDig = digIsRecollection || parsed.deepen === true;
+            }
+          }
+
+          if (wantDig) {
+            moduleLogger.info(
+              {
+                context: {
+                  query: parsed.query,
+                  deepen: parsed.deepen === true,
+                  recollection: digIsRecollection,
+                },
+              },
+              'Running detective (dig) loop',
+            );
+            const digScopeNote =
+              scopedChannelNames.length > 0
+                ? `\n\nScope: limit any search to the channel(s): ${scopedChannelNames.join(
+                    ', ',
+                  )} (pass channelNames: ${JSON.stringify(scopedChannelNames)}).`
+                : '';
+            // Two dig flavors. RECOLLECTION: forceful find-the-moment + correct
+            // wrong labels (a genuine question run through this produces forced
+            // corrections / false "no story" declines — hence the split).
+            // QUESTION: just answer it thoroughly via the deep tools.
+            const recollectionPrompt = `The user is trying to RE-FIND a specific half-remembered moment in the library — a story, anecdote, or exchange they heard. Their recollection (details may be WRONG):
+
+"${parsed.query}"
+
+Your ONLY job is to identify the specific narrated moment/video and correct any misremembered details. This is NOT a doctrinal or factual question: if the recollection embeds a question or quoted line ("is it true that…?"), do NOT answer it or explain any doctrine — the quote is only a clue to WHICH moment they mean.
+
+How to find it:
+1. Extract the PEOPLE and ACTIONS — especially any specific person named (a granddaughter, a child, a friend) and what they DID. That named person + action is your PRIMARY anchor.
+2. You MUST call recallWindows — it is the best tool for a remembered story/scene, finding coherent multi-paragraph passages by MEANING even with no shared keywords. Describe the scene in your own words (person + action + the gist of the quote), with the denomination, the setting ("at the door"), and the exact wording STRIPPED OUT — the remembered label/setting are low-confidence and just re-surface generic content and hide the real story. Also grepTranscript the exact quoted phrase, and searchMedia for the hybrid. Do not conclude after only searchMedia.
+3. The right moment MUST contain the CORE described elements — the specific person (e.g. the granddaughter) AND the remembered quote/action. An episode that merely shares the topic but LACKS the central person (e.g. the teller's own encounter when the query is about his granddaughter) is the WRONG episode — do NOT present it as the match. If the searches fit the people+actions but involve a DIFFERENT group/place than remembered, THAT is the moment.${
+              sourcesBlock
+                ? `\n\nInitial keyword matches (retrieved on the raw wording → biased toward the possibly-wrong label; do NOT anchor on them, use only if they fit the people + actions):\n\n${sourcesBlock}`
+                : '\n\nInitial keyword retrieval was thin.'
+            }${digScopeNote}
+
+Reporting — this is the important part, get the TONE right:
+- Lead DIRECTLY with the moment, as a natural statement: name the video and what happens in it, cited with the tool-provided [upload:...] tokens — the citation is the receipt, so you don't need to hedge. e.g. "On a Dividing Line episode, James White recounts his granddaughter Clementine walking up to two missionaries and asking, '…'." Do NOT open with "This looks like…" / "This appears to be…" / "This seems like…" / "I think this is…" when the quote and the people match — just state it. Reserve a brief hedge ("This may be…") ONLY when the match is genuinely uncertain (a weak or partial fit).
+- Name any group/person/place from what the SOURCE actually shows (e.g. "Mormon missionaries" / "LDS"), NEVER from the query's assumption. Do not describe the story as being about the group the query named if the source shows a different one — that would state a wrong fact.
+- Write ONLY about the source — never about the user's memory. Do NOT analyze, diagnose, or narrate what they remembered: forbidden phrasing includes "misremembered", "you got it wrong", "the remembered X", "the label you're thinking of", "the swapped detail", "which suggests…", "you may be conflating…", "what you have in mind". Do not explain your reasoning for a correction; just state the fact.
+- If the source clearly involves a DIFFERENT group/person/place than the query named (a genuine substitution, e.g. Mormons where the query said Jehovah's Witnesses), note it in ONE short neutral clause about the source and stop: "This is about Mormon missionaries, not Jehovah's Witnesses." Do NOT add a because/which-suggests explanation, and do NOT restate it a second way.
+- A more SPECIFIC detail from the source is NOT a discrepancy: e.g. if they said "his granddaughter" and the source names her Clementine, "granddaughter" was correct — do NOT claim otherwise or list it as a difference. Only note true substitutions, and don't over-correct.
+- NEVER negate a CENTRAL element the user described (a named person like "his granddaughter", the quoted line) just because the episode you happened to retrieve doesn't contain it — e.g. do NOT say "not a granddaughter story". If your best match lacks the core person/quote, you have the WRONG episode: search again with recallWindows, and if you still can't find one that fits, say you couldn't pin down that exact moment rather than substituting a different episode and contradicting what they described.
+- If you truly can't locate it, say so in one plain sentence — do NOT fall back to answering a doctrinal question.`;
+
+            const questionPrompt = `Answer this question thoroughly and grounded in the library, using ALL your tools (searchMedia, plus grepTranscript and recallWindows to dig up less-obvious material — search several times with different phrasings):
+
+"${parsed.query}"
+
+This is a QUESTION/topic, not a recollection: synthesize a direct, well-supported answer. Do NOT hunt for a single "story", do NOT tell the user they misremembered anything, and do NOT decline just because there's no one narrated moment.${
+              sourcesBlock
+                ? `\n\nInitial matches to build on:\n\n${sourcesBlock}`
+                : '\n\nInitial keyword retrieval was thin — search more.'
+            }${digScopeNote}
+
+Cite every claim with the tool-provided [upload:...] tokens. If the library genuinely doesn't cover it, say so in one plain sentence.`;
+
+            const digPrompt = digIsRecollection
+              ? recollectionPrompt
+              : questionPrompt;
+
+            const digGenStart = Date.now();
+            const digResult = streamText({
+              model: agentModel,
+              system: DETECTIVE_INSTRUCTIONS,
+              prompt: digPrompt,
+              tools: detectiveTools,
+              stopWhen: stepCountIs(DIG_STEP_BUDGET),
+              onError: ({ error }) => {
+                moduleLogger.error(
+                  {
+                    context: {
+                      error:
+                        error instanceof Error ? error.message : String(error),
+                    },
+                  },
+                  'streamText error during dig generation',
+                );
+              },
+            });
+
+            const reader = digResult.fullStream.getReader();
+            let generationDone = false;
+            void Promise.resolve(digResult.finishReason)
+              .then(() => {
+                generationDone = true;
+              })
+              .catch(() => {
+                generationDone = true;
+              });
+
+            const digStream = new ReadableStream<Uint8Array>({
+              async start(controller) {
+                // Sources block first (the pre-retrieved chips). Dig cites the
+                // sources it DISCOVERS inline via [upload:...] tokens, which the
+                // client resolves to media links.
+                controller.enqueue(
+                  encoder.encode(JSON.stringify(sources) + SOURCES_DELIMITER),
+                );
+                let answerText = '';
+                let reasoningText = '';
+                const emitReasoning = (line: string) => {
+                  reasoningText += (reasoningText ? '\n' : '') + line;
+                  controller.enqueue(
+                    encoder.encode(channelChunk('r', `${line}\n`)),
+                  );
+                };
+                const deadline = Date.now() + 120_000;
+                const idle = () =>
+                  new Promise<'idle'>((resolve) => {
+                    setTimeout(() => resolve('idle'), 1_000);
+                  });
+                let pending = reader.read();
+                try {
+                  while (true) {
+                    const res = await Promise.race([pending, idle()]);
+                    if (res === 'idle') {
+                      if (generationDone || Date.now() > deadline) break;
+                      continue;
+                    }
+                    if (res.done) break;
+                    const part = res.value;
+                    switch (part.type) {
+                      case 'tool-call':
+                        emitReasoning(
+                          describeToolCall(part.toolName, part.input),
+                        );
+                        break;
+                      case 'tool-result':
+                        emitReasoning(
+                          describeToolResult(part.toolName, part.output),
+                        );
+                        break;
+                      case 'reasoning-delta':
+                        reasoningText += part.text;
+                        controller.enqueue(
+                          encoder.encode(channelChunk('r', part.text)),
+                        );
+                        break;
+                      case 'text-delta':
+                        answerText += part.text;
+                        controller.enqueue(
+                          encoder.encode(channelChunk('a', part.text)),
+                        );
+                        break;
+                      case 'error':
+                        moduleLogger.warn(
+                          { context: { error: String(part.error) } },
+                          'dig fullStream error part',
+                        );
+                        break;
+                      default:
+                        break;
+                    }
+                    pending = reader.read();
+                  }
+                } catch (err) {
+                  moduleLogger.warn(
+                    {
+                      context: {
+                        error: err instanceof Error ? err.message : String(err),
+                      },
+                    },
+                    'Error reading dig stream; closing with partial answer',
+                  );
+                }
+                controller.close();
+                void reader.cancel();
+
+                try {
+                  const usage = (await Promise.resolve(
+                    digResult.usage as unknown,
+                  ).catch(() => null)) as {
+                    inputTokens?: number;
+                    outputTokens?: number;
+                    promptTokens?: number;
+                    completionTokens?: number;
+                  } | null;
+                  const finishReason = await Promise.resolve(
+                    digResult.finishReason,
+                  ).catch(() => null);
+                  await recordLlmCall({
+                    model: SEARCH_AGENT_MODEL,
+                    activity: 'searchDetectiveAgent',
+                    promptTokens:
+                      usage?.inputTokens ?? usage?.promptTokens ?? null,
+                    completionTokens:
+                      usage?.outputTokens ?? usage?.completionTokens ?? null,
+                    durationMs: Date.now() - digGenStart,
+                    finishReason:
+                      typeof finishReason === 'string' ? finishReason : null,
+                    outcome: 'success',
+                    responseText: answerText,
+                  });
+                } catch (err) {
+                  moduleLogger.warn(
+                    {
+                      context: {
+                        error: err instanceof Error ? err.message : String(err),
+                      },
+                    },
+                    'Failed to record dig llm_call',
+                  );
+                }
+
+                if (answerText.trim().length > 0) {
+                  await recordAnswer(answerText, sources);
+                  void cacheAnswer(sources, answerText, reasoningText || null);
+                }
+                moduleLogger.info(
+                  { context: { sources: sources.length } },
+                  'Dig answer stream finished',
+                );
+              },
+              cancel() {
+                void reader.cancel();
+              },
+            });
+
+            return new Response(digStream, { headers: STREAM_HEADERS });
+          }
+
+          // Nothing retrieved and NOT digging — there's nothing to answer OR
+          // overview, so this is the only genuine decline. (Dig runs even on a
+          // thin/empty pre-retrieval: its grep + window-recall tools can find
+          // what the stage-1 pool missed, so the empty check is after the dig
+          // branch, not before it.)
+          if (sources.length === 0) {
+            moduleLogger.info(
+              { context: { query: parsed.query, reason: 'no-results' } },
+              'Answer gated off',
+            );
+            return declineResponse();
+          }
+
+          // --- Decide ANSWER vs OVERVIEW vs DECLINE (cheap path). ---
           // answer  → directly answer the question from the sources.
           // overview→ sources are on-topic but don't fully answer; summarize the
           //           related material (grounded, no fabricated answer).
@@ -441,34 +834,11 @@ export const Route = createFileRoute('/api/search-answer')({
           if (parsed.facetOnly) {
             mode = 'overview';
           } else {
-            // 1. Absolute kNN cosine floor (cheap, no LLM): if nothing in the
-            //    library is even semantically close, decline outright — there's
-            //    nothing worth overviewing.
-            if (queryVector) {
-              try {
-                const score = await runMediaKnnProbe({
-                  queryVector,
-                  uploadIds: internalUploadId ? [internalUploadId] : undefined,
-                });
-                const cosine = score == null ? null : 2 * score - 1;
-                moduleLogger.info(
-                  { context: { query: parsed.query, score, cosine } },
-                  'Answer relevance probe',
-                );
-                if (cosine != null && cosine < RELEVANCE_COSINE_FLOOR) {
-                  mode = 'decline';
-                }
-              } catch (err) {
-                // Probe failure shouldn't downgrade a possibly-good answer.
-                moduleLogger.warn(
-                  {
-                    context: {
-                      error: err instanceof Error ? err.message : String(err),
-                    },
-                  },
-                  'Relevance probe failed; skipping cosine gate',
-                );
-              }
+            // 1. Absolute kNN cosine floor (reuse the probe above): if nothing
+            //    in the library is even semantically close, decline outright —
+            //    there's nothing worth overviewing.
+            if (topCosine != null && topCosine < RELEVANCE_COSINE_FLOOR) {
+              mode = 'decline';
             }
 
             // 2. Cheap nano classifier: answer vs overview vs decline. Only the
@@ -543,6 +913,7 @@ Answer using ONLY the numbered sources below (these are already fetched — you 
 
 Formatting rules:
 - Answer the EXACT question asked, first — in one or two sentences — then add detail. Do NOT open with a heading, title, or a restatement of the question. For an identity question ("who is X" / "what is X"), lead by identifying X from what the sources show — their role, the work attributed to them, or what they teach (e.g. "Conley Owens is the author of The Dorean Principle, in which he argues…") — do NOT pivot straight into summarizing a related work without first answering who/what they are. Even when the sources only cover the subject indirectly, give the most direct answer they support rather than a passive tour of related material.
+- FALSE PREMISE (important): if the question ASSUMES something the sources contradict — e.g. it asks why a person believes/supports/rejects X when the sources show they actually hold the OPPOSITE (asks why he thinks the Trinity is unbiblical when he defends it; why he supports Rome when he opposes it) — do NOT accept or rationalize that premise. Correct it plainly first ("Actually, White defends the Trinity as biblical — he argues…"), then answer from what the sources really say. Never build an answer that affirms a premise the sources refute.
 - Write about the subject directly — don't frame it as what "the library", "the sources", "the material", or "the passages" say (it reads wooden); attribute to a named author/speaker instead when a passage has one, using active verbs.
 - After that, add any supporting detail, lists, or short sections that help.
 - Write in Markdown.

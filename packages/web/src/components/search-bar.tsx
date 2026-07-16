@@ -22,6 +22,7 @@ import {
   type PaletteFacetGroup,
   useSearchPalette,
 } from '@/hooks/use-search-palette';
+import { useWarmQueryEmbed } from '@/hooks/use-warm-query-embed';
 import { $lastSearchQuery } from '@/stores/search-query';
 import { cn } from '@/util/cn';
 
@@ -235,6 +236,11 @@ export default function SearchBar({
 
   // One query feeds the whole palette: titles (left) + facets (right).
   const palette = useSearchPalette(inputValue, paletteActive);
+
+  // Speculatively warm the query embedding on a typing pause so the ~226 ms
+  // embed is usually hot by the time the user submits (see docs/agentic-search-
+  // overview.md). Gated server-side to natural-language-ish queries.
+  useWarmQueryEmbed(inputValue, paletteActive);
   const suggestions = palette.titles;
   const facets = palette;
 

@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
-import { type OsMsearchItem, type OsQuery, osSearch } from './client';
+import {
+  type OsMsearchItem,
+  type OsQuery,
+  osMsearch,
+  osSearch,
+} from './client';
 
 // Hybrid search over the unified `lc_media_v1` index. Two stages:
 //
@@ -45,6 +50,10 @@ export const RRF_PIPELINE = 'lc-media-rrf';
 // inner_hits names must be unique across all hybrid sub-queries in one request.
 const PARA_BM25 = 'para_bm25';
 const PARA_KNN = 'para_knn';
+// inner_hits name for the window kNN recall (runWindowKnnRecall) — carries the
+// winning window's inline `paras`. (Windows are a RANKING signal + the agent's
+// recall target; they are no longer rendered as a contiguous-span snippet.)
+const WINDOW_KNN = 'window_knn';
 
 // kNN candidate pool per sub-query.
 const KNN_K = 50;
@@ -88,6 +97,19 @@ const RERANK_W_PARAGRAPH = 2;
 const PARAGRAPH_COSINE_SCRIPT =
   "doc['paragraphs.embedding'].size()==0 || doc['paragraphs.start'].size()==0 || " +
   "doc['paragraphs.end'].size()==0 || (doc['paragraphs.end'].value - doc['paragraphs.start'].value) < params.mindur ? 0.0 : cosineSimilarity(params.qv, doc['paragraphs.embedding']) + 1.0";
+
+// Story-run "window" rerank weight, fused alongside the paragraph-cosine signal
+// (start conservative — same 2 as paragraphs; tune via the eval harness). A
+// window is a rolling 4-paragraph span, so its best-cosine rewards docs whose
+// coherent multi-paragraph passage — not just a lucky single sentence — is on
+// point. See docs/agentic-search-overview.md.
+const RERANK_W_WINDOW = 2;
+// Painless: 0 for windows with no vector, else cosine + 1 (faiss cosinesimil
+// convention keeps the score positive). Like PARAGRAPH_COSINE_SCRIPT this reads
+// raw vectors from doc-values and NEVER loads the window HNSW graph, so it cannot
+// OOM. Used for both the window rerank scoring and the contiguous-span snippet.
+const WINDOW_COSINE_SCRIPT =
+  "doc['windows.embedding'].size()==0 ? 0.0 : cosineSimilarity(params.qv, doc['windows.embedding']) + 1.0";
 
 // Speaker-suggestion confidence floor (0–100, in the cosine-derived match-%
 // the UI shows). faiss `cosinesimil` knn returns score = (1 + cosine)/2, so
@@ -181,6 +203,155 @@ export function accessControlFilter(): OsQuery[] {
     { exists: { field: 'transcodingFinishedAt' } },
     { exists: { field: 'transcribingFinishedAt' } },
   ];
+}
+
+// --- Exact-quote transcript grep (detective `grepTranscript` tool) -----------
+// Fast, case-insensitive SUBSTRING match of a remembered verbatim quote against
+// the transcript, over the `paragraphs.text.wildcard` multi-field. This is the
+// OpenSearch-native replacement for the old Postgres `ILIKE` + pg_trgm path:
+// same data, no second store, access control via the shared filter. The
+// analyzed `paragraphs.text` field can't do arbitrary substring matching
+// (stemming/tokenization); the `wildcard` sub-field can (mid-word, across
+// tokens), and matches are EXACT (no trigram false positives).
+
+const GREP_PARAS = 'grep_paras';
+
+export type GrepMatch = {
+  /** Media doc `_id` = the upload's internal UUID. */
+  uploadId: string;
+  /** Paragraph index within the upload (for fetching neighbors). */
+  order: number | null;
+  /** Paragraph start, in SECONDS (index-native; the caller rounds/×1000). */
+  start: number;
+  text: string;
+  title: string | null;
+  channelName: string | null;
+};
+
+const GrepParaInnerSchema = z.object({
+  _source: z
+    .object({
+      order: z.number().nullable().optional(),
+      start: z.number(),
+      text: z.string(),
+    })
+    .nullable()
+    .optional(),
+});
+
+const GrepResponseSchema = z.object({
+  hits: z.object({
+    hits: z.array(
+      z.object({
+        _id: z.string(),
+        _source: z
+          .object({
+            title: z.string().nullable().optional(),
+            channelName: z.string().nullable().optional(),
+          })
+          .nullable()
+          .optional(),
+        inner_hits: z
+          .object({
+            [GREP_PARAS]: z
+              .object({
+                hits: z.object({ hits: z.array(GrepParaInnerSchema) }),
+              })
+              .optional(),
+          })
+          .optional(),
+      }),
+    ),
+  }),
+});
+
+// Escape the `wildcard` query's metacharacters (`\`, `*`, `?`) so a remembered
+// quote containing them matches literally, then wrap in `*…*` for substring.
+function escapeWildcard(s: string): string {
+  return s.replace(/[\\*?]/g, (c) => `\\${c}`);
+}
+
+/**
+ * Find a remembered near-verbatim QUOTE as an exact, case-insensitive substring
+ * of the transcript. Access control mirrors the search path (PUBLIC + approved +
+ * processed); an empty `channelIds` array means "a channel was named but matched
+ * nothing" → no results (not a library-wide search). Returns one entry per
+ * matched paragraph (capped), each with its video + timestamp.
+ */
+export async function grepParagraphs(args: {
+  phrase: string;
+  channelIds?: string[] | null;
+  maxDocs?: number;
+  perDoc?: number;
+}): Promise<GrepMatch[]> {
+  const phrase = args.phrase.trim();
+  if (phrase.length < 3) {
+    return [];
+  }
+  const filter = accessControlFilter();
+  if (Array.isArray(args.channelIds)) {
+    if (args.channelIds.length === 0) {
+      return [];
+    }
+    filter.push({ terms: { channelId: args.channelIds } });
+  }
+
+  const raw = await osSearch({
+    index: MEDIA_INDEX,
+    size: args.maxDocs ?? 8,
+    _source: ['title', 'channelName'],
+    query: {
+      bool: {
+        filter,
+        must: [
+          {
+            nested: {
+              path: 'paragraphs',
+              query: {
+                wildcard: {
+                  'paragraphs.text.wildcard': {
+                    value: `*${escapeWildcard(phrase)}*`,
+                    case_insensitive: true,
+                  },
+                },
+              },
+              inner_hits: {
+                name: GREP_PARAS,
+                size: args.perDoc ?? 3,
+                _source: {
+                  includes: [
+                    'paragraphs.order',
+                    'paragraphs.start',
+                    'paragraphs.text',
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+
+  const parsed = GrepResponseSchema.parse(raw);
+  const out: GrepMatch[] = [];
+  for (const hit of parsed.hits.hits) {
+    for (const inner of hit.inner_hits?.[GREP_PARAS]?.hits.hits ?? []) {
+      const s = inner._source;
+      if (!s) {
+        continue;
+      }
+      out.push({
+        uploadId: hit._id,
+        order: s.order ?? null,
+        start: s.start,
+        text: s.text,
+        title: hit._source?.title ?? null,
+        channelName: hit._source?.channelName ?? null,
+      });
+    }
+  }
+  return out;
 }
 
 export type PublishedAtRange = { gte?: string; lte?: string };
@@ -649,24 +820,68 @@ export function buildParagraphCosineBody(
 }
 
 /**
- * RRF-fuse the stage-1 hybrid order (candidate index) with the paragraph-cosine
- * order, weighted `RERANK_W_STAGE1 : RERANK_W_PARAGRAPH` (1:2 from eval). Returns
- * the candidates reordered.
+ * Body that scores each candidate upload by its best window's exact cosine to the
+ * query — a `script_score` over the nested `windows`, so (like the paragraph
+ * variant) it reads raw vectors and never loads the faiss HNSW graph (cannot
+ * OOM). Scoped to `uploadIds` (the retrieved pool). `_score - 1` is the cosine.
+ * Feeds the window signal in `runMediaHybridSearch`'s rerank.
  */
-function rerankByParagraphCosine(
+export function buildWindowCosineBody(
+  queryVector: number[],
+  uploadIds: string[],
+): OsMsearchItem {
+  return {
+    size: uploadIds.length,
+    _source: false,
+    query: {
+      bool: {
+        filter: [{ ids: { values: uploadIds } }],
+        must: [
+          {
+            nested: {
+              path: 'windows',
+              score_mode: 'max',
+              query: {
+                script_score: {
+                  query: { match_all: {} },
+                  script: {
+                    source: WINDOW_COSINE_SCRIPT,
+                    params: { qv: queryVector },
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * RRF-fuse the stage-1 hybrid order (candidate index) with one or more
+ * exact-cosine signals (paragraph, window), each weighted. Score for a candidate
+ * is `RERANK_W_STAGE1/(K+stage1Rank) + Σ weight_i/(K+rank_i)`. Returns the
+ * candidates reordered. Generalizes the former paragraph-only rerank so the
+ * window signal fuses alongside it without a second pass.
+ */
+function rerankByCosineSignals(
   candidates: MediaHit[],
-  cosineById: Map<string, number>,
+  signals: Array<{ cosineById: Map<string, number>; weight: number }>,
 ): MediaHit[] {
-  const byCosine = [...candidates].sort(
-    (a, b) => (cosineById.get(b._id) ?? 0) - (cosineById.get(a._id) ?? 0),
-  );
-  const paragraphRank = new Map(byCosine.map((h, i) => [h._id, i]));
+  const rankMaps = signals.map(({ cosineById }) => {
+    const byCosine = [...candidates].sort(
+      (a, b) => (cosineById.get(b._id) ?? 0) - (cosineById.get(a._id) ?? 0),
+    );
+    return new Map(byCosine.map((h, i) => [h._id, i]));
+  });
   return candidates
     .map((hit, stage1Rank) => {
-      const pRank = paragraphRank.get(hit._id) ?? candidates.length;
-      const score =
-        RERANK_W_STAGE1 / (RERANK_RRF_K + stage1Rank) +
-        RERANK_W_PARAGRAPH / (RERANK_RRF_K + pRank);
+      let score = RERANK_W_STAGE1 / (RERANK_RRF_K + stage1Rank);
+      for (const [i, { weight }] of signals.entries()) {
+        const rank = rankMaps[i]?.get(hit._id) ?? candidates.length;
+        score += weight / (RERANK_RRF_K + rank);
+      }
       return { hit, score };
     })
     .sort((a, b) => b.score - a.score)
@@ -716,26 +931,32 @@ export async function runMediaHybridSearch(
   const total = parsed.hits.total.value;
   const candidates = parsed.hits.hits;
 
-  // Stage 2: exact-cosine paragraph rerank over the pool, then take the page.
+  // Stage 2: exact-cosine rerank over the pool (paragraph + window signals),
+  // then take the page. Both signals are `script_score` (no HNSW graph load), and
+  // we fetch them in ONE msearch round-trip rather than two parallel searches.
   let pageHits: MediaHit[];
   if (rerankable && candidates.length > 0) {
-    const cosineRaw = await osSearch({
-      index: MEDIA_INDEX,
-      ...buildParagraphCosineBody(
-        args.queryVector,
-        candidates.map((h) => h._id),
-      ),
-    });
-    const cosineById = new Map(
-      MediaSearchResponseSchema.parse(cosineRaw).hits.hits.map((h) => [
-        h._id,
-        (h._score ?? 1) - 1,
-      ]),
-    );
-    pageHits = rerankByParagraphCosine(candidates, cosineById).slice(
-      from,
-      from + size,
-    );
+    const ids = candidates.map((h) => h._id);
+    const msRaw = await osMsearch([
+      { index: MEDIA_INDEX },
+      buildParagraphCosineBody(args.queryVector, ids),
+      { index: MEDIA_INDEX },
+      buildWindowCosineBody(args.queryVector, ids),
+    ]);
+    const responses = (msRaw as { responses?: unknown[] }).responses ?? [];
+    const cosineByIdFrom = (resp: unknown) =>
+      new Map(
+        MediaSearchResponseSchema.parse(resp).hits.hits.map((h) => [
+          h._id,
+          (h._score ?? 1) - 1,
+        ]),
+      );
+    const paragraphCosineById = cosineByIdFrom(responses[0]);
+    const windowCosineById = cosineByIdFrom(responses[1]);
+    pageHits = rerankByCosineSignals(candidates, [
+      { cosineById: paragraphCosineById, weight: RERANK_W_PARAGRAPH },
+      { cosineById: windowCosineById, weight: RERANK_W_WINDOW },
+    ]).slice(from, from + size);
   } else {
     pageHits = candidates.slice(from, from + size);
   }
@@ -761,6 +982,106 @@ export async function runMediaHybridSearch(
   }
 
   return { hits: pageHits, total };
+}
+
+// Approximate kNN candidate pool + returned window count for the agent's
+// on-demand semantic recall (below). Bounded and modest — this is a targeted,
+// occasional query, not a hot-path fan-out.
+const WINDOW_RECALL_K = 100;
+const WINDOW_RECALL_SIZE = 12;
+
+export type WindowRecallSpan = {
+  uploadId: string;
+  startOrder: number | null;
+  endOrder: number | null;
+  /** Seconds. */
+  start: number | null;
+  end: number | null;
+  paras: Array<{ order: number; start: number; end: number; text: string }>;
+};
+
+/**
+ * On-demand semantic RECALL over story-run windows — the §2a move from
+ * docs/agentic-search-overview.md. Unlike the deterministic lane (exact-cosine
+ * `script_score`, which only REORDERS the stage-1 pool), this issues a real
+ * approximate `knn` against the nested `windows.embedding`, so it can PULL IN a
+ * media that shares no keywords and whose summary never mentions the moment (the
+ * keyword-free "granddaughter story" case). It is therefore the ONE caller that
+ * warms the window HNSW graph into off-heap memory — deliberately paid visibly
+ * and occasionally by the streaming agent, never on the instant lane. Returns
+ * one contiguous window span (the top window) per matched media, newest match
+ * first by score.
+ */
+export async function runWindowKnnRecall(args: {
+  queryVector: number[];
+  channelIds?: string[] | null;
+  publishedAt?: PublishedAtRange | null;
+  bibleRefs?: string[] | null;
+  bibleBooks?: string[] | null;
+  uploadIds?: string[] | null;
+  k?: number;
+  size?: number;
+}): Promise<WindowRecallSpan[]> {
+  const k = args.k ?? WINDOW_RECALL_K;
+  const size = args.size ?? WINDOW_RECALL_SIZE;
+  const filter = buildFilter(
+    args.channelIds,
+    args.publishedAt,
+    args.bibleRefs,
+    args.bibleBooks,
+    null,
+    args.uploadIds,
+  );
+  const raw = await osSearch({
+    index: MEDIA_INDEX,
+    size,
+    _source: false,
+    query: {
+      bool: {
+        filter,
+        must: [
+          {
+            nested: {
+              path: 'windows',
+              score_mode: 'max',
+              query: {
+                knn: {
+                  'windows.embedding': { vector: args.queryVector, k },
+                },
+              },
+              inner_hits: {
+                name: WINDOW_KNN,
+                size: 1,
+                _source: {
+                  includes: [
+                    'windows.startOrder',
+                    'windows.endOrder',
+                    'windows.start',
+                    'windows.end',
+                    'windows.paras',
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+  return MediaSearchResponseSchema.parse(raw).hits.hits.flatMap((hit) => {
+    const src = hit.inner_hits?.[WINDOW_KNN]?.hits.hits[0]?._source;
+    if (!src?.paras || src.paras.length === 0) return [];
+    return [
+      {
+        uploadId: hit._id,
+        startOrder: src.startOrder ?? null,
+        endOrder: src.endOrder ?? null,
+        start: src.start ?? null,
+        end: src.end ?? null,
+        paras: src.paras,
+      },
+    ];
+  });
 }
 
 /**
@@ -1473,6 +1794,38 @@ const InnerHitsGroupSchema = z
   })
   .optional();
 
+// The winning window's inline constituent paragraphs, for contiguous-span
+// snippet reconstruction. `paras` come back from `_source` (mapping marks the
+// nested `windows.paras` as `enabled: false`, so it is stored, not indexed).
+const WindowInnerHitSchema = z.object({
+  _source: z
+    .object({
+      startOrder: z.number().optional(),
+      endOrder: z.number().optional(),
+      start: z.number().optional(),
+      end: z.number().optional(),
+      paras: z
+        .array(
+          z.object({
+            order: z.number(),
+            start: z.number(),
+            end: z.number(),
+            text: z.string(),
+          }),
+        )
+        .optional(),
+    })
+    .nullable(),
+});
+
+const WindowInnerHitsGroupSchema = z
+  .object({
+    hits: z.object({
+      hits: z.array(WindowInnerHitSchema),
+    }),
+  })
+  .optional();
+
 export const MediaHitSchema = z.object({
   _id: z.string(),
   _score: z.number().nullable(),
@@ -1480,6 +1833,7 @@ export const MediaHitSchema = z.object({
     .object({
       [PARA_BM25]: InnerHitsGroupSchema,
       [PARA_KNN]: InnerHitsGroupSchema,
+      [WINDOW_KNN]: WindowInnerHitsGroupSchema,
     })
     .partial()
     .optional(),

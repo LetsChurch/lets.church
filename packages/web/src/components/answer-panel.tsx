@@ -1,4 +1,4 @@
-import { IconClockHour3, IconSparkles } from '@tabler/icons-react';
+import { IconClockHour3, IconSearch, IconSparkles } from '@tabler/icons-react';
 import {
   Component,
   type ComponentProps,
@@ -11,7 +11,11 @@ import {
 } from 'react';
 import { Streamdown } from 'streamdown';
 
-import { type AnswerSource, SOURCES_DELIMITER } from '@/ai/answer-stream';
+import {
+  type AnswerSource,
+  CHANNEL_MARK,
+  SOURCES_DELIMITER,
+} from '@/ai/answer-stream';
 import { Avatar } from '@/components/avatar';
 import {
   MediaPreviewScope,
@@ -48,27 +52,37 @@ function getThreadId(): string {
   return id;
 }
 
-// The model shouldn't emit inline [upload:…] tokens anymore (sources render as
-// chips), but strip any (complete or trailing-partial) defensively so they
-// never flash in the prose.
-function stripCitations(text: string): string {
-  return (
-    text
-      .replace(/\s*\[upload:[^\]]*\]/g, '')
-      .replace(/\s*\[upload:[^\]]*$/, '')
-      // The model occasionally emits empty/whitespace-only citation brackets;
-      // drop them so a stray "[]" never shows in the prose.
-      .replace(/\s*\[\s*\]/g, '')
+// Drop a trailing PARTIAL citation token (mid-stream, before its closing `]`)
+// and stray empty brackets so neither flashes in the prose. Complete [upload:…]
+// tokens are KEPT — they're linkified to media deep-links (linkifyUploadCitations)
+// on the dig path where the agent cites sources it discovered.
+function cleanupPartialCitations(text: string): string {
+  return text.replace(/\s*\[upload:[^\]]*$/, '').replace(/\s*\[\s*\]/g, '');
+}
+
+// Turn a complete tool cite token `[upload:<id>@<sec>]` into a markdown link to
+// the media moment. Used for dig-path answers, whose agent cites sources it
+// discovered (which aren't in the up-front numbered `sources` chip map).
+function linkifyUploadCitations(md: string): string {
+  return md.replace(
+    /\[upload:([A-Za-z0-9]+)@(\d+)\]/g,
+    (_full, id: string, sec: string) => `[source](/media/${id}#t=${sec})`,
   );
 }
 
-// The stream is `<JSON sources><DELIMITER><answer markdown>`. Sources lead so
-// inline [N] citations can resolve to a source while the answer is still
-// streaming. Until the delimiter arrives the leading bytes are the sources
-// JSON (not prose), so hold the answer empty.
-function parseStream(raw: string): { answer: string; sources: AnswerSource[] } {
+// The stream is `<JSON sources><DELIMITER><body>`. Sources lead so inline [N]
+// citations can resolve while the answer streams. The <body> is either plain
+// answer markdown (cheap path) or a sequence of channel-tagged segments
+// (`CHANNEL_MARK + 'r'|'a' + text`) on the dig path — 'r' = the reasoning
+// stream, 'a' = the answer. We detect the dig shape by CHANNEL_MARK. Until the
+// delimiter arrives the leading bytes are the sources JSON, so hold body empty.
+function parseStream(raw: string): {
+  answer: string;
+  reasoning: string;
+  sources: AnswerSource[];
+} {
   const idx = raw.indexOf(SOURCES_DELIMITER);
-  if (idx === -1) return { answer: '', sources: [] };
+  if (idx === -1) return { answer: '', reasoning: '', sources: [] };
   let sources: AnswerSource[] = [];
   try {
     const parsed = JSON.parse(raw.slice(0, idx));
@@ -76,8 +90,27 @@ function parseStream(raw: string): { answer: string; sources: AnswerSource[] } {
   } catch {
     // sources block not fully received yet
   }
+  const body = raw.slice(idx + SOURCES_DELIMITER.length);
+
+  if (!body.includes(CHANNEL_MARK)) {
+    // Cheap path: the whole body is the answer.
+    return { answer: cleanupPartialCitations(body), reasoning: '', sources };
+  }
+
+  // Dig path: walk CHANNEL_MARK-delimited segments, routing each to reasoning
+  // or answer by its leading channel byte.
+  let reasoning = '';
+  let answer = '';
+  for (const seg of body.split(CHANNEL_MARK)) {
+    if (!seg) continue;
+    const channel = seg[0];
+    const text = seg.slice(1);
+    if (channel === 'r') reasoning += text;
+    else if (channel === 'a') answer += text;
+  }
   return {
-    answer: stripCitations(raw.slice(idx + SOURCES_DELIMITER.length)),
+    answer: cleanupPartialCitations(answer),
+    reasoning: reasoning.trimEnd(),
     sources,
   };
 }
@@ -311,6 +344,94 @@ function SourceChips({
 // the rest fades out behind a "See more" toggle.
 const COLLAPSED_HEIGHT = 112;
 
+// The detective loop's narrated reasoning (candidate searches, contradictions,
+// the pivot). While the loop runs (no answer yet) it shows a live ticker — each
+// new reasoning line slides + fades into place (Grok-style), with the previous
+// line fading out above it. Once the settled answer starts, it collapses to a
+// "Show reasoning" toggle that expands the full trail. Renders nothing when
+// there's no reasoning (the cheap path).
+function ReasoningTrail({
+  reasoning,
+  answerPresent,
+}: {
+  reasoning: string;
+  answerPresent: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const lines = useMemo(
+    () =>
+      reasoning
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean),
+    [reasoning],
+  );
+  if (lines.length === 0) return null;
+
+  // Still thinking: live, animated tail of the reasoning.
+  if (!answerPresent) {
+    // Show the last two lines: the newest slides/fades in at the bottom, the
+    // previous one lingers, faded, above it — masked so it fades off the top.
+    const tail = lines.slice(-2);
+    return (
+      <div className="mb-3">
+        <div className="mb-1 inline-flex items-center gap-1.5 text-xs font-medium text-white/70">
+          <IconSearch size={12} aria-hidden="true" className="shrink-0" />
+          <span className="text-shimmer">Searching…</span>
+        </div>
+        <div
+          className="relative overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_45%)] text-xs leading-relaxed text-white/70"
+          style={{ maxHeight: '2.75rem' }}
+          aria-live="polite"
+        >
+          <div className="flex flex-col justify-end">
+            {tail.map((line, i) => {
+              const isNewest = i === tail.length - 1;
+              // Key by absolute line index so ONLY a genuinely new line remounts
+              // and replays the enter animation; an existing line shifting up
+              // keeps its key and just changes opacity.
+              const absIndex = lines.length - tail.length + i;
+              return (
+                <div
+                  key={absIndex}
+                  className={
+                    isNewest
+                      ? 'lc-thought-in'
+                      : 'opacity-45 transition-opacity duration-300'
+                  }
+                >
+                  {line}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Answer present: collapse to a toggle; expanded shows the full trail.
+  return (
+    <div className="mb-3">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex items-center gap-1 text-[11px] font-normal text-white/50 transition-colors hover:text-white/80"
+      >
+        <IconSearch size={10} aria-hidden="true" className="shrink-0" />
+        {open ? 'Hide reasoning' : 'Show reasoning'}
+      </button>
+      {open ? (
+        <div className="mt-2 space-y-0.5 border-l-2 border-white/25 pl-3 text-xs leading-relaxed text-white/70">
+          {lines.map((line, i) => (
+            <div key={`${i}:${line}`}>{line}</div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export type AnswerStatus = 'streaming' | 'done' | 'error';
 
 // The first (cache-miss) request streams while the server generates the answer;
@@ -451,6 +572,7 @@ export function AnswerCard({
   sources,
   onCite,
   heading,
+  reasoning = '',
 }: {
   status: AnswerStatus;
   answer: string;
@@ -461,11 +583,18 @@ export function AnswerCard({
   // Optional bold heading shown at the top of the card — used in direct-question
   // mode (the media page) to echo the asked question above its answer.
   heading?: string;
+  // The detective (dig) loop's narrated reasoning, streamed above the answer.
+  // Empty on the cheap answer/overview path.
+  reasoning?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
-  const shimmerWord = useShimmerWord(status === 'streaming' && !answer);
+  // Only shimmer when there's nothing to show yet — the reasoning trail is its
+  // own "working" indicator on the dig path.
+  const shimmerWord = useShimmerWord(
+    status === 'streaming' && !answer && !reasoning,
+  );
 
   // Read latest sources + onCite via refs so the (stable) markdown components can
   // look up a citation without rebuilding on every streamed chunk.
@@ -493,7 +622,10 @@ export function AnswerCard({
     }),
     [],
   );
-  const renderedAnswer = linkifyCitations(answer, sources.length);
+  const renderedAnswer = linkifyCitations(
+    linkifyUploadCitations(answer),
+    sources.length,
+  );
 
   // Measure whether the answer is tall enough to warrant collapsing. Re-run as
   // the answer streams/changes (scrollHeight is the full height even when the
@@ -507,8 +639,9 @@ export function AnswerCard({
 
   // Defensive: the server always sends either a real answer or a concise
   // decline message, so a done-but-empty stream only happens on a truncated
-  // response — hide the empty shell rather than spin on "Seeking…".
-  if (status === 'done' && !answer) return null;
+  // response — hide the empty shell rather than spin on "Seeking…". Keep the
+  // shell if a dig produced reasoning (the user should still see what it did).
+  if (status === 'done' && !answer && !reasoning) return null;
 
   return (
     <div className="border-fancy-pants rounded-2xl bg-indigo-500/90 p-5 text-white shadow-sm dark:bg-indigo-500/40">
@@ -517,6 +650,7 @@ export function AnswerCard({
           {heading}
         </h2>
       ) : null}
+      <ReasoningTrail reasoning={reasoning} answerPresent={Boolean(answer)} />
       {status === 'error' ? (
         <p className="text-sm text-white/80">
           Sorry — we couldn't generate an answer for this query.
@@ -529,8 +663,8 @@ export function AnswerCard({
             ref={contentRef}
             className={
               collapsed
-                ? 'overflow-hidden [mask-image:linear-gradient(to_bottom,black_60%,transparent)] [-webkit-mask-image:linear-gradient(to_bottom,black_60%,transparent)]'
-                : undefined
+                ? 'lc-answer-in overflow-hidden [mask-image:linear-gradient(to_bottom,black_60%,transparent)] [-webkit-mask-image:linear-gradient(to_bottom,black_60%,transparent)]'
+                : 'lc-answer-in'
             }
             style={collapsed ? { maxHeight: COLLAPSED_HEIGHT } : undefined}
           >
@@ -564,7 +698,9 @@ export function AnswerCard({
             onCite={onCite}
           />
         </MediaPreviewScope>
-      ) : (
+      ) : reasoning ? null : (
+        // The reasoning trail (when digging) is its own working indicator, so
+        // only shimmer on the cheap path while waiting for the first token.
         <p className="text-shimmer text-sm">{shimmerWord}…</p>
       )}
       <p className="mt-3 flex items-center gap-1.5 text-xs text-white/75">
@@ -618,6 +754,8 @@ export function AnswerPanel({
 }) {
   const [text, setText] = useState('');
   const [status, setStatus] = useState<AnswerStatus>('streaming');
+  // Bumped by the "Dig deeper" button to re-fire the request with deepen:true.
+  const [runId, setRunId] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   // Read via ref so the fetch effect (keyed on q) picks up the id without
   // re-firing when it resolves a tick after mount.
@@ -627,6 +765,14 @@ export function AnswerPanel({
   // effect (its deps are [q, ready]) — the answer follows only the pre-filled set.
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
+  // Whether THIS run should force the detective loop. A manual override, so it
+  // lives in a ref (read at fire time) not the effect deps; the button flips it
+  // and bumps `runId`. Reset whenever the query changes (declared before the
+  // fetch effect so the ref is already false when that effect runs on a new q).
+  const deepenRef = useRef(false);
+  useEffect(() => {
+    deepenRef.current = false;
+  }, [q]);
 
   useEffect(() => {
     if (!ready) return;
@@ -645,6 +791,7 @@ export function AnswerPanel({
           searchLogId: searchLogIdRef.current ?? null,
           filters: filtersRef.current ?? null,
           facetOnly,
+          deepen: deepenRef.current,
         },
         controller.signal,
         setText,
@@ -653,11 +800,39 @@ export function AnswerPanel({
     })();
 
     return () => controller.abort();
-  }, [q, ready, facetOnly]);
+  }, [q, ready, facetOnly, runId]);
 
-  const { answer, sources } = parseStream(text);
+  const { answer, reasoning, sources } = parseStream(text);
 
-  return <AnswerCard status={status} answer={answer} sources={sources} />;
+  // Offer a manual "dig deeper" only once a cheap answer has settled, when the
+  // detective loop wasn't already run (no reasoning) and this isn't a facet
+  // browse. It re-fires the request forcing the loop.
+  const canDeepen =
+    status === 'done' && !reasoning && !facetOnly && Boolean(answer);
+
+  return (
+    <div>
+      <AnswerCard
+        status={status}
+        answer={answer}
+        sources={sources}
+        reasoning={reasoning}
+      />
+      {canDeepen ? (
+        <button
+          type="button"
+          onClick={() => {
+            deepenRef.current = true;
+            setRunId((n) => n + 1);
+          }}
+          className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 transition-colors hover:text-indigo-500 dark:text-indigo-300 dark:hover:text-indigo-200"
+        >
+          <IconSearch size={12} aria-hidden="true" className="shrink-0" />
+          Dig deeper — search by meaning
+        </button>
+      ) : null}
+    </div>
+  );
 }
 
 // Per-video, per-tab-session thread so follow-up asks about the SAME video share

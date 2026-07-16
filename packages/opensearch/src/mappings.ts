@@ -147,13 +147,66 @@ const targetMappings: Record<
           speakerId: { type: 'keyword' },
           // (Speaker vectors live in the flat `lc_speaker_vectors` index, not
           // here — see suggestSpeakersByEmbedding.)
-          text: { type: 'text' },
+          text: {
+            type: 'text',
+            // A `wildcard` multi-field for the detective's `grepTranscript`
+            // exact-quote lane: it does fast, case-insensitive SUBSTRING matching
+            // (`*phrase*`) — mid-word, across tokenization — which the analyzed
+            // `text` field can't. Derived from `text`'s value at index time
+            // (multi-field), so index requests are unchanged; it just needs the
+            // docs reindexed to populate it (the window backfill does that). This
+            // is the OpenSearch-native replacement for the Postgres pg_trgm index.
+            fields: { wildcard: { type: 'wildcard' } },
+          },
           embedding: {
             type: 'knn_vector',
             dimension: 1536,
             space_type: 'cosinesimil',
             method: { name: 'hnsw', engine: 'faiss' },
           },
+        },
+      },
+      // Nested "windows" — story-run spans (rolling 4-paragraph, stride-2), the
+      // concatenated text embedded so a story spanning several paragraphs is
+      // retrievable as one coherent unit. See docs/agentic-search-overview.md.
+      // Two jobs, both memory-safe by default: (1) a window exact-cosine
+      // `script_score` rerank signal + a contiguous-span snippet source, and
+      // (2) an on-demand semantic recall target the search agent may `knn` when
+      // it decides a keyword-free story needs it (the ONLY caller that warms the
+      // window HNSW graph — the deterministic lane never issues a knn clause).
+      windows: {
+        type: 'nested',
+        properties: {
+          // Paragraph-order range of the span, for snippet reconstruction.
+          startOrder: { type: 'integer' },
+          endOrder: { type: 'integer' },
+          // Seconds — from the first/last constituent paragraph.
+          start: { type: 'double' },
+          end: { type: 'double' },
+          // `on_disk` mode (faiss, ~32x compression): the recallWindows detective
+          // tool DOES issue an approximate `knn` over this field, which loads the
+          // window HNSW graph into off-heap native memory — and windows are ~half
+          // the ~100GB paragraph vector set (~3.9M vectors → ~50GB), which would
+          // OOM the pod. on_disk keeps a compressed graph in memory (~1.5GB) +
+          // full-precision vectors on disk for rescoring, so recallWindows stays
+          // fast and cannot OOM. The window RERANK (`script_score` cosine over
+          // doc-values) is UNAFFECTED — on_disk preserves doc-value access
+          // (verified). NOTE: `mode`/method is static, so it applies to a FRESHLY
+          // created window field (prod adds it here for the first time); an index
+          // that already has a plain-hnsw window field must be reindexed to adopt
+          // on_disk.
+          embedding: {
+            type: 'knn_vector',
+            dimension: 1536,
+            space_type: 'cosinesimil',
+            mode: 'on_disk',
+          },
+          // The inline constituent paragraphs [{order,start,end,text}] for
+          // snippet reconstruction. `enabled: false` keeps them in _source (so
+          // inner_hits return them) but does NOT index them — no nested-in-nested
+          // doc explosion, and the paragraph text is not re-indexed here (it
+          // already lives under `paragraphs.text`, which owns BM25).
+          paras: { type: 'object', enabled: false },
         },
       },
     },
@@ -263,7 +316,14 @@ for (const [name, mappings] of Object.entries(targetMappings)) {
     });
   }
 
-  // PUT the index mapping
+  // PUT the index mapping. Additive changes (new fields) apply in place. A change
+  // a live index CAN'T take — a field's static knn `mode`/`method`/type, e.g.
+  // flipping an existing `windows.embedding` from plain hnsw to `on_disk` — is
+  // rejected by OpenSearch, and we let that THROW: in the init container it fails
+  // the pod and stalls the rollout ON PURPOSE, so the operator recreates/reindexes
+  // the index to adopt the new mapping BEFORE it goes live, rather than silently
+  // running on the stale field. (A fresh index doesn't hit this — it got the
+  // correct mapping at create time above.)
   moduleLogger.info(`PUTting index mapping for ${name}`);
   await client.indices.putMapping({
     index: name,

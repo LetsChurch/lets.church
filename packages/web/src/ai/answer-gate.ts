@@ -90,3 +90,121 @@ export async function classifyAnswerMode(
     return 'answer';
   }
 }
+
+// --- Recollection gate: when to run the expensive detective loop ---
+
+// A natural-language recollection is a sentence, not a keyword. Below this token
+// count a query is navigational/topical and never worth the deep loop.
+const RECOLLECTION_MIN_TOKENS = 6;
+// Operator / filter-syntax / quoted-id markers → navigational, never dig.
+const OPERATOR_RE = /[":<>()]|\b(AND|OR|NOT)\b/;
+
+// 'dig' → run the detective loop; 'summarize' → the existing cheap answer/
+// overview path; 'skip' → clearly navigational (also handled by the cheap path);
+// 'ambiguous' → let the nano tie-breaker decide.
+export type DigDecision = 'dig' | 'summarize' | 'skip' | 'ambiguous';
+
+/**
+ * Deterministic, cheap first pass deciding whether a query might be a
+ * RECOLLECTION worth the expensive detective loop versus the cheap
+ * summarize/answer path. IMPORTANT: a natural-language question is NOT by itself
+ * a recollection — most questions ("what does X argue about Y") are answered
+ * perfectly well by the cheap answer/overview path, and running them through the
+ * detective loop makes it hunt for a "story" that isn't there (forced
+ * corrections / false declines). So this NEVER returns 'dig' outright: the only
+ * signals that a real "re-find a specific remembered moment" intent exists (an NL
+ * question, or a thin Lane-1 that keywords missed) are handed to the nano
+ * classifier via 'ambiguous', which digs ONLY for an actual recollection. A plain
+ * on-topic browse (no question, healthy cosine) stays cheap with no nano call.
+ * See docs/agentic-search-overview.md ("The gate — when to dig").
+ */
+export function recollectionGate(args: {
+  query: string;
+  isAnswerWorthy: boolean;
+  topCosine: number | null;
+}): DigDecision {
+  const trimmed = args.query.trim();
+  const tokens = trimmed.split(/\s+/).filter(Boolean);
+  if (OPERATOR_RE.test(trimmed) || tokens.length <= 2) return 'skip';
+  if (tokens.length < RECOLLECTION_MIN_TOKENS) return 'summarize';
+  // Any substantive natural-language query → hand to the nano recollection
+  // classifier. IMPORTANT: do NOT gate this on `isAnswerWorthy`/thin-cosine.
+  // Recollections are frequently NOUN PHRASES ("the story where James White met
+  // his first two missionaries", "James White's granddaughter and the Jehovah's
+  // Witnesses") — not questions — and they often retrieve a healthy (non-thin)
+  // cosine, so gating on question-ness meant those never reached the classifier
+  // and got a cheap-path answer or, worse, a cold decline. The nano call is
+  // cheap and returns false for genuine questions/topics (which then take the
+  // cheap answer/overview path), so routing all substantive queries here costs
+  // little and closes the recollection under-trigger. (`isAnswerWorthy` /
+  // `topCosine` stay in the signature for future tuning.)
+  return 'ambiguous';
+}
+
+const recollectionJsonSchema = {
+  name: 'recollection',
+  strict: true,
+  schema: {
+    type: 'object',
+    additionalProperties: false,
+    properties: { isRecollection: { type: 'boolean' } },
+    required: ['isRecollection'],
+  },
+} as const;
+
+const RecollectionResultSchema = z.object({ isRecollection: z.boolean() });
+
+const RECOLLECTION_SYSTEM = `You decide whether a search query is a RECOLLECTION: the user trying to RE-FIND a specific remembered MOMENT — a story, an anecdote, a particular scene, or a line someone said — as opposed to a general question or topic browse.
+
+Output {"isRecollection": true} when the query points to ONE specific episode. The strongest tells:
+- it names a SPECIFIC PERSON in a SPECIFIC SCENE doing something (e.g. "his granddaughter talking with missionaries at the door", "the caller who argued about baptism", "when he met his first two missionaries in college"), and/or
+- it quotes or paraphrases a specific LINE someone said ("she asked, 'is it true you aren't allowed to talk to us?'"), and/or
+- it opens like a retold memory ("the story/time/episode where…", "that segment about…", "he went off about…", "remind me what he said about…").
+An embedded question or quoted line does NOT make it a general question — a remembered quote is part of the scene the user wants to locate. CRUCIALLY: the details may be WRONG — a wrong name (Smith and Young for Reed and Reese), a wrong relation (grandson for granddaughter), a wrong group (Catholic priest / Jehovah's Witnesses for Mormons), a wrong setting (Christmas for Easter). Wrong details are EXACTLY what recollections have, and a query with a specific person+action+scene is a recollection even when a detail looks off or when it makes the underlying event sound implausible. When in doubt between "recollection" and "question", if there is a specific person doing a specific thing in a specific scene, choose true.
+
+Output {"isRecollection": false} ONLY for a GENERAL question about what someone teaches/argues/believes with no specific scene ("what does he say about the papacy", "how does he define sola scriptura", "what are the five solas"), or a bare topic/keyword ("church discipline", "textual criticism").
+
+Examples → answer:
+- "James White's granddaughter talking with Jehovah's Witnesses, is it true that you aren't allowed to talk to us" → true (specific person + scene + a quoted line)
+- "the story where James White meets his first two Mormon missionaries, elders Smith and Young, in college" → true (specific scene + names, even though the names are wrong)
+- "the story where his grandson handed a tract to Mormon missionaries at a pageant" → true (specific scene; "grandson" may be a misremembered "granddaughter")
+- "James White's granddaughter Clementine witnessing to a Catholic priest on the street" → true (named person + scene; the group may be misremembered)
+- "there was a segment where he talked about how Mormons changed their teaching about temple garments" → true (a retold specific segment)
+- "the episode where he tells the story about the roller coaster" → true
+- "how does James White respond to the Roman Catholic view of the papacy" → false (general question, no specific scene)
+- "textual criticism of the New Testament" → false (topic)`;
+
+/**
+ * Nano tie-breaker for the 'ambiguous' case of `recollectionGate`. Returns true
+ * when the query reads like a specific recollection worth the detective loop.
+ * Fail-soft to FALSE (don't dig when unsure — digging costs money). Recorded in
+ * `llm_call` (activity `searchRecollectionGate`).
+ */
+export async function classifyRecollection(query: string): Promise<boolean> {
+  try {
+    const completion = await createChatCompletionTracked({
+      model: OPENROUTER_SEARCH_PARSE_MODEL,
+      messages: [
+        { role: 'system', content: RECOLLECTION_SYSTEM },
+        { role: 'user', content: `Query: ${query}` },
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: recollectionJsonSchema,
+      },
+      tracking: { activity: 'searchRecollectionGate' },
+    });
+    const content = completion.choices[0]?.message.content ?? '';
+    const cleaned = content
+      .trim()
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '');
+    return RecollectionResultSchema.parse(JSON.parse(cleaned)).isRecollection;
+  } catch (err) {
+    moduleLogger.warn(
+      { context: { error: err instanceof Error ? err.message : String(err) } },
+      'Recollection gate failed; not digging',
+    );
+    return false;
+  }
+}

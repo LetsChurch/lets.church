@@ -25,6 +25,7 @@ import {
   bibleRefsFromMetadata,
 } from '../../util/bible-refs';
 import logger from '../../util/logger';
+import { buildWindows, embedWindows } from '../../util/windows';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/index-document',
@@ -327,6 +328,39 @@ async function getDocument(
         ),
       );
 
+      // Story-run "windows": rolling 4-paragraph, stride-2 spans whose
+      // concatenated text is embedded fresh (paragraph vectors are precomputed
+      // in Postgres, but a window's text has no persisted vector). Stored as a
+      // nested field for the exact-cosine rerank signal, the contiguous-span
+      // snippet, and the agent's on-demand semantic recall. See
+      // docs/agentic-search-overview.md. Windows are an enhancement, not a
+      // prerequisite: if the fresh embed fails (e.g. OpenAI unavailable), index
+      // the doc WITHOUT windows rather than failing the whole media write — a
+      // later reindex backfills them.
+      let windows: Awaited<ReturnType<typeof embedWindows>> = [];
+      try {
+        windows = await embedWindows(
+          buildWindows(
+            paragraphs.map((p) => ({
+              order: p.order,
+              start: p.start,
+              end: p.end,
+              text: p.text,
+            })),
+          ),
+          documentId,
+        );
+      } catch (err) {
+        log.warn(
+          {
+            context: {
+              error: err instanceof Error ? err.message : String(err),
+            },
+          },
+          'Window embedding failed; indexing without windows',
+        );
+      }
+
       return {
         index: 'lc_media_v1',
         id: documentId,
@@ -375,6 +409,24 @@ async function getDocument(
               embedding: p.embedding,
             };
           }),
+          // Story-run spans (see above). `paras` are stored inline (mapping
+          // marks them `enabled: false`) so a winning window can render as one
+          // contiguous passage without a second lookup.
+          windows: windows.map((w) => ({
+            startOrder: w.startOrder,
+            endOrder: w.endOrder,
+            start: w.start,
+            end: w.end,
+            embedding: w.embedding,
+            // Fresh object literals (not the named InParagraph type) so the
+            // structure satisfies escapeDocument's JsonValue constraint.
+            paras: w.paras.map((p) => ({
+              order: p.order,
+              start: p.start,
+              end: p.end,
+              text: p.text,
+            })),
+          })),
         }),
       };
     }

@@ -11,10 +11,6 @@ import {
   runMediaHybridSearch,
   topMatchStartSeconds,
 } from '@letschurch/opensearch';
-import {
-  createEmbeddingsTracked,
-  EMBED_MODEL,
-} from '@letschurch/temporal/util/llm';
 import { tool } from 'ai';
 import { and, eq, gte, isNull, lte, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -25,6 +21,7 @@ import {
   resolveChannelSlugs,
 } from '@/trpc/search/channels';
 import logger from '@/util/logger';
+import { getQueryEmbeddingCached } from '@/util/query-embed';
 
 import { sanitizeSourceText } from '../sanitize';
 
@@ -211,13 +208,12 @@ export async function runAgentMediaSearch({
         }
       : null;
 
-  const embed = await createEmbeddingsTracked({
-    model: EMBED_MODEL,
-    input: query,
-    tracking: { activity: 'agentSearchEmbedQuery' },
-  });
-  const queryVector = embed.data[0]?.embedding ?? null;
-  if (!queryVector) {
+  // Shares the warm-embed cache with the instant search box (keyed by the
+  // normalized query), so a query the user just searched embeds once.
+  let queryVector: number[];
+  try {
+    queryVector = await getQueryEmbeddingCached(query, 'agentSearchEmbedQuery');
+  } catch {
     moduleLogger.warn('Failed to embed agent search query');
     return { results: [], total: 0, queryVector: null };
   }
