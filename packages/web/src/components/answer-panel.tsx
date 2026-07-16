@@ -60,13 +60,21 @@ function cleanupPartialCitations(text: string): string {
   return text.replace(/\s*\[upload:[^\]]*$/, '').replace(/\s*\[\s*\]/g, '');
 }
 
-// Turn a complete tool cite token `[upload:<id>@<sec>]` into a markdown link to
-// the media moment. Used for dig-path answers, whose agent cites sources it
-// discovered (which aren't in the up-front numbered `sources` chip map).
-function linkifyUploadCitations(md: string): string {
+// Turn a complete tool cite token `[upload:<id>@<sec>]` into an inline citation.
+// Used for dig-path answers, whose agent cites sources it discovered. When the
+// upload's metadata has arrived (the 's' channel merged it into `sources`), emit
+// the numbered `[N](#lc-cite-N)` form so it renders as a hover-preview citation
+// badge (avatar + title) and shows in the chip row — matching the cheap path.
+// Until then (or on a hydrate miss) fall back to a plain link to the moment.
+function linkifyUploadCitations(md: string, sources: AnswerSource[]): string {
   return md.replace(
     /\[upload:([A-Za-z0-9]+)@(\d+)\]/g,
-    (_full, id: string, sec: string) => `[source](/media/${id}#t=${sec})`,
+    (_full, id: string, sec: string) => {
+      const i = sources.findIndex((s) => s.id === id);
+      return i === -1
+        ? `[source](/media/${id}#t=${sec})`
+        : `[${i + 1}](#lc-cite-${i + 1})`;
+    },
   );
 }
 
@@ -97,8 +105,8 @@ function parseStream(raw: string): {
     return { answer: cleanupPartialCitations(body), reasoning: '', sources };
   }
 
-  // Dig path: walk CHANNEL_MARK-delimited segments, routing each to reasoning
-  // or answer by its leading channel byte.
+  // Dig path: walk CHANNEL_MARK-delimited segments, routing each to reasoning,
+  // answer, or discovered-sources by its leading channel byte.
   let reasoning = '';
   let answer = '';
   for (const seg of body.split(CHANNEL_MARK)) {
@@ -107,6 +115,28 @@ function parseStream(raw: string): {
     const text = seg.slice(1);
     if (channel === 'r') reasoning += text;
     else if (channel === 'a') answer += text;
+    else if (channel === 's') {
+      // Sources the detective discovered + cited (JSON AnswerSource[]). Merge,
+      // deduping by id — the up-front block is empty on the live dig path, so
+      // these are how [upload:…] citations resolve to chips.
+      try {
+        const parsed: unknown = JSON.parse(text);
+        if (Array.isArray(parsed)) {
+          for (const s of parsed as AnswerSource[]) {
+            if (
+              s &&
+              typeof s.id === 'string' &&
+              !sources.some((x) => x.id === s.id)
+            ) {
+              sources.push(s);
+            }
+          }
+        }
+      } catch {
+        // A partial 's' segment (JSON split across network chunks) — it's the
+        // trailing bytes and completes on a later read; skip until then.
+      }
+    }
   }
   return {
     answer: cleanupPartialCitations(answer),
@@ -149,14 +179,23 @@ function pickCitedSources(
   sources: AnswerSource[],
 ): AnswerSource[] {
   const cited = new Set<number>();
-  const re = /\[(\d+(?:\s*,\s*\d+)*)\](?!\()/g;
-  let m: RegExpExecArray | null = re.exec(answer);
+  // Cheap path: numbered [N] / [N, M] markers.
+  const numRe = /\[(\d+(?:\s*,\s*\d+)*)\](?!\()/g;
+  let m: RegExpExecArray | null = numRe.exec(answer);
   while (m !== null) {
     for (const part of m[1].split(',')) {
       const n = Number(part.trim());
       if (n >= 1 && n <= sources.length) cited.add(n);
     }
-    m = re.exec(answer);
+    m = numRe.exec(answer);
+  }
+  // Dig path: [upload:id@sec] tokens — resolve the id to its source index.
+  const upRe = /\[upload:([A-Za-z0-9]+)@\d+\]/g;
+  m = upRe.exec(answer);
+  while (m !== null) {
+    const i = sources.findIndex((s) => s.id === m?.[1]);
+    if (i !== -1) cited.add(i + 1);
+    m = upRe.exec(answer);
   }
   return sources.filter((_, i) => cited.has(i + 1));
 }
@@ -623,7 +662,7 @@ export function AnswerCard({
     [],
   );
   const renderedAnswer = linkifyCitations(
-    linkifyUploadCitations(answer),
+    linkifyUploadCitations(answer, sources),
     sources.length,
   );
 

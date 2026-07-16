@@ -675,14 +675,79 @@ Cite every claim with the tool-provided [upload:...] tokens. If the library genu
 
             const digStream = new ReadableStream<Uint8Array>({
               async start(controller) {
-                // Sources block first (the pre-retrieved chips). Dig cites the
-                // sources it DISCOVERS inline via [upload:...] tokens, which the
-                // client resolves to media links.
+                // Empty up-front sources block: the dig cites the sources it
+                // DISCOVERS inline via [upload:id@sec] tokens, which aren't known
+                // until the loop runs. As those tokens stream we hydrate each and
+                // push it on the 's' channel (below) so the client resolves the
+                // citation to a real source badge + chip. (The pre-retrieved
+                // `sources` are prompt context only — they carry no citation
+                // tokens, so the model never cites them.)
                 controller.enqueue(
-                  encoder.encode(JSON.stringify(sources) + SOURCES_DELIMITER),
+                  encoder.encode(JSON.stringify([]) + SOURCES_DELIMITER),
                 );
                 let answerText = '';
                 let reasoningText = '';
+
+                // Sources the model actually cited, hydrated (avatar + title +
+                // thumbnail) for the chips. Populated from the [upload:id@sec]
+                // tokens as the answer streams; `seenSourceIds` dedupes so each
+                // upload hydrates once. Best-effort: a hydrate miss just leaves
+                // the bare [source] link.
+                const digSources: AnswerSource[] = [];
+                const seenSourceIds = new Set<string>();
+                // In-flight hydrations, awaited before close so a late enqueue
+                // never lands on a closed controller.
+                const flushes: Array<Promise<void>> = [];
+                const CITE_RE = /\[upload:([1-9A-HJ-NP-Za-km-z]+)@(\d+)\]/g;
+                const flushNewSources = async () => {
+                  const pending: Array<{ outId: string; sec: number }> = [];
+                  for (const m of answerText.matchAll(CITE_RE)) {
+                    const outId = m[1];
+                    if (seenSourceIds.has(outId)) continue;
+                    seenSourceIds.add(outId);
+                    pending.push({ outId, sec: Number(m[2]) });
+                  }
+                  if (pending.length === 0) return;
+                  const withInternal = pending
+                    .map((p) => {
+                      try {
+                        return { ...p, intId: IncomingIdSchema.parse(p.outId) };
+                      } catch {
+                        return null;
+                      }
+                    })
+                    .filter((x): x is NonNullable<typeof x> => x !== null);
+                  if (withInternal.length === 0) return;
+                  let hydrated: Awaited<ReturnType<typeof hydrateUploads>>;
+                  try {
+                    hydrated = await hydrateUploads(
+                      withInternal.map((p) => p.intId),
+                    );
+                  } catch {
+                    return;
+                  }
+                  const byOut = new Map(hydrated.map((h) => [h.id, h]));
+                  const fresh: AnswerSource[] = [];
+                  for (const p of withInternal) {
+                    const h = byOut.get(p.outId);
+                    if (!h) continue;
+                    const src: AnswerSource = {
+                      id: p.outId,
+                      title: h.title ?? null,
+                      channelName: h.channel.name ?? null,
+                      avatarUrl: h.channel.avatarUrl,
+                      thumbnailUrl: h.thumbnailUrl,
+                      startSeconds: p.sec,
+                    };
+                    fresh.push(src);
+                    digSources.push(src);
+                  }
+                  if (fresh.length > 0) {
+                    controller.enqueue(
+                      encoder.encode(channelChunk('s', JSON.stringify(fresh))),
+                    );
+                  }
+                };
                 const emitReasoning = (line: string) => {
                   reasoningText += (reasoningText ? '\n' : '') + line;
                   controller.enqueue(
@@ -726,6 +791,12 @@ Cite every claim with the tool-provided [upload:...] tokens. If the library genu
                         controller.enqueue(
                           encoder.encode(channelChunk('a', part.text)),
                         );
+                        // Hydrate + stream any newly-completed [upload:…]
+                        // citation so its badge/chip resolves close behind the
+                        // token. Tracked (not fire-and-forget) so it's awaited
+                        // before close; the sync seenSourceIds guard keeps
+                        // concurrent flushes from double-adding an id.
+                        flushes.push(flushNewSources());
                         break;
                       case 'error':
                         moduleLogger.warn(
@@ -748,6 +819,13 @@ Cite every claim with the tool-provided [upload:...] tokens. If the library genu
                     'Error reading dig stream; closing with partial answer',
                   );
                 }
+                // Drain in-flight hydrations, then a final sweep for any
+                // citation completed in the last delta (the loop may have
+                // broken before its flush ran) — all before close, so no
+                // enqueue lands on a closed controller.
+                await Promise.allSettled(flushes);
+                await flushNewSources();
+
                 controller.close();
                 void reader.cancel();
 
@@ -788,11 +866,18 @@ Cite every claim with the tool-provided [upload:...] tokens. If the library genu
                 }
 
                 if (answerText.trim().length > 0) {
-                  await recordAnswer(answerText, sources);
-                  void cacheAnswer(sources, answerText, reasoningText || null);
+                  // Persist the DISCOVERED (cited) sources, not the pre-retrieved
+                  // ones — so a cache replay streams them up front and the
+                  // [upload:…] citations resolve to chips without the 's' channel.
+                  await recordAnswer(answerText, digSources);
+                  void cacheAnswer(
+                    digSources,
+                    answerText,
+                    reasoningText || null,
+                  );
                 }
                 moduleLogger.info(
-                  { context: { sources: sources.length } },
+                  { context: { sources: digSources.length } },
                   'Dig answer stream finished',
                 );
               },

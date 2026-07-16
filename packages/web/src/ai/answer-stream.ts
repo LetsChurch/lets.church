@@ -8,9 +8,13 @@
 // The <body> is EITHER plain answer markdown (the cheap answer/overview path) OR,
 // on the detective "dig" path, a sequence of channel-tagged segments so the
 // reasoning stream and the settled answer can be rendered separately. Each
-// segment is `CHANNEL_MARK + ('r' | 'a') + text` — 'r' = reasoning (server-
-// authored, from observable tool calls), 'a' = answer. The client detects the
-// dig shape by the presence of CHANNEL_MARK; without it the body is plain answer.
+// segment is `CHANNEL_MARK + ('r' | 'a' | 's') + text` — 'r' = reasoning (server-
+// authored, from observable tool calls), 'a' = answer, 's' = a JSON `AnswerSource[]`
+// of sources the detective DISCOVERED and cited inline (the up-front sources block
+// can't hold these — they aren't known until the loop runs), which the client
+// merges so each `[upload:…]` citation resolves to a real source badge/chip. The
+// client detects the dig shape by the presence of CHANNEL_MARK; without it the
+// body is plain answer.
 
 export const SOURCES_DELIMITER = String.fromCharCode(0x1e);
 
@@ -18,8 +22,9 @@ export const SOURCES_DELIMITER = String.fromCharCode(0x1e);
 // the record separator it can't appear in markdown, so it splits cleanly.
 export const CHANNEL_MARK = String.fromCharCode(0x1f);
 
-// 'r' = reasoning (the loop's narrated searching/pivoting), 'a' = answer.
-export type StreamChannel = 'r' | 'a';
+// 'r' = reasoning (the loop's narrated searching/pivoting), 'a' = answer,
+// 's' = discovered-source metadata (JSON AnswerSource[]) the client merges.
+export type StreamChannel = 'r' | 'a' | 's';
 
 /** Frame a channel-tagged chunk for the dig-path body. */
 export function channelChunk(channel: StreamChannel, text: string): string {
