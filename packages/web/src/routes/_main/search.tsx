@@ -300,6 +300,13 @@ const _trendingSearches = [
   'Christian disagreement on parenting',
 ];
 
+// When the instant (BM25-only) list returns at most this many results for a
+// free-text query, treat it as empty/sparse and fire the semantic fallback
+// (`deep: true`). Verbose natural-language queries whose content words are a
+// minority of their tokens can't clear the retriever's term-overlap floor and
+// land here; the deep pass embeds the query and surfaces matches by meaning.
+const DEEP_FALLBACK_MAX_RESULTS = 2;
+
 const emptyArray: ReadonlyArray<unknown> = [];
 const emptyStrings: ReadonlyArray<string> = [];
 const emptyMatchedChannels: ReadonlyArray<{ slug: string; name: string }> = [];
@@ -326,6 +333,40 @@ function SearchResultsSkeleton() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// Shown while the semantic-fallback pass is in flight: the instant lexical list
+// came back empty/sparse, so we're pulling in related results by meaning. Purely
+// a loading affordance — it's replaced by the deep results (or the empty state)
+// the moment the fallback resolves. Wording deliberately avoids "search by
+// meaning" so it doesn't read as the answer panel's manual "Dig deeper — search
+// by meaning" button (a different surface: that re-runs the AI answer agent).
+function FindingRelated() {
+  return (
+    <div className="text-muted flex items-center gap-3 rounded-lg border border-white/10 px-4 py-3 text-sm">
+      <svg
+        className="size-4 shrink-0 animate-spin text-orange-400"
+        viewBox="0 0 24 24"
+        fill="none"
+        aria-hidden="true"
+      >
+        <circle
+          className="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          strokeWidth="4"
+        />
+        <path
+          className="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 0 1 8-8V0C5.37 0 0 5.37 0 12h4z"
+        />
+      </svg>
+      <span>Few keyword matches — finding related results…</span>
     </div>
   );
 }
@@ -371,11 +412,19 @@ function SearchResults({ q }: { q: string }) {
           .join(', ')
           .trim();
 
+  const getNextPageParam = (lastPage: unknown) => {
+    if (lastPage && typeof lastPage === 'object' && 'nextCursor' in lastPage) {
+      return (lastPage as { nextCursor: number | null }).nextCursor;
+    }
+    return null;
+  };
+
+  // ── Fast pass: the instant, BM25-only list (no query embed, no kNN). ────────
   const {
-    data: searchData,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
+    data: fastData,
+    fetchNextPage: fastFetchNextPage,
+    hasNextPage: fastHasNextPage,
+    isFetchingNextPage: fastIsFetchingNextPage,
     isPending,
     isPlaceholderData,
   } = useInfiniteQuery({
@@ -392,16 +441,7 @@ function SearchResults({ q }: { q: string }) {
       dateLte: dateEnd,
       skipLogging,
     }),
-    getNextPageParam: (lastPage) => {
-      if (
-        lastPage &&
-        typeof lastPage === 'object' &&
-        'nextCursor' in lastPage
-      ) {
-        return lastPage.nextCursor;
-      }
-      return null;
-    },
+    getNextPageParam,
     initialPageParam: 0,
     // Changing a filter (channel, date, sort) re-keys this query. Keep the
     // previous results + facets on screen while the new ones load instead of
@@ -411,9 +451,71 @@ function SearchResults({ q }: { q: string }) {
     placeholderData: keepPreviousData,
   });
 
-  // Search-log id + faceted channels come back on page 0 of the hybrid search.
-  const firstPage = searchData?.pages?.[0];
-  const searchLogId = firstPage?.searchLogId ?? null;
+  const fastFirstPage = fastData?.pages?.[0];
+  const fastMediaCount = fastFirstPage?.mediaCount ?? 0;
+  // The fast pass has SETTLED for this exact query (not a kept-previous
+  // placeholder from the last query/filter) — the gate for firing the fallback.
+  const fastSettled = !isPlaceholderData && fastFirstPage != null;
+
+  // ── Semantic fallback: only when the instant list came back empty/sparse for
+  // a free-text query (facet-only browses have no text to embed). The deep pass
+  // embeds the query and runs the full hybrid path, surfacing matches by meaning
+  // that the BM25 term-overlap floor rejected. Enabled lazily so we never pay the
+  // embed / kNN cold-graph tail on the hot path — only for the queries that need it.
+  const wantDeep =
+    q.trim().length > 0 &&
+    fastSettled &&
+    fastMediaCount <= DEEP_FALLBACK_MAX_RESULTS;
+
+  const {
+    data: deepData,
+    fetchNextPage: deepFetchNextPage,
+    hasNextPage: deepHasNextPage,
+    isFetchingNextPage: deepIsFetchingNextPage,
+    isPending: deepIsPending,
+  } = useInfiniteQuery({
+    ...trpc.search.hybridSearch.infiniteQueryOptions({
+      q,
+      channelSlugs,
+      bibleRefs,
+      bibleBooks,
+      speakers,
+      limit: 20,
+      sort,
+      dateRange,
+      dateGte: dateStart,
+      dateLte: dateEnd,
+      skipLogging,
+      deep: true,
+    }),
+    getNextPageParam,
+    initialPageParam: 0,
+    enabled: wantDeep,
+    // No keepPreviousData: on a new query the deep cache must reset to undefined
+    // (not show the prior query's deep hits) until this query's fallback resolves.
+  });
+
+  const deepFirstPage = deepData?.pages?.[0];
+  // Deep results supersede the sparse lexical list once they're in with ≥1 hit.
+  const showDeep =
+    wantDeep && deepFirstPage != null && deepFirstPage.items.length > 0;
+  // "Digging deeper": the fallback is wanted but its first page hasn't landed yet.
+  const digging = wantDeep && deepIsPending;
+
+  // The active result set + pagination controls: deep when it superseded the
+  // sparse lexical list, else the fast lexical list.
+  const searchData = showDeep ? deepData : fastData;
+  const firstPage = showDeep ? deepFirstPage : fastFirstPage;
+  const fetchNextPage = showDeep ? deepFetchNextPage : fastFetchNextPage;
+  const hasNextPage = showDeep ? deepHasNextPage : fastHasNextPage;
+  const isFetchingNextPage = showDeep
+    ? deepIsFetchingNextPage
+    : fastIsFetchingNextPage;
+
+  // The search-log id ALWAYS comes from the fast pass — the deep pass re-runs the
+  // same query and deliberately doesn't log (so no duplicate row), returning a
+  // null id. The answer panel + searchMeta attach to this one row.
+  const searchLogId = fastFirstPage?.searchLogId ?? null;
   const facetedChannels = firstPage?.facetedChannels ?? [];
   const facetedSpeakers = firstPage?.facetedSpeakers ?? emptySpeakers;
   const facetedVerses = firstPage?.facetedVerses ?? emptyVerses;
@@ -427,10 +529,10 @@ function SearchResults({ q }: { q: string }) {
   // initial hydrated load where data is already present.)
   const settledQRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!isPlaceholderData && firstPage != null) {
+    if (fastSettled) {
       settledQRef.current = q;
     }
-  }, [isPlaceholderData, firstPage, q]);
+  }, [fastSettled, q]);
   const loadingResults =
     isPending || (isPlaceholderData && settledQRef.current !== q);
 
@@ -664,7 +766,10 @@ function SearchResults({ q }: { q: string }) {
             />
           ) : null}
 
-          {mediaCount > 0 ? (
+          {/* Suppress the count while digging: the sparse lexical count (e.g.
+              "1 result") is about to be replaced by the fuller deep count, and
+              flashing the old number first reads as a glitch. */}
+          {mediaCount > 0 && !digging ? (
             <p className="text-muted text-sm">
               {mediaCount.toLocaleString()}{' '}
               {mediaCount === 1 ? 'result' : 'results'}
@@ -685,7 +790,13 @@ function SearchResults({ q }: { q: string }) {
               {items.map((item) => (
                 <Result key={item.id} item={item} />
               ))}
+              {/* Sparse lexical hits are visible above; the fallback is still
+                  searching by meaning for more. */}
+              {digging ? <FindingRelated /> : null}
             </div>
+          ) : digging ? (
+            // No lexical hits at all yet — the fallback is the only thing running.
+            <FindingRelated />
           ) : (
             <EmptyState
               emptyTitle="There are no matches"

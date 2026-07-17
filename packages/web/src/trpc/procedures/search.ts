@@ -84,6 +84,17 @@ const hybridSearchSchema = z.object({
   limit: z.number().min(1).max(50).default(20),
   cursor: z.number().min(0).default(0),
   skipLogging: z.boolean().optional().default(false),
+  // Semantic-fallback pass. The instant list is BM25-only (no query embed, no
+  // kNN — see the retriever); a verbose natural-language query whose content
+  // words are a minority of its tokens can't clear the `minimum_should_match`
+  // floor and returns nothing (e.g. "WWUTT Q&A Jehovah's Witness episode
+  // number"). When the lexical pass comes back empty/sparse, the client re-fires
+  // with `deep: true`: we embed the query and run the full hybrid path (whose
+  // doc-summary kNN clause is NOT gated by the term-overlap floor), so
+  // semantically-relevant media surface even with no keyword overlap. Never on
+  // the hot path — only as a client-driven fallback, with a visible "digging
+  // deeper" state. Deep passes don't log (the lexical pass owns the log row).
+  deep: z.boolean().optional().default(false),
 });
 
 // Map the UI's coarse date-range bucket to an absolute publishedAt range.
@@ -307,6 +318,7 @@ export const searchProcedures = {
         limit,
         cursor,
         skipLogging,
+        deep,
       } = input;
 
       const channelIds =
@@ -439,6 +451,19 @@ export const searchProcedures = {
       const quoteList =
         quotes && quotes.length > 0 ? quotes : extractQuotedPhrases(q);
 
+      // Deep (semantic-fallback) pass: embed the query so `runMediaHybridSearch`
+      // takes the full hybrid path (doc-summary kNN + exact-cosine rerank),
+      // surfacing media the BM25 `minimum_should_match` gate rejected. Warm from
+      // the shared query-embed cache (the search bar / answer panel usually
+      // warmed it already). If the embed fails, degrade to the lexical path
+      // (queryVector stays null) rather than erroring the whole search.
+      const queryVector =
+        deep && q.trim().length > 0
+          ? await getQueryEmbeddingCached(q, 'searchDeepFallback').catch(
+              () => null,
+            )
+          : null;
+
       // Instant results are LEXICAL (BM25) only — no query embed, no doc-summary
       // kNN, no cosine rerank, and no kNN relevance probe. The query's semantics
       // are served by the AI overview (the answer panel embeds + digs on its own,
@@ -459,6 +484,9 @@ export const searchProcedures = {
           from: cursor,
           size: limit,
           sort: hybridSort,
+          // Present only on the deep fallback pass → hybrid path; null keeps the
+          // instant list a pure-BM25 query (no embed, no kNN, no cold-graph tail).
+          queryVector: queryVector ?? undefined,
           // Surface (nearly) all of a video's lexical matches under "show more".
           innerHitsSize: 25,
         }),
@@ -537,7 +565,14 @@ export const searchProcedures = {
       let searchLogId: string | null = null;
       try {
         const isAdmin = ctx.session?.appUser?.role === 'ADMIN';
-        if (q.trim().length > 0 && cursor === 0 && !(skipLogging && isAdmin)) {
+        // The deep fallback re-runs the SAME user query; the lexical pass already
+        // logged it, so skip logging here to avoid a duplicate row.
+        if (
+          q.trim().length > 0 &&
+          cursor === 0 &&
+          !deep &&
+          !(skipLogging && isAdmin)
+        ) {
           const [row] = await db
             .insert(SearchLogEntry)
             .values({
