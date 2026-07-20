@@ -929,7 +929,14 @@ function SpeakerAssignPopover({
         )}
       />
       <Popover.Portal>
-        <Popover.Positioner side={side} align="start" sideOffset={4}>
+        {/* This popover is portaled out of the z-50 full-screen dialog. Keep it
+            in a higher layer so the dialog popup/backdrop cannot cover it. */}
+        <Popover.Positioner
+          side={side}
+          align="start"
+          sideOffset={4}
+          className="z-[60]"
+        >
           <Popover.Popup className="border-fancy-pants w-75 overflow-hidden rounded-lg bg-white shadow-xl transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:bg-zinc-900">
             <div className="p-2">
               {/* The detected diarization label is surfaced only here — once
