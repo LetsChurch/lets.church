@@ -49,6 +49,9 @@ const source = (
 const overviewSources = [
   source('AbC123', 'Seeded source', 12),
   source('AbC123', 'Seeded source', 98),
+  source('GhI789', 'Third source', 30),
+  source('JkL012', 'Fourth source', 45),
+  source('MnO345', 'Fifth source', 60),
 ];
 const overviewRaw =
   `${JSON.stringify(overviewSources)}${SOURCES_DELIMITER}` +
@@ -134,6 +137,28 @@ export const SeededFollowUpAndSourceRail: Story = {
     const overviewSources = within(overviewSourceSection);
     expect(overviewSources.getByText('0:12')).toBeInTheDocument();
     expect(overviewSources.getByText('1:38')).toBeInTheDocument();
+    expect(
+      within(
+        overviewSources.getByTestId('dig-deeper-visible-sources'),
+      ).getAllByText(/source/i),
+    ).toHaveLength(3);
+    expect(overviewSources.queryByTestId('dig-deeper-source-panel')).toBeNull();
+    expect(
+      getComputedStyle(overviewSources.getByTestId('dig-deeper-source-fade'))
+        .maskImage,
+    ).not.toBe('none');
+
+    const sourceToggle = overviewSources.getByRole('button', {
+      name: 'Show 2 more sources',
+    });
+    expect(sourceToggle).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(sourceToggle);
+    expect(sourceToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(
+      within(overviewSources.getByTestId('dig-deeper-source-panel')).getByText(
+        'Fifth source',
+      ),
+    ).toBeInTheDocument();
 
     const scrollRoot = canvas.getByTestId('story-scroll-root');
     const composer = canvas.getByTestId('dig-deeper-composer');

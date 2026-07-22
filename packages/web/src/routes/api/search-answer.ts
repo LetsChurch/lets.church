@@ -384,7 +384,9 @@ export const Route = createFileRoute('/api/search-answer')({
         // v2 -> v3: the payload gained an optional `reasoning` field (dig path)
         // and the gate can now route a query to the detective loop, so old
         // v2 entries (answer-only, non-dig) must not be replayed as dig answers.
-        const answerCacheKey = `search-answer:v3:${SEARCH_AGENT_MODEL}:${new Date()
+        // Bumped v3 -> v4 when the assistant identity became Wendell so cached
+        // generic model identities are not replayed after the prompt change.
+        const answerCacheKey = `search-answer:v4:${SEARCH_AGENT_MODEL}:${new Date()
           .toISOString()
           .slice(0, 10)}:${filterSig}:${parsed.query.trim()}`;
         const cacheAnswer = (

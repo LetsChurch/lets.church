@@ -1,4 +1,9 @@
-import { IconArrowUp, IconSparkles } from '@tabler/icons-react';
+import { Collapsible } from '@base-ui/react/collapsible';
+import {
+  IconArrowUp,
+  IconChevronDown,
+  IconSparkles,
+} from '@tabler/icons-react';
 import { createFileRoute, useLocation } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
@@ -125,13 +130,66 @@ function SourceCard({ source }: { source: AnswerSource }) {
 }
 
 function SourceRail({ sources }: { sources: AnswerSource[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const visibleSources = sources.slice(0, 3);
+  const additionalSources = sources.slice(3);
+
   return (
     <MediaPreviewScope side="left">
-      <div className="flex flex-col gap-2">
-        {sources.map((s) => (
-          <SourceCard key={answerSourceKey(s)} source={s} />
-        ))}
-      </div>
+      <Collapsible.Root open={expanded} onOpenChange={setExpanded}>
+        <div
+          data-testid="dig-deeper-visible-sources"
+          className="flex flex-col gap-2"
+        >
+          {visibleSources.map((source) => (
+            <SourceCard key={answerSourceKey(source)} source={source} />
+          ))}
+        </div>
+
+        {additionalSources.length > 0 ? (
+          <>
+            {!expanded ? (
+              <div
+                data-testid="dig-deeper-source-fade"
+                aria-hidden="true"
+                inert
+                className="pointer-events-none mt-2 max-h-28 overflow-hidden [mask-image:linear-gradient(to_bottom,black_0%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_0%,transparent_100%)]"
+              >
+                <div className="flex flex-col gap-2">
+                  {additionalSources.slice(0, 2).map((source) => (
+                    <SourceCard key={answerSourceKey(source)} source={source} />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <Collapsible.Panel
+              data-testid="dig-deeper-source-panel"
+              className="h-[var(--collapsible-panel-height)] overflow-hidden opacity-100 transition-[height,opacity] duration-300 ease-out data-[ending-style]:h-0 data-[ending-style]:opacity-0 data-[starting-style]:h-0 data-[starting-style]:opacity-0"
+            >
+              <div className="flex flex-col gap-2 pt-2">
+                {additionalSources.map((source) => (
+                  <SourceCard key={answerSourceKey(source)} source={source} />
+                ))}
+              </div>
+            </Collapsible.Panel>
+
+            <Collapsible.Trigger
+              type="button"
+              className="text-muted hover:text-primary group mt-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+            >
+              {expanded
+                ? 'Show fewer sources'
+                : `Show ${additionalSources.length} more ${additionalSources.length === 1 ? 'source' : 'sources'}`}
+              <IconChevronDown
+                size={14}
+                aria-hidden="true"
+                className="transition-transform duration-200 group-data-[panel-open]:rotate-180"
+              />
+            </Collapsible.Trigger>
+          </>
+        ) : null}
+      </Collapsible.Root>
     </MediaPreviewScope>
   );
 }
