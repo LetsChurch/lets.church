@@ -5,7 +5,10 @@ import {
   SOURCES_DELIMITER,
   terminalChunk,
 } from './answer-stream';
-import { requestDigDeeperTurn } from './dig-deeper-client';
+import {
+  DigDeeperRateLimitError,
+  requestDigDeeperTurn,
+} from './dig-deeper-client';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -78,6 +81,23 @@ describe('requestDigDeeperTurn', () => {
       status: 'error',
       reason: 'timeout',
     });
+  });
+
+  it('surfaces rate limits with the server retry delay', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response('Slow down', {
+            status: 429,
+            headers: { 'Retry-After': '23' },
+          }),
+      ),
+    );
+
+    const error = await run().catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(DigDeeperRateLimitError);
+    expect(error).toMatchObject({ retryAfterSeconds: 23 });
   });
 
   it('passes cancellation through to fetch', async () => {

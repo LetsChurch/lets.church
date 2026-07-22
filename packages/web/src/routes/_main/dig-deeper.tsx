@@ -14,6 +14,7 @@ import {
   parseAnswerStream,
 } from '@/ai/answer-stream';
 import {
+  DigDeeperRateLimitError,
   type DigDeeperTurnRequest,
   requestDigDeeperTurn,
 } from '@/ai/dig-deeper-client';
@@ -44,6 +45,7 @@ import { formatTime } from '@/util/format';
 // same wire format the search-answer dig path emits).
 type Turn = DigDeeperHistoryTurn & {
   id: string;
+  errorMessage?: string;
 };
 
 export const Route = createFileRoute('/_main/dig-deeper')({
@@ -283,13 +285,17 @@ export function DigDeeperChat({
               : turn,
           ),
         );
-      } catch {
+      } catch (error) {
         setTurns((prev) =>
           prev.map((turn) =>
             turn.id === id
               ? {
                   ...turn,
                   status: controller.signal.aborted ? 'cancelled' : 'error',
+                  errorMessage:
+                    error instanceof DigDeeperRateLimitError
+                      ? error.message
+                      : undefined,
                 }
               : turn,
           ),
@@ -399,6 +405,7 @@ export function DigDeeperChat({
                   reasoning={reasoning}
                   sources={sources}
                   hideSourceChips
+                  errorMessage={turn.errorMessage}
                 />
               </div>
 

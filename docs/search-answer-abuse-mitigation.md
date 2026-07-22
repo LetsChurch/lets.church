@@ -1,13 +1,13 @@
-# Abuse mitigation for `/api/search-answer` (future work)
+# Abuse mitigation for the AI answer endpoints
 
-Status: **design only** — not yet implemented. The route currently has no rate
-limiting. This documents the intended approach so it isn't lost.
+Status: **token-bucket rate limiting implemented** for `/api/search-answer` and
+`/api/dig-deeper`; proof-of-work and a global spend cap remain future layers.
 
 ## Threat
 
-`POST /api/search-answer` is **unauthenticated** and **expensive per call**:
+The AI answer endpoints are **unauthenticated** and **expensive per call**:
 each request runs a query embedding, one or more Elasticsearch + DB tool calls,
-and a streamed LLM generation (up to `maxSteps: 8` tool turns). That makes it a
+and a streamed LLM generation (up to 12 tool turns). That makes it a
 **cost / resource DoS** lever — a script can hammer it to burn OpenRouter spend
 and saturate the agent worker — independent of prompt injection.
 
@@ -16,15 +16,15 @@ client **proof-of-work (PoW)** over Cloudflare Turnstile.
 
 ## Why PoW instead of Turnstile
 
-| | Turnstile | Proof-of-work |
-|---|---|---|
-| Dependency | Third-party (Cloudflare) | Self-contained |
-| Privacy | Sends signals to a third party | No third party |
-| UX | Usually invisible, sometimes a challenge | Invisible (runs in a worker) |
-| API/headless clients | Awkward | Works (just compute) |
-| What it measures | Bot-vs-human likelihood | Compute cost paid |
+|                      | Turnstile                                | Proof-of-work                |
+| -------------------- | ---------------------------------------- | ---------------------------- |
+| Dependency           | Third-party (Cloudflare)                 | Self-contained               |
+| Privacy              | Sends signals to a third party           | No third party               |
+| UX                   | Usually invisible, sometimes a challenge | Invisible (runs in a worker) |
+| API/headless clients | Awkward                                  | Works (just compute)         |
+| What it measures     | Bot-vs-human likelihood                  | Compute cost paid            |
 
-PoW makes each request *cost the caller something*, which directly targets the
+PoW makes each request _cost the caller something_, which directly targets the
 volumetric/cost threat. It does **not** tell bots from humans — a bot willing to
 pay the compute still passes — so it's a rate/cost control, not a bot filter.
 
@@ -50,8 +50,10 @@ pay the compute still passes — so it's a rate/cost control, not a bot filter.
 
 ## Layering (PoW is one layer, not the whole answer)
 
-- **Token-bucket rate limit** per IP and per `resourceId`/user (cheap, do this
-  first; covers most abuse without any client cost).
+- **Token-bucket rate limit** per IP and per `resourceId` (implemented). Both
+  endpoints spend from the same Valkey-backed credit buckets; deep-search and
+  chat requests cost twice as much as an ordinary overview. A bounded
+  process-local bucket takes over when Valkey is unavailable.
 - **Global token budget / spend cap** per day — hard ceiling on OpenRouter cost
   regardless of who's calling.
 - **PoW** as an adaptive second layer, mainly for anonymous / high-rate callers.
@@ -62,7 +64,7 @@ pay the compute still passes — so it's a rate/cost control, not a bot filter.
 ## Trade-offs / limits of PoW
 
 - **Weak asymmetry**: cheap to verify, but a determined attacker with many
-  cores / GPUs / a botnet still solves challenges. PoW *raises the cost*, it
+  cores / GPUs / a botnet still solves challenges. PoW _raises the cost_, it
   doesn't stop a funded adversary.
 - **Penalizes low-power devices**: mobile/battery users pay the same CPU; high
   difficulty hurts UX and accessibility. Keep baseline difficulty low.
@@ -75,12 +77,12 @@ pay the compute still passes — so it's a rate/cost control, not a bot filter.
 
 ## Integration points
 
-- New `GET /api/search-challenge` route (challenge issuance).
-- Guard at the top of the `POST /api/search-answer` handler in
-  `packages/web/src/routes/api/search-answer.ts`: verify rate limit + PoW
-  *before* constructing the agent; on failure return `429` with a fresh
-  challenge.
-- Shared counter/seen-nonce store (Redis/Upstash; in-memory LRU acceptable for a
-  single instance).
+- Implemented guards at the top of both POST handlers, before retrieval/model
+  dependencies load. Rejections return `429` plus `Retry-After`, and clients do
+  not retry deliberate throttles.
+- Shared counters live in Valkey, with bounded in-memory fallback buckets for a
+  single instance during cache outages.
+- Future: add `GET /api/search-challenge` for PoW challenge issuance and verify
+  its single-use solution alongside the existing rate limit.
 - Client solver in a Web Worker, invoked by `components/answer-panel.tsx` before
-  the `fetch`.
+  the `fetch` (future PoW layer).

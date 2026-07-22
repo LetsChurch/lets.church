@@ -32,17 +32,17 @@ const ANSWER_CACHE_TTL_SECONDS = 60 * 60 * 24;
 const DIG_STEP_BUDGET = 12;
 
 const bodySchema = z.object({
-  query: z.string().min(1),
+  query: z.string().min(1).max(1_000),
   // The parser's reformulated question (e.g. "Bible examples of grace-based
   // giving" -> "What are some Bible examples of grace-based giving?"). Used to
   // frame the generated answer + the answerability check; retrieval still runs
   // on the raw `query` to preserve recall. Falls back to `query` when absent.
-  question: z.string().optional().nullable(),
+  question: z.string().max(2_000).optional().nullable(),
   // Per search-session conversation thread (multi-turn follow-ups share it).
-  threadId: z.string().min(1),
-  // Stable per-browser id; only used for anonymous users (logged-in users are
-  // keyed by their app user id instead).
-  resourceId: z.string().min(1),
+  threadId: z.string().min(1).max(128),
+  // Stable per-browser id; paired with the client IP for anonymous abuse
+  // control. It is caller-supplied and is not treated as authentication.
+  resourceId: z.string().min(1).max(128),
   // The search_log_entry row created by hybridSearch for this query; the final
   // answer (or decline) is appended to its params. Null when logging was
   // skipped (e.g. admin inspecting logs).
@@ -205,15 +205,36 @@ export const Route = createFileRoute('/api/search-answer')({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        // TODO(abuse): this endpoint is unauthenticated and expensive per call
-        // (embedding + multi-step agent + LLM gen) — a cost-DoS vector. Add a
-        // rate-limit + adaptive proof-of-work guard here before building the
-        // agent. Design: docs/search-answer-abuse-mitigation.md.
         let parsed: z.infer<typeof bodySchema>;
         try {
           parsed = bodySchema.parse(await request.json());
         } catch {
           return new Response('Invalid request body', { status: 400 });
+        }
+
+        // Charge the shared IP + browser token buckets before loading any DB,
+        // retrieval, or model dependencies. Manual deep searches cost more than
+        // ordinary overviews because their multi-tool loop is substantially
+        // more expensive.
+        const { aiRateLimitResponse, enforceAiRateLimit } =
+          await import('@/ai/abuse-control');
+        const rateLimit = await enforceAiRateLimit({
+          headers: request.headers,
+          resourceId: parsed.resourceId,
+          kind: parsed.deepen === true ? 'search-deep' : 'search',
+        });
+        if (!rateLimit.allowed) {
+          moduleLogger.warn(
+            {
+              context: {
+                limitedBy: rateLimit.limitedBy,
+                retryAfterSeconds: rateLimit.retryAfterSeconds,
+                deep: parsed.deepen === true,
+              },
+            },
+            'Search answer request rate limited',
+          );
+          return aiRateLimitResponse(rateLimit);
         }
 
         // Single-video scope: resolve the outgoing upload id to the internal

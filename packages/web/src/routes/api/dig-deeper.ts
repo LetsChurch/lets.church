@@ -37,10 +37,10 @@ const bodySchema = z.object({
   // turn. History is client-held for now (no server persistence yet) and resent
   // each turn so follow-ups resolve pronouns/references against prior turns.
   messages: z.array(messageSchema).min(1).max(DIG_DEEPER_MAX_MESSAGES),
-  // Per-tab thread + stable per-browser id — accepted for logging / future
-  // persistence; retrieval itself doesn't depend on them.
-  threadId: z.string().min(1).optional(),
-  resourceId: z.string().min(1).optional(),
+  // Per-tab thread + stable per-browser id. The resource id participates in
+  // abuse control; neither identifier is trusted as authentication.
+  threadId: z.string().min(1).max(128),
+  resourceId: z.string().min(1).max(128),
 });
 
 const STREAM_HEADERS = {
@@ -61,9 +61,6 @@ export const Route = createFileRoute('/api/dig-deeper')({
       // cache — a follow-up like "what about infants?" is only meaningful with its
       // history, so a raw-query cache would collide across conversations.
       POST: async ({ request }) => {
-        // TODO(abuse): unauthenticated + expensive (multi-step agent per turn).
-        // Same cost-DoS surface as /api/search-answer — gate both together when
-        // the abuse mitigation lands (docs/search-answer-abuse-mitigation.md).
         let parsed: z.infer<typeof bodySchema>;
         try {
           parsed = bodySchema.parse(await request.json());
@@ -77,6 +74,28 @@ export const Route = createFileRoute('/api/dig-deeper')({
           return new Response('Last message must be from the user', {
             status: 400,
           });
+        }
+
+        // Every chat turn runs the expensive multi-tool loop, so charge the
+        // shared limiter before importing retrieval/model dependencies.
+        const { aiRateLimitResponse, enforceAiRateLimit } =
+          await import('@/ai/abuse-control');
+        const rateLimit = await enforceAiRateLimit({
+          headers: request.headers,
+          resourceId: parsed.resourceId,
+          kind: 'dig-deeper',
+        });
+        if (!rateLimit.allowed) {
+          moduleLogger.warn(
+            {
+              context: {
+                limitedBy: rateLimit.limitedBy,
+                retryAfterSeconds: rateLimit.retryAfterSeconds,
+              },
+            },
+            'Dig Deeper request rate limited',
+          );
+          return aiRateLimitResponse(rateLimit);
         }
 
         // Server-only deps loaded lazily so pg / opensearch / db never enter the

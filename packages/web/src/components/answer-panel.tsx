@@ -413,7 +413,12 @@ function ReasoningTrail({
   );
 }
 
-export type AnswerStatus = 'streaming' | 'done' | 'error' | 'cancelled';
+export type AnswerStatus =
+  | 'streaming'
+  | 'done'
+  | 'error'
+  | 'cancelled'
+  | 'rate-limited';
 
 // The first (cache-miss) request streams while the server generates the answer;
 // on a flaky/slow connection that stream can drop even though the server finishes
@@ -425,16 +430,15 @@ const ANSWER_MAX_ATTEMPTS = 3;
 const ANSWER_RETRY_MS = 1500;
 
 // POST the answer request and stream the response into `onText`, retrying on a
-// dropped/failed stream. Returns true once a response streamed to completion,
-// false if every attempt failed (→ the caller shows the decline). Aborts are not
-// failures. `onText` is reset to '' at the start of each attempt.
-async function streamAnswerWithRetry(
+// dropped/failed stream. Returns the final UI status; deliberate throttles do
+// not retry. `onText` is reset to '' at the start of each attempt.
+export async function streamAnswerWithRetry(
   body: unknown,
   signal: AbortSignal,
   onText: (text: string) => void,
-): Promise<boolean> {
+): Promise<'done' | 'error' | 'rate-limited'> {
   for (let attempt = 0; attempt < ANSWER_MAX_ATTEMPTS; attempt++) {
-    if (signal.aborted) return false;
+    if (signal.aborted) return 'error';
     onText('');
     try {
       const res = await fetch('/api/search-answer', {
@@ -443,6 +447,9 @@ async function streamAnswerWithRetry(
         body: JSON.stringify(body),
         signal,
       });
+      // A deliberate throttle is not a flaky stream. Retrying it would create
+      // more load and make the user wait through pointless backoff cycles.
+      if (res.status === 429) return 'rate-limited';
       if (res.ok && res.body) {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
@@ -453,16 +460,16 @@ async function streamAnswerWithRetry(
           acc += decoder.decode(value, { stream: true });
           onText(acc);
         }
-        return true;
+        return 'done';
       }
     } catch {
-      if (signal.aborted) return false;
+      if (signal.aborted) return 'error';
     }
     if (attempt < ANSWER_MAX_ATTEMPTS - 1) {
       await new Promise((r) => setTimeout(r, ANSWER_RETRY_MS * (attempt + 1)));
     }
   }
-  return false;
+  return 'error';
 }
 
 // Isolate the markdown renderer: Streamdown parses the answer as GFM, and a
@@ -555,6 +562,7 @@ export function AnswerCard({
   heading,
   reasoning = '',
   hideSourceChips = false,
+  errorMessage,
 }: {
   status: AnswerStatus;
   answer: string;
@@ -572,6 +580,9 @@ export function AnswerCard({
   // which renders each turn's sources itself (a sticky rail on desktop, inline
   // cards on mobile) rather than as chips inside the card.
   hideSourceChips?: boolean;
+  // Optional endpoint-specific error copy, such as the retry delay supplied by
+  // the Dig Deeper rate limiter.
+  errorMessage?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
@@ -639,7 +650,13 @@ export function AnswerCard({
       <ReasoningTrail reasoning={reasoning} answerPresent={Boolean(answer)} />
       {status === 'error' ? (
         <p className="text-sm text-white/80">
-          Sorry — we couldn't generate an answer for this query.
+          {errorMessage ??
+            "Sorry — we couldn't generate an answer for this query."}
+        </p>
+      ) : status === 'rate-limited' ? (
+        <p className="text-sm text-white/80">
+          You're asking a little too quickly. Please wait a moment and try
+          again.
         </p>
       ) : status === 'cancelled' ? (
         <p className="text-sm text-white/80">Search stopped.</p>
@@ -763,7 +780,7 @@ export function AnswerPanel({
     setStatus('streaming');
 
     (async () => {
-      const ok = await streamAnswerWithRetry(
+      const result = await streamAnswerWithRetry(
         {
           query: q,
           threadId: getThreadId(),
@@ -775,7 +792,7 @@ export function AnswerPanel({
         controller.signal,
         setText,
       );
-      if (!controller.signal.aborted) setStatus(ok ? 'done' : 'error');
+      if (!controller.signal.aborted) setStatus(result);
     })();
 
     return () => controller.abort();
@@ -877,7 +894,7 @@ export function VideoAnswerPanel({
     setStatus('streaming');
 
     (async () => {
-      const ok = await streamAnswerWithRetry(
+      const result = await streamAnswerWithRetry(
         {
           query: question,
           uploadId: mediaId,
@@ -887,7 +904,7 @@ export function VideoAnswerPanel({
         controller.signal,
         setText,
       );
-      if (!controller.signal.aborted) setStatus(ok ? 'done' : 'error');
+      if (!controller.signal.aborted) setStatus(result);
     })();
 
     return () => controller.abort();
