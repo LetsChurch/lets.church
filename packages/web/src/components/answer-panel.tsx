@@ -1,4 +1,11 @@
-import { IconClockHour3, IconSearch, IconSparkles } from '@tabler/icons-react';
+import {
+  IconChevronRight,
+  IconClockHour3,
+  IconMessageCircle2,
+  IconSearch,
+  IconSparkles,
+} from '@tabler/icons-react';
+import { Link } from '@tanstack/react-router';
 import {
   Component,
   type ComponentProps,
@@ -13,8 +20,8 @@ import { Streamdown } from 'streamdown';
 
 import {
   type AnswerSource,
-  CHANNEL_MARK,
-  SOURCES_DELIMITER,
+  answerSourceKey,
+  parseAnswerStream,
 } from '@/ai/answer-stream';
 import { Avatar } from '@/components/avatar';
 import {
@@ -30,7 +37,7 @@ const useIsomorphicLayoutEffect =
 // Stable per-browser id (anonymous memory scope) + per-tab-session thread id
 // (so consecutive questions in a session share conversation memory and
 // follow-up pronouns resolve).
-function getResourceId(): string {
+export function getResourceId(): string {
   if (typeof window === 'undefined') return 'ssr';
   const KEY = 'lc-search-resource';
   let id = window.localStorage.getItem(KEY);
@@ -41,7 +48,7 @@ function getResourceId(): string {
   return id;
 }
 
-function getThreadId(): string {
+export function getThreadId(): string {
   if (typeof window === 'undefined') return 'ssr';
   const KEY = 'lc-search-thread';
   let id = window.sessionStorage.getItem(KEY);
@@ -50,14 +57,6 @@ function getThreadId(): string {
     window.sessionStorage.setItem(KEY, id);
   }
   return id;
-}
-
-// Drop a trailing PARTIAL citation token (mid-stream, before its closing `]`)
-// and stray empty brackets so neither flashes in the prose. Complete [upload:…]
-// tokens are KEPT — they're linkified to media deep-links (linkifyUploadCitations)
-// on the dig path where the agent cites sources it discovered.
-function cleanupPartialCitations(text: string): string {
-  return text.replace(/\s*\[upload:[^\]]*$/, '').replace(/\s*\[\s*\]/g, '');
 }
 
 // Turn a complete tool cite token `[upload:<id>@<sec>]` into an inline citation.
@@ -70,7 +69,10 @@ function linkifyUploadCitations(md: string, sources: AnswerSource[]): string {
   return md.replace(
     /\[upload:([A-Za-z0-9]+)@(\d+)\]/g,
     (_full, id: string, sec: string) => {
-      const i = sources.findIndex((s) => s.id === id);
+      const seconds = Number(sec);
+      const i = sources.findIndex(
+        (source) => source.id === id && source.startSeconds === seconds,
+      );
       return i === -1
         ? `[source](/media/${id}#t=${sec})`
         : `[${i + 1}](#lc-cite-${i + 1})`;
@@ -78,72 +80,10 @@ function linkifyUploadCitations(md: string, sources: AnswerSource[]): string {
   );
 }
 
-// The stream is `<JSON sources><DELIMITER><body>`. Sources lead so inline [N]
-// citations can resolve while the answer streams. The <body> is either plain
-// answer markdown (cheap path) or a sequence of channel-tagged segments
-// (`CHANNEL_MARK + 'r'|'a' + text`) on the dig path — 'r' = the reasoning
-// stream, 'a' = the answer. We detect the dig shape by CHANNEL_MARK. Until the
-// delimiter arrives the leading bytes are the sources JSON, so hold body empty.
-function parseStream(raw: string): {
-  answer: string;
-  reasoning: string;
-  sources: AnswerSource[];
-} {
-  const idx = raw.indexOf(SOURCES_DELIMITER);
-  if (idx === -1) return { answer: '', reasoning: '', sources: [] };
-  let sources: AnswerSource[] = [];
-  try {
-    const parsed = JSON.parse(raw.slice(0, idx));
-    if (Array.isArray(parsed)) sources = parsed;
-  } catch {
-    // sources block not fully received yet
-  }
-  const body = raw.slice(idx + SOURCES_DELIMITER.length);
-
-  if (!body.includes(CHANNEL_MARK)) {
-    // Cheap path: the whole body is the answer.
-    return { answer: cleanupPartialCitations(body), reasoning: '', sources };
-  }
-
-  // Dig path: walk CHANNEL_MARK-delimited segments, routing each to reasoning,
-  // answer, or discovered-sources by its leading channel byte.
-  let reasoning = '';
-  let answer = '';
-  for (const seg of body.split(CHANNEL_MARK)) {
-    if (!seg) continue;
-    const channel = seg[0];
-    const text = seg.slice(1);
-    if (channel === 'r') reasoning += text;
-    else if (channel === 'a') answer += text;
-    else if (channel === 's') {
-      // Sources the detective discovered + cited (JSON AnswerSource[]). Merge,
-      // deduping by id — the up-front block is empty on the live dig path, so
-      // these are how [upload:…] citations resolve to chips.
-      try {
-        const parsed: unknown = JSON.parse(text);
-        if (Array.isArray(parsed)) {
-          for (const s of parsed as AnswerSource[]) {
-            if (
-              s &&
-              typeof s.id === 'string' &&
-              !sources.some((x) => x.id === s.id)
-            ) {
-              sources.push(s);
-            }
-          }
-        }
-      } catch {
-        // A partial 's' segment (JSON split across network chunks) — it's the
-        // trailing bytes and completes on a later read; skip until then.
-      }
-    }
-  }
-  return {
-    answer: cleanupPartialCitations(answer),
-    reasoning: reasoning.trimEnd(),
-    sources,
-  };
-}
+// Kept as a compatibility export for callers that used the old component-local
+// parser; the protocol itself now lives in the dependency-free answer-stream
+// module and is unit tested there.
+export const parseStream = parseAnswerStream;
 
 const VISIBLE_SOURCES = 3;
 
@@ -189,11 +129,13 @@ function pickCitedSources(
     }
     m = numRe.exec(answer);
   }
-  // Dig path: [upload:id@sec] tokens — resolve the id to its source index.
-  const upRe = /\[upload:([A-Za-z0-9]+)@\d+\]/g;
+  // Dig path: [upload:id@sec] tokens — one upload can support several distinct
+  // moments, so resolve the complete (id, timestamp) identity.
+  const upRe = /\[upload:([A-Za-z0-9]+)@(\d+)\]/g;
   m = upRe.exec(answer);
   while (m !== null) {
-    const i = sources.findIndex((s) => s.id === m?.[1]);
+    const key = `${m[1]}@${Number(m[2])}`;
+    const i = sources.findIndex((source) => answerSourceKey(source) === key);
     if (i !== -1) cited.add(i + 1);
     m = upRe.exec(answer);
   }
@@ -347,7 +289,7 @@ function SourceChips({
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2">
       {visible.map((s) => (
-        <SourceChip key={s.id} s={s} onCite={onCite} />
+        <SourceChip key={answerSourceKey(s)} s={s} onCite={onCite} />
       ))}
       {hidden.length > 0 ? (
         <button
@@ -362,7 +304,7 @@ function SourceChips({
               <span className="flex -space-x-1.5">
                 {hidden.slice(0, 2).map((s) => (
                   <Avatar
-                    key={s.id}
+                    key={answerSourceKey(s)}
                     src={s.avatarUrl}
                     alt=""
                     className="size-4 shrink-0 ring-1 ring-white/25"
@@ -471,7 +413,7 @@ function ReasoningTrail({
   );
 }
 
-export type AnswerStatus = 'streaming' | 'done' | 'error';
+export type AnswerStatus = 'streaming' | 'done' | 'error' | 'cancelled';
 
 // The first (cache-miss) request streams while the server generates the answer;
 // on a flaky/slow connection that stream can drop even though the server finishes
@@ -612,6 +554,7 @@ export function AnswerCard({
   onCite,
   heading,
   reasoning = '',
+  hideSourceChips = false,
 }: {
   status: AnswerStatus;
   answer: string;
@@ -625,6 +568,10 @@ export function AnswerCard({
   // The detective (dig) loop's narrated reasoning, streamed above the answer.
   // Empty on the cheap answer/overview path.
   reasoning?: string;
+  // Suppress the built-in cited-source chip row — used by the Dig Deeper chat,
+  // which renders each turn's sources itself (a sticky rail on desktop, inline
+  // cards on mobile) rather than as chips inside the card.
+  hideSourceChips?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
@@ -694,6 +641,8 @@ export function AnswerCard({
         <p className="text-sm text-white/80">
           Sorry — we couldn't generate an answer for this query.
         </p>
+      ) : status === 'cancelled' ? (
+        <p className="text-sm text-white/80">Search stopped.</p>
       ) : answer ? (
         // One preview card for the whole answer — references re-anchor + swap
         // media instantly as you move between citations and chips.
@@ -732,10 +681,12 @@ export function AnswerCard({
               {expanded ? 'See less' : 'See more'}
             </button>
           ) : null}
-          <SourceChips
-            sources={pickCitedSources(answer, sources)}
-            onCite={onCite}
-          />
+          {hideSourceChips ? null : (
+            <SourceChips
+              sources={pickCitedSources(answer, sources)}
+              onCite={onCite}
+            />
+          )}
         </MediaPreviewScope>
       ) : reasoning ? null : (
         // The reasoning trail (when digging) is its own working indicator, so
@@ -793,8 +744,6 @@ export function AnswerPanel({
 }) {
   const [text, setText] = useState('');
   const [status, setStatus] = useState<AnswerStatus>('streaming');
-  // Bumped by the "Dig deeper" button to re-fire the request with deepen:true.
-  const [runId, setRunId] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   // Read via ref so the fetch effect (keyed on q) picks up the id without
   // re-firing when it resolves a tick after mount.
@@ -804,14 +753,6 @@ export function AnswerPanel({
   // effect (its deps are [q, ready]) — the answer follows only the pre-filled set.
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
-  // Whether THIS run should force the detective loop. A manual override, so it
-  // lives in a ref (read at fire time) not the effect deps; the button flips it
-  // and bumps `runId`. Reset whenever the query changes (declared before the
-  // fetch effect so the ref is already false when that effect runs on a new q).
-  const deepenRef = useRef(false);
-  useEffect(() => {
-    deepenRef.current = false;
-  }, [q]);
 
   useEffect(() => {
     if (!ready) return;
@@ -830,7 +771,6 @@ export function AnswerPanel({
           searchLogId: searchLogIdRef.current ?? null,
           filters: filtersRef.current ?? null,
           facetOnly,
-          deepen: deepenRef.current,
         },
         controller.signal,
         setText,
@@ -839,15 +779,17 @@ export function AnswerPanel({
     })();
 
     return () => controller.abort();
-  }, [q, ready, facetOnly, runId]);
+  }, [q, ready, facetOnly]);
 
   const { answer, reasoning, sources } = parseStream(text);
 
-  // Offer a manual "dig deeper" only once a cheap answer has settled, when the
-  // detective loop wasn't already run (no reasoning) and this isn't a facet
-  // browse. It re-fires the request forcing the loop.
-  const canDeepen =
-    status === 'done' && !reasoning && !facetOnly && Boolean(answer);
+  // Once an answer has settled (and this isn't a facet browse), offer to continue
+  // in the Dig Deeper chat — a multi-turn conversation that searches the whole
+  // library hard on every turn, seeded with this question. Shown even when the
+  // overview already auto-dug (has reasoning): the chat is a follow-up surface, so
+  // it's still useful — unlike the old in-place re-fire, which was pointless once
+  // the loop had run.
+  const canDeepen = shouldOfferDigDeeper(status, facetOnly, answer);
 
   return (
     <div>
@@ -858,20 +800,44 @@ export function AnswerPanel({
         reasoning={reasoning}
       />
       {canDeepen ? (
-        <button
-          type="button"
-          onClick={() => {
-            deepenRef.current = true;
-            setRunId((n) => n + 1);
-          }}
-          className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 transition-colors hover:text-indigo-500 dark:text-indigo-300 dark:hover:text-indigo-200"
+        <Link
+          to="/dig-deeper"
+          search={{ q }}
+          state={(previous) => ({
+            ...previous,
+            digDeeperSeed: { question: q, raw: text },
+          })}
+          className="lc-continue-in group mt-3 flex w-full items-center gap-3 rounded-2xl border border-indigo-500/15 bg-indigo-500/5 px-4 py-3 text-left transition-colors hover:border-indigo-500/30 hover:bg-indigo-500/10 dark:border-indigo-400/15 dark:bg-indigo-400/5 dark:hover:border-indigo-400/30 dark:hover:bg-indigo-400/10"
         >
-          <IconSearch size={12} aria-hidden="true" className="shrink-0" />
-          Dig deeper — search by meaning
-        </button>
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 transition-colors group-hover:bg-indigo-500/15 dark:bg-indigo-400/10 dark:text-indigo-300 dark:group-hover:bg-indigo-400/15">
+            <IconMessageCircle2 size={18} aria-hidden="true" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="text-primary block text-sm font-medium">
+              Continue in Dig Deeper
+            </span>
+            <span className="text-muted mt-0.5 block text-xs">
+              Ask a follow-up with this answer and its sources already in
+              context.
+            </span>
+          </span>
+          <IconChevronRight
+            size={17}
+            aria-hidden="true"
+            className="text-muted shrink-0 transition-transform group-hover:translate-x-0.5"
+          />
+        </Link>
       ) : null}
     </div>
   );
+}
+
+export function shouldOfferDigDeeper(
+  status: AnswerStatus,
+  facetOnly: boolean,
+  answer: string,
+): boolean {
+  return status === 'done' && !facetOnly && Boolean(answer);
 }
 
 // Per-video, per-tab-session thread so follow-up asks about the SAME video share

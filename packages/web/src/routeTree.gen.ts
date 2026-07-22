@@ -31,10 +31,12 @@ import { Route as AuthLogoutRouteImport } from './routes/auth_/logout'
 import { Route as AuthLoginRouteImport } from './routes/auth_/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth_/forgot-password'
 import { Route as ApiSearchAnswerRouteImport } from './routes/api/search-answer'
+import { Route as ApiDigDeeperRouteImport } from './routes/api/dig-deeper'
 import { Route as MainSearchRouteImport } from './routes/_main/search'
 import { Route as MainLibraryRouteImport } from './routes/_main/library'
 import { Route as MainHistoryRouteImport } from './routes/_main/history'
 import { Route as MainFollowingRouteImport } from './routes/_main/following'
+import { Route as MainDigDeeperRouteImport } from './routes/_main/dig-deeper'
 import { Route as MainDashboardRouteImport } from './routes/_main/dashboard'
 import { Route as MainChurchesRouteImport } from './routes/_main/churches'
 import { Route as MainChannelsRouteImport } from './routes/_main/channels'
@@ -229,6 +231,11 @@ const ApiSearchAnswerRoute = ApiSearchAnswerRouteImport.update({
   path: '/api/search-answer',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDigDeeperRoute = ApiDigDeeperRouteImport.update({
+  id: '/api/dig-deeper',
+  path: '/api/dig-deeper',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MainSearchRoute = MainSearchRouteImport.update({
   id: '/search',
   path: '/search',
@@ -247,6 +254,11 @@ const MainHistoryRoute = MainHistoryRouteImport.update({
 const MainFollowingRoute = MainFollowingRouteImport.update({
   id: '/following',
   path: '/following',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainDigDeeperRoute = MainDigDeeperRouteImport.update({
+  id: '/dig-deeper',
+  path: '/dig-deeper',
   getParentRoute: () => MainRoute,
 } as any)
 const MainDashboardRoute = MainDashboardRouteImport.update({
@@ -734,10 +746,12 @@ export interface FileRoutesByFullPath {
   '/channels': typeof MainChannelsRoute
   '/churches': typeof MainChurchesRoute
   '/dashboard': typeof MainDashboardRouteWithChildren
+  '/dig-deeper': typeof MainDigDeeperRoute
   '/following': typeof MainFollowingRoute
   '/history': typeof MainHistoryRoute
   '/library': typeof MainLibraryRoute
   '/search': typeof MainSearchRoute
+  '/api/dig-deeper': typeof ApiDigDeeperRoute
   '/api/search-answer': typeof ApiSearchAnswerRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
@@ -842,10 +856,12 @@ export interface FileRoutesByTo {
   '/$slug': typeof MainSlugRoute
   '/channels': typeof MainChannelsRoute
   '/churches': typeof MainChurchesRoute
+  '/dig-deeper': typeof MainDigDeeperRoute
   '/following': typeof MainFollowingRoute
   '/history': typeof MainHistoryRoute
   '/library': typeof MainLibraryRoute
   '/search': typeof MainSearchRoute
+  '/api/dig-deeper': typeof ApiDigDeeperRoute
   '/api/search-answer': typeof ApiSearchAnswerRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
@@ -955,10 +971,12 @@ export interface FileRoutesById {
   '/_main/channels': typeof MainChannelsRoute
   '/_main/churches': typeof MainChurchesRoute
   '/_main/dashboard': typeof MainDashboardRouteWithChildren
+  '/_main/dig-deeper': typeof MainDigDeeperRoute
   '/_main/following': typeof MainFollowingRoute
   '/_main/history': typeof MainHistoryRoute
   '/_main/library': typeof MainLibraryRoute
   '/_main/search': typeof MainSearchRoute
+  '/api/dig-deeper': typeof ApiDigDeeperRoute
   '/api/search-answer': typeof ApiSearchAnswerRoute
   '/auth_/forgot-password': typeof AuthForgotPasswordRoute
   '/auth_/login': typeof AuthLoginRoute
@@ -1069,10 +1087,12 @@ export interface FileRouteTypes {
     | '/channels'
     | '/churches'
     | '/dashboard'
+    | '/dig-deeper'
     | '/following'
     | '/history'
     | '/library'
     | '/search'
+    | '/api/dig-deeper'
     | '/api/search-answer'
     | '/auth/forgot-password'
     | '/auth/login'
@@ -1177,10 +1197,12 @@ export interface FileRouteTypes {
     | '/$slug'
     | '/channels'
     | '/churches'
+    | '/dig-deeper'
     | '/following'
     | '/history'
     | '/library'
     | '/search'
+    | '/api/dig-deeper'
     | '/api/search-answer'
     | '/auth/forgot-password'
     | '/auth/login'
@@ -1289,10 +1311,12 @@ export interface FileRouteTypes {
     | '/_main/channels'
     | '/_main/churches'
     | '/_main/dashboard'
+    | '/_main/dig-deeper'
     | '/_main/following'
     | '/_main/history'
     | '/_main/library'
     | '/_main/search'
+    | '/api/dig-deeper'
     | '/api/search-answer'
     | '/auth_/forgot-password'
     | '/auth_/login'
@@ -1397,6 +1421,7 @@ export interface RootRouteChildren {
   MaintenanceRoute: typeof MaintenanceRoute
   DotwellKnownJwksDotjsonRoute: typeof DotwellKnownJwksDotjsonRoute
   DotwellKnownOpenidConfigurationRoute: typeof DotwellKnownOpenidConfigurationRoute
+  ApiDigDeeperRoute: typeof ApiDigDeeperRoute
   ApiSearchAnswerRoute: typeof ApiSearchAnswerRoute
   EmbedChurchesRoute: typeof EmbedChurchesRoute
   InvitationsAcceptRoute: typeof InvitationsAcceptRoute
@@ -1574,6 +1599,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSearchAnswerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/dig-deeper': {
+      id: '/api/dig-deeper'
+      path: '/api/dig-deeper'
+      fullPath: '/api/dig-deeper'
+      preLoaderRoute: typeof ApiDigDeeperRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_main/search': {
       id: '/_main/search'
       path: '/search'
@@ -1600,6 +1632,13 @@ declare module '@tanstack/react-router' {
       path: '/following'
       fullPath: '/following'
       preLoaderRoute: typeof MainFollowingRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/dig-deeper': {
+      id: '/_main/dig-deeper'
+      path: '/dig-deeper'
+      fullPath: '/dig-deeper'
+      preLoaderRoute: typeof MainDigDeeperRouteImport
       parentRoute: typeof MainRoute
     }
     '/_main/dashboard': {
@@ -2369,6 +2408,7 @@ interface MainRouteChildren {
   MainChannelsRoute: typeof MainChannelsRoute
   MainChurchesRoute: typeof MainChurchesRoute
   MainDashboardRoute: typeof MainDashboardRouteWithChildren
+  MainDigDeeperRoute: typeof MainDigDeeperRoute
   MainFollowingRoute: typeof MainFollowingRoute
   MainHistoryRoute: typeof MainHistoryRoute
   MainLibraryRoute: typeof MainLibraryRoute
@@ -2389,6 +2429,7 @@ const MainRouteChildren: MainRouteChildren = {
   MainChannelsRoute: MainChannelsRoute,
   MainChurchesRoute: MainChurchesRoute,
   MainDashboardRoute: MainDashboardRouteWithChildren,
+  MainDigDeeperRoute: MainDigDeeperRoute,
   MainFollowingRoute: MainFollowingRoute,
   MainHistoryRoute: MainHistoryRoute,
   MainLibraryRoute: MainLibraryRoute,
@@ -2431,6 +2472,7 @@ const rootRouteChildren: RootRouteChildren = {
   MaintenanceRoute: MaintenanceRoute,
   DotwellKnownJwksDotjsonRoute: DotwellKnownJwksDotjsonRoute,
   DotwellKnownOpenidConfigurationRoute: DotwellKnownOpenidConfigurationRoute,
+  ApiDigDeeperRoute: ApiDigDeeperRoute,
   ApiSearchAnswerRoute: ApiSearchAnswerRoute,
   EmbedChurchesRoute: EmbedChurchesRoute,
   InvitationsAcceptRoute: InvitationsAcceptRoute,

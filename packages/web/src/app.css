@@ -150,9 +150,13 @@
 .lc-answer-in {
   animation: lc-answer-in 300ms cubic-bezier(0.22, 0.61, 0.24, 1) both;
 }
+.lc-continue-in {
+  animation: lc-answer-in 400ms cubic-bezier(0.22, 0.61, 0.24, 1) both;
+}
 @media (prefers-reduced-motion: reduce) {
   .lc-thought-in,
-  .lc-answer-in {
+  .lc-answer-in,
+  .lc-continue-in {
     animation: none;
   }
 }

@@ -1,7 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 
-import { type AnswerSource, SOURCES_DELIMITER } from '@/ai/answer-stream';
+import {
+  type AnswerSource,
+  answerSourceKey,
+  SOURCES_DELIMITER,
+} from '@/ai/answer-stream';
 import { IncomingIdSchema } from '@/schemas/common';
 import logger from '@/util/logger';
 
@@ -690,11 +694,11 @@ Cite every claim with the tool-provided [upload:...] tokens. If the library genu
 
                 // Sources the model actually cited, hydrated (avatar + title +
                 // thumbnail) for the chips. Populated from the [upload:id@sec]
-                // tokens as the answer streams; `seenSourceIds` dedupes so each
-                // upload hydrates once. Best-effort: a hydrate miss just leaves
-                // the bare [source] link.
+                // tokens as the answer streams. Keep distinct timestamps from
+                // the same upload as distinct citations; a hydrate miss just
+                // leaves the bare [source] link.
                 const digSources: AnswerSource[] = [];
-                const seenSourceIds = new Set<string>();
+                const seenSourceKeys = new Set<string>();
                 // In-flight hydrations, awaited before close so a late enqueue
                 // never lands on a closed controller.
                 const flushes: Array<Promise<void>> = [];
@@ -703,9 +707,14 @@ Cite every claim with the tool-provided [upload:...] tokens. If the library genu
                   const pending: Array<{ outId: string; sec: number }> = [];
                   for (const m of answerText.matchAll(CITE_RE)) {
                     const outId = m[1];
-                    if (seenSourceIds.has(outId)) continue;
-                    seenSourceIds.add(outId);
-                    pending.push({ outId, sec: Number(m[2]) });
+                    const sec = Number(m[2]);
+                    const key = answerSourceKey({
+                      id: outId,
+                      startSeconds: sec,
+                    });
+                    if (seenSourceKeys.has(key)) continue;
+                    seenSourceKeys.add(key);
+                    pending.push({ outId, sec });
                   }
                   if (pending.length === 0) return;
                   const withInternal = pending
@@ -781,10 +790,9 @@ Cite every claim with the tool-provided [upload:...] tokens. If the library genu
                         );
                         break;
                       case 'reasoning-delta':
-                        reasoningText += part.text;
-                        controller.enqueue(
-                          encoder.encode(channelChunk('r', part.text)),
-                        );
+                        // Provider reasoning is private model deliberation, not a
+                        // public progress channel. Observable tool statuses above
+                        // are the only reasoning we expose.
                         break;
                       case 'text-delta':
                         answerText += part.text;
@@ -794,8 +802,8 @@ Cite every claim with the tool-provided [upload:...] tokens. If the library genu
                         // Hydrate + stream any newly-completed [upload:…]
                         // citation so its badge/chip resolves close behind the
                         // token. Tracked (not fire-and-forget) so it's awaited
-                        // before close; the sync seenSourceIds guard keeps
-                        // concurrent flushes from double-adding an id.
+                        // before close; the sync seenSourceKeys guard keeps
+                        // concurrent flushes from double-adding one moment.
                         flushes.push(flushNewSources());
                         break;
                       case 'error':
