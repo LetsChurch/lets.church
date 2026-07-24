@@ -394,8 +394,8 @@ just lb-up             # all of the above, in order
 
 ### 2.4 Test accounts & inputs
 
-- Sign-in user (seeded in the web IdP): **`admin` / `password`** (dev Turnstile
-  uses Cloudflare test keys that always pass).
+- Sign-in user (seeded in the web IdP): **`admin` / `password`** (dev hCaptcha
+  uses hCaptcha test keys that always pass).
 - Sample references: `John 3:16`, `Matthew 1:23` (has a cross-reference),
   `Genesis 1:1` (Hebrew), `Psalm 23`, `Romans 8`.
 - Sample phrases: `fruit of the Spirit`, `love your enemies`, `do not be anxious`.

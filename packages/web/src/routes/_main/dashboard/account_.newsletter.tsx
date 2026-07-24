@@ -51,11 +51,13 @@ function NewsletterPage() {
         } else {
           setError(data.error || 'Failed to subscribe. Please try again.');
           setSuccess(null);
+          form.setFieldValue('hcaptchaToken', '');
         }
       },
       onError: () => {
         setError('Unable to subscribe at this time. Please try again later.');
         setSuccess(null);
+        form.setFieldValue('hcaptchaToken', '');
       },
     }),
   );
@@ -63,14 +65,14 @@ function NewsletterPage() {
   const form = useAppForm({
     defaultValues: {
       email: '',
-      turnstileToken: '',
+      hcaptchaToken: '',
     },
     onSubmit: async ({ value }) => {
       setSuccess(null);
       setError(null);
       subscribeMutation.mutate({
         email: value.email,
-        turnstileToken: value.turnstileToken,
+        hcaptchaToken: value.hcaptchaToken,
       });
     },
   });
@@ -136,9 +138,9 @@ function NewsletterPage() {
               </form.AppField>
 
               <div className="flex flex-col items-center gap-4">
-                <form.AppField name="turnstileToken">
+                <form.AppField name="hcaptchaToken">
                   {(field) => (
-                    <field.TurnstileField siteKey={env.TURNSTILE_SITE_KEY} />
+                    <field.HCaptchaField sitekey={env.HCAPTCHA_SITE_KEY} />
                   )}
                 </form.AppField>
               </div>

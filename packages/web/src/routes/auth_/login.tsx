@@ -58,6 +58,7 @@ function LoginRoute() {
       onSuccess: async (data) => {
         if (data.error) {
           setError(data.error);
+          form.setFieldValue('hcaptchaToken', '');
           return;
         }
 
@@ -82,6 +83,10 @@ function LoginRoute() {
         await router.invalidate();
         await router.navigate({ to: '/' });
       },
+      onError: () => {
+        setError('Error signing in, please try again!');
+        form.setFieldValue('hcaptchaToken', '');
+      },
     }),
   );
 
@@ -89,7 +94,7 @@ function LoginRoute() {
     defaultValues: {
       id: '',
       password: '',
-      turnstile: '',
+      hcaptchaToken: '',
     },
     validators: {
       onSubmit: loginSchema,
@@ -143,9 +148,9 @@ function LoginRoute() {
           </form.AppField>
 
           <div className="flex flex-col items-center gap-4">
-            <form.AppField name="turnstile">
+            <form.AppField name="hcaptchaToken">
               {(field) => (
-                <field.TurnstileField siteKey={env.TURNSTILE_SITE_KEY} />
+                <field.HCaptchaField sitekey={env.HCAPTCHA_SITE_KEY} />
               )}
             </form.AppField>
           </div>

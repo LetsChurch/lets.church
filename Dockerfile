@@ -63,7 +63,6 @@ COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml tsconfig.json package.json ./
 COPY --chown=nodeapp:nodeapp packages/ ./packages/
 ENV NODE_ENV=production
 ENV VITE_SENTRY_DSN=https://d641f53f296e7abff3b6b269a4decfc4@o387306.ingest.sentry.io/4506108399190016
-ENV VITE_TURNSTILE_SITEKEY=0x4AAAAAAAEHhiqW0UvoZTf3
 RUN pnpm run -r build
 
 FROM build AS dev

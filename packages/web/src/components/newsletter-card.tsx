@@ -1,7 +1,7 @@
-import { Turnstile } from '@marsidev/react-turnstile';
+import HCaptcha from '@hcaptcha/react-hcaptcha';
 import { IconMail } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { useTRPC } from '@/trpc/react';
@@ -10,9 +10,10 @@ export function NewsletterCard() {
   const trpc = useTRPC();
   const [opened, setOpened] = useState(false);
   const [email, setEmail] = useState('');
-  const [turnstileToken, setTurnstileToken] = useState('');
+  const [hcaptchaToken, setHCaptchaToken] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const captchaRef = useRef<HCaptcha>(null);
 
   const { data: env } = useQuery(trpc.common.getClientEnv.queryOptions());
 
@@ -26,7 +27,7 @@ export function NewsletterCard() {
           setTimeout(() => {
             setOpened(false);
             setEmail('');
-            setTurnstileToken('');
+            setHCaptchaToken('');
             setSuccess(false);
           }, 2000);
         } else {
@@ -49,12 +50,20 @@ export function NewsletterCard() {
     setOpened(true);
   };
 
-  const handleTurnstileSubmit = () => {
-    if (!turnstileToken) {
+  const handleCaptchaSubmit = () => {
+    if (!hcaptchaToken) {
       setError('Please complete the verification.');
       return;
     }
-    subscribeMutation.mutate({ email, turnstileToken });
+    subscribeMutation.mutate(
+      { email, hcaptchaToken },
+      {
+        onSettled: () => {
+          setHCaptchaToken('');
+          captchaRef.current?.resetCaptcha();
+        },
+      },
+    );
   };
 
   return (
@@ -97,7 +106,8 @@ export function NewsletterCard() {
           setOpened(open);
           if (!open) {
             setError(null);
-            setTurnstileToken('');
+            setHCaptchaToken('');
+            captchaRef.current?.resetCaptcha();
           }
         }}
       >
@@ -123,18 +133,21 @@ export function NewsletterCard() {
                   ) : null}
 
                   <div className="flex justify-center">
-                    {env?.TURNSTILE_SITE_KEY ? (
-                      <Turnstile
-                        siteKey={env.TURNSTILE_SITE_KEY}
-                        onSuccess={setTurnstileToken}
+                    {env?.HCAPTCHA_SITE_KEY ? (
+                      <HCaptcha
+                        ref={captchaRef}
+                        sitekey={env.HCAPTCHA_SITE_KEY}
+                        onVerify={setHCaptchaToken}
+                        onExpire={() => setHCaptchaToken('')}
+                        onError={() => setHCaptchaToken('')}
                       />
                     ) : null}
                   </div>
 
                   <button
                     type="button"
-                    onClick={handleTurnstileSubmit}
-                    disabled={!turnstileToken || subscribeMutation.isPending}
+                    onClick={handleCaptchaSubmit}
+                    disabled={!hcaptchaToken || subscribeMutation.isPending}
                     className="w-full rounded-lg bg-emerald-600 px-4 py-2 font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {subscribeMutation.isPending

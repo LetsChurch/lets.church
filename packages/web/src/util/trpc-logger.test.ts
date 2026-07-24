@@ -13,14 +13,16 @@ describe('redactSensitive', () => {
   it('redacts nested sensitive keys (the tRPC context.input case)', () => {
     expect(
       redactSensitive({
-        context: { input: { email: 'a@b.com', password: 'p', turnstile: 't' } },
+        context: {
+          input: { email: 'a@b.com', password: 'p', hcaptchaToken: 't' },
+        },
       }),
     ).toEqual({
       context: {
         input: {
           email: 'a@b.com',
           password: '[REDACTED]',
-          turnstile: '[REDACTED]',
+          hcaptchaToken: '[REDACTED]',
         },
       },
     });
@@ -36,11 +38,11 @@ describe('redactSensitive', () => {
 
   it('matches keys case-insensitively', () => {
     expect(
-      redactSensitive({ Password: 'x', TOKEN: 'y', Turnstile: 'z' }),
+      redactSensitive({ Password: 'x', TOKEN: 'y', HCaptcha: 'z' }),
     ).toEqual({
       Password: '[REDACTED]',
       TOKEN: '[REDACTED]',
-      Turnstile: '[REDACTED]',
+      HCaptcha: '[REDACTED]',
     });
   });
 

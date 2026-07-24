@@ -28,7 +28,7 @@ const moduleLogger = logger.child({
 
 const clientEnv = z
   .object({
-    TURNSTILE_SITE_KEY: z.string(),
+    HCAPTCHA_SITE_KEY: z.string(),
     MAPBOX_MAP_TOKEN: z.string(),
     MAPBOX_SEARCHBOX_TOKEN: z.string(),
   })

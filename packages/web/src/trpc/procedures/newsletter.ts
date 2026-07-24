@@ -2,9 +2,9 @@ import { db } from '@letschurch/db';
 import { getRequest } from '@tanstack/react-start/server';
 import { z } from 'zod';
 
+import { validateHCaptcha } from '@/util/hcaptcha';
 import logger from '@/util/logger';
 import { getClientIpAddress } from '@/util/request-ip';
-import { validateTurnstile } from '@/util/turnstile';
 
 import { publicProcedure } from '../trpc';
 
@@ -20,7 +20,7 @@ const moduleLogger = logger.child({
 
 const subscribeSchema = z.object({
   email: z.email(),
-  turnstileToken: z.string().min(1),
+  hcaptchaToken: z.string().min(1),
 });
 
 type SubscribeResponse = { success: true } | { success: false; error: string };
@@ -30,15 +30,15 @@ export const newsletterProcedures = {
     .input(subscribeSchema)
     .mutation(
       async ({
-        input: { email, turnstileToken },
+        input: { email, hcaptchaToken },
       }): Promise<SubscribeResponse> => {
         const clientIp = getClientIpAddress(getRequest().headers);
 
         moduleLogger.info('Newsletter subscription attempt');
 
-        // Validate Turnstile
+        // Validate hCaptcha
         try {
-          const isValid = await validateTurnstile(turnstileToken, clientIp);
+          const isValid = await validateHCaptcha(hcaptchaToken, clientIp);
           if (!isValid) {
             moduleLogger.warn(
               {
@@ -61,7 +61,7 @@ export const newsletterProcedures = {
                 error: e instanceof Error ? e.message : String(e),
               },
             },
-            'Turnstile validation error',
+            'hCaptcha validation error',
           );
           return {
             success: false,

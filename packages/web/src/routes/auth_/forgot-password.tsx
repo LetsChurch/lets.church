@@ -36,6 +36,7 @@ function ForgotPasswordRoute() {
       onSuccess: async (data) => {
         if (data.error) {
           setError(data.error);
+          form.setFieldValue('hcaptchaToken', '');
           return;
         }
 
@@ -43,6 +44,7 @@ function ForgotPasswordRoute() {
       },
       onError: () => {
         setError('Error processing request, please try again!');
+        form.setFieldValue('hcaptchaToken', '');
       },
     }),
   );
@@ -50,12 +52,12 @@ function ForgotPasswordRoute() {
   const form = useAppForm({
     defaultValues: {
       identifier: '',
-      turnstile: '',
+      hcaptchaToken: '',
     },
     validators: {
       onChange: z.object({
         identifier: z.string().min(1, 'Email or username is required'),
-        turnstile: z.string().min(1, 'Please complete the CAPTCHA'),
+        hcaptchaToken: z.string().min(1, 'Please complete the CAPTCHA'),
       }),
     },
     onSubmit: async ({ value }) => {
@@ -116,9 +118,9 @@ function ForgotPasswordRoute() {
             </form.AppField>
 
             <div className="flex flex-col items-center gap-4">
-              <form.AppField name="turnstile">
+              <form.AppField name="hcaptchaToken">
                 {(field) => (
-                  <field.TurnstileField siteKey={env.TURNSTILE_SITE_KEY} />
+                  <field.HCaptchaField sitekey={env.HCAPTCHA_SITE_KEY} />
                 )}
               </form.AppField>
             </div>

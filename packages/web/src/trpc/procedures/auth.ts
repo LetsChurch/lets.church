@@ -11,12 +11,12 @@ import {
   resetPassword,
 } from '@/temporal';
 import { BannedError, login } from '@/util/auth';
+import { validateHCaptcha } from '@/util/hcaptcha';
 import { createSessionJwt, parsePasswordResetJwt } from '@/util/jwt';
 import logger from '@/util/logger';
 import { getClientIpAddress } from '@/util/request-ip';
 import { generateResetPasswordEmail } from '@/util/reset-password-email';
 import { SESSION_COOKIE, sessionCookieOptions } from '@/util/session-cookie';
-import { validateTurnstile } from '@/util/turnstile';
 import testPassword from '@/util/zxcvbn';
 
 import { anonProcedure } from '../trpc';
@@ -33,7 +33,7 @@ export const authProcedures = {
     .input(loginSchema)
     .mutation(
       async ({
-        input: { id, password, turnstile },
+        input: { id, password, hcaptchaToken },
       }): Promise<HandleLoginResponse> => {
         const clientIp = getClientIpAddress(getRequest().headers);
 
@@ -42,7 +42,7 @@ export const authProcedures = {
           'Login attempt',
         );
 
-        if (!(await validateTurnstile(turnstile, clientIp))) {
+        if (!(await validateHCaptcha(hcaptchaToken, clientIp))) {
           moduleLogger.warn(
             { context: { userId: id, clientIp } },
             'Login failed - invalid CAPTCHA',
@@ -108,7 +108,7 @@ export const authProcedures = {
         'Registration attempt',
       );
 
-      if (!(await validateTurnstile(value.turnstile, clientIp))) {
+      if (!(await validateHCaptcha(value.hcaptchaToken, clientIp))) {
         moduleLogger.warn(
           {
             context: {
@@ -200,7 +200,7 @@ export const authProcedures = {
     .input(
       z.object({
         identifier: z.string().min(1),
-        turnstile: z.string(),
+        hcaptchaToken: z.string().min(1),
       }),
     )
     .mutation(
@@ -216,7 +216,7 @@ export const authProcedures = {
           'Password reset request',
         );
 
-        if (!(await validateTurnstile(input.turnstile, clientIp))) {
+        if (!(await validateHCaptcha(input.hcaptchaToken, clientIp))) {
           moduleLogger.warn(
             {
               context: {

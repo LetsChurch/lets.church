@@ -23,7 +23,7 @@ const SENSITIVE_SUBSTRINGS = [
   'password',
   'secret',
   'token',
-  'turnstile',
+  'hcaptcha',
   'authorization',
   'cookie',
   'credential',

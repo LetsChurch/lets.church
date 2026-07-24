@@ -12,7 +12,7 @@ export const usernameSchema = z
 export const loginSchema = z.object({
   id: z.string().min(1, 'Email or Username is required'),
   password: z.string().min(1, 'Password is required'),
-  turnstile: z.string(),
+  hcaptchaToken: z.string().min(1, 'Please complete the CAPTCHA'),
 });
 
 export const registerSchema = z.object({
@@ -36,5 +36,5 @@ export const registerSchema = z.object({
       'You must agree to the Terms and Conditions',
     ),
   subscribeNewsletter: z.boolean(),
-  turnstile: z.string(),
+  hcaptchaToken: z.string().min(1, 'Please complete the CAPTCHA'),
 });

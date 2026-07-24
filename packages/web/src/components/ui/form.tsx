@@ -1,6 +1,6 @@
-import { Turnstile } from '@marsidev/react-turnstile';
+import HCaptcha from '@hcaptcha/react-hcaptcha';
 import { createFormHook, createFormHookContexts } from '@tanstack/react-form';
-import type { ComponentProps } from 'react';
+import { useEffect, useRef, type ComponentProps } from 'react';
 
 import { Button } from './button';
 import { LoadingOverlay } from './feedback';
@@ -211,11 +211,30 @@ function DatePickerField(props: {
   );
 }
 
-function TurnstileField(
-  props: Omit<ComponentProps<typeof Turnstile>, 'onSuccess'>,
+function HCaptchaField(
+  props: Omit<
+    ComponentProps<typeof HCaptcha>,
+    'onVerify' | 'onExpire' | 'onError'
+  >,
 ) {
   const field = useFieldContext<string>();
-  return <Turnstile {...props} onSuccess={field.setValue} />;
+  const captchaRef = useRef<HCaptcha>(null);
+
+  useEffect(() => {
+    if (!field.state.value) {
+      captchaRef.current?.resetCaptcha();
+    }
+  }, [field.state.value]);
+
+  return (
+    <HCaptcha
+      {...props}
+      ref={captchaRef}
+      onVerify={(token) => field.setValue(token)}
+      onExpire={() => field.setValue('')}
+      onError={() => field.setValue('')}
+    />
+  );
 }
 
 function SubmitButton({ label }: { label: string }) {
@@ -252,7 +271,7 @@ export const { useAppForm } = createFormHook({
     MultiSelectField,
     RadioGroupField,
     DatePickerField,
-    TurnstileField,
+    HCaptchaField,
   },
   formComponents: {
     SubmitButton,

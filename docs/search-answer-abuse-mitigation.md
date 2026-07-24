@@ -12,17 +12,17 @@ and a streamed LLM generation (up to 12 tool turns). That makes it a
 and saturate the agent worker — independent of prompt injection.
 
 Goal: throttle abusive volume **without a third-party CAPTCHA**. We prefer
-client **proof-of-work (PoW)** over Cloudflare Turnstile.
+client **proof-of-work (PoW)** over hCaptcha.
 
-## Why PoW instead of Turnstile
+## Why PoW instead of hCaptcha
 
-|                      | Turnstile                                | Proof-of-work                |
-| -------------------- | ---------------------------------------- | ---------------------------- |
-| Dependency           | Third-party (Cloudflare)                 | Self-contained               |
-| Privacy              | Sends signals to a third party           | No third party               |
-| UX                   | Usually invisible, sometimes a challenge | Invisible (runs in a worker) |
-| API/headless clients | Awkward                                  | Works (just compute)         |
-| What it measures     | Bot-vs-human likelihood                  | Compute cost paid            |
+|                      | hCaptcha                              | Proof-of-work                |
+| -------------------- | ------------------------------------- | ---------------------------- |
+| Dependency           | Third-party                           | Self-contained               |
+| Privacy              | Sends signals to a third party        | No third party               |
+| UX                   | Usually a checkbox, then a challenge  | Invisible (runs in a worker) |
+| API/headless clients | Awkward                               | Works (just compute)         |
+| What it measures     | Bot-vs-human likelihood               | Compute cost paid            |
 
 PoW makes each request _cost the caller something_, which directly targets the
 volumetric/cost threat. It does **not** tell bots from humans — a bot willing to
@@ -59,7 +59,7 @@ pay the compute still passes — so it's a rate/cost control, not a bot filter.
 - **PoW** as an adaptive second layer, mainly for anonymous / high-rate callers.
 - **`maxSteps` cap** (already 8) bounds per-request fan-out.
 - **Auth requirement** for heavy/automated use, longer term.
-- Keep Turnstile available as an emergency fallback for egregious abuse.
+- Keep hCaptcha available as an emergency fallback for egregious abuse.
 
 ## Trade-offs / limits of PoW
 

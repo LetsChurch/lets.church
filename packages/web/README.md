@@ -28,8 +28,8 @@ The following variables are parsed at **module load time** and must be present f
 | `IMGPROXY_KEY`           | imgproxy signing key (hex)              |
 | `IMGPROXY_SALT`          | imgproxy signing salt (hex)             |
 | `WEB_URL`                | Public URL of this app (used in emails) |
-| `TURNSTILE_SITE_KEY`     | Cloudflare Turnstile site key           |
-| `TURNSTILE_SECRET_KEY`   | Cloudflare Turnstile secret key         |
+| `HCAPTCHA_SITE_KEY`      | hCaptcha site key                       |
+| `HCAPTCHA_SECRET_KEY`    | hCaptcha secret key                     |
 | `MAPBOX_MAP_TOKEN`       | Mapbox token for map display            |
 | `MAPBOX_SEARCHBOX_TOKEN` | Mapbox token for the search box         |
 | `ZXCVBN_MINIMUM_SCORE`   | Minimum password strength score (0–4)   |

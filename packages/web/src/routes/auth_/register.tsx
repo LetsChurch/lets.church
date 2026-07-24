@@ -53,6 +53,7 @@ function RouteComponent() {
       onSuccess: async (data) => {
         if (data.error) {
           setError(data.error);
+          form.setFieldValue('hcaptchaToken', '');
           return;
         }
 
@@ -75,6 +76,7 @@ function RouteComponent() {
           return;
         }
         setError('Error registering a new account, please try again!');
+        form.setFieldValue('hcaptchaToken', '');
       },
     }),
   );
@@ -88,7 +90,7 @@ function RouteComponent() {
       agreeToTheology: false,
       agreeToTerms: false,
       subscribeNewsletter: true,
-      turnstile: '',
+      hcaptchaToken: '',
     },
     validators: {
       onSubmit: registerSchema,
@@ -220,9 +222,9 @@ function RouteComponent() {
           </form.AppField>
 
           <div className="flex flex-col items-center gap-4">
-            <form.AppField name="turnstile">
+            <form.AppField name="hcaptchaToken">
               {(field) => (
-                <field.TurnstileField siteKey={env.TURNSTILE_SITE_KEY} />
+                <field.HCaptchaField sitekey={env.HCAPTCHA_SITE_KEY} />
               )}
             </form.AppField>
           </div>

@@ -30,7 +30,7 @@ describe('registerSchema username', () => {
     agreeToTheology: true,
     agreeToTerms: true,
     subscribeNewsletter: false,
-    turnstile: 'token',
+    hcaptchaToken: 'token',
   };
 
   it('rejects an email-shaped username (shadowing guard)', () => {
