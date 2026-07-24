@@ -127,18 +127,6 @@ function ReprocessPage() {
   const [allProcessingScope, setAllProcessingScope] =
     useState<ProcessingScope>('transcode');
 
-  // Per-card toggle for OpenAI Batch API mode. When checked, each
-  // group of 100 uploads' LLM stages (summarize/annotate/embed)
-  // submit via the Batch API at 50% cost with a ~24h SLA; live
-  // path otherwise. Only meaningful for scopes that include
-  // transcribe.
-  // Batch defaults ON for the mass-reprocess flows (the migration and
-  // all-uploads) where the 50% cost saving matters most; the targeted
-  // by-channel flow defaults OFF.
-  const [noParagraphsViaBatch, setNoParagraphsViaBatch] = useState(true);
-  const [channelViaBatch, setChannelViaBatch] = useState(false);
-  const [allViaBatch, setAllViaBatch] = useState(true);
-
   // Skip-probe defaults on everywhere (including the migration): reuse
   // the probe captured on the first run instead of re-downloading +
   // re-probing. Falls back to a live probe per-upload when none stored.
@@ -214,7 +202,9 @@ function ReprocessPage() {
         <Title order={1}>Reprocess Media</Title>
         <Text c="dimmed">
           Re-run uploads through the current pipeline. Jobs run at lowest
-          priority and won't disrupt normal uploads.
+          priority and won't disrupt normal uploads. When transcribing, LLM
+          stages use OpenAI Batch; each sequential batch stage may take up to 24
+          hours.
         </Text>
       </div>
 
@@ -253,16 +243,6 @@ function ReprocessPage() {
           />
 
           <Checkbox
-            label="Use OpenAI Batch API (50% cost, ~24h SLA per group of 100)"
-            checked={noParagraphsViaBatch}
-            onChange={(checked) => setNoParagraphsViaBatch(checked)}
-            disabled={
-              status.noParagraphsStatus === 'running' ||
-              noParagraphsProcessingScope === 'transcode'
-            }
-          />
-
-          <Checkbox
             label="Skip probe (reuse stored metadata)"
             checked={noParagraphsSkipProbe}
             onChange={(checked) => setNoParagraphsSkipProbe(checked)}
@@ -296,7 +276,6 @@ function ReprocessPage() {
                 startMutation.mutate({
                   scope: { kind: 'no_paragraphs' },
                   processingScope: noParagraphsProcessingScope,
-                  viaBatch: noParagraphsViaBatch,
                   skipProbe: noParagraphsSkipProbe,
                 })
               }
@@ -335,16 +314,6 @@ function ReprocessPage() {
             onChange={(v) => setChannelProcessingScope(v as ProcessingScope)}
             data={processingScopeData}
             disabled={channelStatus === 'running'}
-          />
-
-          <Checkbox
-            label="Use OpenAI Batch API (50% cost, ~24h SLA per group of 100)"
-            checked={channelViaBatch}
-            onChange={(checked) => setChannelViaBatch(checked)}
-            disabled={
-              channelStatus === 'running' ||
-              channelProcessingScope === 'transcode'
-            }
           />
 
           <Checkbox
@@ -421,7 +390,6 @@ function ReprocessPage() {
                 startMutation.mutate({
                   scope: { kind: 'channel', channelSlug: channelSlug.trim() },
                   processingScope: channelProcessingScope,
-                  viaBatch: channelViaBatch,
                   skipProbe: channelSkipProbe,
                   videoOnly:
                     channelVideoOnly && transcodes(channelProcessingScope),
@@ -462,16 +430,6 @@ function ReprocessPage() {
             onChange={(v) => setAllProcessingScope(v as ProcessingScope)}
             data={processingScopeData}
             disabled={status.allStatus === 'running'}
-          />
-
-          <Checkbox
-            label="Use OpenAI Batch API (50% cost, ~24h SLA per group of 100)"
-            checked={allViaBatch}
-            onChange={(checked) => setAllViaBatch(checked)}
-            disabled={
-              status.allStatus === 'running' ||
-              allProcessingScope === 'transcode'
-            }
           />
 
           <Checkbox
@@ -542,7 +500,6 @@ function ReprocessPage() {
                 startMutation.mutate({
                   scope: { kind: 'all' },
                   processingScope: allProcessingScope,
-                  viaBatch: allViaBatch,
                   skipProbe: allSkipProbe,
                   videoOnly: allVideoOnly && transcodes(allProcessingScope),
                   dateRange: toDateRange(allDateStart, allDateEnd),

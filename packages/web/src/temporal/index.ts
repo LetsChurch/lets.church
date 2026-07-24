@@ -1300,7 +1300,6 @@ export async function startReprocess(
   scope: ReprocessScope,
   processingScope: 'transcode' | 'transcribe' | 'everything' = 'transcode',
   options: {
-    viaBatch?: boolean;
     skipProbe?: boolean;
     dateStart?: string;
     dateEnd?: string;
@@ -1321,7 +1320,6 @@ export async function startReprocess(
       processingScope,
       null,
       {
-        viaBatch: options.viaBatch ?? false,
         skipProbe: options.skipProbe ?? true,
         dateStart: options.dateStart,
         dateEnd: options.dateEnd,

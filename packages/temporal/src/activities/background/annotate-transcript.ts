@@ -15,6 +15,11 @@ import {
   ANNOTATE_MODEL,
   createChatCompletionTracked,
 } from '../../util/llm';
+import {
+  ANNOTATION_COMPLETION_FLOOR,
+  ANNOTATION_CHARS_PER_TOKEN,
+  getAnnotationCompletenessGuard,
+} from '../../util/llm-completion-guards';
 import { resolveCostUsd } from '../../util/llm-pricing';
 import logger from '../../util/logger';
 
@@ -731,30 +736,6 @@ function buildModelToOriginalMap(original: string, model: string): Int32Array {
 // in one response are each found.
 const HEADING_RE = /^#{1,3}[ \t]+(.+?)[ \t]*$/gm;
 
-// Silent-summarization guard tuning. See the docstring at the call site
-// (search for SILENT_SUMMARY_FLOOR) for why these are the values they
-// are. Pulled out so the next person to revisit the threshold has one
-// place to edit, and so the constants show up in stack traces.
-//
-// CHARS_PER_TOKEN is the English-prose average. Sermon transcripts skew
-// closer to 3.5 because of scripture-reference density (`John 3:16`,
-// `1 Corinthians 6 and 1 Timothy 1`) — that means `length / 4` slightly
-// *overestimates* target tokens, which is conservative for this guard's
-// purpose (false-positive on legitimate-but-token-dense outputs is the
-// failure we'd want to know about).
-const CHARS_PER_TOKEN = 4;
-
-// Fraction of estimated-transcript-tokens the completion must hit. Tuned
-// against the corpus: healthy gpt-5.4-mini runs land at 0.95-1.05 (echo
-// + heading + link decoration overhead), Llama 4 summarization failures
-// land at 0.2-0.3. Lowered from 0.8 → 0.75 after the debate-format prompt
-// expansion shifted Dorean chapters 11-14 to 76-79% (the prompt now asks
-// the model to be more disciplined about not heading-wrapping intros and
-// other banter, which trims its echo budget on dense passages). Still
-// comfortably above the Llama failure mode; watch the audit log
-// (finish_reason='stop' rows with non-null errors) when bumping again.
-const SILENT_SUMMARY_FLOOR = 0.75;
-
 /**
  * Eval-only: full-markdown-document annotation mode. See the block
  * comment above for the strategy + rationale. Same `RunAnnotationResult`
@@ -816,7 +797,7 @@ export async function runAnnotation(
   // headings + link syntax overhead).
   const t0 = Date.now();
   const estimatedTranscriptTokens = Math.ceil(
-    transcriptBody.length / CHARS_PER_TOKEN,
+    transcriptBody.length / ANNOTATION_CHARS_PER_TOKEN,
   );
   const completion = await createChatCompletionTracked({
     tracking: options.tracking,
@@ -843,28 +824,17 @@ export async function runAnnotation(
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: userContent },
     ],
-    guards: (completion) => {
-      const completionTokens = completion.usage?.completion_tokens ?? 0;
-      if (
-        completionTokens > 0 &&
-        estimatedTranscriptTokens > 0 &&
-        completionTokens < estimatedTranscriptTokens * SILENT_SUMMARY_FLOOR
-      ) {
-        return {
-          outcome: 'guard_silent_summarization',
-          errorMessage: `Model output too short (${completionTokens} completion tokens vs ~${estimatedTranscriptTokens} estimated transcript tokens, ${Math.round(
-            (completionTokens / estimatedTranscriptTokens) * 100,
-          )}%, floor ${Math.round(SILENT_SUMMARY_FLOOR * 100)}%). Likely silent summarization or truncation — the model did not echo every paragraph verbatim.`,
-        };
-      }
-      return { outcome: 'success', errorMessage: null };
-    },
+    guards: (completion) =>
+      getAnnotationCompletenessGuard(
+        paragraphs.map((paragraph) => paragraph.text),
+        completion.usage?.completion_tokens,
+      ),
   });
   const durationMs = Date.now() - t0;
   const choice = completion.choices[0];
 
   // Log the completion/estimated-input ratio so the silent-summarization
-  // floor (SILENT_SUMMARY_FLOOR) can be tuned from observed data instead
+  // floor (ANNOTATION_COMPLETION_FLOOR) can be tuned from observed data instead
   // of vibes. The ratio is per-call, the floor is per-model; plotting
   // the distribution over enough runs surfaces models that hug the
   // edge. This only runs on the happy path — failed guards already
@@ -882,7 +852,7 @@ export async function runAnnotation(
           completionTokens,
           estimatedTranscriptTokens,
           ratio: completionTokens / estimatedTranscriptTokens,
-          floor: SILENT_SUMMARY_FLOOR,
+          floor: ANNOTATION_COMPLETION_FLOOR,
         },
       },
       'annotate-transcript completion ratio',

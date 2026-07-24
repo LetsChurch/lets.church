@@ -12,10 +12,8 @@ const env = z
   })
   .parse(process.env);
 
-// Separate SDK instance from `llm.ts` — that one routes through
-// OpenRouter for the live path; this one hits OpenAI direct because
-// OpenRouter does not proxy the Batch API. Tier 4 limits apply
-// (1B chat tokens / 500M embed tokens queued at a time).
+// SDK instance dedicated to OpenAI Batch. OpenRouter does not proxy the Batch
+// API, so requests are always submitted directly to OpenAI.
 export const openaiBatch = new OpenAI({
   apiKey: env.OPENAI_API_KEY,
   // No baseURL override — defaults to https://api.openai.com/v1.
@@ -62,13 +60,14 @@ export function buildChatRequest(
   body: Record<string, unknown>,
 ): BatchRequestLine {
   const { provider: _provider, usage: _usage, ...rest } = body;
+  const model = requireOpenaiModel(rest.model);
   return {
     custom_id: customId,
     method: 'POST',
     url: '/v1/chat/completions',
     body: {
       ...rest,
-      model: stripOpenaiPrefix(String(rest.model ?? '')),
+      model: stripOpenaiPrefix(model),
     },
   };
 }
@@ -78,15 +77,26 @@ export function buildEmbedRequest(
   body: Record<string, unknown>,
 ): BatchRequestLine {
   const { provider: _provider, usage: _usage, ...rest } = body;
+  const model = requireOpenaiModel(rest.model);
   return {
     custom_id: customId,
     method: 'POST',
     url: '/v1/embeddings',
     body: {
       ...rest,
-      model: stripOpenaiPrefix(String(rest.model ?? '')),
+      model: stripOpenaiPrefix(model),
     },
   };
+}
+
+function requireOpenaiModel(value: unknown): string {
+  const model = String(value ?? '');
+  if (!model.startsWith('openai/')) {
+    throw new Error(
+      `OpenAI Batch API requires an openai/* model id, received ${model || '(empty)'}`,
+    );
+  }
+  return model;
 }
 
 // Serialise the request lines as JSONL, upload to the Files API
@@ -106,12 +116,19 @@ export async function submitBatch(
     file: await toFile(Buffer.from(jsonl, 'utf8'), 'batch-input.jsonl'),
     purpose: 'batch',
   });
-  const batch = await openaiBatch.batches.create({
-    input_file_id: file.id,
-    endpoint,
-    completion_window: '24h',
-  });
-  return { batchId: batch.id, inputFileId: file.id };
+  try {
+    const batch = await openaiBatch.batches.create({
+      input_file_id: file.id,
+      endpoint,
+      completion_window: '24h',
+    });
+    return { batchId: batch.id, inputFileId: file.id };
+  } catch (error) {
+    // Input files do not auto-expire. If batch creation fails after upload,
+    // remove the orphan before the submit activity retries.
+    await deleteBatchFile(file.id);
+    throw error;
+  }
 }
 
 export type BatchStatus = {

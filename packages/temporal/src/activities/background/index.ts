@@ -73,6 +73,8 @@ export { default as deleteOldThumbnails } from './delete-old-thumbnails';
 export * from './delete-upload-record';
 export { default as embedTranscriptParagraphs } from './embed-transcript-paragraphs';
 export { default as embedUpload } from './embed-upload';
+// Kept for replay compatibility with in-flight reprocessGroupWorkflow
+// executions. New workflows do not schedule this live embedding activity.
 export {
   default as embedUploadSummariesBulk,
   type EmbedUploadSummariesBulkArgs,

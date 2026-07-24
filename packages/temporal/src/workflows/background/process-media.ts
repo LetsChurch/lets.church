@@ -1,5 +1,6 @@
 import {
   executeChild,
+  patched,
   proxyActivities,
   setCurrentDetails,
   workflowInfo,
@@ -78,6 +79,9 @@ export async function processMediaWorkflow(
   // call `uploadDashboardLinks`/`absoluteWebUrl` here (they read process.env).
   links: Array<LcLink> = [],
 ) {
+  const inheritChildPriority = patched(
+    'inherit-process-media-child-priority-v1',
+  );
   // Propagate UploadId to every child / grandchild so the whole tree is
   // searchable in the Temporal UI by upload. Temporal does NOT inherit
   // search attributes automatically — see handle-multipart-media-upload.ts
@@ -140,22 +144,17 @@ export async function processMediaWorkflow(
       // disk first, summarize falls back to a flat summary with no
       // sections.
       //
-      // These always run on the transcribe path (no skip option):
-      // storeTranscriptParagraphs above delete-then-inserts paragraphs,
-      // which cascade-deletes the upload's annotations (annotation ->
-      // transcript_paragraph FK is ON DELETE CASCADE) and leaves the
-      // existing summary describing a stale transcript. Skipping the LLM
-      // here would therefore leave the upload with zero annotations and a
-      // mismatched summary, so retranscribe must always regenerate them.
+      // These always run on the transcribe path (no skip option). A changed
+      // transcript atomically replaces paragraphs, cascade-deletes annotations,
+      // and invalidates summary state; an identical activity retry is a no-op.
+      // The Batch submission checks below then skip any work that is already
+      // present, preserving retry idempotency without retaining stale output.
       //
-      // `embedParagraphs: true` because paragraphs are fresh from
-      // storeTranscriptParagraphs and need embedding for the first time
-      // (the admin regen path defaults this to false since paragraph text
-      // is stable across summary prompt changes). `force` is NOT passed
-      // — annotate / summarize both short-circuit on existing rows so a
-      // parent retry costs one DB SELECT per child, not duplicate LLM
-      // calls. The admin "Regenerate" mutations pass `force: true` to
-      // bypass that idempotency.
+      // `embedParagraphs: true` because changed paragraphs need embedding (the
+      // admin regen path defaults this to false since paragraph text is stable
+      // across prompt changes). `force` is NOT passed — Batch submission skips
+      // persisted results so a parent retry does not submit duplicate work. The
+      // admin "Regenerate" mutations pass `force: true` to bypass that check.
       //
       // Graceful degradation: if annotate fails, we still attempt
       // summarize (it writes a sections-less summary), then re-throw
@@ -169,7 +168,9 @@ export async function processMediaWorkflow(
           workflowId: `annotateTranscript:on-transcribe:${s3UploadKey}`,
           args: [targetId],
           taskQueue: BACKGROUND_QUEUE,
-          priority: { priorityKey: PRIORITY_USER },
+          ...(inheritChildPriority
+            ? {}
+            : { priority: { priorityKey: PRIORITY_USER } }),
           typedSearchAttributes: childSearchAttrs,
           ...staticMeta({ summary: 'Annotate transcript', links }),
           retry: { maximumAttempts: 2 },
@@ -183,7 +184,9 @@ export async function processMediaWorkflow(
         workflowId: `summarizeUpload:on-transcribe:${s3UploadKey}`,
         args: [targetId, { embedParagraphs: true }],
         taskQueue: BACKGROUND_QUEUE,
-        priority: { priorityKey: PRIORITY_USER },
+        ...(inheritChildPriority
+          ? {}
+          : { priority: { priorityKey: PRIORITY_USER } }),
         typedSearchAttributes: childSearchAttrs,
         ...staticMeta({ summary: 'Summarize', links }),
         retry: { maximumAttempts: 2 },
@@ -204,7 +207,9 @@ export async function processMediaWorkflow(
       workflowId: `media:${s3UploadKey}`,
       args: ['media', targetId],
       taskQueue: BACKGROUND_QUEUE,
-      priority: { priorityKey: PRIORITY_USER },
+      ...(inheritChildPriority
+        ? {}
+        : { priority: { priorityKey: PRIORITY_USER } }),
       typedSearchAttributes: childSearchAttrs,
       ...staticMeta({ summary: 'Index media', links }),
       retry: { maximumAttempts: 2 },

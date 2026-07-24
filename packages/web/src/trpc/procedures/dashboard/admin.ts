@@ -3440,10 +3440,10 @@ export const adminRouter = router({
    * Uploads whose annotation pipeline failed and never produced any OUTLINE
    * annotations. Surface for the admin failed-annotations page so an
    * operator can review the failure reason (typically OpenAI's content
-   * filter on politically/theologically frank content, after which the
-   * configured fallback model also failed) and decide whether to retry,
-   * switch the configured fallback, or accept that this content can't be
-   * annotated.
+   * filter on politically/theologically frank content) and decide whether to
+   * retry or accept that this content can't be annotated. Production
+   * processing is Batch-only, so the non-OpenAI live/eval fallback is not
+   * available on this path.
    *
    * "Failure" = the most recent `llm_call` row for this upload with
    * `activity='annotateTranscript'` has a non-success outcome (e.g.
@@ -5244,7 +5244,6 @@ export const adminRouter = router({
         processingScope: z
           .enum(['transcode', 'transcribe', 'everything'])
           .default('transcode'),
-        viaBatch: z.boolean().default(false),
         // Reuse stored probe metadata instead of re-probing. Defaults
         // on (including the no_paragraphs migration); falls back to a
         // live probe per-upload when no stored probe exists.
@@ -5270,7 +5269,6 @@ export const adminRouter = router({
           context: {
             scope: input.scope,
             processingScope: input.processingScope,
-            viaBatch: input.viaBatch,
             skipProbe: input.skipProbe,
             dateRange: input.dateRange,
             videoOnly: input.videoOnly,
@@ -5278,30 +5276,6 @@ export const adminRouter = router({
         },
         'Starting reprocess',
       );
-
-      // Pre-flight: OpenAI Batch only accepts openai/* model ids
-      // (model id is rewritten by stripping the prefix before
-      // submission). If a chat/embed model isn't openai/-prefixed,
-      // batch mode would silently fail at submit time — reject up
-      // front with a useful message.
-      if (input.viaBatch) {
-        const offenders: string[] = [];
-        if (!SUMMARY_MODEL.startsWith('openai/')) {
-          offenders.push(`SUMMARY_MODEL=${SUMMARY_MODEL}`);
-        }
-        if (!ANNOTATE_MODEL.startsWith('openai/')) {
-          offenders.push(`ANNOTATE_MODEL=${ANNOTATE_MODEL}`);
-        }
-        if (!EMBED_MODEL.startsWith('openai/')) {
-          offenders.push(`EMBED_MODEL=${EMBED_MODEL}`);
-        }
-        if (offenders.length > 0) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: `Batch mode requires openai/* models. Non-openai configured: ${offenders.join(', ')}`,
-          });
-        }
-      }
 
       let scope: ReprocessScope;
       if (input.scope.kind === 'channel') {
@@ -5331,7 +5305,6 @@ export const adminRouter = router({
         }
 
         await startReprocess(scope, input.processingScope, {
-          viaBatch: input.viaBatch,
           skipProbe: input.skipProbe,
           dateStart: input.dateRange?.start,
           dateEnd: input.dateRange?.end,

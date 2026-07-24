@@ -2,17 +2,27 @@ import { db, LlmCall } from '@letschurch/db';
 import OpenAI from 'openai';
 import { z } from 'zod';
 
+import {
+  getBuiltInCompletionGuard,
+  type GuardOutcome,
+} from './llm-completion-guards';
 import { computeCost } from './llm-pricing';
+
+const openaiBatchModel = z
+  .string()
+  .startsWith(
+    'openai/',
+    'Production Batch API models must use the canonical openai/* id',
+  );
 
 const env = z
   .object({
-    // Production calls go direct to OpenAI. OpenRouter is kept only for the two
-    // paths that genuinely can't be OpenAI-direct: the admin LLM-eval page
-    // (arbitrary multi-provider models) and the content-filter fallback below
-    // (a non-OpenAI provider, by design).
+    // Production processing goes through OpenAI Batch. OpenRouter remains for
+    // the admin LLM-eval page, and for the live fallback used only by legacy
+    // workflow replays/eval calls. Batch processing never switches providers.
     OPENAI_API_KEY: z.string().min(1),
     OPENROUTER_API_KEY: z.string().min(1),
-    OPENROUTER_SUMMARY_MODEL: z.string().default('openai/gpt-5.4-mini'),
+    OPENROUTER_SUMMARY_MODEL: openaiBatchModel.default('openai/gpt-5.4-mini'),
     // Annotation defaults to gpt-5.4-mini. The full-doc markdown-output
     // approach (paragraph-echo + inline links, see annotate-transcript.ts)
     // is the only output format the activity supports; the earlier
@@ -20,12 +30,11 @@ const env = z
     // safety classifier was retired with that rewrite. Temperature 0.6
     // + the silent-summarization guard in the activity together close
     // the residual variance we measured during prompt tuning.
-    OPENROUTER_ANNOTATE_MODEL: z.string().default('openai/gpt-5.4-mini'),
-    // Fallback model for annotate when the primary's response is blocked by
-    // the provider content filter (finish_reason=content_filter). Routed via
-    // OpenRouter to a non-OpenAI provider so the same content that tripped
-    // OpenAI's classifier has a chance to land. Empty string disables the
-    // fallback (the activity throws guard_content_filter as before).
+    OPENROUTER_ANNOTATE_MODEL: openaiBatchModel.default('openai/gpt-5.4-mini'),
+    // Live-path fallback for annotate when the primary's response is blocked
+    // by the provider content filter. This is retained for legacy workflow
+    // replay and eval tooling; the always-batched production path cannot route
+    // a request to a non-OpenAI provider.
     OPENROUTER_ANNOTATE_FALLBACK_MODEL: z
       .string()
       .default('anthropic/claude-haiku-4-5'),
@@ -47,10 +56,8 @@ export const openaiClient = new OpenAI({
   maxRetries: 5,
 });
 
-// OpenRouter client — kept ONLY for `via: 'openrouter'` calls: the admin
-// LLM-eval page (which runs arbitrary multi-provider models) and the
-// content-filter fallback (which routes to a non-OpenAI provider so content
-// OpenAI's classifier blocked has a chance to land).
+// OpenRouter client — used by the admin LLM-eval page and replay-only live
+// content-filter fallback. Current production processing uses OpenAI Batch.
 export const openrouterClient = new OpenAI({
   apiKey: env.OPENROUTER_API_KEY,
   baseURL: 'https://openrouter.ai/api/v1',
@@ -209,10 +216,7 @@ export type RecordLlmCallArgs = {
  * row (intentional: each retry is a separately billable call). Do not
  * dedupe `llm_call` rows by `(activity, upload_record_id)` downstream.
  */
-export type GuardOutcome = {
-  outcome: string;
-  errorMessage: string | null;
-};
+export type { GuardOutcome } from './llm-completion-guards';
 
 export type CreateTrackedChatCompletionArgs =
   OpenAI.ChatCompletionCreateParamsNonStreaming & {
@@ -308,35 +312,12 @@ export async function createChatCompletionTracked(
 
   // Built-in guards run first. Activity-specific `guards` callback only
   // sees the completion if all built-ins passed.
-  let result: GuardOutcome;
-  if (choice?.finish_reason === 'length') {
-    result = {
-      outcome: 'guard_length_truncation',
-      errorMessage: `Model output exceeded max_tokens (finish_reason=length) — try a model with a higher output cap or shrink the prompt`,
-    };
-  } else if (choice?.finish_reason === 'content_filter') {
-    result = {
-      outcome: 'guard_content_filter',
-      errorMessage:
-        'Model response was blocked by the provider content filter (finish_reason=content_filter)',
-    };
-  } else if (
-    // Empty content is a failure for text-only flows. Tool-calling
-    // responses legitimately set `message.content = ''` (or null) with
-    // populated `tool_calls`, so don't trip the guard in that case.
-    !choice?.message.content &&
-    !(choice?.message.tool_calls && choice.message.tool_calls.length > 0)
-  ) {
-    result = {
-      outcome: 'guard_empty_content',
-      errorMessage:
-        'Model returned no content (empty `choices[0].message.content` and no tool_calls)',
-    };
-  } else {
-    result = guards
+  const builtInGuard = getBuiltInCompletionGuard(choice);
+  const result: GuardOutcome =
+    builtInGuard ??
+    (guards
       ? await guards(completion)
-      : { outcome: 'success', errorMessage: null };
-  }
+      : { outcome: 'success', errorMessage: null });
 
   if (tracking) {
     await recordLlmCall({

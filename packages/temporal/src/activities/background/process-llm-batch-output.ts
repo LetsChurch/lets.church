@@ -1,11 +1,12 @@
 import {
   Annotation,
+  Channel,
   db,
   TranscriptParagraph,
   UploadRecord,
 } from '@letschurch/db';
 import { Context } from '@temporalio/activity';
-import { asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 
 import {
@@ -16,6 +17,19 @@ import {
   recordLlmCall,
   SUMMARY_MODEL,
 } from '../../util/llm';
+import {
+  assertBatchSourceCurrent,
+  fingerprintAnnotationSource,
+  fingerprintParagraphEmbeddingSource,
+  fingerprintSummaryEmbeddingSource,
+  fingerprintSummarySource,
+  parseBatchCustomId,
+} from '../../util/llm-batch-source';
+import {
+  getAnnotationCompletenessGuard,
+  getBuiltInCompletionGuard,
+  type GuardOutcome,
+} from '../../util/llm-completion-guards';
 import logger from '../../util/logger';
 import {
   type BatchResponseLine,
@@ -27,8 +41,8 @@ import {
 } from './annotate-transcript';
 import type { LlmBatchKind } from './submit-llm-batch';
 import {
-  loadOutlineSectionsForSummary,
   parseSummaryResponse,
+  type SummarySectionInput,
 } from './summarize-upload';
 
 const moduleLogger = logger.child({
@@ -54,8 +68,8 @@ export type ProcessLlmBatchOutputResult = {
   // Upload IDs whose batch line failed — either because the OpenAI batch
   // service rejected the request (errorFileId) or because applying the
   // response threw on our side (parse error, DB error, schema mismatch).
-  // The workflow uses this list to retry those uploads via the matching
-  // live activity (which has model-fallback logic of its own).
+  // The workflow treats any such line as a failure so Temporal can retry the
+  // regular job through the Batch API again.
   failedUploadIds: string[];
 };
 
@@ -89,7 +103,7 @@ export default async function processLlmBatchOutput(
         succeeded += 1;
       } catch (err) {
         failed += 1;
-        failedUploadIds.add(parseCustomId(line.custom_id).uploadId);
+        failedUploadIds.add(parseBatchCustomId(line.custom_id).uploadId);
         activityLogger.warn(
           `Failed to apply batch line ${line.custom_id}: ${err instanceof Error ? err.message : String(err)}`,
         );
@@ -109,7 +123,7 @@ export default async function processLlmBatchOutput(
   if (args.errorFileId) {
     for await (const line of downloadOutput(args.errorFileId)) {
       failed += 1;
-      const { uploadId } = parseCustomId(line.custom_id);
+      const { uploadId } = parseBatchCustomId(line.custom_id);
       failedUploadIds.add(uploadId);
       // Persist the raw line when our reader doesn't recognize the
       // shape — OpenAI's parameter-validation rejections (e.g. the
@@ -163,80 +177,56 @@ async function dispatchResponseLine(
   const {
     kind: customKind,
     uploadId,
+    sourceFingerprint,
     chunkIdx,
-  } = parseCustomId(line.custom_id);
+  } = parseBatchCustomId(line.custom_id);
+  const expectedCustomKind =
+    kind === 'embed_paragraphs'
+      ? 'embed-paragraphs'
+      : kind === 'embed_summary'
+        ? 'embed-summary'
+        : kind;
+  invariant(
+    customKind === expectedCustomKind,
+    `Batch kind/custom_id mismatch: kind=${kind}, custom_id=${line.custom_id}`,
+  );
   if (customKind === 'summarize') {
-    await handleSummary(uploadId, line);
+    await handleSummary(uploadId, sourceFingerprint, line);
   } else if (customKind === 'annotate') {
-    await handleAnnotate(uploadId, line);
+    await handleAnnotate(uploadId, sourceFingerprint, line);
   } else if (customKind === 'embed-paragraphs') {
     if (chunkIdx === null) {
       throw new Error(
         `Batch line ${line.custom_id}: embed-paragraphs missing chunk index`,
       );
     }
-    await handleEmbedParagraphs(uploadId, chunkIdx, line);
+    await handleEmbedParagraphs(uploadId, sourceFingerprint, chunkIdx, line);
   } else if (customKind === 'embed-summary') {
-    await handleEmbedSummary(uploadId, line);
-  } else {
-    throw new Error(`Unknown batch custom_id kind: ${customKind}`);
+    await handleEmbedSummary(uploadId, sourceFingerprint, line);
   }
-  // Sanity: the kind argument matches the request kind it should
-  // contain. Cheap defensive check against caller bugs that submit a
-  // chat-batch outputFileId as `kind: embed_paragraphs` etc.
-  if (
-    (kind === 'annotate' && customKind !== 'annotate') ||
-    (kind === 'summarize' && customKind !== 'summarize') ||
-    (kind === 'embed_paragraphs' && customKind !== 'embed-paragraphs')
-  ) {
-    moduleLogger.warn(
-      `Batch kind/custom_id mismatch: kind=${kind}, custom_id=${line.custom_id}`,
-    );
-  }
-}
-
-// Custom-id grammar (set in `submit-llm-batch.ts`):
-//   annotate:<uuid>
-//   summarize:<uuid>
-//   embed-paragraphs:<uuid>:<chunkIdx>     (chunkIdx ∈ [0, ⌈n/2048⌉))
-// embed-summary is intentionally not batched — it runs as a live
-// `embedUploadSummariesBulk` activity in the group workflow.
-// UUIDs don't contain `:`, so split on `:` is unambiguous. The
-// chunkIdx is only set for embed-paragraphs; null otherwise.
-function parseCustomId(customId: string): {
-  kind: string;
-  uploadId: string;
-  chunkIdx: number | null;
-} {
-  const parts = customId.split(':');
-  const chunkRaw = parts[2];
-  const chunkIdx =
-    chunkRaw !== undefined && /^\d+$/.test(chunkRaw)
-      ? Number.parseInt(chunkRaw, 10)
-      : null;
-  return {
-    kind: parts[0] ?? '',
-    uploadId: parts[1] ?? '',
-    chunkIdx,
-  };
 }
 
 function activityForCustomId(customId: string): string {
-  const { kind } = parseCustomId(customId);
+  const { kind } = parseBatchCustomId(customId);
   if (kind === 'summarize') return 'summarizeUpload';
   if (kind === 'annotate') return 'annotateTranscript';
   if (kind === 'embed-paragraphs') return 'embedTranscriptParagraphs';
+  if (kind === 'embed-summary') return 'embedUpload';
   return kind;
 }
 
 function modelForKind(kind: LlmBatchKind): string {
-  if (kind === 'annotate' || kind === 'summarize') return SUMMARY_MODEL;
+  if (kind === 'annotate') return ANNOTATE_MODEL;
+  if (kind === 'summarize') return SUMMARY_MODEL;
   return EMBED_MODEL;
 }
 
 type ChatCompletionResponse = {
   choices?: Array<{
-    message?: { content?: string | null };
+    message?: {
+      content?: string | null;
+      tool_calls?: ReadonlyArray<unknown> | null;
+    };
     finish_reason?: string | null;
   }>;
   usage?: {
@@ -254,165 +244,273 @@ type EmbeddingsResponse = {
 
 async function handleSummary(
   uploadId: string,
+  sourceFingerprint: string | null,
   line: BatchResponseLine,
 ): Promise<void> {
   const body = line.response?.body as ChatCompletionResponse;
-  const raw = body?.choices?.[0]?.message?.content;
-  invariant(raw, `Summary batch ${line.custom_id}: empty content`);
-  // Load the same outline section IDs the prompt was built from
-  // (annotate persisted these BEFORE this summarize batch ran). We
-  // pass them to the parser so an extra/hallucinated section in the
-  // model's response gets filtered out before hitting the DB.
-  const sectionInputs = await loadOutlineSectionsForSummary(uploadId);
-  const expectedIds = new Set(sectionInputs.map((s) => s.id));
-  const { summary, searchSummary, sections } = parseSummaryResponse(
-    raw,
-    expectedIds,
+  const result = await db.transaction(
+    async (tx) => {
+      const uploads = await tx
+        .select({
+          title: UploadRecord.title,
+          description: UploadRecord.description,
+          channelName: Channel.name,
+        })
+        .from(UploadRecord)
+        .innerJoin(Channel, eq(Channel.id, UploadRecord.channelId))
+        .where(eq(UploadRecord.id, uploadId));
+      const upload = uploads[0];
+      invariant(upload, `Summary batch ${line.custom_id}: upload not found`);
+
+      const paragraphs = await tx
+        .select({
+          id: TranscriptParagraph.id,
+          order: TranscriptParagraph.order,
+          text: TranscriptParagraph.text,
+        })
+        .from(TranscriptParagraph)
+        .where(eq(TranscriptParagraph.uploadRecordId, uploadId))
+        .orderBy(asc(TranscriptParagraph.order));
+      invariant(
+        paragraphs.length > 0,
+        `Summary batch ${line.custom_id}: no paragraphs for upload`,
+      );
+
+      const outlineRows = await tx
+        .select({
+          id: Annotation.id,
+          metadata: Annotation.metadata,
+          paragraphOrder: TranscriptParagraph.order,
+        })
+        .from(Annotation)
+        .innerJoin(
+          TranscriptParagraph,
+          eq(TranscriptParagraph.id, Annotation.paragraphId),
+        )
+        .where(
+          and(
+            eq(TranscriptParagraph.uploadRecordId, uploadId),
+            eq(Annotation.kind, 'OUTLINE'),
+            isNotNull(TranscriptParagraph.order),
+          ),
+        )
+        .orderBy(asc(TranscriptParagraph.order));
+      const sectionInputs: SummarySectionInput[] = [];
+      for (const row of outlineRows) {
+        const title =
+          typeof row.metadata.title === 'string' ? row.metadata.title : null;
+        if (title) {
+          sectionInputs.push({
+            id: row.id,
+            title,
+            firstParagraphOrder: row.paragraphOrder,
+          });
+        }
+      }
+
+      assertBatchSourceCurrent(
+        line.custom_id,
+        sourceFingerprint,
+        fingerprintSummarySource(upload, paragraphs, sectionInputs),
+      );
+
+      const guard =
+        getBuiltInCompletionGuard(body?.choices?.[0]) ??
+        ({ outcome: 'success', errorMessage: null } satisfies GuardOutcome);
+      const raw = body?.choices?.[0]?.message?.content ?? null;
+      if (guard.errorMessage) return { guard, raw };
+      invariant(raw, `Summary batch ${line.custom_id}: empty content`);
+
+      const expectedIds = new Set(sectionInputs.map((section) => section.id));
+      const { summary, searchSummary, sections } = parseSummaryResponse(
+        raw,
+        expectedIds,
+      );
+      await tx
+        .update(UploadRecord)
+        .set({
+          summary,
+          searchSummary,
+          sections,
+          summarizedAt: new Date(),
+          // Summary text and vectors are one versioned unit. A retry can then
+          // discover and submit only the missing embedding work.
+          summaryEmbedding: null,
+          searchSummaryEmbedding: null,
+        })
+        .where(eq(UploadRecord.id, uploadId));
+      return { guard, raw };
+    },
+    { isolationLevel: 'serializable' },
   );
-  await db
-    .update(UploadRecord)
-    .set({ summary, searchSummary, sections, summarizedAt: new Date() })
-    .where(eq(UploadRecord.id, uploadId));
-  await recordLlmCall({
+
+  await recordBatchChatResult({
     model: SUMMARY_MODEL,
     activity: 'summarizeUpload',
-    uploadRecordId: uploadId,
-    promptTokens: body.usage?.prompt_tokens ?? null,
-    completionTokens: body.usage?.completion_tokens ?? null,
-    durationMs: 0,
-    finishReason: body.choices?.[0]?.finish_reason ?? null,
-    outcome: 'success',
-    responseText: raw,
-    viaBatch: true,
+    uploadId,
+    body,
+    result,
   });
+  if (result.guard.errorMessage) throw new Error(result.guard.errorMessage);
 }
 
 async function handleAnnotate(
   uploadId: string,
+  sourceFingerprint: string | null,
   line: BatchResponseLine,
 ): Promise<void> {
   const body = line.response?.body as ChatCompletionResponse;
-  const raw = body?.choices?.[0]?.message?.content;
-  invariant(raw, `Annotate batch ${line.custom_id}: empty content`);
+  const result = await db.transaction(
+    async (tx) => {
+      const uploads = await tx
+        .select({
+          title: UploadRecord.title,
+          description: UploadRecord.description,
+          channelName: Channel.name,
+        })
+        .from(UploadRecord)
+        .innerJoin(Channel, eq(Channel.id, UploadRecord.channelId))
+        .where(eq(UploadRecord.id, uploadId));
+      const upload = uploads[0];
+      invariant(upload, `Annotate batch ${line.custom_id}: upload not found`);
 
-  // Reload paragraphs so the parser can map heading + link positions
-  // back to word indices — same shape `runAnnotation` builds for the
-  // live path.
-  const paragraphs = await db
-    .select({
-      id: TranscriptParagraph.id,
-      order: TranscriptParagraph.order,
-      text: TranscriptParagraph.text,
-      words: TranscriptParagraph.words,
-    })
-    .from(TranscriptParagraph)
-    .where(eq(TranscriptParagraph.uploadRecordId, uploadId))
-    .orderBy(asc(TranscriptParagraph.order));
-  invariant(
-    paragraphs.length > 0,
-    `Annotate batch ${line.custom_id}: no paragraphs for upload`,
+      // Reload paragraphs so the parser can map heading + link positions back
+      // to word indices, then validate the exact source submitted to OpenAI.
+      const paragraphs = await tx
+        .select({
+          id: TranscriptParagraph.id,
+          order: TranscriptParagraph.order,
+          text: TranscriptParagraph.text,
+          words: TranscriptParagraph.words,
+        })
+        .from(TranscriptParagraph)
+        .where(eq(TranscriptParagraph.uploadRecordId, uploadId))
+        .orderBy(asc(TranscriptParagraph.order));
+      invariant(
+        paragraphs.length > 0,
+        `Annotate batch ${line.custom_id}: no paragraphs for upload`,
+      );
+      assertBatchSourceCurrent(
+        line.custom_id,
+        sourceFingerprint,
+        fingerprintAnnotationSource(upload, paragraphs),
+      );
+
+      const builtInGuard = getBuiltInCompletionGuard(body?.choices?.[0]);
+      const guard =
+        builtInGuard ??
+        getAnnotationCompletenessGuard(
+          paragraphs.map((paragraph) => paragraph.text),
+          body.usage?.completion_tokens,
+        );
+      const raw = body?.choices?.[0]?.message?.content ?? null;
+      if (guard.errorMessage) return { guard, raw };
+      invariant(raw, `Annotate batch ${line.custom_id}: empty content`);
+
+      const evalParagraphs: EvalParagraph[] = paragraphs.map((paragraph) => ({
+        id: paragraph.id,
+        order: paragraph.order,
+        text: paragraph.text,
+        words: paragraph.words,
+      }));
+      const { annotations } = parseAnnotationResponse(raw, evalParagraphs);
+      const paragraphIds = paragraphs.map((paragraph) => paragraph.id);
+      await tx
+        .delete(Annotation)
+        .where(inArray(Annotation.paragraphId, paragraphIds));
+      if (annotations.length > 0) {
+        const now = new Date();
+        await tx.insert(Annotation).values(
+          annotations.map((annotation) => ({
+            ...annotation,
+            updatedAt: now,
+          })),
+        );
+      }
+      // OUTLINE ids are generated on insert. Existing section descriptions
+      // therefore refer to deleted ids and must be cleared atomically.
+      await tx
+        .update(UploadRecord)
+        .set({ sections: [] })
+        .where(eq(UploadRecord.id, uploadId));
+      return { guard, raw };
+    },
+    { isolationLevel: 'serializable' },
   );
 
-  const evalParagraphs: EvalParagraph[] = paragraphs.map((p) => ({
-    id: p.id,
-    order: p.order,
-    text: p.text,
-    words: p.words,
-  }));
-  const { annotations } = parseAnnotationResponse(raw, evalParagraphs);
-
-  const now = new Date();
-  const paragraphIds = paragraphs.map((p) => p.id);
-  await db.transaction(async (tx) => {
-    await tx
-      .delete(Annotation)
-      .where(inArray(Annotation.paragraphId, paragraphIds));
-    if (annotations.length > 0) {
-      await tx
-        .insert(Annotation)
-        .values(annotations.map((a) => ({ ...a, updatedAt: now })));
-    }
-  });
-
-  await recordLlmCall({
+  await recordBatchChatResult({
     model: ANNOTATE_MODEL,
     activity: 'annotateTranscript',
-    uploadRecordId: uploadId,
-    promptTokens: body.usage?.prompt_tokens ?? null,
-    completionTokens: body.usage?.completion_tokens ?? null,
-    durationMs: 0,
-    finishReason: body.choices?.[0]?.finish_reason ?? null,
-    outcome: 'success',
-    responseText: raw,
-    viaBatch: true,
+    uploadId,
+    body,
+    result,
   });
+  if (result.guard.errorMessage) throw new Error(result.guard.errorMessage);
 }
 
 async function handleEmbedParagraphs(
   uploadId: string,
+  sourceFingerprint: string | null,
   chunkIdx: number,
   line: BatchResponseLine,
 ): Promise<void> {
   const body = line.response?.body as EmbeddingsResponse;
   const data = body?.data ?? [];
+  await db.transaction(
+    async (tx) => {
+      // Re-query the whole upload in the same order used at submission. The
+      // whole-source fingerprint makes every chunk stale if any row changed.
+      const rows = await tx
+        .select({
+          id: TranscriptParagraph.id,
+          order: TranscriptParagraph.order,
+          text: TranscriptParagraph.text,
+        })
+        .from(TranscriptParagraph)
+        .where(eq(TranscriptParagraph.uploadRecordId, uploadId))
+        .orderBy(asc(TranscriptParagraph.order));
+      assertBatchSourceCurrent(
+        line.custom_id,
+        sourceFingerprint,
+        fingerprintParagraphEmbeddingSource(rows),
+      );
 
-  // Re-query paragraphs in the SAME order as we submitted (asc by
-  // `order`) so embeddings line up by `data[i].index`. The submit
-  // path uses the identical ORDER BY, and chunks the upload's
-  // paragraphs into 2048-input windows; this chunk corresponds to
-  // the slice `[chunkIdx*2048, chunkIdx*2048 + expectedChunkLen)`.
-  const rows = await db
-    .select({ id: TranscriptParagraph.id })
-    .from(TranscriptParagraph)
-    .where(eq(TranscriptParagraph.uploadRecordId, uploadId))
-    .orderBy(asc(TranscriptParagraph.order));
-  const chunkStart = chunkIdx * EMBED_PARAGRAPHS_CHUNK_SIZE;
-  invariant(
-    chunkStart >= 0 && chunkStart < rows.length,
-    `Embed-paragraphs batch ${line.custom_id}: chunkStart ${chunkStart} out of range for ${rows.length} rows`,
+      const chunkStart = chunkIdx * EMBED_PARAGRAPHS_CHUNK_SIZE;
+      invariant(
+        chunkStart >= 0 && chunkStart < rows.length,
+        `Embed-paragraphs batch ${line.custom_id}: chunkStart ${chunkStart} out of range for ${rows.length} rows`,
+      );
+      const expectedChunkLen = Math.min(
+        EMBED_PARAGRAPHS_CHUNK_SIZE,
+        rows.length - chunkStart,
+      );
+      invariant(
+        data.length === expectedChunkLen,
+        `Embed-paragraphs batch ${line.custom_id}: response length ${data.length} != expected ${expectedChunkLen} (chunkStart=${chunkStart}, totalRows=${rows.length})`,
+      );
+      const chunkRows = rows.slice(chunkStart, chunkStart + expectedChunkLen);
+      const updates = chunkRows.map((row, index) => {
+        const embedding = data[index];
+        invariant(
+          embedding && embedding.index === index,
+          `Embed-paragraphs batch ${line.custom_id}: index/order mismatch at ${index}`,
+        );
+        invariant(
+          embedding.embedding.length === EMBED_DIMS,
+          `Embed-paragraphs batch ${line.custom_id}: bad embedding dim at ${index}`,
+        );
+        return { id: row.id, embedding: embedding.embedding };
+      });
+      await tx.execute(sql`
+        UPDATE ${TranscriptParagraph} AS t
+        SET embedding = v.embedding
+        FROM jsonb_to_recordset(${JSON.stringify(updates)}::jsonb)
+          AS v(id uuid, embedding jsonb)
+        WHERE t.id = v.id
+      `);
+    },
+    { isolationLevel: 'serializable' },
   );
-  // Derive the expected chunk length from the submit-side window —
-  // NOT from `data.length`. If the provider ever returns a partial
-  // response, or paragraphs were added/deleted between submit and
-  // process (a re-transcribe mid-batch is the realistic case),
-  // slicing by `data.length` would silently misalign embeddings
-  // with paragraphs. Asserting the expected size catches both.
-  const expectedChunkLen = Math.min(
-    EMBED_PARAGRAPHS_CHUNK_SIZE,
-    rows.length - chunkStart,
-  );
-  invariant(
-    data.length === expectedChunkLen,
-    `Embed-paragraphs batch ${line.custom_id}: response length ${data.length} != expected ${expectedChunkLen} (chunkStart=${chunkStart}, totalRows=${rows.length}). Paragraph count may have changed since submit; skip + re-run rather than misalign vectors.`,
-  );
-  const chunkRows = rows.slice(chunkStart, chunkStart + expectedChunkLen);
-
-  // Parity with `embed-transcript-paragraphs.ts`'s live path: OpenAI
-  // documents `data` as input-ordered but we still assert `index === i`
-  // so a future routing change can't silently misalign vectors with
-  // paragraphs. Build the (id, embedding) pairs first, then apply them in
-  // a SINGLE bulk UPDATE — a long sermon is thousands of paragraphs, and
-  // the previous one-statement-per-row pattern was the dominant cost of
-  // this activity on large batch groups.
-  const updates = chunkRows.map((r, i) => {
-    const d = data[i];
-    invariant(
-      d && d.index === i,
-      `Embed-paragraphs batch ${line.custom_id}: index/order mismatch at ${i}`,
-    );
-    invariant(
-      d.embedding.length === EMBED_DIMS,
-      `Embed-paragraphs batch ${line.custom_id}: bad embedding dim at ${i}`,
-    );
-    return { id: r.id, embedding: d.embedding };
-  });
-  await db.execute(sql`
-    UPDATE ${TranscriptParagraph} AS t
-    SET embedding = v.embedding
-    FROM jsonb_to_recordset(${JSON.stringify(updates)}::jsonb)
-      AS v(id uuid, embedding jsonb)
-    WHERE t.id = v.id
-  `);
 
   await recordLlmCall({
     model: EMBED_MODEL,
@@ -428,30 +526,56 @@ async function handleEmbedParagraphs(
 
 async function handleEmbedSummary(
   uploadId: string,
+  sourceFingerprint: string | null,
   line: BatchResponseLine,
 ): Promise<void> {
   const body = line.response?.body as EmbeddingsResponse;
   const data = body?.data ?? [];
-  invariant(
-    data.length === 2,
-    `Embed-summary batch ${line.custom_id}: expected 2 vectors, got ${data.length}`,
+  await db.transaction(
+    async (tx) => {
+      const rows = await tx
+        .select({
+          summary: UploadRecord.summary,
+          searchSummary: UploadRecord.searchSummary,
+        })
+        .from(UploadRecord)
+        .where(eq(UploadRecord.id, uploadId));
+      const row = rows[0];
+      invariant(
+        row?.summary && row.searchSummary,
+        `Embed-summary batch ${line.custom_id}: current summary is missing`,
+      );
+      assertBatchSourceCurrent(
+        line.custom_id,
+        sourceFingerprint,
+        fingerprintSummaryEmbeddingSource(row.summary, row.searchSummary),
+      );
+
+      invariant(
+        data.length === 2,
+        `Embed-summary batch ${line.custom_id}: expected 2 vectors, got ${data.length}`,
+      );
+      const summary = data[0];
+      const searchSummary = data[1];
+      invariant(
+        summary?.index === 0 && searchSummary?.index === 1,
+        `Embed-summary batch ${line.custom_id}: index/order mismatch`,
+      );
+      invariant(
+        summary.embedding.length === EMBED_DIMS &&
+          searchSummary.embedding.length === EMBED_DIMS,
+        `Embed-summary batch ${line.custom_id}: bad embedding dim`,
+      );
+      await tx
+        .update(UploadRecord)
+        .set({
+          summaryEmbedding: summary.embedding,
+          searchSummaryEmbedding: searchSummary.embedding,
+        })
+        .where(eq(UploadRecord.id, uploadId));
+    },
+    { isolationLevel: 'serializable' },
   );
-  const d0 = data[0];
-  const d1 = data[1];
-  invariant(
-    d0 && d0.index === 0 && d1 && d1.index === 1,
-    `Embed-summary batch ${line.custom_id}: index/order mismatch`,
-  );
-  const summaryEmb = d0.embedding;
-  const searchEmb = d1.embedding;
-  invariant(
-    summaryEmb.length === EMBED_DIMS && searchEmb.length === EMBED_DIMS,
-    `Embed-summary batch ${line.custom_id}: bad embedding dim`,
-  );
-  await db
-    .update(UploadRecord)
-    .set({ summaryEmbedding: summaryEmb, searchSummaryEmbedding: searchEmb })
-    .where(eq(UploadRecord.id, uploadId));
   await recordLlmCall({
     model: EMBED_MODEL,
     activity: 'embedUpload',
@@ -460,6 +584,28 @@ async function handleEmbedSummary(
     completionTokens: 0,
     durationMs: 0,
     outcome: 'success',
+    viaBatch: true,
+  });
+}
+
+async function recordBatchChatResult(args: {
+  model: string;
+  activity: string;
+  uploadId: string;
+  body: ChatCompletionResponse;
+  result: { guard: GuardOutcome; raw: string | null };
+}): Promise<void> {
+  await recordLlmCall({
+    model: args.model,
+    activity: args.activity,
+    uploadRecordId: args.uploadId,
+    promptTokens: args.body.usage?.prompt_tokens ?? null,
+    completionTokens: args.body.usage?.completion_tokens ?? null,
+    durationMs: 0,
+    finishReason: args.body.choices?.[0]?.finish_reason ?? null,
+    outcome: args.result.guard.outcome,
+    errorMessage: args.result.guard.errorMessage,
+    responseText: args.result.raw,
     viaBatch: true,
   });
 }

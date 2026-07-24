@@ -1,5 +1,6 @@
 import {
   executeChild,
+  patched,
   proxyActivities,
   setCurrentDetails,
 } from '@temporalio/workflow';
@@ -8,14 +9,14 @@ import type * as backgroundActivities from '../../activities/background';
 import { BACKGROUND_QUEUE, PRIORITY_USER } from '../../queues';
 import { UPLOAD_ID_KEY } from '../../search-attributes';
 import { indexDocumentWorkflow } from './index-document';
+import { runLlmBatch } from './llm-batch';
 
+const ALWAYS_BATCH_SUMMARIZE_PATCH = 'always-batch-summarize-v1';
+
+// Replay-only live path for histories that were created before the Batch API
+// migration. New executions always take the patched branch below.
 const { summarizeUpload, embedUpload, embedTranscriptParagraphs } =
   proxyActivities<typeof backgroundActivities>({
-    // No heartbeatTimeout: these activities are single LLM round-trips
-    // (or a small batched embed) and don't heartbeat. Without a
-    // heartbeat-based timeout, `startToCloseTimeout` is the only ceiling
-    // — which matters once the content_filter fallback chains a second
-    // model into the same attempt.
     startToCloseTimeout: '10 minute',
     taskQueue: BACKGROUND_QUEUE,
     retry: { maximumAttempts: 3 },
@@ -32,12 +33,9 @@ export type SummarizeUploadOptions = {
    */
   embedParagraphs?: boolean;
   /**
-   * When true, the summarize activity overwrites any existing summary.
-   * Default false: the activity short-circuits if `upload_record.summary`
-   * is already populated, so parent-workflow retries (process-media's
-   * `Promise.allSettled` re-runs the happy-path child if its sibling
-   * fails) don't re-bill LLM tokens for work already done. The admin
-   * "Regenerate Summary" mutation passes `force: true`.
+   * When true, submit the summary and embedding batches even when persisted
+   * results already exist. Default false lets workflow retries skip work that
+   * already landed. Admin "Regenerate Summary" passes `force: true`.
    */
   force?: boolean;
 };
@@ -45,8 +43,8 @@ export type SummarizeUploadOptions = {
 /**
  * LLM summary + embeddings post-processing pipeline.
  *
- *   summarize → embed-summary (sequential)
- *   embed-paragraphs (parallel, opt-in)
+ *   summarize batch → summary-embedding batch (sequential)
+ *   paragraph-embedding batch (parallel, opt-in)
  *   → media indexer (lc_media_v1)
  *
  * Called as a child workflow from `processMediaWorkflow` on the transcribe
@@ -57,32 +55,52 @@ export type SummarizeUploadOptions = {
  * separately. Splitting them lets admins regenerate one without paying for
  * the other.
  *
- * Note: the file/workflow share a name with the `summarizeUpload` activity
- * (different directory, different exported identifier — the workflow appends
- * `Workflow`). The workflow is the broader pipeline; the activity is just
- * the chat-completion call.
+ * Every model call uses OpenAI Batch, including a single-upload admin run.
  */
 export async function summarizeUploadWorkflow(
   uploadRecordId: string,
   { embedParagraphs = false, force = false }: SummarizeUploadOptions = {},
 ) {
-  // `force` propagates to every step in the chain so admin Regenerate
-  // (which always passes force=true) actually rewrites: summary text →
-  // summary embeddings (otherwise the old vector outlives the new
-  // text), and paragraph embeddings when requested. The first-pass
-  // transcribe path runs with force=false so retries reuse durable
-  // landings instead of re-billing tokens — see each activity's
-  // idempotency comment.
-  setCurrentDetails('Summarizing & embedding');
-  await Promise.all([
-    (async () => {
-      await summarizeUpload(uploadRecordId, { force });
-      await embedUpload(uploadRecordId, { force });
-    })(),
-    embedParagraphs
-      ? embedTranscriptParagraphs(uploadRecordId, { force })
-      : undefined,
-  ]);
+  const alwaysBatch = patched(ALWAYS_BATCH_SUMMARIZE_PATCH);
+  if (alwaysBatch) {
+    // Wait for both first-wave batches to settle so one failure does not
+    // abandon another submitted OpenAI batch. Summary embeddings form a second
+    // wave because their inputs do not exist until summary output is persisted.
+    setCurrentDetails('Summarizing & embedding paragraphs via OpenAI Batch');
+    const [summaryResult, paragraphResult] = await Promise.allSettled([
+      runLlmBatch([uploadRecordId], 'summarize', { force }),
+      embedParagraphs
+        ? runLlmBatch([uploadRecordId], 'embed_paragraphs', { force })
+        : Promise.resolve(null),
+    ]);
+
+    let summaryEmbeddingError: unknown = null;
+    if (summaryResult.status === 'fulfilled') {
+      try {
+        setCurrentDetails('Embedding summary via OpenAI Batch');
+        await runLlmBatch([uploadRecordId], 'embed_summary', { force });
+      } catch (error) {
+        summaryEmbeddingError = error;
+      }
+    }
+
+    throwCombinedBatchFailures([
+      summaryResult.status === 'rejected' ? summaryResult.reason : null,
+      paragraphResult.status === 'rejected' ? paragraphResult.reason : null,
+      summaryEmbeddingError,
+    ]);
+  } else {
+    setCurrentDetails('Summarizing & embedding');
+    await Promise.all([
+      (async () => {
+        await summarizeUpload(uploadRecordId, { force });
+        await embedUpload(uploadRecordId, { force });
+      })(),
+      embedParagraphs
+        ? embedTranscriptParagraphs(uploadRecordId, { force })
+        : undefined,
+    ]);
+  }
 
   setCurrentDetails('Indexing media');
   // Unique child workflow id per invocation. `Date.now()` is deterministic
@@ -93,10 +111,21 @@ export async function summarizeUploadWorkflow(
     workflowId: `media:${uploadRecordId}:${Date.now()}`,
     args: ['media', uploadRecordId],
     taskQueue: BACKGROUND_QUEUE,
-    priority: { priorityKey: PRIORITY_USER },
+    ...(alwaysBatch ? {} : { priority: { priorityKey: PRIORITY_USER } }),
     // Propagate UploadId so the grandchild media indexer is filterable by
     // upload in the Temporal UI, same as the rest of the tree.
     typedSearchAttributes: [{ key: UPLOAD_ID_KEY, value: uploadRecordId }],
     retry: { maximumAttempts: 2 },
   });
+}
+
+function throwCombinedBatchFailures(errors: ReadonlyArray<unknown>): void {
+  const failures = errors.filter((error) => error !== null);
+  if (failures.length === 0) return;
+  if (failures.length === 1) throw failures[0];
+  throw new Error(
+    `summarizeUploadWorkflow: multiple batch stages failed: ${failures
+      .map((error) => (error instanceof Error ? error.message : String(error)))
+      .join('; ')}`,
+  );
 }

@@ -1,8 +1,9 @@
-import { db, TranscriptParagraph } from '@letschurch/db';
+import { db, TranscriptParagraph, UploadRecord } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import { eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 
+import { fingerprintTranscriptSource } from '../../util/llm-batch-source';
 import logger from '../../util/logger';
 import {
   type TranscriptJsonSegment,
@@ -18,10 +19,11 @@ const moduleLogger = logger.child({
  * segments into paragraphs (via `isParagraphStart`), and persist them to
  * `transcript_paragraph` for word-level rendering on the media page.
  *
- * Idempotent: delete-then-insert in a transaction (paragraph boundaries shift
- * between reprocesses, so there's no stable upsert key). No-ops on legacy
- * transcripts that lack paragraph markers, leaving the media page on the legacy
- * VTT rendering.
+ * Idempotent: an identical transcript is a no-op, preserving any LLM work that
+ * landed before an activity/workflow retry. A genuinely changed transcript is
+ * replaced and all transcript-derived summary state is invalidated in the same
+ * transaction. No-ops on legacy transcripts that lack paragraph markers,
+ * leaving the media page on the legacy VTT rendering.
  */
 export default async function storeTranscriptParagraphs(
   uploadRecordId: string,
@@ -80,15 +82,58 @@ export default async function storeTranscriptParagraphs(
     };
   });
 
-  await db.transaction(async (tx) => {
-    await tx
-      .delete(TranscriptParagraph)
-      .where(eq(TranscriptParagraph.uploadRecordId, uploadRecordId));
-    if (rows.length > 0) {
-      await tx.insert(TranscriptParagraph).values(rows);
-    }
-  });
+  const changed = await db.transaction(
+    async (tx) => {
+      const existing = await tx
+        .select({
+          order: TranscriptParagraph.order,
+          start: TranscriptParagraph.start,
+          end: TranscriptParagraph.end,
+          speaker: TranscriptParagraph.speaker,
+          speakerEmbedding: TranscriptParagraph.speakerEmbedding,
+          text: TranscriptParagraph.text,
+          words: TranscriptParagraph.words,
+        })
+        .from(TranscriptParagraph)
+        .where(eq(TranscriptParagraph.uploadRecordId, uploadRecordId))
+        .orderBy(TranscriptParagraph.order);
 
-  activityLogger.info(`Stored ${rows.length} transcript paragraphs`);
-  return { paragraphs: rows.length };
+      if (
+        fingerprintTranscriptSource(existing) ===
+        fingerprintTranscriptSource(rows)
+      ) {
+        return false;
+      }
+
+      await tx
+        .delete(TranscriptParagraph)
+        .where(eq(TranscriptParagraph.uploadRecordId, uploadRecordId));
+      if (rows.length > 0) {
+        await tx.insert(TranscriptParagraph).values(rows);
+      }
+      // Paragraph deletion cascades annotations. Clear every summary field as
+      // part of the same source-version transition so a no-outline transcript
+      // cannot retain a stale summary that the submission stage would skip.
+      await tx
+        .update(UploadRecord)
+        .set({
+          summary: null,
+          searchSummary: null,
+          sections: [],
+          summarizedAt: null,
+          summaryEmbedding: null,
+          searchSummaryEmbedding: null,
+        })
+        .where(eq(UploadRecord.id, uploadRecordId));
+      return true;
+    },
+    { isolationLevel: 'serializable' },
+  );
+
+  activityLogger.info(
+    changed
+      ? `Stored ${rows.length} changed transcript paragraphs and invalidated derived LLM state`
+      : `Transcript source unchanged; preserved ${rows.length} paragraphs and derived LLM state`,
+  );
+  return { paragraphs: rows.length, changed };
 }

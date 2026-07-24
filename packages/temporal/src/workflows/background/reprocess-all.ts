@@ -1,6 +1,7 @@
 import {
   continueAsNew,
   ParentClosePolicy,
+  patched,
   proxyActivities,
   startChild,
 } from '@temporalio/workflow';
@@ -25,18 +26,14 @@ const { getReprocessBatch } = proxyActivities<typeof backgroundActivities>({
   retry: { maximumAttempts: 3 },
 });
 
-// Uploads per iteration. In viaBatch mode this is also the size of each
-// reprocessGroupWorkflow's OpenAI batch, so keep it modest: 50 keeps each
-// group's submit/process activity well within its timeout while still
-// amortizing the batch overhead.
+// Uploads dispatched per iterator history. Each upload is an independent
+// processMedia workflow; its LLM stages submit through OpenAI Batch.
 const BATCH_SIZE = 50;
 
 export type ReprocessAllOptions = {
   /**
-   * When true, dispatch each iteration's uploads to one
-   * `reprocessGroupWorkflow` (which batches the LLM stages via
-   * OpenAI Batch). When false (default), keep the per-upload
-   * `processMediaWorkflow` behavior with live LLM calls.
+   * Replay-only input retained for histories created before all reprocessing
+   * began dispatching regular per-upload jobs. New callers omit this field.
    */
   viaBatch?: boolean;
   /**
@@ -93,60 +90,27 @@ export async function reprocessAllWorkflow(
     },
   );
 
-  if (options.viaBatch) {
-    // Each iterator batch (≤100 uploads) becomes ONE
-    // `reprocessGroupWorkflow` child. Inside that child the work
-    // splits into three OpenAI batches because the Batch API
-    // restricts each batch to a single endpoint:
-    //   - one `/v1/chat/completions` batch carrying every upload's
-    //     summarize + annotate requests,
-    //   - one `/v1/embeddings` batch carrying every upload's
-    //     paragraph-vector requests (runs in parallel with the chat
-    //     batch — paragraph text is in the DB after transcribe),
-    //   - one `/v1/embeddings` batch carrying every upload's
-    //     summary-vector requests (runs after the chat batch
-    //     finishes since it depends on summaries being written).
-    // Plus live per-upload prep (transcribe) at the start and live
-    // per-upload reindex children at the end.
-    //
-    // `startChild` + `ABANDON` (matching the unbatched per-upload
-    // branch below) so the parent advances through the cursor
-    // immediately and the group children run in parallel. With
-    // sequential `executeChild` a 50-group full reprocess would
-    // serialise the 24h Batch SLA into ~50 days; with parallel
-    // children every group's batches sit in OpenAI's queue
-    // concurrently and finish in ~24h total. Tier-4 quotas
-    // (1B chat / 500M embed queued) easily fit dozens of groups in
-    // flight at once.
-    //
-    // Trade-off: like the unbatched branch, the parent workflow
-    // completes as soon as dispatch finishes, so the admin status
-    // badge will flip to "Completed" while abandoned group
-    // children may still have hours of polling left. Operators can
-    // see per-group progress via the Temporal UI's
-    // `reprocessGroup:*` workflows. Cancellation of the parent
-    // also doesn't cascade to the abandoned children — same as the
-    // unbatched path.
+  const dispatchRegularJobs = patched('always-batch-reprocess-regular-jobs-v1');
+  if (!dispatchRegularJobs && options.viaBatch) {
+    // Replay the legacy grouped child command for histories that were already
+    // running in the old opt-in Batch mode. New executions never enter here.
     if (items.length > 0) {
       try {
-        // Resolve each upload's deep-links here (webUrl threaded in, channel
-        // known per item) so the group's reindex children can carry them.
-        // Keyed by upload id; empty map when webUrl wasn't provided.
         const linksByUpload: Record<
           string,
           ReturnType<typeof uploadDashboardLinks>
         > = webUrl
           ? Object.fromEntries(
-              items.map((i) => [
-                i.id,
-                uploadDashboardLinks(i.channelId, i.id, webUrl),
+              items.map((item) => [
+                item.id,
+                uploadDashboardLinks(item.channelId, item.id, webUrl),
               ]),
             )
           : {};
         await startChild(reprocessGroupWorkflow, {
           workflowId: `reprocessGroup:${items[0]?.id ?? 'empty'}:${items.length}`,
           args: [
-            items.map((i) => i.id),
+            items.map((item) => item.id),
             processingScope,
             skipProbe,
             linksByUpload,
@@ -158,17 +122,8 @@ export async function reprocessAllWorkflow(
           ...staticMeta({
             summary: `Reprocess group (${processingScope}, ${items.length} uploads)`,
           }),
-          // No `typedSearchAttributes` on the group workflow itself —
-          // a group spans up to 100 uploads (and many channels in the
-          // `no_paragraphs` / `all` scopes), so cherry-picking
-          // `items[0]`'s ids would be misleading. The per-upload
-          // indexDocument grandchildren inside the group still set
-          // `UPLOAD_ID_KEY` so the upload-tree filter stays intact.
         });
       } catch (err) {
-        // Mirror the unbatched per-upload branch's already-started
-        // tolerance: cursor advancement should prevent duplicate
-        // ids, but defending against a re-entered resume is cheap.
         if (
           !(
             err instanceof Error &&
@@ -182,9 +137,8 @@ export async function reprocessAllWorkflow(
   } else {
     for (const item of items) {
       try {
-        // Build the deep-links from the explicitly-threaded webUrl (never
-        // the process.env default — that read isn't replay-safe in the
-        // sandbox). Empty when webUrl wasn't provided.
+        // Build the deep-links from the explicitly-threaded webUrl (never the
+        // process.env default — that read isn't replay-safe in the sandbox).
         const links = webUrl
           ? uploadDashboardLinks(item.channelId, item.id, webUrl)
           : [];
