@@ -22,7 +22,7 @@ import {
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { invariant } from 'es-toolkit';
 import { map } from 'nanostores';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 
 import { LcMenu, MenuItemButton } from '@/components/lc-menu';
@@ -52,9 +52,104 @@ import { trpcClient, useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 import { formatDate, formatTime } from '@/util/format';
 import { doMultipartUpload } from '@/util/multipart-upload';
+import {
+  extractVideoThumbnailCandidates,
+  type VideoThumbnailCandidate,
+} from '@/util/video-thumbnails';
 
 export const $uploadProgress = map<Record<string, number | undefined>>({});
 export const $deletedUploads = map<Record<string, true>>({});
+
+export type LocalVideoThumbnailCandidate = VideoThumbnailCandidate & {
+  url: string;
+};
+
+type LocalVideoThumbnailState =
+  | { requestId: number; status: 'loading' }
+  | {
+      requestId: number;
+      status: 'ready';
+      candidates: LocalVideoThumbnailCandidate[];
+    }
+  | { requestId: number; status: 'error'; message: string };
+
+export const $localVideoThumbnails = map<
+  Record<string, LocalVideoThumbnailState | undefined>
+>({});
+
+let localVideoThumbnailRequestId = 0;
+const localVideoThumbnailConsumers = new Map<string, number>();
+
+function trackLocalVideoThumbnails(
+  uploadId: string,
+  promise: Promise<VideoThumbnailCandidate[]>,
+) {
+  const requestId = ++localVideoThumbnailRequestId;
+  $localVideoThumbnails.setKey(uploadId, { requestId, status: 'loading' });
+
+  void promise
+    .then((candidates) => {
+      if ($localVideoThumbnails.get()[uploadId]?.requestId !== requestId) {
+        return;
+      }
+
+      $localVideoThumbnails.setKey(uploadId, {
+        requestId,
+        status: 'ready',
+        candidates: candidates.map((candidate) => ({
+          ...candidate,
+          url: URL.createObjectURL(candidate.file),
+        })),
+      });
+    })
+    .catch((error) => {
+      if ($localVideoThumbnails.get()[uploadId]?.requestId !== requestId) {
+        return;
+      }
+
+      console.error('Failed to generate video thumbnails:', error);
+      $localVideoThumbnails.setKey(uploadId, {
+        requestId,
+        status: 'error',
+        message:
+          'We could not preview frames from this video. Generated thumbnails will appear after processing.',
+      });
+    });
+}
+
+function clearLocalVideoThumbnails(uploadId: string) {
+  const state = $localVideoThumbnails.get()[uploadId];
+  if (state?.status === 'ready') {
+    for (const candidate of state.candidates) {
+      URL.revokeObjectURL(candidate.url);
+    }
+  }
+  $localVideoThumbnails.setKey(uploadId, undefined);
+}
+
+export function retainLocalVideoThumbnails(uploadId: string) {
+  localVideoThumbnailConsumers.set(
+    uploadId,
+    (localVideoThumbnailConsumers.get(uploadId) ?? 0) + 1,
+  );
+
+  return () => {
+    const remaining = (localVideoThumbnailConsumers.get(uploadId) ?? 1) - 1;
+    if (remaining > 0) {
+      localVideoThumbnailConsumers.set(uploadId, remaining);
+      return;
+    }
+
+    localVideoThumbnailConsumers.delete(uploadId);
+    // Deferring cleanup keeps React Strict Mode's development-only effect
+    // teardown/re-setup from discarding candidates while the page is mounted.
+    queueMicrotask(() => {
+      if (!localVideoThumbnailConsumers.has(uploadId)) {
+        clearLocalVideoThumbnails(uploadId);
+      }
+    });
+  };
+}
 
 export const Route = createFileRoute(
   '/_main/dashboard/channels_/$channelId_/uploads',
@@ -130,11 +225,23 @@ function ChannelUploadsPage() {
   const canUpload = isAdmin || (channel.userMembership?.canUpload ?? false);
   const canDelete = isAdmin; // Only channel admins and site admins can delete
   const [currentFile, setCurrentFile] = useState<File | null>(null);
+  const currentFileRef = useRef<File | null>(null);
+  const localThumbnailExtractionRef = useRef<{
+    abortController: AbortController;
+    promise: Promise<VideoThumbnailCandidate[]>;
+  } | null>(null);
   const [uploadToDelete, setUploadToDelete] = useState<{
     id: string;
     title: string;
   } | null>(null);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+
+  const resetPreparedUpload = useCallback(() => {
+    localThumbnailExtractionRef.current?.abortController.abort();
+    localThumbnailExtractionRef.current = null;
+    currentFileRef.current = null;
+    setCurrentFile(null);
+  }, []);
 
   const uploadIds = uploads.map((upload) => upload.id);
   const [selection, setSelection] = useState<string[]>([]);
@@ -177,27 +284,36 @@ function ChannelUploadsPage() {
   const createUploadMutation = useMutation(
     trpc.dashboard.channels.createUploadRecord.mutationOptions({
       onSuccess: async (uploadId) => {
-        invariant(currentFile, 'Missing upload file');
+        const file = currentFileRef.current;
+        invariant(file, 'Missing upload file');
+        const localThumbnailExtraction = localThumbnailExtractionRef.current;
+        localThumbnailExtractionRef.current = null;
+
+        if (localThumbnailExtraction) {
+          trackLocalVideoThumbnails(uploadId, localThumbnailExtraction.promise);
+        }
+
+        $uploadProgress.setKey(uploadId, 0);
+        const navPromise = navigate({
+          to: '/dashboard/channels/$channelId/uploads/$uploadId',
+          params: { channelId: channel.id, uploadId },
+        });
+
         try {
           const { urls, partSize, s3UploadKey, s3UploadId } =
             await trpcClient.dashboard.channels.createMultipartUpload.mutate({
               channelId: channel.id,
               targetId: uploadId,
-              uploadMimeType: currentFile.type,
+              uploadMimeType: file.type,
               postProcess: 'media',
-              bytes: currentFile.size,
+              bytes: file.size,
             });
 
-          const mpu = doMultipartUpload(currentFile, urls, partSize);
+          const mpu = doMultipartUpload(file, urls, partSize);
 
           mpu.onProgress((progress) =>
             $uploadProgress.setKey(uploadId, progress),
           );
-
-          const navPromise = navigate({
-            to: '/dashboard/channels/$channelId/uploads/$uploadId',
-            params: { channelId: channel.id, uploadId },
-          });
 
           const etags = await mpu;
 
@@ -212,6 +328,7 @@ function ChannelUploadsPage() {
 
           await navPromise;
         } catch (error) {
+          $uploadProgress.setKey(uploadId, undefined);
           console.error('Failed to upload file:', error);
           showFailure({
             message:
@@ -219,11 +336,12 @@ function ChannelUploadsPage() {
           });
         }
         closeUploadModal();
+        currentFileRef.current = null;
         setCurrentFile(null);
       },
       onError: (error) => {
         console.error('Failed to create upload record:', error);
-        setCurrentFile(null);
+        resetPreparedUpload();
         showFailure({
           message:
             error instanceof Error
@@ -428,7 +546,26 @@ function ChannelUploadsPage() {
   });
 
   const handleDrop = ([file]: File[]) => {
+    localThumbnailExtractionRef.current?.abortController.abort();
+    localThumbnailExtractionRef.current = null;
+    currentFileRef.current = file;
     setCurrentFile(file);
+
+    if (file.type.startsWith('video/')) {
+      const abortController = new AbortController();
+      const promise = extractVideoThumbnailCandidates(file, {
+        signal: abortController.signal,
+      });
+      // The upload-record request can fail before the promise is transferred to
+      // the media page. Mark early rejection as observed while preserving it for
+      // the inline status handler attached after the record is created.
+      void promise.catch(() => undefined);
+      localThumbnailExtractionRef.current = {
+        abortController,
+        promise,
+      };
+    }
+
     createUploadMutation.mutate({
       channelId: channel.id,
       originalFileName: file.name,
@@ -632,7 +769,10 @@ function ChannelUploadsPage() {
       <LcModal.Root
         open={uploadModalOpened}
         onOpenChange={(o) => {
-          if (!o) closeUploadModal();
+          if (!o && !createUploadMutation.isPending) {
+            closeUploadModal();
+            resetPreparedUpload();
+          }
         }}
       >
         <LcModal.Portal>
@@ -664,10 +804,15 @@ function ChannelUploadsPage() {
                 </Dropzone.Idle>
 
                 <div>
-                  <Text size="xl">Drag and drop media files to upload</Text>
+                  <Text size="xl">
+                    {currentFile
+                      ? currentFile.name
+                      : 'Drag and drop media files to upload'}
+                  </Text>
                   <Text size="sm" c="dimmed" className="mt-[7px]">
-                    Or click to select files. Your media will be private until
-                    you publish them.
+                    {currentFile
+                      ? 'Preparing your media page…'
+                      : 'Or click to select files. Your media will be private until you publish them.'}
                   </Text>
                 </div>
               </div>

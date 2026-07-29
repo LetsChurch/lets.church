@@ -44,6 +44,13 @@ export default async function createThumbnails(
     },
   });
 
+  // A reprocessing run must hide candidates from the previous run until every
+  // new frame is available. This is also the explicit "in progress" signal
+  // consumed by the dashboard polling query.
+  await updateUploadRecord(uploadRecordId, {
+    thumbnailCount: null,
+  });
+
   const cancellationSignal = Context.current().cancellationSignal;
   const workingDir = join(WORK_DIR, s3UploadKey);
 
@@ -64,6 +71,7 @@ export default async function createThumbnails(
   // device. No-op on the software path.
   const hwAccel = resolveHwAccel();
   let releaseBudget: () => void = () => {};
+  let generatedThumbnailCount = 0;
 
   try {
     if (thumbnailsUseAma(probe, hwAccel)) {
@@ -104,6 +112,7 @@ export default async function createThumbnails(
     // blurhash, hovernail). Idempotent with the finally below.
     releaseBudget();
     const thumbnailJpgs = (await fastGlob(join(workingDir, '*.jpg'))).sort();
+    generatedThumbnailCount = thumbnailJpgs.length;
     const thumbnailsWithSizes = await pMap(
       thumbnailJpgs,
       async (p) => ({
@@ -136,7 +145,6 @@ export default async function createThumbnails(
           await updateUploadRecord(uploadRecordId, {
             defaultThumbnailPath: key,
             defaultThumbnailBlurhash: blurhash,
-            thumbnailCount: thumbnailJpgs.length,
           });
         },
         {
@@ -206,4 +214,26 @@ export default async function createThumbnails(
     releaseBudget();
     await rimraf(workingDir);
   }
+
+  // Publish the candidate count and completion signal together, only after all
+  // individual frames and the hovernail have finished uploading. This keeps
+  // clients from constructing URLs for objects that are not available yet.
+  await pRetry(
+    async (attempt) => {
+      activityLogger.info(
+        `Publishing generated thumbnails: attempt ${attempt}`,
+      );
+      await updateUploadRecord(uploadRecordId, {
+        thumbnailCount: generatedThumbnailCount,
+      });
+    },
+    {
+      retries: 5,
+      onFailedAttempt: (e) => {
+        activityLogger.warn(
+          `${e.attemptNumber}: Failed to publish generated thumbnails: ${e}`,
+        );
+      },
+    },
+  );
 }

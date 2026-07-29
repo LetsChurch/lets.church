@@ -135,6 +135,12 @@ const moduleLogger = logger.child({
   module: 'trpc/procedures/dashboard/channel',
 });
 
+const MAX_GENERATED_THUMBNAILS = 1000;
+
+function generatedThumbnailPath(uploadId: string, index: number) {
+  return `${uploadId}/screenshot_v1_${String(index).padStart(3, '0')}.jpg`;
+}
+
 const { ADMIN_EMAIL, WEB_URL } = z
   .object({
     ADMIN_EMAIL: z.email(),
@@ -2488,6 +2494,7 @@ export const channelRouter = router({
           downloadsEnabled: true,
           defaultThumbnailPath: true,
           overrideThumbnailPath: true,
+          thumbnailCount: true,
           uploadFinalized: true,
           finalizedUploadKey: true,
           transcodingFinishedAt: true,
@@ -2570,6 +2577,7 @@ export const channelRouter = router({
       const {
         defaultThumbnailPath,
         overrideThumbnailPath,
+        thumbnailCount,
         featuredUpload,
         variants,
         uploadListEntries,
@@ -2591,6 +2599,9 @@ export const channelRouter = router({
       const thumbnailUrl = thumbnailPath
         ? getPublicImageUrl(publicS3.getS3ProtocolUri(thumbnailPath))
         : null;
+      const overrideThumbnailUrl = overrideThumbnailPath
+        ? getPublicImageUrl(publicS3.getS3ProtocolUri(overrideThumbnailPath))
+        : null;
 
       // Generate media source URLs based on available variants
       const hasVideo = variants.some((v) => v.startsWith('VIDEO'));
@@ -2603,6 +2614,27 @@ export const channelRouter = router({
       const audioSource = hasAudio
         ? getPublicMediaUrl(`${upload.id}/AUDIO.m3u8`)
         : null;
+
+      const generatedThumbnailCount =
+        hasVideo && thumbnailCount !== null
+          ? Math.min(Math.max(thumbnailCount ?? 0, 0), MAX_GENERATED_THUMBNAILS)
+          : 0;
+      const generatedThumbnailsReady = hasVideo && thumbnailCount !== null;
+      const generatedThumbnails = Array.from(
+        { length: generatedThumbnailCount },
+        (_, offset) => {
+          const index = offset + 1;
+          const path = generatedThumbnailPath(upload.id, index);
+
+          return {
+            index,
+            url: getPublicImageUrl(publicS3.getS3ProtocolUri(path), {
+              resize: { width: 320 },
+            }),
+            isSelected: path === thumbnailPath,
+          };
+        },
+      );
 
       // For site admins, check if there's an active workflow for failed uploads
       let hasActiveWorkflow = false;
@@ -2657,6 +2689,9 @@ export const channelRouter = router({
         upload: {
           ...uploadRest,
           thumbnailUrl,
+          overrideThumbnailUrl,
+          generatedThumbnailsReady,
+          generatedThumbnails,
           isFeatured: featuredUpload.length > 0,
           mediaSource,
           audioSource,
@@ -2674,6 +2709,61 @@ export const channelRouter = router({
           ...upload.channel,
           userMembership,
         },
+      };
+    }),
+
+  setGeneratedThumbnail: channelEditProcedure
+    .input(
+      uploadQuerySchema.extend({
+        thumbnailIndex: z.number().int().min(1).max(MAX_GENERATED_THUMBNAILS),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const upload = await db.query.UploadRecord.findFirst({
+        columns: {
+          id: true,
+          thumbnailCount: true,
+          variants: true,
+        },
+        where: (t, { and, eq }) =>
+          and(eq(t.id, input.uploadId), eq(t.channelId, input.channelId)),
+      });
+
+      if (!upload) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Upload not found or access denied',
+        });
+      }
+
+      const hasVideo = upload.variants.some((variant) =>
+        variant.startsWith('VIDEO'),
+      );
+      if (
+        !hasVideo ||
+        !upload.thumbnailCount ||
+        input.thumbnailIndex > upload.thumbnailCount
+      ) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'That generated thumbnail is not available',
+        });
+      }
+
+      const path = generatedThumbnailPath(upload.id, input.thumbnailIndex);
+      await db
+        .update(UploadRecord)
+        .set({
+          overrideThumbnailPath: path,
+          // A blurhash from a previous uploaded thumbnail would no longer
+          // describe this generated frame.
+          overrideThumbnailBlurhash: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(UploadRecord.id, upload.id));
+
+      return {
+        thumbnailUrl: getPublicImageUrl(publicS3.getS3ProtocolUri(path)),
       };
     }),
 

@@ -1,3 +1,4 @@
+import { Accordion } from '@base-ui/react/accordion';
 import { Combobox } from '@base-ui/react/combobox';
 import { Toggle } from '@base-ui/react/toggle';
 import { ToggleGroup } from '@base-ui/react/toggle-group';
@@ -68,13 +69,16 @@ import { idTranslator } from '@/schemas/common';
 import { uploadFormSchema } from '@/schemas/dashboard';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
+import { formatTime } from '@/util/format';
 import { doMultipartUpload } from '@/util/multipart-upload';
 import { stopMediaElement } from '@/util/stop-media-element';
 
 import { SpeakerLabelingModal } from './-components/speaker-labeling-modal';
 import {
+  $localVideoThumbnails,
   $deletedUploads,
   $uploadProgress,
+  retainLocalVideoThumbnails,
 } from './channels_.$channelId_.uploads';
 
 import styles from './-styles.module.css';
@@ -192,6 +196,11 @@ function ChannelUploadPage() {
   const { [uploadId]: uploadProgress } = useStore($uploadProgress, {
     keys: [uploadId],
   });
+  const { [uploadId]: localVideoThumbnails } = useStore($localVideoThumbnails, {
+    keys: [uploadId],
+  });
+
+  useEffect(() => retainLocalVideoThumbnails(uploadId), [uploadId]);
 
   const isUploading = typeof uploadProgress === 'number';
 
@@ -207,8 +216,13 @@ function ChannelUploadPage() {
 
       const isTranscoding = !data.upload.transcodingFinishedAt;
       const isTranscribing = !data.upload.transcribingFinishedAt;
+      const isGeneratingThumbnails =
+        data.upload.mediaSource !== null &&
+        !data.upload.generatedThumbnailsReady;
 
-      return isTranscoding || isTranscribing ? 5000 : false;
+      return isTranscoding || isTranscribing || isGeneratingThumbnails
+        ? 5000
+        : false;
     },
   });
 
@@ -246,10 +260,13 @@ function ChannelUploadPage() {
   >('everything');
   const [reprocessSkipProbe, setReprocessSkipProbe] = useState(true);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedGeneratedThumbnailIndex, setSelectedGeneratedThumbnailIndex] =
+    useState<number | null>(null);
   const [isProcessingThumbnail, setIsProcessingThumbnail] = useState(false);
-  const [thumbnailUrlBeforeUpload, setThumbnailUrlBeforeUpload] = useState<
-    string | null
-  >(null);
+  const [
+    overrideThumbnailUrlBeforeUpload,
+    setOverrideThumbnailUrlBeforeUpload,
+  ] = useState<string | null>(null);
   // Copied-state for the embed-code copy button — flips back after a short delay.
   const { copied: embedCopied, copy: copyEmbed } = useCopied(1000);
   // Disable the LLM Eval menu item while the route transition is in
@@ -291,6 +308,7 @@ function ChannelUploadPage() {
       return null;
     });
     setNewThumbnailFile(null);
+    setSelectedGeneratedThumbnailIndex(null);
   }, []);
 
   // Poll for thumbnail changes when processing
@@ -316,12 +334,17 @@ function ChannelUploadPage() {
         ) as typeof data;
 
         if (currentData) {
-          const currentThumbnailUrl = currentData.upload.thumbnailUrl;
+          const currentOverrideThumbnailUrl =
+            currentData.upload.overrideThumbnailUrl;
 
-          // Check if thumbnail URL has changed from what it was before upload
-          if (currentThumbnailUrl !== thumbnailUrlBeforeUpload) {
+          // The auto-generated default can appear while a new media upload is
+          // still processing. Wait specifically for the override to change so
+          // that event cannot be mistaken for the selected local frame.
+          if (
+            currentOverrideThumbnailUrl !== overrideThumbnailUrlBeforeUpload
+          ) {
             setIsProcessingThumbnail(false);
-            setThumbnailUrlBeforeUpload(null);
+            setOverrideThumbnailUrlBeforeUpload(null);
             showSuccess({
               title: 'Thumbnail Updated',
               message: 'Your thumbnail has been processed successfully!',
@@ -338,7 +361,7 @@ function ChannelUploadPage() {
     };
   }, [
     isProcessingThumbnail,
-    thumbnailUrlBeforeUpload,
+    overrideThumbnailUrlBeforeUpload,
     queryClient,
     trpc,
     channelId,
@@ -377,6 +400,10 @@ function ChannelUploadPage() {
         });
       },
     }),
+  );
+
+  const setGeneratedThumbnailMutation = useMutation(
+    trpc.dashboard.channels.setGeneratedThumbnail.mutationOptions(),
   );
 
   const downloadOriginalMutation = useMutation(
@@ -619,7 +646,7 @@ function ChannelUploadPage() {
     onSubmit: async ({ value }) => {
       try {
         if (newThumbnailFile) {
-          setThumbnailUrlBeforeUpload(upload.thumbnailUrl);
+          setOverrideThumbnailUrlBeforeUpload(upload.overrideThumbnailUrl);
 
           const mpu =
             await trpcClient.dashboard.channels.createMultipartUpload.mutate({
@@ -644,6 +671,12 @@ function ChannelUploadPage() {
           });
 
           setIsProcessingThumbnail(true);
+        } else if (selectedGeneratedThumbnailIndex !== null) {
+          await setGeneratedThumbnailMutation.mutateAsync({
+            channelId,
+            uploadId,
+            thumbnailIndex: selectedGeneratedThumbnailIndex,
+          });
         }
 
         // Update basic upload fields
@@ -730,6 +763,11 @@ function ChannelUploadPage() {
   // The iframe embed snippet — computed once and reused by both the copy
   // button and the read-only textarea below.
   const embedCode = `<iframe src="${typeof window !== 'undefined' ? window.location.origin : 'https://lets.church'}/embed/media/${idTranslator.fromUUID(uploadId)}" width="1920" height="1080" frameborder="0" allowfullscreen allow="fullscreen; picture-in-picture"></iframe>`;
+  const selectedGeneratedThumbnail = upload.generatedThumbnails.find(
+    (thumbnail) => thumbnail.index === selectedGeneratedThumbnailIndex,
+  );
+  const thumbnailPreviewUrl =
+    previewUrl ?? selectedGeneratedThumbnail?.url ?? upload.thumbnailUrl;
 
   return (
     <div className="relative mx-auto w-full max-w-7xl px-4 py-4">
@@ -806,6 +844,7 @@ function ChannelUploadPage() {
                           onDrop={(files) => {
                             const file = files[0];
                             if (file) {
+                              setSelectedGeneratedThumbnailIndex(null);
                               if (previewUrl) {
                                 URL.revokeObjectURL(previewUrl);
                               }
@@ -842,11 +881,9 @@ function ChannelUploadPage() {
                           className="h-[180px] w-[320px]"
                         >
                           <div className="relative h-full w-full">
-                            {upload.thumbnailUrl || previewUrl ? (
+                            {thumbnailPreviewUrl ? (
                               <img
-                                src={
-                                  previewUrl || upload.thumbnailUrl || undefined
-                                }
+                                src={thumbnailPreviewUrl}
                                 alt="Upload thumbnail"
                                 className="h-full w-full"
                                 style={{ objectFit: 'cover' }}
@@ -903,7 +940,8 @@ function ChannelUploadPage() {
                           </div>
                         </Dropzone>
 
-                        {newThumbnailFile && (
+                        {(newThumbnailFile ||
+                          selectedGeneratedThumbnailIndex !== null) && (
                           <ActionIcon
                             className="absolute"
                             style={{ top: 4, right: 4, zIndex: 10 }}
@@ -916,19 +954,172 @@ function ChannelUploadPage() {
                           </ActionIcon>
                         )}
 
-                        {previewUrl && !isProcessingThumbnail && (
-                          <Text
-                            size="xs"
-                            c="dimmed"
-                            style={{ textAlign: 'center' }}
-                            className="mt-[4px]"
-                          >
-                            New thumbnail
-                          </Text>
-                        )}
+                        {(previewUrl || selectedGeneratedThumbnail) &&
+                          !isProcessingThumbnail && (
+                            <Text
+                              size="xs"
+                              c="dimmed"
+                              style={{ textAlign: 'center' }}
+                              className="mt-[4px]"
+                            >
+                              {previewUrl
+                                ? 'New uploaded thumbnail'
+                                : 'Generated thumbnail selected'}
+                            </Text>
+                          )}
                       </div>
                     </Tooltip>
                   </div>
+
+                  {localVideoThumbnails ? (
+                    <div className="mt-7">
+                      <Text fw={500} size="sm">
+                        Frames from your video
+                      </Text>
+                      <Text size="xs" c="dimmed" className="mt-1">
+                        Pick a frame from the file you just uploaded.
+                      </Text>
+
+                      {localVideoThumbnails.status === 'loading' ? (
+                        <div className="flex items-center gap-3 py-5">
+                          <Loader size="sm" />
+                          <Text size="sm" c="dimmed">
+                            Preparing thumbnail candidates…
+                          </Text>
+                        </div>
+                      ) : localVideoThumbnails.status === 'error' ? (
+                        <Text size="sm" c="red" className="mt-3">
+                          {localVideoThumbnails.message}
+                        </Text>
+                      ) : (
+                        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                          {localVideoThumbnails.candidates.map(
+                            (candidate, index) => {
+                              const isSelected =
+                                newThumbnailFile === candidate.file;
+
+                              return (
+                                <button
+                                  key={`${candidate.timeSeconds}-${index}`}
+                                  type="button"
+                                  aria-label={`Use frame at ${formatTime(candidate.timeSeconds * 1000)}`}
+                                  aria-pressed={isSelected}
+                                  disabled={isProcessingThumbnail}
+                                  onClick={() => {
+                                    resetDroppedThumbnail();
+                                    setPreviewUrl(
+                                      URL.createObjectURL(candidate.file),
+                                    );
+                                    setNewThumbnailFile(candidate.file);
+                                  }}
+                                  className={cn(
+                                    'relative aspect-video overflow-hidden rounded-lg border-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+                                    isSelected
+                                      ? 'border-brand'
+                                      : 'border-transparent hover:border-gray-300 dark:hover:border-zinc-600',
+                                  )}
+                                >
+                                  <img
+                                    src={candidate.url}
+                                    alt=""
+                                    className="size-full object-cover"
+                                  />
+                                  <span className="absolute right-1 bottom-1 rounded bg-black/75 px-1.5 py-0.5 text-xs text-white">
+                                    {formatTime(candidate.timeSeconds * 1000)}
+                                  </span>
+                                  {isSelected ? (
+                                    <span className="bg-brand absolute top-2 right-2 flex size-5 items-center justify-center rounded-full text-white">
+                                      <IconCheck size={13} />
+                                    </span>
+                                  ) : null}
+                                </button>
+                              );
+                            },
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+
+                  {upload.generatedThumbnails.length > 0 ? (
+                    <Accordion.Root className="mt-7">
+                      <Accordion.Item
+                        value="generated-thumbnails"
+                        className="overflow-hidden rounded-lg border border-gray-200 dark:border-zinc-700"
+                      >
+                        <Accordion.Header>
+                          <Accordion.Trigger className="group flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:hover:bg-zinc-800">
+                            <div>
+                              <Text fw={500} size="sm">
+                                Generated thumbnails
+                              </Text>
+                              <Text size="xs" c="dimmed" className="mt-1">
+                                {upload.generatedThumbnails.length} frames from
+                                processing
+                              </Text>
+                            </div>
+                            <IconChevronDown
+                              aria-hidden
+                              size={18}
+                              className="shrink-0 transition-transform group-data-[panel-open]:rotate-180"
+                            />
+                          </Accordion.Trigger>
+                        </Accordion.Header>
+                        <Accordion.Panel>
+                          <div className="border-t border-gray-200 p-4 dark:border-zinc-700">
+                            <Text size="xs" c="dimmed" className="mb-3">
+                              Choose any frame created while this video was
+                              processed, or upload your own image above.
+                            </Text>
+                            <div className="grid max-h-[420px] grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3 lg:grid-cols-4">
+                              {upload.generatedThumbnails.map((thumbnail) => {
+                                const isSelected =
+                                  selectedGeneratedThumbnailIndex ===
+                                    thumbnail.index ||
+                                  (selectedGeneratedThumbnailIndex === null &&
+                                    !newThumbnailFile &&
+                                    thumbnail.isSelected);
+
+                                return (
+                                  <button
+                                    key={thumbnail.index}
+                                    type="button"
+                                    aria-label={`Use generated thumbnail ${thumbnail.index}`}
+                                    aria-pressed={isSelected}
+                                    disabled={isProcessingThumbnail}
+                                    onClick={() => {
+                                      resetDroppedThumbnail();
+                                      setSelectedGeneratedThumbnailIndex(
+                                        thumbnail.index,
+                                      );
+                                    }}
+                                    className={cn(
+                                      'relative aspect-video overflow-hidden rounded-lg border-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+                                      isSelected
+                                        ? 'border-brand'
+                                        : 'border-transparent hover:border-gray-300 dark:hover:border-zinc-600',
+                                    )}
+                                  >
+                                    <img
+                                      src={thumbnail.url}
+                                      alt=""
+                                      loading="lazy"
+                                      className="size-full object-cover"
+                                    />
+                                    {isSelected ? (
+                                      <span className="bg-brand absolute top-2 right-2 flex size-5 items-center justify-center rounded-full text-white">
+                                        <IconCheck size={13} />
+                                      </span>
+                                    ) : null}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </Accordion.Panel>
+                      </Accordion.Item>
+                    </Accordion.Root>
+                  ) : null}
                 </div>
 
                 <form.AppField name="license">
@@ -1052,7 +1243,11 @@ function ChannelUploadPage() {
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      disabled={!isDirty && !newThumbnailFile}
+                      disabled={
+                        !isDirty &&
+                        !newThumbnailFile &&
+                        selectedGeneratedThumbnailIndex === null
+                      }
                       onClick={() => {
                         form.reset();
                         resetDroppedThumbnail();
@@ -1064,8 +1259,16 @@ function ChannelUploadPage() {
                     <Button
                       size="sm"
                       className="flex-1"
-                      disabled={(!isDirty && !newThumbnailFile) || !isValid}
-                      loading={updateMutation.isPending}
+                      disabled={
+                        (!isDirty &&
+                          !newThumbnailFile &&
+                          selectedGeneratedThumbnailIndex === null) ||
+                        !isValid
+                      }
+                      loading={
+                        updateMutation.isPending ||
+                        setGeneratedThumbnailMutation.isPending
+                      }
                       onClick={() => form.handleSubmit()}
                     >
                       Save
