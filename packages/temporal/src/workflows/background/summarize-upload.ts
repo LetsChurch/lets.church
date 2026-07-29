@@ -1,4 +1,5 @@
 import {
+  ApplicationFailure,
   executeChild,
   patched,
   proxyActivities,
@@ -123,9 +124,10 @@ function throwCombinedBatchFailures(errors: ReadonlyArray<unknown>): void {
   const failures = errors.filter((error) => error !== null);
   if (failures.length === 0) return;
   if (failures.length === 1) throw failures[0];
-  throw new Error(
+  throw ApplicationFailure.retryable(
     `summarizeUploadWorkflow: multiple batch stages failed: ${failures
       .map((error) => (error instanceof Error ? error.message : String(error)))
       .join('; ')}`,
+    'OpenAIBatchStagesFailed',
   );
 }

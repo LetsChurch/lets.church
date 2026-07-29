@@ -1,4 +1,5 @@
 import {
+  ApplicationFailure,
   CancellationScope,
   log,
   proxyActivities,
@@ -203,8 +204,9 @@ export async function runLlmBatch(
     accountingErrors.length > 0
   ) {
     const states = [...new Set(badStatuses.map((status) => status.status))];
-    throw new Error(
+    throw ApplicationFailure.retryable(
       `OpenAI ${kind} batch failed: ${Math.max(failedRequestCount, providerFailedRequestCount)} request(s) failed${states.length > 0 ? `; terminal status ${states.join(', ')}` : ''}${accountingErrors.length > 0 ? `; accounting: ${accountingErrors.join('; ')}` : ''}`,
+      states.includes('expired') ? 'OpenAIBatchExpired' : 'OpenAIBatchFailed',
     );
   }
 

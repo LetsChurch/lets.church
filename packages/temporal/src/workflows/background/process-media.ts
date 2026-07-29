@@ -1,4 +1,5 @@
 import {
+  ApplicationFailure,
   executeChild,
   patched,
   proxyActivities,
@@ -193,8 +194,9 @@ export async function processMediaWorkflow(
       });
 
       if (annotateError !== null) {
-        throw new Error(
+        throw ApplicationFailure.retryable(
           `Post-transcribe pipeline: annotate failed — ${annotateError instanceof Error ? annotateError.message : String(annotateError)}`,
+          'PostTranscribeAnnotationFailed',
         );
       }
     }
