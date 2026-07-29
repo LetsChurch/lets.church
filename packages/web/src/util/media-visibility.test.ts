@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 // Import from the db-free rules module so the test doesn't pull in @letschurch/db
 // (which parses DATABASE_URL at load) — `just test` runs without a database.
-import { canViewMedia, isChannelRoutable } from './media-visibility-rules';
+import {
+  canViewMedia,
+  getVisibleLiveBroadcastVisibilities,
+  isChannelRoutable,
+} from './media-visibility-rules';
 
 const approved = new Date('2020-01-01T00:00:00Z');
 
@@ -106,5 +110,43 @@ describe('canViewMedia', () => {
         }),
       ).toBe(false);
     });
+  });
+});
+
+describe('getVisibleLiveBroadcastVisibilities', () => {
+  it('only resolves public broadcasts for anonymous viewers', () => {
+    expect(
+      getVisibleLiveBroadcastVisibilities({
+        isSiteAdmin: false,
+        isChannelMember: false,
+      }),
+    ).toEqual(['PUBLIC']);
+  });
+
+  it('also resolves private broadcasts for channel members', () => {
+    expect(
+      getVisibleLiveBroadcastVisibilities({
+        isSiteAdmin: false,
+        isChannelMember: true,
+      }),
+    ).toEqual(['PUBLIC', 'PRIVATE']);
+  });
+
+  it('also resolves private broadcasts for site admins', () => {
+    expect(
+      getVisibleLiveBroadcastVisibilities({
+        isSiteAdmin: true,
+        isChannelMember: false,
+      }),
+    ).toEqual(['PUBLIC', 'PRIVATE']);
+  });
+
+  it('never resolves unlisted broadcasts through a guessable live URL', () => {
+    const visibilities = getVisibleLiveBroadcastVisibilities({
+      isSiteAdmin: true,
+      isChannelMember: true,
+    });
+
+    expect(visibilities).not.toContain('UNLISTED');
   });
 });

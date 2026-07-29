@@ -8,6 +8,7 @@ import { isChannelRoutable } from './media-visibility-rules';
 export {
   type ChannelVisibilityFields,
   canViewMedia,
+  getVisibleLiveBroadcastVisibilities,
   isChannelRoutable,
   type UploadVisibilityFields,
 } from './media-visibility-rules';

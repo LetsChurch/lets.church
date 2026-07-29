@@ -19,6 +19,19 @@ export type UploadVisibilityFields = {
 };
 
 /**
+ * Visibility values a channel live-link may resolve for the current viewer.
+ * UNLISTED is intentionally absent because /<slug>/live is guessable.
+ */
+export function getVisibleLiveBroadcastVisibilities(args: {
+  isSiteAdmin: boolean;
+  isChannelMember: boolean;
+}): Array<'PUBLIC' | 'PRIVATE'> {
+  return args.isSiteAdmin || args.isChannelMember
+    ? ['PUBLIC', 'PRIVATE']
+    : ['PUBLIC'];
+}
+
+/**
  * A channel is publicly routable when it is not private, has been approved, and
  * has not been deleted. Private/unapproved channels (and their media) are not
  * exposed through public/list endpoints.

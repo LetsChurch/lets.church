@@ -24,11 +24,16 @@ import { OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarMd2x, appAvatarXs2x } from '@/util/avatar-sizes';
 import { coverImageFull } from '@/util/image-sizes';
 import logger from '@/util/logger';
+import {
+  getMemberChannelIds,
+  getVisibleLiveBroadcastVisibilities,
+} from '@/util/media-visibility';
 import { escapeLikePattern } from '@/util/misc';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { ResizeType } from '@/util/url';
 
+import type { Context } from '../context';
 import { publicProcedure } from '../trpc';
 
 const moduleLogger = logger.child({
@@ -59,6 +64,20 @@ const listPublicChannelsQuerySchema = z.object({
   limit: z.number().min(1).max(50).default(20),
   cursor: z.number().nullable().optional(), // Offset for pagination
 });
+
+async function getViewerLiveBroadcastVisibilities(
+  channelId: string,
+  ctx: Pick<Context, 'session' | 'isSiteAdmin'>,
+) {
+  const isChannelMember = ctx.isSiteAdmin
+    ? false
+    : (await getMemberChannelIds(ctx.session?.appUserId)).has(channelId);
+
+  return getVisibleLiveBroadcastVisibilities({
+    isSiteAdmin: ctx.isSiteAdmin,
+    isChannelMember,
+  });
+}
 
 export const channelProcedures = {
   getChannelBySlug: publicProcedure
@@ -223,17 +242,17 @@ export const channelProcedures = {
 
       // Is the channel currently broadcasting? (a started, not-yet-ended live
       // broadcast). Drives the channel-page live indicator + avatar badge.
+      const liveBroadcastVisibilities =
+        await getViewerLiveBroadcastVisibilities(channel.id, ctx);
       const liveBroadcast = await db.query.UploadRecord.findFirst({
         columns: { id: true },
-        where: (t, { and, eq, isNull, isNotNull }) =>
+        where: (t, { and, eq, inArray, isNull, isNotNull }) =>
           and(
             eq(t.channelId, channel.id),
             eq(t.isLiveBroadcast, true),
             isNotNull(t.liveStartedAt),
             isNull(t.liveEndedAt),
-            // Only PUBLIC broadcasts drive the public live indicator (UNLISTED
-            // shouldn't be surfaced); matches getLatestLiveStream.
-            eq(t.visibility, 'PUBLIC'),
+            inArray(t.visibility, liveBroadcastVisibilities),
             isNull(t.deletedAt),
           ),
       });
@@ -679,7 +698,7 @@ export const channelProcedures = {
   // recent one. Returns null if the channel has never broadcast.
   getLatestLiveStream: publicProcedure
     .input(channelQuerySchema)
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const { slug } = input;
 
       // Only resolve for publicly viewable channels (approved, not private) so
@@ -698,18 +717,18 @@ export const channelProcedures = {
         return null;
       }
 
-      // Only PUBLIC broadcasts are resolvable via this public URL (UNLISTED
-      // shouldn't be surfaced by a guessable /<slug>/live link). Also exclude
-      // never-started broadcasts (liveStartedAt nullable; a null could win the
-      // DESC ordering).
+      // PRIVATE broadcasts resolve only for site admins or channel members.
+      // UNLISTED remains excluded because /<slug>/live is guessable.
+      const liveBroadcastVisibilities =
+        await getViewerLiveBroadcastVisibilities(channel.id, ctx);
       const broadcast = await db.query.UploadRecord.findFirst({
         columns: { id: true },
-        where: (t, { and, eq, isNull, isNotNull }) =>
+        where: (t, { and, eq, inArray, isNull, isNotNull }) =>
           and(
             eq(t.channelId, channel.id),
             eq(t.isLiveBroadcast, true),
             isNotNull(t.liveStartedAt),
-            eq(t.visibility, 'PUBLIC'),
+            inArray(t.visibility, liveBroadcastVisibilities),
             isNull(t.deletedAt),
           ),
         orderBy: (t, { desc }) => [
