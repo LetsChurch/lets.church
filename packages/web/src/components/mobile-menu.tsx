@@ -28,14 +28,12 @@ function MobileMenuDonateCard({ onDismiss }: MobileMenuDonateCardProps) {
         </p>
       </div>
       <div className="flex flex-col gap-1">
-        <a
-          href="https://givebutter.com/LetsChurch"
+        <Link
+          to="/donate"
           className="text-brand rounded-full bg-white px-2.5 py-1.5 text-center text-xs font-semibold transition-opacity hover:opacity-90"
-          target="_blank"
-          rel="noopener"
         >
-          Donate Now
-        </a>
+          Donate
+        </Link>
         {onDismiss ? (
           <button
             type="button"

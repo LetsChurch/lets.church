@@ -29,7 +29,7 @@ network policy for the rest.
 
 ## 3. Neutralize untrusted data at the point of output
 
-Encode for the **exact sink**: HTML text and HTML *attribute* contexts have
+Encode for the **exact sink**: HTML text and HTML _attribute_ contexts have
 different escaping needs, so use an escaper that is safe in both. Allow-list URL
 schemes before putting a value in an `href`/`src`. Prefer structural rendering
 (React nodes, DOM APIs) over building HTML by string concatenation, and sanitize
@@ -54,7 +54,7 @@ readable.
 ## 6. Bound everything the client controls
 
 Cap array lengths, numeric sizes, and any value that drives allocation or
-iteration — *before* allocating or looping — so a single request can't exhaust
+iteration — _before_ allocating or looping — so a single request can't exhaust
 memory, CPU, or downstream quotas.
 
 ## 7. Validate redirects against your own origin
@@ -72,15 +72,15 @@ slightly-different copy is how a fix silently regresses at one call site.
 
 ## Where the canonical helpers live
 
-| Principle | Helper(s) | Location |
-|-----------|-----------|----------|
-| 1 — input constraints | `z.url({ protocol: /^https?$/ })`, slug regexes, size caps | request schemas (`packages/web/src/schemas/**`) |
-| 2 — SSRF-safe fetch | `assertPublicUrl`, `safeFetch` | `packages/temporal/src/util/import/safe-url.ts` |
-| 3 — output encoding | `escapeHtml` | `packages/web/src/util/html-escape.ts` |
-| 3 — URL scheme allow-list | `isSafeUrl`, `safeHttpHref` | `packages/web/src/util/safe-url.ts` |
-| 4 — read/write authorization | `isChannelRoutable`, `canViewMedia`, `canViewMediaById`, `getMemberChannelIds` | `packages/web/src/util/media-visibility.ts` |
-| 5 — log redaction | `redactSensitive` | `packages/web/src/util/trpc-logger.ts` |
-| 7 — open-redirect | `safeRedirect` | `packages/web/src/util/safe-redirect.ts` |
+| Principle                    | Helper(s)                                                                      | Location                                                                            |
+| ---------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| 1 — input constraints        | `z.url({ protocol: /^https?$/ })`, slug regexes, size caps                     | request schemas (`packages/web/src/schemas/**`)                                     |
+| 2 — SSRF-safe fetch          | `assertPublicUrl`, `safeFetch`                                                 | `packages/temporal/src/util/import/safe-url.ts`                                     |
+| 3 — output encoding          | `escapeHtml`                                                                   | `packages/web/src/util/html-escape.ts`                                              |
+| 3 — URL scheme allow-list    | `isSafeUrl`, `safeHttpHref`                                                    | `packages/web/src/util/safe-url.ts`                                                 |
+| 4 — read/write authorization | `isChannelRoutable`, `canViewMedia`, `canViewMediaById`, `getMemberChannelIds` | `packages/web/src/util/media-visibility.ts`                                         |
+| 5 — log redaction            | `redactLogInput`, `redactSensitive`                                            | `packages/web/src/util/redact-log-input.ts`, `packages/web/src/util/trpc-logger.ts` |
+| 7 — open-redirect            | `safeRedirect`                                                                 | `packages/web/src/util/safe-redirect.ts`                                            |
 
 The pure helpers above are covered by unit tests in the matching `*.test.ts`
 files; run `pnpm --filter @letschurch/web test` / `--filter @letschurch/temporal`.
@@ -118,6 +118,57 @@ lets.bible calls it in-cluster; it applies every principle above:
 
 lets.bible's caller (`bible.relatedMedia`) fails closed — a non-2xx, network
 error, or unparseable payload degrades to an empty result, never a thrown error.
+
+---
+
+## Authentication links and password recovery
+
+Email sign-in and password-reset links use separate, purpose-scoped token types.
+Only a SHA-256 token hash is stored. Tokens expire after 20 minutes, are
+consumed atomically, and can be used once. Issuing a password-reset token
+invalidates earlier resets for that email. Email sign-in links remain valid
+until one is completed, then the successful link consumes its siblings. This
+prevents an unsolicited request from invalidating a link already in the
+recipient's inbox.
+
+The sign-in landing page requires a POST action before consuming the token so
+email link scanners do not use it accidentally. Email sign-in can create a
+passwordless account and verifies the address in the same transaction. Normal
+registration still requires a password. Passwordless users can set one from
+account security, and the password-reset flow works for both account types.
+Completing a password reset revokes every existing session.
+
+Authentication tokens, passwords, CAPTCHA responses, and import CSV contents
+are redacted by the tRPC logging boundary. Redirects stored with sign-in tokens
+pass through `safeRedirect` both before storage and before use.
+
+---
+
+## Donations
+
+Payment details go straight to Stripe Checkout and never pass through the
+application. The application stores donor identity, amounts, Stripe object IDs,
+status, and receipt links.
+
+- Checkout input is schema-validated and amount-bounded. hCaptcha protects the
+  public endpoint.
+- A signed-in donor can attach a checkout only to an email address already
+  verified on that account.
+- Guest gifts are attached to an account only after the matching email address
+  is verified.
+- Stripe webhook signatures are verified against the raw request body. Event IDs
+  are stored before processing so retries do not create duplicate ledger rows.
+- Stripe webhooks, not browser redirects, set payment and subscription state.
+- Donation history, portal sessions, refunds, subscription cancellation, search,
+  and exports enforce server-side account or administrator authorization.
+- Donation imports are administrator-only, request-size bounded, and do not
+  store uploaded CSV contents. Import runs retain counts, filenames, and errors.
+- Checkout status responses contain no donor details and expose only the amount,
+  frequency, and payment status needed by the confirmation page.
+
+Keep Stripe secret keys and webhook signing secrets out of client bundles and
+logs. Do not log donor names, email addresses, checkout payloads, or webhook
+bodies.
 
 ---
 

@@ -1,4 +1,8 @@
-import { useMutation } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 
 import { Button, Text, Title } from '@/components/ui';
@@ -17,16 +21,23 @@ export const Route = createFileRoute('/_main/dashboard/account_/security')({
       throw redirect({ to: '/auth/login' });
     }
   },
-  loader: () => ({
-    backNavigation: {
-      label: 'Account Settings',
-      to: '/dashboard/account',
-    },
-  }),
+  loader: async ({ context: { queryClient, trpc } }) => {
+    await queryClient.ensureQueryData(trpc.account.getSecurity.queryOptions());
+    return {
+      backNavigation: {
+        label: 'Account Settings',
+        to: '/dashboard/account',
+      },
+    };
+  },
 });
 
 function SecurityPage() {
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const { data: security } = useSuspenseQuery(
+    trpc.account.getSecurity.queryOptions(),
+  );
 
   const changePasswordMutation = useMutation(
     trpc.account.changePassword.mutationOptions({
@@ -41,9 +52,14 @@ function SecurityPage() {
 
         showSuccess({
           title: 'Success',
-          message: 'Password changed successfully!',
+          message: security.hasPassword
+            ? 'Password changed successfully.'
+            : 'Your password is set.',
         });
         form.reset();
+        await queryClient.invalidateQueries(
+          trpc.account.getSecurity.queryFilter(),
+        );
       },
       onError: () => {
         showFailure({
@@ -77,8 +93,14 @@ function SecurityPage() {
       <div className="flex max-w-[600px] flex-col gap-5">
         <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
           <Text fw={500} className="mb-4">
-            Change Password
+            {security.hasPassword ? 'Change password' : 'Set a password'}
           </Text>
+          {!security.hasPassword ? (
+            <Text size="sm" c="dimmed" className="mb-4">
+              You currently sign in by email. Setting a password gives you
+              another way to access your account.
+            </Text>
+          ) : null}
 
           <form
             onSubmit={(e) => {
@@ -89,20 +111,22 @@ function SecurityPage() {
             method="post"
           >
             <div className="flex flex-col gap-4">
-              <form.AppField name="currentPassword">
-                {(field) => (
-                  <field.PasswordInputField
-                    label="Current Password"
-                    placeholder="Enter your current password"
-                    required
-                  />
-                )}
-              </form.AppField>
+              {security.hasPassword ? (
+                <form.AppField name="currentPassword">
+                  {(field) => (
+                    <field.PasswordInputField
+                      label="Current password"
+                      placeholder="Enter your current password"
+                      required
+                    />
+                  )}
+                </form.AppField>
+              ) : null}
 
               <form.AppField name="newPassword">
                 {(field) => (
                   <field.PasswordInputField
-                    label="New Password"
+                    label="New password"
                     placeholder="Enter your new password"
                     required
                   />
@@ -112,7 +136,7 @@ function SecurityPage() {
               <form.AppField name="confirmPassword">
                 {(field) => (
                   <field.PasswordInputField
-                    label="Confirm New Password"
+                    label="Confirm new password"
                     placeholder="Confirm your new password"
                     required
                   />
@@ -123,7 +147,9 @@ function SecurityPage() {
                 <form.Subscribe selector={(state) => state.isSubmitting}>
                   {(isSubmitting) => (
                     <Button type="submit" loading={isSubmitting}>
-                      Update Password
+                      {security.hasPassword
+                        ? 'Update password'
+                        : 'Set password'}
                     </Button>
                   )}
                 </form.Subscribe>

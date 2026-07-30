@@ -62,7 +62,8 @@ import {
 } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { usernameSchema } from '@/schemas/auth';
+import { releaseDonorEmailForUser } from '@/donations/identity';
+import { emailSchema, usernameSchema } from '@/schemas/auth';
 import { IncomingIdSchema } from '@/schemas/common';
 import {
   adminAssignSpeakerLabelsSchema,
@@ -103,7 +104,6 @@ import {
   makeSummarizeUploadWorkflowId,
   type ReindexKind,
   type ReprocessScope,
-  resetPassword,
   startBackfillFilenames,
   startBackfillUploadStateSizes,
   startBackfillUploadStates,
@@ -115,6 +115,7 @@ import {
   startReprocess,
   startStorageAudit,
 } from '@/temporal';
+import { normalizeAuthEmail } from '@/util/auth-token';
 import { mantineAvatarSm2x } from '@/util/avatar-sizes';
 import { clearByPrefix } from '@/util/cache';
 import logger from '@/util/logger';
@@ -123,7 +124,7 @@ import {
   setMaintenanceConfig,
 } from '@/util/maintenance';
 import { escapeLikePattern } from '@/util/misc';
-import { generateResetPasswordEmail } from '@/util/reset-password-email';
+import { sendPasswordResetEmail } from '@/util/password-reset';
 import { getPublicImageUrl } from '@/util/server-env';
 import {
   filterUploadsWithActiveWorkflows,
@@ -1193,7 +1194,7 @@ export const adminRouter = router({
   upsertOrganizationTag: adminProcedure
     .input(
       z.object({
-        slug: z.string().min(1),
+        slug: z.string().trim().min(1),
         label: z.string().min(1),
         description: z.string().optional(),
         category: z.enum([
@@ -1283,7 +1284,7 @@ export const adminRouter = router({
     }),
 
   deleteOrganizationTag: adminProcedure
-    .input(z.object({ slug: z.string() }))
+    .input(z.object({ slug: z.string().trim().min(1) }))
     .mutation(async ({ ctx, input }) => {
       moduleLogger.info(
         {
@@ -1365,17 +1366,17 @@ export const adminRouter = router({
         username: usernameSchema,
         password: z.string().min(6),
         fullName: z.string().optional(),
-        email: z.email(),
+        email: emailSchema,
         role: z.enum(['USER', 'ADMIN']),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const email = normalizeAuthEmail(input.email);
       moduleLogger.info(
         {
           appUserId: ctx.session.appUserId,
           context: {
             username: input.username,
-            email: input.email,
             role: input.role,
           },
         },
@@ -1409,7 +1410,7 @@ export const adminRouter = router({
 
           await tx.insert(AppUserEmail).values({
             appUserId: newUser.id,
-            email: input.email,
+            email,
             verifiedAt: new Date(),
           });
 
@@ -1441,7 +1442,6 @@ export const adminRouter = router({
             appUserId: ctx.session.appUserId,
             context: {
               username: input.username,
-              email: input.email,
               error: error instanceof Error ? error.message : String(error),
             },
           },
@@ -1462,7 +1462,7 @@ export const adminRouter = router({
         username: usernameSchema.optional(),
         fullName: z.string().optional(),
         role: z.enum(['USER', 'ADMIN']).optional(),
-        email: z.email().optional(),
+        email: emailSchema.optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -1478,6 +1478,7 @@ export const adminRouter = router({
       );
 
       try {
+        const email = input.email ? normalizeAuthEmail(input.email) : undefined;
         const updateData: {
           username?: string;
           fullName?: string | null;
@@ -1500,19 +1501,28 @@ export const adminRouter = router({
             createdAt: AppUser.createdAt,
           });
 
-        if (input.email) {
+        if (email) {
           // Target a single row by primary key to avoid updating all verified emails
           const targetEmail = await db.query.AppUserEmail.findFirst({
             where: (t, { and, eq, isNotNull }) =>
               and(eq(t.appUserId, input.appUserId), isNotNull(t.verifiedAt)),
-            columns: { id: true },
+            columns: { id: true, email: true },
             orderBy: (t, { desc }) => desc(t.verifiedAt),
           });
-          if (targetEmail) {
-            await db
-              .update(AppUserEmail)
-              .set({ email: input.email })
-              .where(eq(AppUserEmail.id, targetEmail.id));
+          if (targetEmail && targetEmail.email !== email) {
+            await db.transaction(async (tx) => {
+              if (normalizeAuthEmail(targetEmail.email) !== email) {
+                await releaseDonorEmailForUser(
+                  tx,
+                  input.appUserId,
+                  targetEmail.email,
+                );
+              }
+              await tx
+                .update(AppUserEmail)
+                .set({ email })
+                .where(eq(AppUserEmail.id, targetEmail.id));
+            });
           }
         }
 
@@ -1754,12 +1764,11 @@ export const adminRouter = router({
           });
         }
 
-        const { text, html } = await generateResetPasswordEmail(
-          user.id,
-          user.username,
-        );
-
-        await resetPassword(user.id, user.id, emailRecord.email, text, html);
+        await sendPasswordResetEmail({
+          userId: user.id,
+          username: user.username,
+          email: emailRecord.email,
+        });
 
         moduleLogger.info(
           {

@@ -3,6 +3,7 @@ import { getCookie } from '@tanstack/react-start/server';
 import argon2 from 'argon2';
 import { eq } from 'drizzle-orm';
 
+import { normalizeAuthEmail } from './auth-token';
 import { parseSessionJwt } from './jwt';
 
 /**
@@ -23,18 +24,19 @@ export class BannedError extends Error {
 }
 
 export async function login(id: string, password: string) {
+  const identifier = id.trim();
   const lookupByUsername = () =>
     db
       .select()
       .from(AppUser)
-      .where(eq(AppUser.username, id))
+      .where(eq(AppUser.username, identifier))
       .then((r) => r[0] ?? null);
 
   const lookupByEmail = () =>
     db
       .select({ appUserId: AppUserEmail.appUserId })
       .from(AppUserEmail)
-      .where(eq(AppUserEmail.email, id))
+      .where(eq(AppUserEmail.email, normalizeAuthEmail(identifier)))
       .then(async (r) => {
         if (!r[0]) return null;
         return db
@@ -48,12 +50,17 @@ export async function login(id: string, password: string) {
   // are not constrained to exclude `@`, so historically a user could set their
   // username to another user's email address and shadow that email at login /
   // password recovery. Looking up the email owner first prevents the shadow.
-  const looksLikeEmail = id.includes('@');
+  const looksLikeEmail = identifier.includes('@');
   const user = looksLikeEmail
     ? ((await lookupByEmail()) ?? (await lookupByUsername()))
     : ((await lookupByUsername()) ?? (await lookupByEmail()));
 
-  if (!user || !(await argon2.verify(user.password, password))) {
+  if (
+    !user ||
+    user.deletedAt ||
+    !user.password ||
+    !(await argon2.verify(user.password, password))
+  ) {
     throw new Error('Error logging in. Please try again.');
   }
 
@@ -93,7 +100,14 @@ export async function getSession() {
       and(eq(t.id, jwt.sub), gt(t.expiresAt, new Date()), isNull(t.deletedAt)),
     with: {
       appUser: {
-        columns: { id: true, role: true, bannedAt: true },
+        columns: {
+          id: true,
+          role: true,
+          bannedAt: true,
+          deletedAt: true,
+          statementOfTheologyAcceptedAt: true,
+          termsAcceptedAt: true,
+        },
       },
     },
   });
@@ -101,7 +115,7 @@ export async function getSession() {
   // Treat a banned user as having no session so the ban takes effect on their
   // very next request (role/ban state is read fresh from the DB here), rather
   // than waiting for the session cookie to expire.
-  if (session?.appUser?.bannedAt) {
+  if (session?.appUser?.bannedAt || session?.appUser?.deletedAt) {
     return null;
   }
 

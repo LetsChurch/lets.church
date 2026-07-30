@@ -43,7 +43,6 @@ export const newsletterProcedures = {
             moduleLogger.warn(
               {
                 context: {
-                  email,
                   clientIp,
                 },
               },

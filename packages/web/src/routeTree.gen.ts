@@ -13,6 +13,7 @@ import { Route as MaintenanceRouteImport } from './routes/maintenance'
 import { Route as AuthRouteImport } from './routes/auth_'
 import { Route as MainRouteImport } from './routes/_main'
 import { Route as MainIndexRouteImport } from './routes/_main/index'
+import { Route as WebhooksStripeRouteImport } from './routes/webhooks_/stripe'
 import { Route as WebhooksMuxRouteImport } from './routes/webhooks_/mux'
 import { Route as TrpcSplatRouteImport } from './routes/trpc.$'
 import { Route as OidcUserinfoRouteImport } from './routes/oidc.userinfo'
@@ -30,12 +31,14 @@ import { Route as AuthRegisterRouteImport } from './routes/auth_/register'
 import { Route as AuthLogoutRouteImport } from './routes/auth_/logout'
 import { Route as AuthLoginRouteImport } from './routes/auth_/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth_/forgot-password'
+import { Route as AuthEmailSignInRouteImport } from './routes/auth_/email-sign-in'
 import { Route as ApiSearchAnswerRouteImport } from './routes/api/search-answer'
 import { Route as ApiDigDeeperRouteImport } from './routes/api/dig-deeper'
 import { Route as MainSearchRouteImport } from './routes/_main/search'
 import { Route as MainLibraryRouteImport } from './routes/_main/library'
 import { Route as MainHistoryRouteImport } from './routes/_main/history'
 import { Route as MainFollowingRouteImport } from './routes/_main/following'
+import { Route as MainDonateRouteImport } from './routes/_main/donate'
 import { Route as MainDigDeeperRouteImport } from './routes/_main/dig-deeper'
 import { Route as MainDashboardRouteImport } from './routes/_main/dashboard'
 import { Route as MainChurchesRouteImport } from './routes/_main/churches'
@@ -53,9 +56,14 @@ import { Route as EmbedChannelSlugRouteImport } from './routes/embed.channel.$sl
 import { Route as ChannelSlugRssDotxmlRouteImport } from './routes/channel.$slug.rss[.]xml'
 import { Route as ChannelSlugPodcastDotxmlRouteImport } from './routes/channel.$slug.podcast[.]xml'
 import { Route as ApiInternalMediaForVerseRouteImport } from './routes/api/internal/media-for-verse'
+import { Route as ApiDonationsStatusRouteImport } from './routes/api/donations/status'
+import { Route as ApiDonationsImportsRouteImport } from './routes/api/donations/imports'
+import { Route as ApiDonationsCheckoutRouteImport } from './routes/api/donations/checkout'
+import { Route as ApiDonationsAdminExportRouteImport } from './routes/api/donations/admin-export'
 import { Route as MainSeriesSeriesIdRouteImport } from './routes/_main/series.$seriesId'
 import { Route as MainPlaylistPlaylistIdRouteImport } from './routes/_main/playlist.$playlistId'
 import { Route as MainMediaMediaIdRouteImport } from './routes/_main/media/$mediaId'
+import { Route as MainDonateSuccessRouteImport } from './routes/_main/donate_.success'
 import { Route as MainDashboardOrganizationsRouteImport } from './routes/_main/dashboard/organizations'
 import { Route as MainDashboardInvitationsRouteImport } from './routes/_main/dashboard/invitations'
 import { Route as MainDashboardChurchesRouteImport } from './routes/_main/dashboard/churches'
@@ -98,12 +106,15 @@ import { Route as MainDashboardAdminFailedUploadsRouteImport } from './routes/_m
 import { Route as MainDashboardAdminFailedSummariesRouteImport } from './routes/_main/dashboard/admin_.failed-summaries'
 import { Route as MainDashboardAdminFailedAnnotationsRouteImport } from './routes/_main/dashboard/admin_.failed-annotations'
 import { Route as MainDashboardAdminDuplicateUploadsRouteImport } from './routes/_main/dashboard/admin_.duplicate-uploads'
+import { Route as MainDashboardAdminDonationsRouteImport } from './routes/_main/dashboard/admin_.donations'
 import { Route as MainDashboardAdminDeletingUploadsRouteImport } from './routes/_main/dashboard/admin_.deleting-uploads'
 import { Route as MainDashboardAdminChannelsRouteImport } from './routes/_main/dashboard/admin_.channels'
 import { Route as MainDashboardAdminBackfillFilenamesRouteImport } from './routes/_main/dashboard/admin_.backfill-filenames'
 import { Route as MainDashboardAccountSecurityRouteImport } from './routes/_main/dashboard/account_.security'
 import { Route as MainDashboardAccountProfileRouteImport } from './routes/_main/dashboard/account_.profile'
+import { Route as MainDashboardAccountParticipationRouteImport } from './routes/_main/dashboard/account_.participation'
 import { Route as MainDashboardAccountNewsletterRouteImport } from './routes/_main/dashboard/account_.newsletter'
+import { Route as MainDashboardAccountDonationsRouteImport } from './routes/_main/dashboard/account_.donations'
 import { Route as MainChannelSlugLiveRouteImport } from './routes/_main/channel.$slug_.live'
 import { Route as MainDashboardOrganizationsOrgIdMembersRouteImport } from './routes/_main/dashboard/organizations_.$orgId_.members'
 import { Route as MainDashboardOrganizationsOrgIdEditRouteImport } from './routes/_main/dashboard/organizations_.$orgId_.edit'
@@ -119,6 +130,7 @@ import { Route as MainDashboardChannelsChannelIdPlaylistsRouteImport } from './r
 import { Route as MainDashboardChannelsChannelIdMembersRouteImport } from './routes/_main/dashboard/channels_.$channelId_.members'
 import { Route as MainDashboardChannelsChannelIdLiveRouteImport } from './routes/_main/dashboard/channels_.$channelId_.live'
 import { Route as MainDashboardChannelsChannelIdEditRouteImport } from './routes/_main/dashboard/channels_.$channelId_.edit'
+import { Route as MainDashboardAccountDonationsYearRouteImport } from './routes/_main/dashboard/account_.donations_.$year'
 import { Route as MainDashboardChannelsChannelIdUploadsUploadIdRouteImport } from './routes/_main/dashboard/channels_.$channelId_.uploads_.$uploadId'
 import { Route as MainDashboardChannelsChannelIdPlaylistsPlaylistIdRouteImport } from './routes/_main/dashboard/channels_.$channelId_.playlists_.$playlistId'
 
@@ -140,6 +152,11 @@ const MainIndexRoute = MainIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => MainRoute,
+} as any)
+const WebhooksStripeRoute = WebhooksStripeRouteImport.update({
+  id: '/webhooks_/stripe',
+  path: '/webhooks/stripe',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const WebhooksMuxRoute = WebhooksMuxRouteImport.update({
   id: '/webhooks_/mux',
@@ -226,6 +243,11 @@ const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthEmailSignInRoute = AuthEmailSignInRouteImport.update({
+  id: '/email-sign-in',
+  path: '/email-sign-in',
+  getParentRoute: () => AuthRoute,
+} as any)
 const ApiSearchAnswerRoute = ApiSearchAnswerRouteImport.update({
   id: '/api/search-answer',
   path: '/api/search-answer',
@@ -254,6 +276,11 @@ const MainHistoryRoute = MainHistoryRouteImport.update({
 const MainFollowingRoute = MainFollowingRouteImport.update({
   id: '/following',
   path: '/following',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainDonateRoute = MainDonateRouteImport.update({
+  id: '/donate',
+  path: '/donate',
   getParentRoute: () => MainRoute,
 } as any)
 const MainDigDeeperRoute = MainDigDeeperRouteImport.update({
@@ -345,6 +372,26 @@ const ApiInternalMediaForVerseRoute =
     path: '/api/internal/media-for-verse',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiDonationsStatusRoute = ApiDonationsStatusRouteImport.update({
+  id: '/api/donations/status',
+  path: '/api/donations/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDonationsImportsRoute = ApiDonationsImportsRouteImport.update({
+  id: '/api/donations/imports',
+  path: '/api/donations/imports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDonationsCheckoutRoute = ApiDonationsCheckoutRouteImport.update({
+  id: '/api/donations/checkout',
+  path: '/api/donations/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDonationsAdminExportRoute = ApiDonationsAdminExportRouteImport.update({
+  id: '/api/donations/admin-export',
+  path: '/api/donations/admin-export',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MainSeriesSeriesIdRoute = MainSeriesSeriesIdRouteImport.update({
   id: '/series/$seriesId',
   path: '/series/$seriesId',
@@ -358,6 +405,11 @@ const MainPlaylistPlaylistIdRoute = MainPlaylistPlaylistIdRouteImport.update({
 const MainMediaMediaIdRoute = MainMediaMediaIdRouteImport.update({
   id: '/media/$mediaId',
   path: '/media/$mediaId',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainDonateSuccessRoute = MainDonateSuccessRouteImport.update({
+  id: '/donate_/success',
+  path: '/donate/success',
   getParentRoute: () => MainRoute,
 } as any)
 const MainDashboardOrganizationsRoute =
@@ -597,6 +649,12 @@ const MainDashboardAdminDuplicateUploadsRoute =
     path: '/admin/duplicate-uploads',
     getParentRoute: () => MainDashboardRoute,
   } as any)
+const MainDashboardAdminDonationsRoute =
+  MainDashboardAdminDonationsRouteImport.update({
+    id: '/admin_/donations',
+    path: '/admin/donations',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
 const MainDashboardAdminDeletingUploadsRoute =
   MainDashboardAdminDeletingUploadsRouteImport.update({
     id: '/admin_/deleting-uploads',
@@ -627,10 +685,22 @@ const MainDashboardAccountProfileRoute =
     path: '/account/profile',
     getParentRoute: () => MainDashboardRoute,
   } as any)
+const MainDashboardAccountParticipationRoute =
+  MainDashboardAccountParticipationRouteImport.update({
+    id: '/account_/participation',
+    path: '/account/participation',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
 const MainDashboardAccountNewsletterRoute =
   MainDashboardAccountNewsletterRouteImport.update({
     id: '/account_/newsletter',
     path: '/account/newsletter',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAccountDonationsRoute =
+  MainDashboardAccountDonationsRouteImport.update({
+    id: '/account_/donations',
+    path: '/account/donations',
     getParentRoute: () => MainDashboardRoute,
   } as any)
 const MainChannelSlugLiveRoute = MainChannelSlugLiveRouteImport.update({
@@ -722,6 +792,12 @@ const MainDashboardChannelsChannelIdEditRoute =
     path: '/channels/$channelId/edit',
     getParentRoute: () => MainDashboardRoute,
   } as any)
+const MainDashboardAccountDonationsYearRoute =
+  MainDashboardAccountDonationsYearRouteImport.update({
+    id: '/account_/donations_/$year',
+    path: '/account/donations/$year',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
 const MainDashboardChannelsChannelIdUploadsUploadIdRoute =
   MainDashboardChannelsChannelIdUploadsUploadIdRouteImport.update({
     id: '/channels_/$channelId_/uploads_/$uploadId',
@@ -747,12 +823,14 @@ export interface FileRoutesByFullPath {
   '/churches': typeof MainChurchesRoute
   '/dashboard': typeof MainDashboardRouteWithChildren
   '/dig-deeper': typeof MainDigDeeperRoute
+  '/donate': typeof MainDonateRoute
   '/following': typeof MainFollowingRoute
   '/history': typeof MainHistoryRoute
   '/library': typeof MainLibraryRoute
   '/search': typeof MainSearchRoute
   '/api/dig-deeper': typeof ApiDigDeeperRoute
   '/api/search-answer': typeof ApiSearchAnswerRoute
+  '/auth/email-sign-in': typeof AuthEmailSignInRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
@@ -770,6 +848,7 @@ export interface FileRoutesByFullPath {
   '/oidc/userinfo': typeof OidcUserinfoRoute
   '/trpc/$': typeof TrpcSplatRoute
   '/webhooks/mux': typeof WebhooksMuxRoute
+  '/webhooks/stripe': typeof WebhooksStripeRoute
   '/$slug/live': typeof MainSlugLiveRoute
   '/about/add-church': typeof MainAboutAddChurchRoute
   '/about/add-content': typeof MainAboutAddContentRoute
@@ -786,9 +865,14 @@ export interface FileRoutesByFullPath {
   '/dashboard/churches': typeof MainDashboardChurchesRoute
   '/dashboard/invitations': typeof MainDashboardInvitationsRoute
   '/dashboard/organizations': typeof MainDashboardOrganizationsRoute
+  '/donate/success': typeof MainDonateSuccessRoute
   '/media/$mediaId': typeof MainMediaMediaIdRoute
   '/playlist/$playlistId': typeof MainPlaylistPlaylistIdRoute
   '/series/$seriesId': typeof MainSeriesSeriesIdRoute
+  '/api/donations/admin-export': typeof ApiDonationsAdminExportRoute
+  '/api/donations/checkout': typeof ApiDonationsCheckoutRoute
+  '/api/donations/imports': typeof ApiDonationsImportsRoute
+  '/api/donations/status': typeof ApiDonationsStatusRoute
   '/api/internal/media-for-verse': typeof ApiInternalMediaForVerseRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
@@ -799,12 +883,15 @@ export interface FileRoutesByFullPath {
   '/about/': typeof MainAboutIndexRoute
   '/dashboard/': typeof MainDashboardIndexRoute
   '/channel/$slug/live': typeof MainChannelSlugLiveRoute
+  '/dashboard/account/donations': typeof MainDashboardAccountDonationsRoute
   '/dashboard/account/newsletter': typeof MainDashboardAccountNewsletterRoute
+  '/dashboard/account/participation': typeof MainDashboardAccountParticipationRoute
   '/dashboard/account/profile': typeof MainDashboardAccountProfileRoute
   '/dashboard/account/security': typeof MainDashboardAccountSecurityRoute
   '/dashboard/admin/backfill-filenames': typeof MainDashboardAdminBackfillFilenamesRoute
   '/dashboard/admin/channels': typeof MainDashboardAdminChannelsRoute
   '/dashboard/admin/deleting-uploads': typeof MainDashboardAdminDeletingUploadsRoute
+  '/dashboard/admin/donations': typeof MainDashboardAdminDonationsRoute
   '/dashboard/admin/duplicate-uploads': typeof MainDashboardAdminDuplicateUploadsRoute
   '/dashboard/admin/failed-annotations': typeof MainDashboardAdminFailedAnnotationsRoute
   '/dashboard/admin/failed-summaries': typeof MainDashboardAdminFailedSummariesRoute
@@ -831,6 +918,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/churches/new': typeof MainDashboardChurchesNewRoute
   '/dashboard/invitations/accept': typeof MainDashboardInvitationsAcceptRoute
   '/dashboard/organizations/$orgId': typeof MainDashboardOrganizationsOrgIdRoute
+  '/dashboard/account/donations/$year': typeof MainDashboardAccountDonationsYearRoute
   '/dashboard/channels/$channelId/edit': typeof MainDashboardChannelsChannelIdEditRoute
   '/dashboard/channels/$channelId/live': typeof MainDashboardChannelsChannelIdLiveRoute
   '/dashboard/channels/$channelId/members': typeof MainDashboardChannelsChannelIdMembersRoute
@@ -857,12 +945,14 @@ export interface FileRoutesByTo {
   '/channels': typeof MainChannelsRoute
   '/churches': typeof MainChurchesRoute
   '/dig-deeper': typeof MainDigDeeperRoute
+  '/donate': typeof MainDonateRoute
   '/following': typeof MainFollowingRoute
   '/history': typeof MainHistoryRoute
   '/library': typeof MainLibraryRoute
   '/search': typeof MainSearchRoute
   '/api/dig-deeper': typeof ApiDigDeeperRoute
   '/api/search-answer': typeof ApiSearchAnswerRoute
+  '/auth/email-sign-in': typeof AuthEmailSignInRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
@@ -880,6 +970,7 @@ export interface FileRoutesByTo {
   '/oidc/userinfo': typeof OidcUserinfoRoute
   '/trpc/$': typeof TrpcSplatRoute
   '/webhooks/mux': typeof WebhooksMuxRoute
+  '/webhooks/stripe': typeof WebhooksStripeRoute
   '/': typeof MainIndexRoute
   '/$slug/live': typeof MainSlugLiveRoute
   '/about/add-church': typeof MainAboutAddChurchRoute
@@ -897,9 +988,14 @@ export interface FileRoutesByTo {
   '/dashboard/churches': typeof MainDashboardChurchesRoute
   '/dashboard/invitations': typeof MainDashboardInvitationsRoute
   '/dashboard/organizations': typeof MainDashboardOrganizationsRoute
+  '/donate/success': typeof MainDonateSuccessRoute
   '/media/$mediaId': typeof MainMediaMediaIdRoute
   '/playlist/$playlistId': typeof MainPlaylistPlaylistIdRoute
   '/series/$seriesId': typeof MainSeriesSeriesIdRoute
+  '/api/donations/admin-export': typeof ApiDonationsAdminExportRoute
+  '/api/donations/checkout': typeof ApiDonationsCheckoutRoute
+  '/api/donations/imports': typeof ApiDonationsImportsRoute
+  '/api/donations/status': typeof ApiDonationsStatusRoute
   '/api/internal/media-for-verse': typeof ApiInternalMediaForVerseRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
@@ -910,12 +1006,15 @@ export interface FileRoutesByTo {
   '/about': typeof MainAboutIndexRoute
   '/dashboard': typeof MainDashboardIndexRoute
   '/channel/$slug/live': typeof MainChannelSlugLiveRoute
+  '/dashboard/account/donations': typeof MainDashboardAccountDonationsRoute
   '/dashboard/account/newsletter': typeof MainDashboardAccountNewsletterRoute
+  '/dashboard/account/participation': typeof MainDashboardAccountParticipationRoute
   '/dashboard/account/profile': typeof MainDashboardAccountProfileRoute
   '/dashboard/account/security': typeof MainDashboardAccountSecurityRoute
   '/dashboard/admin/backfill-filenames': typeof MainDashboardAdminBackfillFilenamesRoute
   '/dashboard/admin/channels': typeof MainDashboardAdminChannelsRoute
   '/dashboard/admin/deleting-uploads': typeof MainDashboardAdminDeletingUploadsRoute
+  '/dashboard/admin/donations': typeof MainDashboardAdminDonationsRoute
   '/dashboard/admin/duplicate-uploads': typeof MainDashboardAdminDuplicateUploadsRoute
   '/dashboard/admin/failed-annotations': typeof MainDashboardAdminFailedAnnotationsRoute
   '/dashboard/admin/failed-summaries': typeof MainDashboardAdminFailedSummariesRoute
@@ -942,6 +1041,7 @@ export interface FileRoutesByTo {
   '/dashboard/churches/new': typeof MainDashboardChurchesNewRoute
   '/dashboard/invitations/accept': typeof MainDashboardInvitationsAcceptRoute
   '/dashboard/organizations/$orgId': typeof MainDashboardOrganizationsOrgIdRoute
+  '/dashboard/account/donations/$year': typeof MainDashboardAccountDonationsYearRoute
   '/dashboard/channels/$channelId/edit': typeof MainDashboardChannelsChannelIdEditRoute
   '/dashboard/channels/$channelId/live': typeof MainDashboardChannelsChannelIdLiveRoute
   '/dashboard/channels/$channelId/members': typeof MainDashboardChannelsChannelIdMembersRoute
@@ -972,12 +1072,14 @@ export interface FileRoutesById {
   '/_main/churches': typeof MainChurchesRoute
   '/_main/dashboard': typeof MainDashboardRouteWithChildren
   '/_main/dig-deeper': typeof MainDigDeeperRoute
+  '/_main/donate': typeof MainDonateRoute
   '/_main/following': typeof MainFollowingRoute
   '/_main/history': typeof MainHistoryRoute
   '/_main/library': typeof MainLibraryRoute
   '/_main/search': typeof MainSearchRoute
   '/api/dig-deeper': typeof ApiDigDeeperRoute
   '/api/search-answer': typeof ApiSearchAnswerRoute
+  '/auth_/email-sign-in': typeof AuthEmailSignInRoute
   '/auth_/forgot-password': typeof AuthForgotPasswordRoute
   '/auth_/login': typeof AuthLoginRoute
   '/auth_/logout': typeof AuthLogoutRoute
@@ -995,6 +1097,7 @@ export interface FileRoutesById {
   '/oidc/userinfo': typeof OidcUserinfoRoute
   '/trpc/$': typeof TrpcSplatRoute
   '/webhooks_/mux': typeof WebhooksMuxRoute
+  '/webhooks_/stripe': typeof WebhooksStripeRoute
   '/_main/': typeof MainIndexRoute
   '/_main/$slug_/live': typeof MainSlugLiveRoute
   '/_main/about/add-church': typeof MainAboutAddChurchRoute
@@ -1012,9 +1115,14 @@ export interface FileRoutesById {
   '/_main/dashboard/churches': typeof MainDashboardChurchesRoute
   '/_main/dashboard/invitations': typeof MainDashboardInvitationsRoute
   '/_main/dashboard/organizations': typeof MainDashboardOrganizationsRoute
+  '/_main/donate_/success': typeof MainDonateSuccessRoute
   '/_main/media/$mediaId': typeof MainMediaMediaIdRoute
   '/_main/playlist/$playlistId': typeof MainPlaylistPlaylistIdRoute
   '/_main/series/$seriesId': typeof MainSeriesSeriesIdRoute
+  '/api/donations/admin-export': typeof ApiDonationsAdminExportRoute
+  '/api/donations/checkout': typeof ApiDonationsCheckoutRoute
+  '/api/donations/imports': typeof ApiDonationsImportsRoute
+  '/api/donations/status': typeof ApiDonationsStatusRoute
   '/api/internal/media-for-verse': typeof ApiInternalMediaForVerseRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
@@ -1025,12 +1133,15 @@ export interface FileRoutesById {
   '/_main/about/': typeof MainAboutIndexRoute
   '/_main/dashboard/': typeof MainDashboardIndexRoute
   '/_main/channel/$slug_/live': typeof MainChannelSlugLiveRoute
+  '/_main/dashboard/account_/donations': typeof MainDashboardAccountDonationsRoute
   '/_main/dashboard/account_/newsletter': typeof MainDashboardAccountNewsletterRoute
+  '/_main/dashboard/account_/participation': typeof MainDashboardAccountParticipationRoute
   '/_main/dashboard/account_/profile': typeof MainDashboardAccountProfileRoute
   '/_main/dashboard/account_/security': typeof MainDashboardAccountSecurityRoute
   '/_main/dashboard/admin_/backfill-filenames': typeof MainDashboardAdminBackfillFilenamesRoute
   '/_main/dashboard/admin_/channels': typeof MainDashboardAdminChannelsRoute
   '/_main/dashboard/admin_/deleting-uploads': typeof MainDashboardAdminDeletingUploadsRoute
+  '/_main/dashboard/admin_/donations': typeof MainDashboardAdminDonationsRoute
   '/_main/dashboard/admin_/duplicate-uploads': typeof MainDashboardAdminDuplicateUploadsRoute
   '/_main/dashboard/admin_/failed-annotations': typeof MainDashboardAdminFailedAnnotationsRoute
   '/_main/dashboard/admin_/failed-summaries': typeof MainDashboardAdminFailedSummariesRoute
@@ -1057,6 +1168,7 @@ export interface FileRoutesById {
   '/_main/dashboard/churches_/new': typeof MainDashboardChurchesNewRoute
   '/_main/dashboard/invitations_/accept': typeof MainDashboardInvitationsAcceptRoute
   '/_main/dashboard/organizations_/$orgId': typeof MainDashboardOrganizationsOrgIdRoute
+  '/_main/dashboard/account_/donations_/$year': typeof MainDashboardAccountDonationsYearRoute
   '/_main/dashboard/channels_/$channelId_/edit': typeof MainDashboardChannelsChannelIdEditRoute
   '/_main/dashboard/channels_/$channelId_/live': typeof MainDashboardChannelsChannelIdLiveRoute
   '/_main/dashboard/channels_/$channelId_/members': typeof MainDashboardChannelsChannelIdMembersRoute
@@ -1088,12 +1200,14 @@ export interface FileRouteTypes {
     | '/churches'
     | '/dashboard'
     | '/dig-deeper'
+    | '/donate'
     | '/following'
     | '/history'
     | '/library'
     | '/search'
     | '/api/dig-deeper'
     | '/api/search-answer'
+    | '/auth/email-sign-in'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/logout'
@@ -1111,6 +1225,7 @@ export interface FileRouteTypes {
     | '/oidc/userinfo'
     | '/trpc/$'
     | '/webhooks/mux'
+    | '/webhooks/stripe'
     | '/$slug/live'
     | '/about/add-church'
     | '/about/add-content'
@@ -1127,9 +1242,14 @@ export interface FileRouteTypes {
     | '/dashboard/churches'
     | '/dashboard/invitations'
     | '/dashboard/organizations'
+    | '/donate/success'
     | '/media/$mediaId'
     | '/playlist/$playlistId'
     | '/series/$seriesId'
+    | '/api/donations/admin-export'
+    | '/api/donations/checkout'
+    | '/api/donations/imports'
+    | '/api/donations/status'
     | '/api/internal/media-for-verse'
     | '/channel/$slug/podcast.xml'
     | '/channel/$slug/rss.xml'
@@ -1140,12 +1260,15 @@ export interface FileRouteTypes {
     | '/about/'
     | '/dashboard/'
     | '/channel/$slug/live'
+    | '/dashboard/account/donations'
     | '/dashboard/account/newsletter'
+    | '/dashboard/account/participation'
     | '/dashboard/account/profile'
     | '/dashboard/account/security'
     | '/dashboard/admin/backfill-filenames'
     | '/dashboard/admin/channels'
     | '/dashboard/admin/deleting-uploads'
+    | '/dashboard/admin/donations'
     | '/dashboard/admin/duplicate-uploads'
     | '/dashboard/admin/failed-annotations'
     | '/dashboard/admin/failed-summaries'
@@ -1172,6 +1295,7 @@ export interface FileRouteTypes {
     | '/dashboard/churches/new'
     | '/dashboard/invitations/accept'
     | '/dashboard/organizations/$orgId'
+    | '/dashboard/account/donations/$year'
     | '/dashboard/channels/$channelId/edit'
     | '/dashboard/channels/$channelId/live'
     | '/dashboard/channels/$channelId/members'
@@ -1198,12 +1322,14 @@ export interface FileRouteTypes {
     | '/channels'
     | '/churches'
     | '/dig-deeper'
+    | '/donate'
     | '/following'
     | '/history'
     | '/library'
     | '/search'
     | '/api/dig-deeper'
     | '/api/search-answer'
+    | '/auth/email-sign-in'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/logout'
@@ -1221,6 +1347,7 @@ export interface FileRouteTypes {
     | '/oidc/userinfo'
     | '/trpc/$'
     | '/webhooks/mux'
+    | '/webhooks/stripe'
     | '/'
     | '/$slug/live'
     | '/about/add-church'
@@ -1238,9 +1365,14 @@ export interface FileRouteTypes {
     | '/dashboard/churches'
     | '/dashboard/invitations'
     | '/dashboard/organizations'
+    | '/donate/success'
     | '/media/$mediaId'
     | '/playlist/$playlistId'
     | '/series/$seriesId'
+    | '/api/donations/admin-export'
+    | '/api/donations/checkout'
+    | '/api/donations/imports'
+    | '/api/donations/status'
     | '/api/internal/media-for-verse'
     | '/channel/$slug/podcast.xml'
     | '/channel/$slug/rss.xml'
@@ -1251,12 +1383,15 @@ export interface FileRouteTypes {
     | '/about'
     | '/dashboard'
     | '/channel/$slug/live'
+    | '/dashboard/account/donations'
     | '/dashboard/account/newsletter'
+    | '/dashboard/account/participation'
     | '/dashboard/account/profile'
     | '/dashboard/account/security'
     | '/dashboard/admin/backfill-filenames'
     | '/dashboard/admin/channels'
     | '/dashboard/admin/deleting-uploads'
+    | '/dashboard/admin/donations'
     | '/dashboard/admin/duplicate-uploads'
     | '/dashboard/admin/failed-annotations'
     | '/dashboard/admin/failed-summaries'
@@ -1283,6 +1418,7 @@ export interface FileRouteTypes {
     | '/dashboard/churches/new'
     | '/dashboard/invitations/accept'
     | '/dashboard/organizations/$orgId'
+    | '/dashboard/account/donations/$year'
     | '/dashboard/channels/$channelId/edit'
     | '/dashboard/channels/$channelId/live'
     | '/dashboard/channels/$channelId/members'
@@ -1312,12 +1448,14 @@ export interface FileRouteTypes {
     | '/_main/churches'
     | '/_main/dashboard'
     | '/_main/dig-deeper'
+    | '/_main/donate'
     | '/_main/following'
     | '/_main/history'
     | '/_main/library'
     | '/_main/search'
     | '/api/dig-deeper'
     | '/api/search-answer'
+    | '/auth_/email-sign-in'
     | '/auth_/forgot-password'
     | '/auth_/login'
     | '/auth_/logout'
@@ -1335,6 +1473,7 @@ export interface FileRouteTypes {
     | '/oidc/userinfo'
     | '/trpc/$'
     | '/webhooks_/mux'
+    | '/webhooks_/stripe'
     | '/_main/'
     | '/_main/$slug_/live'
     | '/_main/about/add-church'
@@ -1352,9 +1491,14 @@ export interface FileRouteTypes {
     | '/_main/dashboard/churches'
     | '/_main/dashboard/invitations'
     | '/_main/dashboard/organizations'
+    | '/_main/donate_/success'
     | '/_main/media/$mediaId'
     | '/_main/playlist/$playlistId'
     | '/_main/series/$seriesId'
+    | '/api/donations/admin-export'
+    | '/api/donations/checkout'
+    | '/api/donations/imports'
+    | '/api/donations/status'
     | '/api/internal/media-for-verse'
     | '/channel/$slug/podcast.xml'
     | '/channel/$slug/rss.xml'
@@ -1365,12 +1509,15 @@ export interface FileRouteTypes {
     | '/_main/about/'
     | '/_main/dashboard/'
     | '/_main/channel/$slug_/live'
+    | '/_main/dashboard/account_/donations'
     | '/_main/dashboard/account_/newsletter'
+    | '/_main/dashboard/account_/participation'
     | '/_main/dashboard/account_/profile'
     | '/_main/dashboard/account_/security'
     | '/_main/dashboard/admin_/backfill-filenames'
     | '/_main/dashboard/admin_/channels'
     | '/_main/dashboard/admin_/deleting-uploads'
+    | '/_main/dashboard/admin_/donations'
     | '/_main/dashboard/admin_/duplicate-uploads'
     | '/_main/dashboard/admin_/failed-annotations'
     | '/_main/dashboard/admin_/failed-summaries'
@@ -1397,6 +1544,7 @@ export interface FileRouteTypes {
     | '/_main/dashboard/churches_/new'
     | '/_main/dashboard/invitations_/accept'
     | '/_main/dashboard/organizations_/$orgId'
+    | '/_main/dashboard/account_/donations_/$year'
     | '/_main/dashboard/channels_/$channelId_/edit'
     | '/_main/dashboard/channels_/$channelId_/live'
     | '/_main/dashboard/channels_/$channelId_/members'
@@ -1434,6 +1582,11 @@ export interface RootRouteChildren {
   OidcUserinfoRoute: typeof OidcUserinfoRoute
   TrpcSplatRoute: typeof TrpcSplatRoute
   WebhooksMuxRoute: typeof WebhooksMuxRoute
+  WebhooksStripeRoute: typeof WebhooksStripeRoute
+  ApiDonationsAdminExportRoute: typeof ApiDonationsAdminExportRoute
+  ApiDonationsCheckoutRoute: typeof ApiDonationsCheckoutRoute
+  ApiDonationsImportsRoute: typeof ApiDonationsImportsRoute
+  ApiDonationsStatusRoute: typeof ApiDonationsStatusRoute
   ApiInternalMediaForVerseRoute: typeof ApiInternalMediaForVerseRoute
   ChannelSlugPodcastDotxmlRoute: typeof ChannelSlugPodcastDotxmlRoute
   ChannelSlugRssDotxmlRoute: typeof ChannelSlugRssDotxmlRoute
@@ -1472,6 +1625,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof MainIndexRouteImport
       parentRoute: typeof MainRoute
+    }
+    '/webhooks_/stripe': {
+      id: '/webhooks_/stripe'
+      path: '/webhooks/stripe'
+      fullPath: '/webhooks/stripe'
+      preLoaderRoute: typeof WebhooksStripeRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/webhooks_/mux': {
       id: '/webhooks_/mux'
@@ -1592,6 +1752,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/auth_/email-sign-in': {
+      id: '/auth_/email-sign-in'
+      path: '/email-sign-in'
+      fullPath: '/auth/email-sign-in'
+      preLoaderRoute: typeof AuthEmailSignInRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/api/search-answer': {
       id: '/api/search-answer'
       path: '/api/search-answer'
@@ -1632,6 +1799,13 @@ declare module '@tanstack/react-router' {
       path: '/following'
       fullPath: '/following'
       preLoaderRoute: typeof MainFollowingRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/donate': {
+      id: '/_main/donate'
+      path: '/donate'
+      fullPath: '/donate'
+      preLoaderRoute: typeof MainDonateRouteImport
       parentRoute: typeof MainRoute
     }
     '/_main/dig-deeper': {
@@ -1753,6 +1927,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInternalMediaForVerseRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/donations/status': {
+      id: '/api/donations/status'
+      path: '/api/donations/status'
+      fullPath: '/api/donations/status'
+      preLoaderRoute: typeof ApiDonationsStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/donations/imports': {
+      id: '/api/donations/imports'
+      path: '/api/donations/imports'
+      fullPath: '/api/donations/imports'
+      preLoaderRoute: typeof ApiDonationsImportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/donations/checkout': {
+      id: '/api/donations/checkout'
+      path: '/api/donations/checkout'
+      fullPath: '/api/donations/checkout'
+      preLoaderRoute: typeof ApiDonationsCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/donations/admin-export': {
+      id: '/api/donations/admin-export'
+      path: '/api/donations/admin-export'
+      fullPath: '/api/donations/admin-export'
+      preLoaderRoute: typeof ApiDonationsAdminExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_main/series/$seriesId': {
       id: '/_main/series/$seriesId'
       path: '/series/$seriesId'
@@ -1772,6 +1974,13 @@ declare module '@tanstack/react-router' {
       path: '/media/$mediaId'
       fullPath: '/media/$mediaId'
       preLoaderRoute: typeof MainMediaMediaIdRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/donate_/success': {
+      id: '/_main/donate_/success'
+      path: '/donate/success'
+      fullPath: '/donate/success'
+      preLoaderRoute: typeof MainDonateSuccessRouteImport
       parentRoute: typeof MainRoute
     }
     '/_main/dashboard/organizations': {
@@ -2068,6 +2277,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainDashboardAdminDuplicateUploadsRouteImport
       parentRoute: typeof MainDashboardRoute
     }
+    '/_main/dashboard/admin_/donations': {
+      id: '/_main/dashboard/admin_/donations'
+      path: '/admin/donations'
+      fullPath: '/dashboard/admin/donations'
+      preLoaderRoute: typeof MainDashboardAdminDonationsRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
     '/_main/dashboard/admin_/deleting-uploads': {
       id: '/_main/dashboard/admin_/deleting-uploads'
       path: '/admin/deleting-uploads'
@@ -2103,11 +2319,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainDashboardAccountProfileRouteImport
       parentRoute: typeof MainDashboardRoute
     }
+    '/_main/dashboard/account_/participation': {
+      id: '/_main/dashboard/account_/participation'
+      path: '/account/participation'
+      fullPath: '/dashboard/account/participation'
+      preLoaderRoute: typeof MainDashboardAccountParticipationRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
     '/_main/dashboard/account_/newsletter': {
       id: '/_main/dashboard/account_/newsletter'
       path: '/account/newsletter'
       fullPath: '/dashboard/account/newsletter'
       preLoaderRoute: typeof MainDashboardAccountNewsletterRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/account_/donations': {
+      id: '/_main/dashboard/account_/donations'
+      path: '/account/donations'
+      fullPath: '/dashboard/account/donations'
+      preLoaderRoute: typeof MainDashboardAccountDonationsRouteImport
       parentRoute: typeof MainDashboardRoute
     }
     '/_main/channel/$slug_/live': {
@@ -2215,6 +2445,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainDashboardChannelsChannelIdEditRouteImport
       parentRoute: typeof MainDashboardRoute
     }
+    '/_main/dashboard/account_/donations_/$year': {
+      id: '/_main/dashboard/account_/donations_/$year'
+      path: '/account/donations/$year'
+      fullPath: '/dashboard/account/donations/$year'
+      preLoaderRoute: typeof MainDashboardAccountDonationsYearRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
     '/_main/dashboard/channels_/$channelId_/uploads_/$uploadId': {
       id: '/_main/dashboard/channels_/$channelId_/uploads_/$uploadId'
       path: '/channels/$channelId/uploads/$uploadId'
@@ -2266,12 +2503,15 @@ interface MainDashboardRouteChildren {
   MainDashboardInvitationsRoute: typeof MainDashboardInvitationsRoute
   MainDashboardOrganizationsRoute: typeof MainDashboardOrganizationsRoute
   MainDashboardIndexRoute: typeof MainDashboardIndexRoute
+  MainDashboardAccountDonationsRoute: typeof MainDashboardAccountDonationsRoute
   MainDashboardAccountNewsletterRoute: typeof MainDashboardAccountNewsletterRoute
+  MainDashboardAccountParticipationRoute: typeof MainDashboardAccountParticipationRoute
   MainDashboardAccountProfileRoute: typeof MainDashboardAccountProfileRoute
   MainDashboardAccountSecurityRoute: typeof MainDashboardAccountSecurityRoute
   MainDashboardAdminBackfillFilenamesRoute: typeof MainDashboardAdminBackfillFilenamesRoute
   MainDashboardAdminChannelsRoute: typeof MainDashboardAdminChannelsRoute
   MainDashboardAdminDeletingUploadsRoute: typeof MainDashboardAdminDeletingUploadsRoute
+  MainDashboardAdminDonationsRoute: typeof MainDashboardAdminDonationsRoute
   MainDashboardAdminDuplicateUploadsRoute: typeof MainDashboardAdminDuplicateUploadsRoute
   MainDashboardAdminFailedAnnotationsRoute: typeof MainDashboardAdminFailedAnnotationsRoute
   MainDashboardAdminFailedSummariesRoute: typeof MainDashboardAdminFailedSummariesRoute
@@ -2298,6 +2538,7 @@ interface MainDashboardRouteChildren {
   MainDashboardChurchesNewRoute: typeof MainDashboardChurchesNewRoute
   MainDashboardInvitationsAcceptRoute: typeof MainDashboardInvitationsAcceptRoute
   MainDashboardOrganizationsOrgIdRoute: typeof MainDashboardOrganizationsOrgIdRoute
+  MainDashboardAccountDonationsYearRoute: typeof MainDashboardAccountDonationsYearRoute
   MainDashboardChannelsChannelIdEditRoute: typeof MainDashboardChannelsChannelIdEditRoute
   MainDashboardChannelsChannelIdLiveRoute: typeof MainDashboardChannelsChannelIdLiveRoute
   MainDashboardChannelsChannelIdMembersRoute: typeof MainDashboardChannelsChannelIdMembersRoute
@@ -2324,7 +2565,10 @@ const MainDashboardRouteChildren: MainDashboardRouteChildren = {
   MainDashboardInvitationsRoute: MainDashboardInvitationsRoute,
   MainDashboardOrganizationsRoute: MainDashboardOrganizationsRoute,
   MainDashboardIndexRoute: MainDashboardIndexRoute,
+  MainDashboardAccountDonationsRoute: MainDashboardAccountDonationsRoute,
   MainDashboardAccountNewsletterRoute: MainDashboardAccountNewsletterRoute,
+  MainDashboardAccountParticipationRoute:
+    MainDashboardAccountParticipationRoute,
   MainDashboardAccountProfileRoute: MainDashboardAccountProfileRoute,
   MainDashboardAccountSecurityRoute: MainDashboardAccountSecurityRoute,
   MainDashboardAdminBackfillFilenamesRoute:
@@ -2332,6 +2576,7 @@ const MainDashboardRouteChildren: MainDashboardRouteChildren = {
   MainDashboardAdminChannelsRoute: MainDashboardAdminChannelsRoute,
   MainDashboardAdminDeletingUploadsRoute:
     MainDashboardAdminDeletingUploadsRoute,
+  MainDashboardAdminDonationsRoute: MainDashboardAdminDonationsRoute,
   MainDashboardAdminDuplicateUploadsRoute:
     MainDashboardAdminDuplicateUploadsRoute,
   MainDashboardAdminFailedAnnotationsRoute:
@@ -2364,6 +2609,8 @@ const MainDashboardRouteChildren: MainDashboardRouteChildren = {
   MainDashboardChurchesNewRoute: MainDashboardChurchesNewRoute,
   MainDashboardInvitationsAcceptRoute: MainDashboardInvitationsAcceptRoute,
   MainDashboardOrganizationsOrgIdRoute: MainDashboardOrganizationsOrgIdRoute,
+  MainDashboardAccountDonationsYearRoute:
+    MainDashboardAccountDonationsYearRoute,
   MainDashboardChannelsChannelIdEditRoute:
     MainDashboardChannelsChannelIdEditRoute,
   MainDashboardChannelsChannelIdLiveRoute:
@@ -2409,6 +2656,7 @@ interface MainRouteChildren {
   MainChurchesRoute: typeof MainChurchesRoute
   MainDashboardRoute: typeof MainDashboardRouteWithChildren
   MainDigDeeperRoute: typeof MainDigDeeperRoute
+  MainDonateRoute: typeof MainDonateRoute
   MainFollowingRoute: typeof MainFollowingRoute
   MainHistoryRoute: typeof MainHistoryRoute
   MainLibraryRoute: typeof MainLibraryRoute
@@ -2417,6 +2665,7 @@ interface MainRouteChildren {
   MainSlugLiveRoute: typeof MainSlugLiveRoute
   MainChannelSlugRoute: typeof MainChannelSlugRoute
   MainChurchesSlugRoute: typeof MainChurchesSlugRoute
+  MainDonateSuccessRoute: typeof MainDonateSuccessRoute
   MainMediaMediaIdRoute: typeof MainMediaMediaIdRoute
   MainPlaylistPlaylistIdRoute: typeof MainPlaylistPlaylistIdRoute
   MainSeriesSeriesIdRoute: typeof MainSeriesSeriesIdRoute
@@ -2430,6 +2679,7 @@ const MainRouteChildren: MainRouteChildren = {
   MainChurchesRoute: MainChurchesRoute,
   MainDashboardRoute: MainDashboardRouteWithChildren,
   MainDigDeeperRoute: MainDigDeeperRoute,
+  MainDonateRoute: MainDonateRoute,
   MainFollowingRoute: MainFollowingRoute,
   MainHistoryRoute: MainHistoryRoute,
   MainLibraryRoute: MainLibraryRoute,
@@ -2438,6 +2688,7 @@ const MainRouteChildren: MainRouteChildren = {
   MainSlugLiveRoute: MainSlugLiveRoute,
   MainChannelSlugRoute: MainChannelSlugRoute,
   MainChurchesSlugRoute: MainChurchesSlugRoute,
+  MainDonateSuccessRoute: MainDonateSuccessRoute,
   MainMediaMediaIdRoute: MainMediaMediaIdRoute,
   MainPlaylistPlaylistIdRoute: MainPlaylistPlaylistIdRoute,
   MainSeriesSeriesIdRoute: MainSeriesSeriesIdRoute,
@@ -2447,6 +2698,7 @@ const MainRouteChildren: MainRouteChildren = {
 const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren)
 
 interface AuthRouteChildren {
+  AuthEmailSignInRoute: typeof AuthEmailSignInRoute
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthLogoutRoute: typeof AuthLogoutRoute
@@ -2456,6 +2708,7 @@ interface AuthRouteChildren {
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
+  AuthEmailSignInRoute: AuthEmailSignInRoute,
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthLogoutRoute: AuthLogoutRoute,
@@ -2485,6 +2738,11 @@ const rootRouteChildren: RootRouteChildren = {
   OidcUserinfoRoute: OidcUserinfoRoute,
   TrpcSplatRoute: TrpcSplatRoute,
   WebhooksMuxRoute: WebhooksMuxRoute,
+  WebhooksStripeRoute: WebhooksStripeRoute,
+  ApiDonationsAdminExportRoute: ApiDonationsAdminExportRoute,
+  ApiDonationsCheckoutRoute: ApiDonationsCheckoutRoute,
+  ApiDonationsImportsRoute: ApiDonationsImportsRoute,
+  ApiDonationsStatusRoute: ApiDonationsStatusRoute,
   ApiInternalMediaForVerseRoute: ApiInternalMediaForVerseRoute,
   ChannelSlugPodcastDotxmlRoute: ChannelSlugPodcastDotxmlRoute,
   ChannelSlugRssDotxmlRoute: ChannelSlugRssDotxmlRoute,

@@ -6,7 +6,9 @@ import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
 import { eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
+import { z } from 'zod';
 
+import { releaseDonorEmailForUser } from '@/donations/identity';
 import { passwordChangeSchema, profileUpdateSchema } from '@/schemas/account';
 import {
   finalizeMultipartUploadSchema,
@@ -16,8 +18,10 @@ import {
   completeMultipartMediaUpload,
   handleMultipartMediaUpload,
 } from '@/temporal';
+import { normalizeAuthEmail } from '@/util/auth-token';
 import { mantineAvatarLg2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
+import { hasAcceptedParticipationAgreements } from '@/util/participation';
 import { getPublicImageUrl } from '@/util/server-env';
 import testPassword from '@/util/zxcvbn';
 
@@ -31,6 +35,46 @@ type ProfileUpdateResponse = { error: false } | { error: string };
 type PasswordChangeResponse = { error: false } | { error: string };
 
 export const accountProcedures = {
+  getParticipationStatus: authProcedure.query(({ ctx }) => ({
+    statementOfTheologyAccepted: Boolean(
+      ctx.session.appUser.statementOfTheologyAcceptedAt,
+    ),
+    termsAccepted: Boolean(ctx.session.appUser.termsAcceptedAt),
+    accepted: hasAcceptedParticipationAgreements(ctx.session.appUser),
+  })),
+
+  acceptParticipationAgreements: authProcedure
+    .input(
+      z.object({
+        statementOfTheology: z.literal(true),
+        terms: z.literal(true),
+      }),
+    )
+    .mutation(async ({ ctx }) => {
+      const acceptedAt = new Date();
+      await db
+        .update(AppUser)
+        .set({
+          statementOfTheologyAcceptedAt: acceptedAt,
+          termsAcceptedAt: acceptedAt,
+          updatedAt: acceptedAt,
+        })
+        .where(eq(AppUser.id, ctx.session.appUserId));
+
+      return { accepted: true as const };
+    }),
+
+  getSecurity: authProcedure.query(async ({ ctx }) => {
+    const user = await db.query.AppUser.findFirst({
+      where: (table, { eq }) => eq(table.id, ctx.session.appUserId),
+      columns: { password: true },
+    });
+    if (!user) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+    }
+    return { hasPassword: Boolean(user.password) };
+  }),
+
   getProfile: authProcedure.query(async ({ ctx }) => {
     const user = await db.query.AppUser.findFirst({
       where: (t, { eq }) => eq(t.id, ctx.session.appUserId),
@@ -85,6 +129,7 @@ export const accountProcedures = {
       );
 
       try {
+        const email = normalizeAuthEmail(input.email);
         const existingUser = await db.query.AppUser.findFirst({
           where: (t, { eq, ne, and }) =>
             and(
@@ -107,7 +152,7 @@ export const accountProcedures = {
         }
 
         const existingEmailRecord = await db.query.AppUserEmail.findFirst({
-          where: (t, { eq }) => eq(t.email, input.email),
+          where: (t, { eq }) => eq(t.email, email),
         });
 
         if (
@@ -118,7 +163,6 @@ export const accountProcedures = {
             {
               context: {
                 userId: ctx.session.appUserId,
-                email: input.email,
               },
             },
             'Profile update failed - email taken',
@@ -140,15 +184,23 @@ export const accountProcedures = {
             where: (t, { eq }) => eq(t.appUserId, ctx.session.appUserId),
           });
 
-          if (currentEmail?.email !== input.email) {
+          if (
+            !currentEmail ||
+            normalizeAuthEmail(currentEmail.email) !== email
+          ) {
             if (currentEmail) {
+              await releaseDonorEmailForUser(
+                tx,
+                ctx.session.appUserId,
+                currentEmail.email,
+              );
               await tx
                 .delete(AppUserEmail)
                 .where(eq(AppUserEmail.id, currentEmail.id));
             }
 
             await tx.insert(AppUserEmail).values({
-              email: input.email,
+              email,
               appUserId: ctx.session.appUserId,
             });
           }
@@ -228,19 +280,24 @@ export const accountProcedures = {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
         }
 
-        const isCurrentPasswordValid = await argon2.verify(
-          user.password,
-          input.currentPassword,
-        );
-
-        if (!isCurrentPasswordValid) {
-          moduleLogger.warn(
-            {
-              appUserId: ctx.session.appUserId,
-            },
-            'Password change failed - invalid current password',
+        if (user.password) {
+          if (!input.currentPassword) {
+            return { error: 'Current password is required' };
+          }
+          const isCurrentPasswordValid = await argon2.verify(
+            user.password,
+            input.currentPassword,
           );
-          return { error: 'Current password is incorrect' };
+
+          if (!isCurrentPasswordValid) {
+            moduleLogger.warn(
+              {
+                appUserId: ctx.session.appUserId,
+              },
+              'Password change failed - invalid current password',
+            );
+            return { error: 'Current password is incorrect' };
+          }
         }
 
         const newHash = await argon2.hash(input.newPassword, {

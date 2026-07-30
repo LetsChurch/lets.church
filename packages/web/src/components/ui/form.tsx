@@ -226,14 +226,21 @@ function HCaptchaField(
     }
   }, [field.state.value]);
 
+  const error = fieldError(field.state.meta.errors);
+
   return (
-    <HCaptcha
-      {...props}
-      ref={captchaRef}
-      onVerify={(token) => field.setValue(token)}
-      onExpire={() => field.setValue('')}
-      onError={() => field.setValue('')}
-    />
+    <div>
+      <HCaptcha
+        {...props}
+        ref={captchaRef}
+        onVerify={(token) => field.setValue(token)}
+        onExpire={() => field.setValue('')}
+        onError={() => field.setValue('')}
+      />
+      {error ? (
+        <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>
+      ) : null}
+    </div>
   );
 }
 

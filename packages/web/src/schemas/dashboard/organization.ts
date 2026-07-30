@@ -66,12 +66,12 @@ export const getInvitationDetailsSchema = z.object({
 
 export const organizationFormSchema = z.object({
   name: z.string().min(1, 'Organization name is required'),
-  slug: z.string().optional(),
+  slug: z.string().trim().optional(),
   description: z.string().optional(),
   websiteUrl: httpUrl().optional().or(z.literal('')),
   primaryEmail: z.email('Invalid email').optional().or(z.literal('')),
   primaryPhoneNumber: z.string().optional().or(z.literal('')),
-  tags: z.array(z.string()).optional(),
+  tags: z.array(z.string().trim().min(1)).optional(),
   facebookUrl: httpUrl().optional().or(z.literal('')),
   instagramUrl: httpUrl().optional().or(z.literal('')),
   xUrl: httpUrl().optional().or(z.literal('')),

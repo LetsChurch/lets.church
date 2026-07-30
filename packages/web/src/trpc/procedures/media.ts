@@ -45,7 +45,7 @@ import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { ffprobeSchema } from '@/util/zod';
 
 import { generateSuggestedQuestions } from '../media/suggested-questions';
-import { authProcedure, publicProcedure } from '../trpc';
+import { participationProcedure, publicProcedure } from '../trpc';
 
 const moduleLogger = logger.child({
   module: 'trpc/procedures/media',
@@ -1227,7 +1227,7 @@ export const mediaProcedures = {
       });
     }),
 
-  rateMedia: authProcedure
+  rateMedia: participationProcedure
     .input(
       z.object({
         mediaId: IncomingIdSchema,
@@ -1601,7 +1601,7 @@ export const mediaProcedures = {
       });
     }),
 
-  createComment: authProcedure
+  createComment: participationProcedure
     .input(
       z.object({
         mediaId: IncomingIdSchema,
@@ -1745,7 +1745,7 @@ export const mediaProcedures = {
       };
     }),
 
-  rateComment: authProcedure
+  rateComment: participationProcedure
     .input(
       z.object({
         commentId: IncomingIdSchema,

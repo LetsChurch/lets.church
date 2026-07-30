@@ -258,9 +258,19 @@ function AdminPage() {
       </div>
 
       <Title order={2} className="mb-3 text-lg font-semibold">
-        Users
+        People and giving
       </Title>
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Link to="/dashboard/admin/donations" className="block">
+          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+            <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
+              <Text fw={500}>Donations</Text>
+            </div>
+            <Text size="sm" c="dimmed">
+              Review gifts, recurring plans, refunds, and disputes
+            </Text>
+          </div>
+        </Link>
         <Link to="/dashboard/admin/users" className="block">
           <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">

@@ -49,14 +49,12 @@ function SidebarDonateCard({ onDismiss }: SidebarDonateCardProps) {
         </p>
       </div>
       <div className="flex flex-col gap-1">
-        <a
-          href="https://givebutter.com/LetsChurch"
+        <Link
+          to="/donate"
           className="text-brand rounded-full bg-white px-2.5 py-1.5 text-center text-xs font-semibold transition-opacity hover:opacity-90"
-          target="_blank"
-          rel="noopener"
         >
-          Donate Now
-        </a>
+          Donate
+        </Link>
         {onDismiss ? (
           <button
             type="button"
@@ -635,14 +633,12 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
         {collapsed && !showAltMenu ? (
           <div className="px-4 pb-3">
             <LcTooltip content="Donate" side="right">
-              <a
+              <Link
                 className="text-brand flex size-6 cursor-pointer items-center justify-center transition-all hover:scale-110 hover:animate-pulse hover:text-indigo-400"
-                href="https://givebutter.com/LetsChurch"
-                target="_blank"
-                rel="noopener"
+                to="/donate"
               >
                 <IconHeartFilled size={20} />
-              </a>
+              </Link>
             </LcTooltip>
           </div>
         ) : null}

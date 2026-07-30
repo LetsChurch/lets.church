@@ -25,6 +25,7 @@ export const channelFormSchema = z.object({
   name: z.string().min(1, 'Channel name is required'),
   slug: z
     .string()
+    .trim()
     .min(1, 'Channel slug is required')
     .regex(
       /^[a-zA-Z0-9_-]+$/,
@@ -88,6 +89,7 @@ export const channelFormSchema = z.object({
 export const createChannelSchema = channelFormSchema.extend({
   slug: z
     .string()
+    .trim()
     .regex(
       /^[a-zA-Z0-9_-]+$/,
       'Slug can only contain letters, numbers, underscores, and hyphens',

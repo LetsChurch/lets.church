@@ -142,14 +142,12 @@ function RouteComponent() {
       </p>
 
       <div className="not-prose my-8 text-center">
-        <a
-          href="https://givebutter.com/LetsChurch"
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          to="/donate"
           className="bg-brand hover:bg-brand-700 inline-block rounded-lg px-8 py-4 text-lg font-semibold text-white shadow-lg transition-colors"
         >
-          Donate Now
-        </a>
+          Donate
+        </Link>
       </div>
 
       <p>

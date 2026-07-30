@@ -25,6 +25,8 @@ export type CommentsSectionProps = {
    * Whether comments are enabled for this media
    */
   commentsEnabled?: boolean;
+  canParticipate?: boolean;
+  onParticipationRequired: () => void;
 };
 
 export function CommentsSection({
@@ -33,6 +35,8 @@ export function CommentsSection({
   onLoginRequired,
   showContainer = true,
   commentsEnabled = true,
+  canParticipate = false,
+  onParticipationRequired,
 }: CommentsSectionProps) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
@@ -63,6 +67,10 @@ export function CommentsSection({
   const handleSubmitComment = (text: string) => {
     if (!isLoggedIn) {
       onLoginRequired();
+      return;
+    }
+    if (!canParticipate) {
+      onParticipationRequired();
       return;
     }
 
@@ -96,12 +104,27 @@ export function CommentsSection({
           <div className="border-b border-zinc-200 p-5 dark:border-zinc-800">
             <CommentInput
               onSubmit={handleSubmitComment}
-              placeholder={isLoggedIn ? 'Add a comment' : 'Sign in to comment'}
-              disabled={!isLoggedIn}
+              placeholder={
+                !isLoggedIn
+                  ? 'Sign in to comment'
+                  : canParticipate
+                    ? 'Add a comment'
+                    : 'Accept the participation policies to comment'
+              }
+              disabled={!isLoggedIn || !canParticipate}
               isPending={createCommentMutation.isPending}
               errorMessage={errorMessage}
               onErrorDismiss={() => setErrorMessage(null)}
             />
+            {isLoggedIn && !canParticipate ? (
+              <button
+                type="button"
+                className="text-brand mt-3 text-sm font-medium underline underline-offset-2"
+                onClick={onParticipationRequired}
+              >
+                Review participation policies
+              </button>
+            ) : null}
           </div>
 
           {/* Comments List */}
@@ -119,6 +142,8 @@ export function CommentsSection({
                     mediaId={mediaId}
                     lengthSeconds={lengthSeconds}
                     onLoginRequired={onLoginRequired}
+                    canParticipate={canParticipate}
+                    onParticipationRequired={onParticipationRequired}
                   />
                 ))}
               </div>

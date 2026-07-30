@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { registerSchema, usernameSchema } from './auth';
+import { loginSchema, registerSchema, usernameSchema } from './auth';
 
 describe('usernameSchema', () => {
   it.each(['bob', 'bob_smith', 'bob-123', 'BobSmith', 'a', "o'brien"])(
@@ -9,6 +9,10 @@ describe('usernameSchema', () => {
       expect(usernameSchema.safeParse(username).success).toBe(true);
     },
   );
+
+  it('trims surrounding whitespace', () => {
+    expect(usernameSchema.parse('  BobSmith  ')).toBe('BobSmith');
+  });
 
   it.each([
     ['contains @ (email-shaped)', 'bob@example.com'],
@@ -19,6 +23,33 @@ describe('usernameSchema', () => {
     ['is empty', ''],
   ])('rejects a username that %s', (_label, username) => {
     expect(usernameSchema.safeParse(username).success).toBe(false);
+  });
+});
+
+describe('identity input normalization', () => {
+  it('trims login identifiers before lookup', () => {
+    expect(
+      loginSchema.parse({
+        id: '  User@Example.com  ',
+        password: 'password',
+        hcaptchaToken: 'token',
+      }).id,
+    ).toBe('User@Example.com');
+  });
+
+  it('trims registration emails before normalization', () => {
+    expect(
+      registerSchema.parse({
+        email: '  User@Example.com  ',
+        username: 'new_user',
+        password: 'a-strong-password',
+        fullName: 'New User',
+        agreeToTheology: true,
+        agreeToTerms: true,
+        subscribeNewsletter: false,
+        hcaptchaToken: 'token',
+      }).email,
+    ).toBe('User@Example.com');
   });
 });
 

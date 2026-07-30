@@ -1,22 +1,28 @@
 import { z } from 'zod';
 
+export const emailSchema = z
+  .string()
+  .trim()
+  .pipe(z.email('Invalid email address'));
+
 // Shared username validator. Disallow `@` (and whitespace) so a username can't
 // be shaped like an email address and shadow another user's email at login /
 // password recovery. Used by every path that writes AppUser.username
 // (registration, self-service profile edit, and admin create/update).
 export const usernameSchema = z
   .string()
+  .trim()
   .min(1, 'Username is required')
   .regex(/^[^@\s]+$/, 'Username cannot contain "@" or spaces');
 
 export const loginSchema = z.object({
-  id: z.string().min(1, 'Email or Username is required'),
+  id: z.string().trim().min(1, 'Email or Username is required'),
   password: z.string().min(1, 'Password is required'),
   hcaptchaToken: z.string().min(1, 'Please complete the CAPTCHA'),
 });
 
 export const registerSchema = z.object({
-  email: z.email('Invalid email address'),
+  email: emailSchema,
   username: usernameSchema,
   password: z
     .string()

@@ -1,21 +1,33 @@
-import { AppUser, AppUserEmail, db } from '@letschurch/db';
+import { randomUUID } from 'node:crypto';
+
+import { AppSession, AppUser, AppUserEmail, db } from '@letschurch/db';
 import { getRequest, setCookie } from '@tanstack/react-start/server';
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
+import { eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { loginSchema, registerSchema } from '@/schemas/auth';
-import {
-  completeResetPassword,
-  postUserRegistration,
-  resetPassword,
-} from '@/temporal';
+import { emailSchema, loginSchema, registerSchema } from '@/schemas/auth';
+import { postUserRegistration } from '@/temporal';
 import { BannedError, login } from '@/util/auth';
+import {
+  consumeAuthToken,
+  getUsableAuthToken,
+  getUsableAuthTokenInTransaction,
+  hasUsableAuthToken,
+  normalizeAuthEmail,
+} from '@/util/auth-token';
 import { validateHCaptcha } from '@/util/hcaptcha';
-import { createSessionJwt, parsePasswordResetJwt } from '@/util/jwt';
+import { createSessionJwt } from '@/util/jwt';
 import logger from '@/util/logger';
+import { sendPasswordResetEmail } from '@/util/password-reset';
+import {
+  enforcePublicActionRateLimit,
+  PUBLIC_ACTION_RATE_LIMIT_MESSAGE,
+} from '@/util/public-action-rate-limit';
+import { sendEmailSignInLink } from '@/util/request-email-sign-in';
 import { getClientIpAddress } from '@/util/request-ip';
-import { generateResetPasswordEmail } from '@/util/reset-password-email';
+import { safeRedirect } from '@/util/safe-redirect';
 import { SESSION_COOKIE, sessionCookieOptions } from '@/util/session-cookie';
 import testPassword from '@/util/zxcvbn';
 
@@ -28,6 +40,16 @@ const moduleLogger = logger.child({
 type HandleLoginResponse = { error: false } | { error: string };
 type HandleRegisterResponse = { error: false } | { error: string };
 
+function emailAccountUsername(email: string, userId: string) {
+  const prefix =
+    email
+      .split('@')[0]
+      ?.toLowerCase()
+      .replaceAll(/[^a-z0-9_-]/g, '')
+      .slice(0, 24) || 'member';
+  return `${prefix}-${userId.replaceAll('-', '').slice(0, 8)}`;
+}
+
 export const authProcedures = {
   login: anonProcedure
     .input(loginSchema)
@@ -37,14 +59,11 @@ export const authProcedures = {
       }): Promise<HandleLoginResponse> => {
         const clientIp = getClientIpAddress(getRequest().headers);
 
-        moduleLogger.info(
-          { context: { userId: id, clientIp } },
-          'Login attempt',
-        );
+        moduleLogger.info({ context: { clientIp } }, 'Login attempt');
 
         if (!(await validateHCaptcha(hcaptchaToken, clientIp))) {
           moduleLogger.warn(
-            { context: { userId: id, clientIp } },
+            { context: { clientIp } },
             'Login failed - invalid CAPTCHA',
           );
           return { error: 'Invalid CAPTCHA' };
@@ -60,7 +79,13 @@ export const authProcedures = {
           );
 
           moduleLogger.info(
-            { context: { userId: id, sessionId: session.id, clientIp } },
+            {
+              appUserId: session.appUserId,
+              context: {
+                sessionId: session.id,
+                clientIp,
+              },
+            },
             'Login successful',
           );
 
@@ -68,20 +93,15 @@ export const authProcedures = {
         } catch (e) {
           if (e instanceof BannedError) {
             moduleLogger.warn(
-              { context: { userId: id, clientIp } },
+              { context: { clientIp } },
               'Login failed - account banned',
             );
-            return {
-              error: e.reason
-                ? `This account has been banned. Reason: ${e.reason}`
-                : 'This account has been banned.',
-            };
+            return { error: 'This account is not available.' };
           }
 
           moduleLogger.warn(
             {
               context: {
-                userId: id,
                 clientIp,
                 error: e instanceof Error ? e.message : String(e),
               },
@@ -97,12 +117,12 @@ export const authProcedures = {
     .input(registerSchema)
     .mutation(async ({ input: value }): Promise<HandleRegisterResponse> => {
       const clientIp = getClientIpAddress(getRequest().headers);
+      const email = normalizeAuthEmail(value.email);
 
       moduleLogger.info(
         {
           context: {
             username: value.username,
-            email: value.email,
           },
         },
         'Registration attempt',
@@ -113,7 +133,6 @@ export const authProcedures = {
           {
             context: {
               username: value.username,
-              email: value.email,
             },
           },
           'Registration failed - invalid CAPTCHA',
@@ -128,7 +147,6 @@ export const authProcedures = {
           {
             context: {
               username: value.username,
-              email: value.email,
               passwordError: passwordTest,
             },
           },
@@ -141,14 +159,17 @@ export const authProcedures = {
         const hash = await argon2.hash(value.password, {
           type: argon2.argon2id,
         });
+        const acceptedAt = new Date();
 
-        const user = await db.transaction(async (tx) => {
+        const registration = await db.transaction(async (tx) => {
           const [newUser] = await tx
             .insert(AppUser)
             .values({
               username: value.username,
               fullName: value.fullName || null,
               password: hash,
+              statementOfTheologyAcceptedAt: acceptedAt,
+              termsAcceptedAt: acceptedAt,
               updatedAt: new Date(),
             })
             .returning();
@@ -156,25 +177,46 @@ export const authProcedures = {
             throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
           }
           await tx.insert(AppUserEmail).values({
-            email: value.email,
+            email,
             appUserId: newUser.id,
           });
-          return newUser;
+          const [newSession] = await tx
+            .insert(AppSession)
+            .values({ appUserId: newUser.id, updatedAt: new Date() })
+            .returning({ id: AppSession.id });
+          if (!newSession) {
+            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+          }
+          return { user: newUser, session: newSession };
         });
+        setCookie(
+          SESSION_COOKIE,
+          await createSessionJwt({ sub: registration.session.id }),
+          sessionCookieOptions,
+        );
 
-        await postUserRegistration(user.id, {
-          userId: user.id,
-          username: value.username,
-          email: value.email,
-          subscribeToNewsletter: value.subscribeNewsletter,
-        });
+        try {
+          await postUserRegistration(registration.user.id, {
+            userId: registration.user.id,
+            username: value.username,
+            email,
+            subscribeToNewsletter: value.subscribeNewsletter,
+          });
+        } catch (error) {
+          moduleLogger.error(
+            {
+              appUserId: registration.user.id,
+              err: error instanceof Error ? error : new Error(String(error)),
+            },
+            'Registration follow-up could not be scheduled',
+          );
+        }
 
         moduleLogger.info(
           {
+            appUserId: registration.user.id,
             context: {
-              userId: user.id,
               username: value.username,
-              email: value.email,
             },
           },
           'Registration successful',
@@ -186,7 +228,6 @@ export const authProcedures = {
           {
             context: {
               username: value.username,
-              email: value.email,
               error: e instanceof Error ? e.message : String(e),
             },
           },
@@ -196,10 +237,207 @@ export const authProcedures = {
       }
     }),
 
+  requestEmailSignIn: anonProcedure
+    .input(
+      z.object({
+        email: emailSchema,
+        redirect: z.string().max(2_048).optional(),
+        hcaptchaToken: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const clientIp = getClientIpAddress(getRequest().headers);
+      if (!(await validateHCaptcha(input.hcaptchaToken, clientIp))) {
+        return { error: 'Invalid CAPTCHA' };
+      }
+
+      const email = normalizeAuthEmail(input.email);
+      const rateLimit = await enforcePublicActionRateLimit({
+        headers: getRequest().headers,
+        email,
+        kind: 'email-sign-in',
+      });
+      if (!rateLimit.allowed) {
+        moduleLogger.warn(
+          {
+            context: {
+              limitedBy: rateLimit.limitedBy,
+              retryAfterSeconds: rateLimit.retryAfterSeconds,
+            },
+          },
+          'Email sign-in request rate limited',
+        );
+        return { error: PUBLIC_ACTION_RATE_LIMIT_MESSAGE };
+      }
+      const emailRecord = await db.query.AppUserEmail.findFirst({
+        where: (table, { eq }) => eq(table.email, email),
+        columns: { appUserId: true },
+      });
+
+      try {
+        await sendEmailSignInLink({
+          email,
+          appUserId: emailRecord?.appUserId ?? null,
+          returnTo: safeRedirect(input.redirect) ?? null,
+        });
+        return { error: false as const };
+      } catch (error) {
+        moduleLogger.error(
+          {
+            err: error instanceof Error ? error : new Error(String(error)),
+          },
+          'Failed to send email sign-in link',
+        );
+        return {
+          error: 'We could not send the sign-in email. Try again shortly.',
+        };
+      }
+    }),
+
+  completeEmailSignIn: anonProcedure
+    .input(
+      z.object({
+        token: z.string().min(32).max(512),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const result = await db.transaction(async (tx) => {
+        const availableToken = await getUsableAuthTokenInTransaction(
+          tx,
+          input.token,
+          'EMAIL_SIGN_IN',
+        );
+        if (!availableToken) return null;
+
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(hashtextextended(${availableToken.email}, 0))`,
+        );
+
+        const tokenRecord = await consumeAuthToken(
+          tx,
+          input.token,
+          'EMAIL_SIGN_IN',
+          { consumeSiblings: true },
+        );
+        if (!tokenRecord) return null;
+
+        let emailRecord = await tx.query.AppUserEmail.findFirst({
+          where: (table, { eq }) => eq(table.email, tokenRecord.email),
+        });
+        const existingAppUserId = emailRecord?.appUserId;
+        let user = existingAppUserId
+          ? await tx.query.AppUser.findFirst({
+              where: (table, { eq }) => eq(table.id, existingAppUserId),
+            })
+          : null;
+
+        if (!emailRecord) {
+          const userId = randomUUID();
+          const donor = await tx.query.DonationDonor.findFirst({
+            where: (table, { eq }) => eq(table.email, tokenRecord.email),
+            columns: { name: true },
+          });
+          const [newUser] = await tx
+            .insert(AppUser)
+            .values({
+              id: userId,
+              username: emailAccountUsername(tokenRecord.email, userId),
+              password: null,
+              fullName: donor?.name ?? null,
+              updatedAt: new Date(),
+            })
+            .returning();
+          if (!newUser) {
+            throw new Error('Failed to create account');
+          }
+          const [newEmail] = await tx
+            .insert(AppUserEmail)
+            .values({
+              appUserId: newUser.id,
+              email: tokenRecord.email,
+              verifiedAt: new Date(),
+            })
+            .returning();
+          if (!newEmail) {
+            throw new Error('Failed to create account email');
+          }
+          user = newUser;
+          emailRecord = newEmail;
+        } else if (!emailRecord.verifiedAt) {
+          await tx
+            .update(AppUserEmail)
+            .set({ verifiedAt: new Date() })
+            .where(eq(AppUserEmail.id, emailRecord.id));
+        }
+
+        if (!user || user.deletedAt) {
+          return { denied: true as const, reason: null };
+        }
+        if (user.bannedAt) return { denied: true as const, reason: null };
+
+        const [session] = await tx
+          .insert(AppSession)
+          .values({ appUserId: user.id, updatedAt: new Date() })
+          .returning({ id: AppSession.id });
+        if (!session) {
+          throw new Error('Failed to create session');
+        }
+        return {
+          denied: false as const,
+          appUserId: user.id,
+          sessionId: session.id,
+          returnTo: tokenRecord.returnTo,
+        };
+      });
+
+      if (!result) {
+        return { error: 'This sign-in link is invalid or has expired.' };
+      }
+      if (result.denied) {
+        return { error: 'This account is not available.' };
+      }
+
+      setCookie(
+        SESSION_COOKIE,
+        await createSessionJwt({ sub: result.sessionId }),
+        sessionCookieOptions,
+      );
+      const { claimDonorsForVerifiedUser } =
+        await import('@/donations/identity');
+      try {
+        await claimDonorsForVerifiedUser(result.appUserId);
+      } catch (error) {
+        moduleLogger.error(
+          {
+            appUserId: result.appUserId,
+            err: error instanceof Error ? error : new Error(String(error)),
+          },
+          'Signed in, but donation history could not be linked',
+        );
+      }
+
+      return {
+        error: false as const,
+        redirect: safeRedirect(result.returnTo ?? undefined) ?? '/',
+      };
+    }),
+
+  getEmailSignInDetails: anonProcedure
+    .input(z.object({ token: z.string().min(32).max(512) }))
+    .query(async ({ input }) => {
+      const tokenRecord = await getUsableAuthToken(
+        input.token,
+        'EMAIL_SIGN_IN',
+      );
+      if (!tokenRecord) return { valid: false as const };
+
+      return { valid: true as const };
+    }),
+
   forgotPassword: anonProcedure
     .input(
       z.object({
-        identifier: z.string().min(1),
+        identifier: z.string().trim().min(1),
         hcaptchaToken: z.string().min(1),
       }),
     )
@@ -207,24 +445,10 @@ export const authProcedures = {
       async ({ input }): Promise<{ error: false } | { error: string }> => {
         const clientIp = getClientIpAddress(getRequest().headers);
 
-        moduleLogger.info(
-          {
-            context: {
-              identifier: input.identifier,
-            },
-          },
-          'Password reset request',
-        );
+        moduleLogger.info('Password reset request');
 
         if (!(await validateHCaptcha(input.hcaptchaToken, clientIp))) {
-          moduleLogger.warn(
-            {
-              context: {
-                identifier: input.identifier,
-              },
-            },
-            'Password reset failed - invalid CAPTCHA',
-          );
+          moduleLogger.warn('Password reset failed - invalid CAPTCHA');
           return { error: 'Invalid CAPTCHA' };
         }
 
@@ -243,7 +467,8 @@ export const authProcedures = {
 
           const lookupByEmail = () =>
             db.query.AppUserEmail.findFirst({
-              where: (t, { eq }) => eq(t.email, input.identifier),
+              where: (t, { eq }) =>
+                eq(t.email, normalizeAuthEmail(input.identifier)),
               columns: { appUserId: true, email: true },
             }).then(async (emailRecord) => {
               if (!emailRecord) return null;
@@ -273,24 +498,16 @@ export const authProcedures = {
             const emailRecord = user.emails[0];
 
             if (emailRecord) {
-              const { text, html } = await generateResetPasswordEmail(
-                user.id,
-                user.username,
-              );
-
-              await resetPassword(
-                user.id,
-                user.id,
-                emailRecord.email,
-                text,
-                html,
-              );
+              await sendPasswordResetEmail({
+                userId: user.id,
+                username: user.username,
+                email: emailRecord.email,
+              });
 
               moduleLogger.info(
                 {
                   context: {
                     userId: user.id,
-                    identifier: input.identifier,
                   },
                 },
                 'Password reset email sent',
@@ -300,21 +517,13 @@ export const authProcedures = {
                 {
                   context: {
                     userId: user.id,
-                    identifier: input.identifier,
                   },
                 },
                 'Password reset - user has no email',
               );
             }
           } else {
-            moduleLogger.info(
-              {
-                context: {
-                  identifier: input.identifier,
-                },
-              },
-              'Password reset - user not found',
-            );
+            moduleLogger.info('Password reset - user not found');
           }
 
           // Generic success message that doesn't leak information
@@ -323,7 +532,6 @@ export const authProcedures = {
           moduleLogger.error(
             {
               context: {
-                identifier: input.identifier,
                 error: e instanceof Error ? e.message : String(e),
               },
             },
@@ -341,7 +549,7 @@ export const authProcedures = {
     .input(
       z.object({
         token: z.string().min(1),
-        password: z.string().min(6).max(1024),
+        password: z.string().min(8).max(1024),
       }),
     )
     .mutation(async ({ input: { token, password } }) => {
@@ -350,32 +558,8 @@ export const authProcedures = {
       moduleLogger.info('Complete password reset attempt');
 
       try {
-        // Authorize the reset from the signed, purpose-scoped token that was only
-        // ever minted in `forgotPassword` and only delivered in the reset email.
-        // This must NOT accept the raw AppUserEmail.key: that value is also
-        // embedded in the email-verification link, so accepting it here would let
-        // anyone who saw a victim's verification link take over the account. The
-        // token is signature-verified, expires in 15 minutes, and its `purpose`
-        // literal rejects tokens minted for any other flow (session, verification).
-        const claims = await parsePasswordResetJwt(token);
-
-        if (!claims) {
+        if (!(await hasUsableAuthToken(token, 'PASSWORD_RESET'))) {
           moduleLogger.warn('Password reset failed - invalid or expired token');
-          return {
-            error: 'Invalid or expired password reset link.',
-          };
-        }
-
-        const userId = claims.sub;
-
-        // Confirm the user still exists before signaling the reset workflow.
-        const user = await db.query.AppUser.findFirst({
-          where: (t, { eq }) => eq(t.id, userId),
-          columns: { id: true },
-        });
-
-        if (!user) {
-          moduleLogger.warn('Password reset failed - user not found');
           return {
             error: 'Invalid or expired password reset link.',
           };
@@ -391,7 +575,45 @@ export const authProcedures = {
           type: argon2.argon2id,
         });
 
-        await completeResetPassword(userId, hash);
+        const reset = await db.transaction(async (tx) => {
+          const tokenRecord = await consumeAuthToken(
+            tx,
+            token,
+            'PASSWORD_RESET',
+          );
+          if (!tokenRecord?.appUserId) return false;
+
+          const user = await tx.query.AppUser.findFirst({
+            where: (table, { eq }) => eq(table.id, tokenRecord.appUserId!),
+            columns: { id: true, deletedAt: true },
+          });
+          const emailRecord = await tx.query.AppUserEmail.findFirst({
+            where: (table, { and, eq }) =>
+              and(
+                eq(table.appUserId, tokenRecord.appUserId!),
+                eq(table.email, tokenRecord.email),
+              ),
+            columns: { id: true },
+          });
+          if (!user || user.deletedAt || !emailRecord) return false;
+
+          await tx
+            .update(AppUser)
+            .set({ password: hash, updatedAt: new Date() })
+            .where(eq(AppUser.id, user.id));
+          await tx
+            .update(AppUserEmail)
+            .set({ verifiedAt: new Date() })
+            .where(eq(AppUserEmail.id, emailRecord.id));
+          await tx
+            .update(AppSession)
+            .set({ deletedAt: new Date(), updatedAt: new Date() })
+            .where(eq(AppSession.appUserId, user.id));
+          return true;
+        });
+        if (!reset) {
+          return { error: 'Invalid or expired password reset link.' };
+        }
 
         moduleLogger.info('Password reset completed');
 

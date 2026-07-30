@@ -65,7 +65,7 @@ function ResetPasswordRoute() {
     validators: {
       onChange: z
         .object({
-          password: z.string().min(6, 'Password must be at least 6 characters'),
+          password: z.string().min(8, 'Password must be at least 8 characters'),
           confirmPassword: z.string().min(1, 'Please confirm your password'),
         })
         .refine((data) => data.password === data.confirmPassword, {
@@ -94,8 +94,8 @@ function ResetPasswordRoute() {
           color="green"
           className="mt-4 mb-4"
         >
-          Your password has been reset successfully. You can now log in with
-          your new password.
+          Your password has been reset. Other signed-in sessions were closed,
+          and you can now sign in with the new password.
         </Alert>
       ) : null}
 

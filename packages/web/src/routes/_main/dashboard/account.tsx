@@ -53,6 +53,25 @@ function AccountPage() {
 
         <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
           <div className="mb-2.5 flex flex-wrap items-start justify-between gap-4">
+            <Text fw={500}>Participation Policies</Text>
+            <Button
+              component={Link}
+              to="/dashboard/account/participation"
+              variant="light"
+              size="sm"
+              style={{ width: actionWidth }}
+              className={styles.buttonLink}
+            >
+              Review
+            </Button>
+          </div>
+          <Text size="sm" c="dimmed">
+            Review the policies required to comment or create a channel.
+          </Text>
+        </div>
+
+        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="mb-2.5 flex flex-wrap items-start justify-between gap-4">
             <Text fw={500}>Password & Security</Text>
             <Button
               component={Link}
@@ -67,6 +86,25 @@ function AccountPage() {
           </div>
           <Text size="sm" c="dimmed">
             Manage your password and security preferences.
+          </Text>
+        </div>
+
+        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="mb-2.5 flex flex-wrap items-start justify-between gap-4">
+            <Text fw={500}>Donations</Text>
+            <Button
+              component={Link}
+              to="/dashboard/account/donations"
+              variant="light"
+              size="sm"
+              style={{ width: actionWidth }}
+              className={styles.buttonLink}
+            >
+              View
+            </Button>
+          </div>
+          <Text size="sm" c="dimmed">
+            View receipts, annual statements, and recurring donations.
           </Text>
         </div>
 

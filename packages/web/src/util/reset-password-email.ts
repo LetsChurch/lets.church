@@ -2,24 +2,13 @@ import { emailHtml, sanitizeForHtml } from '@letschurch/temporal/util/email';
 import { stripIndent } from 'proper-tags';
 import { z } from 'zod';
 
-import { createPasswordResetJwt } from './jwt';
-
 const { WEB_URL } = z.object({ WEB_URL: z.string() }).parse(process.env);
 
-export async function generateResetPasswordEmail(
-  userId: string,
-  username: string,
-) {
-  // The link carries a signed, purpose-scoped, 15-minute token — never the raw
-  // AppUserEmail.key. This keeps the reset credential out of any other flow's
-  // URL (e.g. the email-verification link) so it can't be leaked and replayed.
-  const token = await createPasswordResetJwt({
-    sub: userId,
-    purpose: 'password-reset',
-  });
+export function generateResetPasswordEmail(token: string, username: string) {
   const resetUrl = `${WEB_URL}/auth/reset-password?${new URLSearchParams({
     token,
   })}`;
+  const safeResetUrl = sanitizeForHtml(resetUrl);
 
   const text = stripIndent`
     Hello ${username},
@@ -28,7 +17,7 @@ export async function generateResetPasswordEmail(
 
     ${resetUrl}
 
-    This link will expire in 15 minutes.
+    This link will expire in 20 minutes and can only be used once.
 
     If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
   `;
@@ -38,11 +27,11 @@ export async function generateResetPasswordEmail(
     stripIndent`
       Hello <b>${sanitizeForHtml(username)}</b>,
 
-      We received a request to reset your password for Let's Church. If you made this request, click <a href="${resetUrl}">here</a> to reset your password.
+      We received a request to reset your password for Let's Church. If you made this request, click <a href="${safeResetUrl}">here</a> to reset your password.
 
-      This link will expire in 15 minutes.
+      This link will expire in 20 minutes and can only be used once.
 
-      Alternatively, visit the following link: ${resetUrl}
+      Alternatively, visit the following link: ${safeResetUrl}
 
       If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
     `,

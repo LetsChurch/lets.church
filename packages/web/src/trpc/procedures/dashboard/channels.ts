@@ -129,7 +129,7 @@ import {
   buildSpeakerAppearances,
   createSpeakerAndAssign,
 } from '../../speaker-labeling/queue';
-import { authProcedure, router } from '../../trpc';
+import { authProcedure, participationProcedure, router } from '../../trpc';
 
 const moduleLogger = logger.child({
   module: 'trpc/procedures/dashboard/channel',
@@ -280,7 +280,7 @@ async function loadOwnedSpeakerLink(
 }
 
 export const channelRouter = router({
-  createChannel: authProcedure
+  createChannel: participationProcedure
     .input(createChannelSchema)
     .mutation(async ({ ctx, input }) => {
       moduleLogger.info(

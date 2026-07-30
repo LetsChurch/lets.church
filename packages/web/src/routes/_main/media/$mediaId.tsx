@@ -543,6 +543,16 @@ function RouteComponent() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const isLoggedIn = useIsLoggedIn();
+  const { data: participationStatus } = useQuery({
+    ...trpc.account.getParticipationStatus.queryOptions(),
+    enabled: isLoggedIn,
+  });
+  const canParticipate = participationStatus?.accepted ?? false;
+  const requireParticipationAgreements = () => {
+    window.location.assign(
+      `/dashboard/account/participation?redirect=${encodeURIComponent(location.href)}`,
+    );
+  };
   const [transcriptDialogOpen, setTranscriptDialogOpen] = useState(false);
   const [playlistDialogOpen, setPlaylistDialogOpen] = useState(false);
   const [commentsDialogOpen, setCommentsDialogOpen] = useState(false);
@@ -939,6 +949,10 @@ function RouteComponent() {
       setLoginDialogOpen(true);
       return;
     }
+    if (!canParticipate) {
+      requireParticipationAgreements();
+      return;
+    }
 
     rateMutation.mutate({
       mediaId: params.mediaId,
@@ -1112,6 +1126,8 @@ function RouteComponent() {
                   setLoginDialogAction('comment');
                   setLoginDialogOpen(true);
                 }}
+                canParticipate={canParticipate}
+                onParticipationRequired={requireParticipationAgreements}
                 commentsEnabled={media.userCommentsEnabled}
               />
             ) : null}
@@ -1245,6 +1261,8 @@ function RouteComponent() {
                     setLoginDialogAction('comment');
                     setLoginDialogOpen(true);
                   }}
+                  canParticipate={canParticipate}
+                  onParticipationRequired={requireParticipationAgreements}
                   showContainer={false}
                   commentsEnabled={media.userCommentsEnabled}
                 />

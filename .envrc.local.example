@@ -67,6 +67,20 @@ export MUX_TOKEN_SECRET=
 # copy its signing secret here. Webhooks/secrets are per-environment in Mux.
 # export MUX_WEBHOOK_SECRET=
 
+# Stripe donations. Use a test-mode key for local development. The
+# stripe-webhooks service requires Debugging Tools: Write
+# (`stripecli_session_write`) on that test key; do not grant this permission to
+# the production application key.
+#
+# stripe-webhooks Compose service uses http://web:3000/webhooks/stripe as its
+# private --forward-to target; do NOT enter that URL in Stripe Workbench.
+# STRIPE_WEBHOOK_SECRET is optional in development: without it, the app warns
+# and skips signature verification. To verify locally, copy the whsec_... value
+# from `just logs stripe-webhooks`, then rerun `just start`. The Workbench
+# endpoint secret is required in production. See docs/donations.md.
+export STRIPE_SECRET_KEY=
+# export STRIPE_WEBHOOK_SECRET=
+
 export LISTMONK_USER=admin
 export LISTMONK_PASSWORD=password
 export LISTMONK_API_USER=api

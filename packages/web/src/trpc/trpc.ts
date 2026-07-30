@@ -3,6 +3,8 @@ import superjson from 'superjson';
 
 import logger from '@/util/logger';
 import { getMaintenanceConfig } from '@/util/maintenance';
+import { hasAcceptedParticipationAgreements } from '@/util/participation';
+import { redactLogInput } from '@/util/redact-log-input';
 
 import type { Context } from './context';
 
@@ -30,7 +32,7 @@ const loggingMiddleware = t.middleware(
         context: {
           procedure: path,
           type,
-          input,
+          input: redactLogInput(input),
         },
       },
       `tRPC ${type}: ${path}`,
@@ -70,7 +72,7 @@ const loggingMiddleware = t.middleware(
             type,
             durationMs,
             errorName: errorObj.name,
-            input,
+            input: redactLogInput(input),
           },
         },
         `tRPC ${type} error: ${path}`,
@@ -158,3 +160,22 @@ export const authProcedure = t.procedure
       },
     });
   });
+
+export const PARTICIPATION_AGREEMENTS_REQUIRED =
+  'Accept the Statement of Theology and site terms before participating.';
+
+/**
+ * Community participation requires both acknowledgments. Authentication and
+ * account-only features (including donation history and recurring donation
+ * management) deliberately use authProcedure instead.
+ */
+export const participationProcedure = authProcedure.use(({ ctx, next }) => {
+  if (!hasAcceptedParticipationAgreements(ctx.session.appUser)) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: PARTICIPATION_AGREEMENTS_REQUIRED,
+    });
+  }
+
+  return next({ ctx });
+});

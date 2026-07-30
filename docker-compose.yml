@@ -93,10 +93,16 @@ services:
       # Mux live streaming. Webhook secret is the signing secret printed by
       # `mux webhooks listen` (mux-webhooks service) — persists across runs.
       MUX_WEBHOOK_SECRET: ${MUX_WEBHOOK_SECRET:-}
+      # Stripe Checkout and webhook signing credentials for donations.
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      # Optional in development; unsigned events are accepted with a warning.
+      # Always configure the Workbench endpoint secret in production.
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       <<: [*s3-ingest-env, *s3-public-env, *mux-env]
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
+      - ./patches:/usr/src/app/patches:ro
       - ./packages/util:/usr/src/app/packages/util
       - /usr/src/app/packages/util/node_modules
       - ./packages/s3:/usr/src/app/packages/s3
@@ -388,6 +394,35 @@ services:
     restart: unless-stopped
     environment:
       <<: *mux-env
+    depends_on:
+      - web
+
+  # Local-dev Stripe webhook forwarder. The --forward-to URL below is a private
+  # Docker target, not a URL to enter in Stripe Workbench. The service uses the
+  # same test-mode API key as the web service and sends the donation events
+  # handled by the application to the web container. Its generated whsec_...
+  # value is optional locally: without it, the web service accepts events with
+  # a warning instead of verifying their signatures. With no API key this
+  # service idles instead of crash-looping. No public tunnel or Dashboard
+  # webhook destination is needed locally.
+  stripe-webhooks:
+    image: stripe/stripe-cli:v1.44.0
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if [ -z "$$STRIPE_SECRET_KEY" ]; then
+          echo "stripe-webhooks idle: set a test-mode STRIPE_SECRET_KEY to enable"
+          exec sleep 3600
+        fi
+
+        stripe listen \
+          --api-key "$$STRIPE_SECRET_KEY" \
+          --events checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired,invoice.paid,invoice.payment_failed,customer.subscription.created,customer.subscription.updated,customer.subscription.deleted,charge.refunded,charge.dispute.created,charge.dispute.updated,charge.dispute.closed \
+          --forward-to http://web:3000/webhooks/stripe ||
+          (echo "stripe-webhooks idle: Stripe CLI listener failed; check STRIPE_SECRET_KEY" && exec sleep 3600)
+    restart: unless-stopped
+    environment:
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
     depends_on:
       - web
 

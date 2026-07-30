@@ -30,6 +30,15 @@ export const Route = createFileRoute('/_main/dashboard/channels_/new')({
     if (!hasSession) {
       throw redirect({ to: '/auth/login' });
     }
+    const participation = await context.queryClient.fetchQuery(
+      context.trpc.account.getParticipationStatus.queryOptions(),
+    );
+    if (!participation.accepted) {
+      throw redirect({
+        to: '/dashboard/account/participation',
+        search: { redirect: '/dashboard/channels/new' },
+      });
+    }
   },
   loader: () => ({
     backNavigation: {

@@ -79,6 +79,8 @@ type CommentProps = {
   mediaId: string;
   lengthSeconds?: number | null;
   onLoginRequired: () => void;
+  canParticipate?: boolean;
+  onParticipationRequired?: () => void;
   isReply?: boolean;
 };
 
@@ -87,6 +89,8 @@ export function Comment({
   mediaId,
   lengthSeconds,
   onLoginRequired,
+  canParticipate = true,
+  onParticipationRequired = onLoginRequired,
   isReply = false,
 }: CommentProps) {
   const isLoggedIn = useIsLoggedIn();
@@ -185,6 +189,10 @@ export function Comment({
       onLoginRequired();
       return;
     }
+    if (!canParticipate) {
+      onParticipationRequired();
+      return;
+    }
 
     rateCommentMutation.mutate({
       commentId: comment.id,
@@ -195,6 +203,10 @@ export function Comment({
   const handleReplyClick = () => {
     if (!isLoggedIn) {
       onLoginRequired();
+      return;
+    }
+    if (!canParticipate) {
+      onParticipationRequired();
       return;
     }
     setShowReplyInput(!showReplyInput);
@@ -309,6 +321,8 @@ export function Comment({
                 mediaId={mediaId}
                 lengthSeconds={lengthSeconds}
                 onLoginRequired={onLoginRequired}
+                canParticipate={canParticipate}
+                onParticipationRequired={onParticipationRequired}
                 isReply
               />
             ))}

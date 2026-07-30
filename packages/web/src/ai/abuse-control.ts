@@ -1,11 +1,11 @@
-import { createHash } from 'node:crypto';
-
+import { type TokenBucketOptions, type TokenBucketResult } from '@/util/cache';
 import {
-  cacheConsumeTokenBucket,
-  type TokenBucketOptions,
-  type TokenBucketResult,
-} from '@/util/cache';
+  consumeTokenBucketWithFallback,
+  rateLimitIdentifier,
+} from '@/util/rate-limit';
 import { getClientIpAddress } from '@/util/request-ip';
+
+export { createMemoryTokenBucketStore } from '@/util/rate-limit';
 
 export type AiRequestKind = 'dig-deeper' | 'search' | 'search-deep';
 
@@ -39,63 +39,10 @@ const RESOURCE_BUCKET = {
   refillTokensPerSecond: 1 / 10,
 };
 
-type MemoryBucket = { tokens: number; updatedAt: number };
-
-/** A bounded process-local fallback for development and Valkey outages. */
-export function createMemoryTokenBucketStore(maxEntries = 10_000) {
-  const buckets = new Map<string, MemoryBucket>();
-
-  return {
-    consume(
-      { key, capacity, refillTokensPerSecond, cost }: TokenBucketOptions,
-      now = Date.now(),
-    ): TokenBucketResult {
-      const previous = buckets.get(key);
-      const elapsedSeconds = previous
-        ? Math.max(0, now - previous.updatedAt) / 1000
-        : 0;
-      const available = Math.min(
-        capacity,
-        (previous?.tokens ?? capacity) + elapsedSeconds * refillTokensPerSecond,
-      );
-      const allowed = available >= cost;
-      const remainingTokens = allowed ? available - cost : available;
-
-      // Refresh insertion order so the bounded map evicts the least-recently
-      // touched bucket rather than growing from caller-controlled identifiers.
-      buckets.delete(key);
-      if (!previous && buckets.size >= maxEntries) {
-        const oldestKey = buckets.keys().next().value;
-        if (typeof oldestKey === 'string') buckets.delete(oldestKey);
-      }
-      buckets.set(key, { tokens: remainingTokens, updatedAt: now });
-
-      return {
-        allowed,
-        remainingTokens,
-        retryAfterSeconds: allowed
-          ? 0
-          : Math.max(
-              1,
-              Math.ceil((cost - remainingTokens) / refillTokensPerSecond),
-            ),
-      };
-    },
-  };
-}
-
-const memoryStore = createMemoryTokenBucketStore();
-
-function identifierHash(value: string): string {
-  return createHash('sha256').update(value).digest('base64url').slice(0, 24);
-}
-
 async function consumeWithFallback(
   options: TokenBucketOptions,
 ): Promise<TokenBucketResult> {
-  return (
-    (await cacheConsumeTokenBucket(options)) ?? memoryStore.consume(options)
-  );
+  return consumeTokenBucketWithFallback(options);
 }
 
 export async function enforceAiRateLimit(
@@ -123,7 +70,7 @@ export async function enforceAiRateLimit(
     buckets.push({
       scope: 'ip',
       options: {
-        key: `ai-rate:v1:ip:${identifierHash(clientIp)}`,
+        key: `ai-rate:v1:ip:${rateLimitIdentifier(clientIp)}`,
         ...IP_BUCKET,
         cost,
       },
@@ -132,7 +79,7 @@ export async function enforceAiRateLimit(
   buckets.push({
     scope: 'resource',
     options: {
-      key: `ai-rate:v1:resource:${identifierHash(resourceId)}`,
+      key: `ai-rate:v1:resource:${rateLimitIdentifier(resourceId)}`,
       ...RESOURCE_BUCKET,
       cost,
     },
@@ -142,7 +89,8 @@ export async function enforceAiRateLimit(
     const result = await consume(bucket.options);
     // A custom consumer returning null has the same fail-soft behavior as a
     // cache outage: the process-local limiter still protects this instance.
-    const settled = result ?? memoryStore.consume(bucket.options);
+    const settled =
+      result ?? (await consumeTokenBucketWithFallback(bucket.options));
     if (!settled.allowed) {
       return {
         allowed: false,

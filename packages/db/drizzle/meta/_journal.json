@@ -155,6 +155,13 @@
       "when": 1784211660719,
       "tag": "0021_transcript_window",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1784942555247,
+      "tag": "0022_donations_auth_participation",
+      "breakpoints": true
     }
   ]
 }

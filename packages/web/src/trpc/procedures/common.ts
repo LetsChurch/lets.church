@@ -475,9 +475,6 @@ export const commonProcedures = {
     moduleLogger.info(
       {
         appUserId: ctx.session.appUserId,
-        context: {
-          email: userEmail.email,
-        },
       },
       'Verification email resent successfully',
     );

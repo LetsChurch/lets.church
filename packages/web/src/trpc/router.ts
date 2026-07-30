@@ -4,6 +4,7 @@ import { channelProcedures } from './procedures/channel';
 import { churchProcedures } from './procedures/church';
 import { commonProcedures } from './procedures/common';
 import { dashboardRouter } from './procedures/dashboard';
+import { donationProcedures } from './procedures/donations';
 import { homeProcedures } from './procedures/home';
 import { libraryProcedures } from './procedures/library';
 import { listProcedures } from './procedures/list';
@@ -21,6 +22,7 @@ export const appRouter = router({
   channel: channelProcedures,
   church: churchProcedures,
   common: commonProcedures,
+  donations: donationProcedures,
   home: homeProcedures,
   library: libraryProcedures,
   list: listProcedures,

@@ -33,6 +33,15 @@ export const Route = createFileRoute('/_main/dashboard/churches_/new')({
     if (!hasSession) {
       throw redirect({ to: '/auth/login' });
     }
+    const participation = await context.queryClient.fetchQuery(
+      context.trpc.account.getParticipationStatus.queryOptions(),
+    );
+    if (!participation.accepted) {
+      throw redirect({
+        to: '/dashboard/account/participation',
+        search: { redirect: '/dashboard/churches/new' },
+      });
+    }
   },
   loader: () => ({
     backNavigation: {

@@ -4,6 +4,7 @@ import {
   bigint,
   boolean,
   check,
+  customType,
   doublePrecision,
   foreignKey,
   index,
@@ -20,7 +21,71 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
+// PostgreSQL citext preserves string values while applying case-insensitive
+// comparison semantics to equality, indexes, and constraints.
+export const citext = customType<{ data: string }>({
+  dataType() {
+    return 'citext';
+  },
+});
+
 export const AppUserRole = pgEnum('app_user_role', ['USER', 'ADMIN']);
+
+export const AppAuthTokenType = pgEnum('app_auth_token_type', [
+  'EMAIL_SIGN_IN',
+  'PASSWORD_RESET',
+]);
+
+export const DonationFrequency = pgEnum('donation_frequency', [
+  'ONE_TIME',
+  'MONTHLY',
+  'QUARTERLY',
+  'YEARLY',
+]);
+
+export const DonationCheckoutStatus = pgEnum('donation_checkout_status', [
+  'OPEN',
+  'COMPLETED',
+  'EXPIRED',
+]);
+
+export const DonationStatus = pgEnum('donation_status', [
+  'PENDING',
+  'SUCCEEDED',
+  'FAILED',
+  'CANCELED',
+  'REFUNDED',
+  'PARTIALLY_REFUNDED',
+  'DISPUTED',
+]);
+
+export const DonationSource = pgEnum('donation_source', ['STRIPE', 'IMPORT']);
+
+export const DonationSubscriptionStatus = pgEnum(
+  'donation_subscription_status',
+  [
+    'INCOMPLETE',
+    'INCOMPLETE_EXPIRED',
+    'TRIALING',
+    'ACTIVE',
+    'PAST_DUE',
+    'CANCELED',
+    'UNPAID',
+    'PAUSED',
+  ],
+);
+
+export const DonationImportType = pgEnum('donation_import_type', [
+  'TRANSACTION_HISTORY',
+  'RECURRING_PLANS',
+]);
+
+export const DonationImportStatus = pgEnum('donation_import_status', [
+  'VALIDATED',
+  'RUNNING',
+  'COMPLETED',
+  'FAILED',
+]);
 
 export const TagColor = pgEnum('TagColor', [
   'GRAY',
@@ -191,8 +256,8 @@ export const TrackingSalt = pgTable('tracking_salt', {
 
 export const AppUser = pgTable('app_user', {
   id: uuid('id').primaryKey().defaultRandom(),
-  username: text('username').notNull().unique(),
-  password: text('password').notNull(),
+  username: citext('username').notNull().unique(),
+  password: text('password'),
   fullName: text('full_name'),
   avatarPath: text('avatar_path'),
   avatarBlurhash: text('avatar_blurhash'),
@@ -203,6 +268,11 @@ export const AppUser = pgTable('app_user', {
   bannedAt: timestamp('banned_at', { precision: 3 }),
   banReason: text('ban_reason'),
   bannedById: uuid('banned_by_id').references((): AnyPgColumn => AppUser.id),
+  statementOfTheologyAcceptedAt: timestamp(
+    'statement_of_theology_accepted_at',
+    { precision: 3 },
+  ),
+  termsAcceptedAt: timestamp('terms_accepted_at', { precision: 3 }),
 });
 
 export const AppUserEmail = pgTable(
@@ -210,7 +280,7 @@ export const AppUserEmail = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     appUserId: uuid('app_user_id').notNull(),
-    email: text('email').notNull().unique(),
+    email: citext('email').notNull().unique(),
     key: uuid('key').notNull().defaultRandom(),
     verifiedAt: timestamp('verified_at', { precision: 3 }),
   },
@@ -247,6 +317,318 @@ export const AppSession = pgTable(
       .onUpdate('cascade'),
   }),
 );
+
+export const AppAuthToken = pgTable(
+  'app_auth_token',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    type: AppAuthTokenType('type').notNull(),
+    tokenHash: text('token_hash').notNull().unique(),
+    email: citext('email').notNull(),
+    appUserId: uuid('app_user_id'),
+    returnTo: text('return_to'),
+    expiresAt: timestamp('expires_at', { precision: 3 }).notNull(),
+    consumedAt: timestamp('consumed_at', { precision: 3 }),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+  },
+  (AppAuthToken) => ({
+    app_auth_token_appUser_fkey: foreignKey({
+      name: 'app_auth_token_appUser_fkey',
+      columns: [AppAuthToken.appUserId],
+      foreignColumns: [AppUser.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+    app_auth_token_email_createdAt_idx: index(
+      'app_auth_token_email_createdAt_idx',
+    ).on(AppAuthToken.email, AppAuthToken.createdAt),
+    app_auth_token_expiresAt_idx: index('app_auth_token_expiresAt_idx').on(
+      AppAuthToken.expiresAt,
+    ),
+  }),
+);
+
+export const DonationDonor = pgTable(
+  'donation_donor',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    appUserId: uuid('app_user_id'),
+    // Checkout and account-linking paths normalize emails to lowercase before
+    // insert. NULL supports historical offline gifts that have no email.
+    email: citext('email').unique(),
+    name: text('name'),
+    stripeCustomerId: text('stripe_customer_id').unique(),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+  },
+  (DonationDonor) => ({
+    donation_donor_appUser_fkey: foreignKey({
+      name: 'donation_donor_appUser_fkey',
+      columns: [DonationDonor.appUserId],
+      foreignColumns: [AppUser.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+    donation_donor_appUserId_idx: index('donation_donor_appUserId_idx').on(
+      DonationDonor.appUserId,
+    ),
+  }),
+);
+
+export const DonationImportBatch = pgTable(
+  'donation_import_batch',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    type: DonationImportType('type').notNull(),
+    status: DonationImportStatus('status').notNull(),
+    filename: text('filename').notNull(),
+    rowCount: integer('row_count').notNull().default(0),
+    readyCount: integer('ready_count').notNull().default(0),
+    skippedCount: integer('skipped_count').notNull().default(0),
+    importedCount: integer('imported_count').notNull().default(0),
+    duplicateCount: integer('duplicate_count').notNull().default(0),
+    error: text('error'),
+    summary: jsonb('summary')
+      .$type<Record<string, string | number | boolean | null>>()
+      .notNull()
+      .default({}),
+    createdById: uuid('created_by_id').notNull(),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+    completedAt: timestamp('completed_at', { precision: 3 }),
+  },
+  (DonationImportBatch) => ({
+    donation_import_batch_createdBy_fkey: foreignKey({
+      name: 'donation_import_batch_createdBy_fkey',
+      columns: [DonationImportBatch.createdById],
+      foreignColumns: [AppUser.id],
+    })
+      .onDelete('restrict')
+      .onUpdate('cascade'),
+    donation_import_batch_createdAt_idx: index(
+      'donation_import_batch_createdAt_idx',
+    ).on(DonationImportBatch.createdAt),
+    donation_import_batch_counts_nonnegative: check(
+      'donation_import_batch_counts_nonnegative',
+      sql`${DonationImportBatch.rowCount} >= 0
+        and ${DonationImportBatch.readyCount} >= 0
+        and ${DonationImportBatch.skippedCount} >= 0
+        and ${DonationImportBatch.importedCount} >= 0
+        and ${DonationImportBatch.duplicateCount} >= 0`,
+    ),
+  }),
+);
+
+export const DonationCheckout = pgTable(
+  'donation_checkout',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    donorId: uuid('donor_id').notNull(),
+    stripeCheckoutSessionId: text('stripe_checkout_session_id').unique(),
+    frequency: DonationFrequency('frequency').notNull(),
+    baseAmountCents: integer('base_amount_cents').notNull(),
+    feeCoverageCents: integer('fee_coverage_cents').notNull().default(0),
+    amountCents: integer('amount_cents').notNull(),
+    currency: text('currency').notNull().default('usd'),
+    status: DonationCheckoutStatus('status').notNull().default('OPEN'),
+    expiresAt: timestamp('expires_at', { precision: 3 }),
+    completedAt: timestamp('completed_at', { precision: 3 }),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+  },
+  (DonationCheckout) => ({
+    donation_checkout_donor_fkey: foreignKey({
+      name: 'donation_checkout_donor_fkey',
+      columns: [DonationCheckout.donorId],
+      foreignColumns: [DonationDonor.id],
+    })
+      .onDelete('restrict')
+      .onUpdate('cascade'),
+    donation_checkout_donorId_idx: index('donation_checkout_donorId_idx').on(
+      DonationCheckout.donorId,
+    ),
+    donation_checkout_amount_positive: check(
+      'donation_checkout_amount_positive',
+      sql`${DonationCheckout.amountCents} > 0`,
+    ),
+    donation_checkout_amounts_consistent: check(
+      'donation_checkout_amounts_consistent',
+      sql`${DonationCheckout.baseAmountCents} > 0
+        and ${DonationCheckout.feeCoverageCents} >= 0
+        and ${DonationCheckout.amountCents} = ${DonationCheckout.baseAmountCents} + ${DonationCheckout.feeCoverageCents}`,
+    ),
+  }),
+);
+
+export const DonationSubscription = pgTable(
+  'donation_subscription',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    donorId: uuid('donor_id').notNull(),
+    checkoutId: uuid('checkout_id').unique(),
+    legacyExternalId: text('legacy_external_id').unique(),
+    stripeSubscriptionId: text('stripe_subscription_id').notNull().unique(),
+    stripeCustomerId: text('stripe_customer_id').notNull(),
+    stripePriceId: text('stripe_price_id'),
+    frequency: DonationFrequency('frequency').notNull().default('MONTHLY'),
+    status: DonationSubscriptionStatus('status').notNull(),
+    baseAmountCents: integer('base_amount_cents').notNull(),
+    feeCoverageCents: integer('fee_coverage_cents').notNull().default(0),
+    amountCents: integer('amount_cents').notNull(),
+    currency: text('currency').notNull().default('usd'),
+    currentPeriodStart: timestamp('current_period_start', { precision: 3 }),
+    currentPeriodEnd: timestamp('current_period_end', { precision: 3 }),
+    cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+    canceledAt: timestamp('canceled_at', { precision: 3 }),
+    endedAt: timestamp('ended_at', { precision: 3 }),
+    lastPaymentFailedAt: timestamp('last_payment_failed_at', { precision: 3 }),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+  },
+  (DonationSubscription) => ({
+    donation_subscription_donor_fkey: foreignKey({
+      name: 'donation_subscription_donor_fkey',
+      columns: [DonationSubscription.donorId],
+      foreignColumns: [DonationDonor.id],
+    })
+      .onDelete('restrict')
+      .onUpdate('cascade'),
+    donation_subscription_checkout_fkey: foreignKey({
+      name: 'donation_subscription_checkout_fkey',
+      columns: [DonationSubscription.checkoutId],
+      foreignColumns: [DonationCheckout.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+    donation_subscription_donorId_idx: index(
+      'donation_subscription_donorId_idx',
+    ).on(DonationSubscription.donorId),
+    donation_subscription_recurring_frequency: check(
+      'donation_subscription_recurring_frequency',
+      sql`${DonationSubscription.frequency} <> 'ONE_TIME'`,
+    ),
+    donation_subscription_amounts_consistent: check(
+      'donation_subscription_amounts_consistent',
+      sql`${DonationSubscription.baseAmountCents} > 0
+        and ${DonationSubscription.feeCoverageCents} >= 0
+        and ${DonationSubscription.amountCents} = ${DonationSubscription.baseAmountCents} + ${DonationSubscription.feeCoverageCents}`,
+    ),
+  }),
+);
+
+export const Donation = pgTable(
+  'donation',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    donorId: uuid('donor_id').notNull(),
+    checkoutId: uuid('checkout_id'),
+    subscriptionId: uuid('subscription_id'),
+    source: DonationSource('source').notNull(),
+    externalId: text('external_id').notNull().unique(),
+    frequency: DonationFrequency('frequency').notNull(),
+    status: DonationStatus('status').notNull(),
+    baseAmountCents: integer('base_amount_cents').notNull(),
+    feeCoverageCents: integer('fee_coverage_cents').notNull().default(0),
+    amountCents: integer('amount_cents').notNull(),
+    processingFeeCents: integer('processing_fee_cents'),
+    netAmountCents: integer('net_amount_cents'),
+    refundedAmountCents: integer('refunded_amount_cents').notNull().default(0),
+    currency: text('currency').notNull().default('usd'),
+    stripePaymentIntentId: text('stripe_payment_intent_id').unique(),
+    stripeChargeId: text('stripe_charge_id').unique(),
+    stripeInvoiceId: text('stripe_invoice_id').unique(),
+    receiptUrl: text('receipt_url'),
+    disputeStatus: text('dispute_status'),
+    donatedAt: timestamp('donated_at', { precision: 3 }).notNull(),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+  },
+  (Donation) => ({
+    donation_donor_fkey: foreignKey({
+      name: 'donation_donor_fkey',
+      columns: [Donation.donorId],
+      foreignColumns: [DonationDonor.id],
+    })
+      .onDelete('restrict')
+      .onUpdate('cascade'),
+    donation_checkout_fkey: foreignKey({
+      name: 'donation_checkout_fkey',
+      columns: [Donation.checkoutId],
+      foreignColumns: [DonationCheckout.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+    donation_subscription_fkey: foreignKey({
+      name: 'donation_subscription_fkey',
+      columns: [Donation.subscriptionId],
+      foreignColumns: [DonationSubscription.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+    donation_donorId_donatedAt_idx: index('donation_donorId_donatedAt_idx').on(
+      Donation.donorId,
+      Donation.donatedAt,
+    ),
+    donation_status_donatedAt_idx: index('donation_status_donatedAt_idx').on(
+      Donation.status,
+      Donation.donatedAt,
+    ),
+    donation_amount_positive: check(
+      'donation_amount_positive',
+      sql`${Donation.amountCents} > 0`,
+    ),
+    donation_amounts_consistent: check(
+      'donation_amounts_consistent',
+      sql`${Donation.baseAmountCents} > 0
+        and ${Donation.feeCoverageCents} >= 0
+        and ${Donation.amountCents} = ${Donation.baseAmountCents} + ${Donation.feeCoverageCents}
+        and ${Donation.refundedAmountCents} >= 0
+        and ${Donation.refundedAmountCents} <= ${Donation.amountCents}`,
+    ),
+    donation_fees_nonnegative: check(
+      'donation_fees_nonnegative',
+      sql`(${Donation.processingFeeCents} is null or ${Donation.processingFeeCents} >= 0)
+        and (${Donation.netAmountCents} is null or ${Donation.netAmountCents} >= 0)`,
+    ),
+  }),
+);
+
+export const DonationPaymentAdjustment = pgTable(
+  'donation_payment_adjustment',
+  {
+    stripeChargeId: text('stripe_charge_id').primaryKey(),
+    stripePaymentIntentId: text('stripe_payment_intent_id'),
+    chargeAmountCents: integer('charge_amount_cents'),
+    refundedAmountCents: integer('refunded_amount_cents'),
+    disputeStatus: text('dispute_status'),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+  },
+  (DonationPaymentAdjustment) => ({
+    donation_payment_adjustment_paymentIntent_idx: index(
+      'donation_payment_adjustment_paymentIntent_idx',
+    ).on(DonationPaymentAdjustment.stripePaymentIntentId),
+    donation_payment_adjustment_amounts_valid: check(
+      'donation_payment_adjustment_amounts_valid',
+      sql`(${DonationPaymentAdjustment.chargeAmountCents} is null or ${DonationPaymentAdjustment.chargeAmountCents} > 0)
+        and (${DonationPaymentAdjustment.refundedAmountCents} is null or ${DonationPaymentAdjustment.refundedAmountCents} >= 0)
+        and (${DonationPaymentAdjustment.chargeAmountCents} is null
+          or ${DonationPaymentAdjustment.refundedAmountCents} is null
+          or ${DonationPaymentAdjustment.refundedAmountCents} <= ${DonationPaymentAdjustment.chargeAmountCents})`,
+    ),
+  }),
+);
+
+export const DonationWebhookEvent = pgTable('donation_webhook_event', {
+  id: text('id').primaryKey(),
+  type: text('type').notNull(),
+  stripeCreatedAt: timestamp('stripe_created_at', {
+    precision: 3,
+  }).notNull(),
+  processedAt: timestamp('processed_at', { precision: 3 })
+    .notNull()
+    .defaultNow(),
+});
 
 export const OidcAuthorizationCode = pgTable(
   'oidc_authorization_code',
@@ -340,7 +722,7 @@ export const ChannelSubscription = pgTable(
 );
 
 export const OrganizationTag = pgTable('organization_tag', {
-  slug: text('slug').notNull().primaryKey(),
+  slug: citext('slug').notNull().primaryKey(),
   label: text('label').notNull(),
   description: text('description'),
   moreInfoLink: text('more_info_link'),
@@ -351,8 +733,8 @@ export const OrganizationTag = pgTable('organization_tag', {
 export const OrganizationTagSuggestion = pgTable(
   'organization_tag_suggestion',
   {
-    parentSlug: text('parent_slug').notNull(),
-    suggestedSlug: text('recommended_slug').notNull(),
+    parentSlug: citext('parent_slug').notNull(),
+    suggestedSlug: citext('recommended_slug').notNull(),
   },
   (OrganizationTagSuggestion) => ({
     organization_tag_suggestion_parent_fkey: foreignKey({
@@ -383,7 +765,7 @@ export const OrganizationTagInstance = pgTable(
   'organization_tag_instance',
   {
     organizationId: uuid('organization_id').notNull(),
-    tagSlug: text('tag_slug').notNull(),
+    tagSlug: citext('tag_slug').notNull(),
   },
   (OrganizationTagInstance) => ({
     organization_tag_instance_organization_fkey: foreignKey({
@@ -416,7 +798,7 @@ export const Organization = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     type: OrganizationType('type').notNull().default('MINISTRY'),
     name: text('name').notNull(),
-    slug: text('slug').notNull().unique(),
+    slug: citext('slug').notNull().unique(),
     avatarPath: text('avatar_path'),
     coverPath: text('cover_path'),
     primaryEmail: text('primary_email'),
@@ -542,7 +924,7 @@ export const OrganizationInvitation = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     organizationId: uuid('organization_id').notNull(),
-    email: text('email').notNull(),
+    email: citext('email').notNull(),
     token: uuid('token').notNull().unique().defaultRandom(),
     status: InvitationStatus('status').notNull().default('PENDING'),
     isAdmin: boolean('is_admin').notNull(),
@@ -655,7 +1037,7 @@ export const Channel = pgTable(
     avatarBlurhash: text('avatar_blurhash'),
     coverPath: text('cover_path'),
     coverBlurhash: text('cover_blurhash'),
-    slug: text('slug').notNull().unique(),
+    slug: citext('slug').notNull().unique(),
     description: text('description'),
     websiteUrl: text('website_url'),
     facebookUrl: text('facebook_url'),
@@ -730,7 +1112,7 @@ export const ChannelInvitation = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     channelId: uuid('channel_id').notNull(),
-    email: text('email').notNull(),
+    email: citext('email').notNull(),
     token: uuid('token').notNull().unique().defaultRandom(),
     status: InvitationStatus('status').notNull().default('PENDING'),
     isAdmin: boolean('is_admin').notNull(),
@@ -1877,6 +2259,9 @@ export const AppUserRelations = relations(AppUser, ({ many }) => ({
   emails: many(AppUserEmail, {
     relationName: 'AppUserToAppUserEmail',
   }),
+  donationDonors: many(DonationDonor, {
+    relationName: 'AppUserToDonationDonor',
+  }),
   sessions: many(AppSession, {
     relationName: 'AppSessionToAppUser',
   }),
@@ -1952,6 +2337,80 @@ export const AppSessionRelations = relations(AppSession, ({ one }) => ({
     relationName: 'AppSessionToAppUser',
     fields: [AppSession.appUserId],
     references: [AppUser.id],
+  }),
+}));
+
+export const DonationDonorRelations = relations(
+  DonationDonor,
+  ({ many, one }) => ({
+    appUser: one(AppUser, {
+      relationName: 'AppUserToDonationDonor',
+      fields: [DonationDonor.appUserId],
+      references: [AppUser.id],
+    }),
+    checkouts: many(DonationCheckout, {
+      relationName: 'DonationDonorToDonationCheckout',
+    }),
+    subscriptions: many(DonationSubscription, {
+      relationName: 'DonationDonorToDonationSubscription',
+    }),
+    donations: many(Donation, {
+      relationName: 'DonationDonorToDonation',
+    }),
+  }),
+);
+
+export const DonationCheckoutRelations = relations(
+  DonationCheckout,
+  ({ many, one }) => ({
+    donor: one(DonationDonor, {
+      relationName: 'DonationDonorToDonationCheckout',
+      fields: [DonationCheckout.donorId],
+      references: [DonationDonor.id],
+    }),
+    subscriptions: many(DonationSubscription, {
+      relationName: 'DonationCheckoutToDonationSubscription',
+    }),
+    donations: many(Donation, {
+      relationName: 'DonationCheckoutToDonation',
+    }),
+  }),
+);
+
+export const DonationSubscriptionRelations = relations(
+  DonationSubscription,
+  ({ many, one }) => ({
+    donor: one(DonationDonor, {
+      relationName: 'DonationDonorToDonationSubscription',
+      fields: [DonationSubscription.donorId],
+      references: [DonationDonor.id],
+    }),
+    checkout: one(DonationCheckout, {
+      relationName: 'DonationCheckoutToDonationSubscription',
+      fields: [DonationSubscription.checkoutId],
+      references: [DonationCheckout.id],
+    }),
+    donations: many(Donation, {
+      relationName: 'DonationSubscriptionToDonation',
+    }),
+  }),
+);
+
+export const DonationRelations = relations(Donation, ({ one }) => ({
+  donor: one(DonationDonor, {
+    relationName: 'DonationDonorToDonation',
+    fields: [Donation.donorId],
+    references: [DonationDonor.id],
+  }),
+  checkout: one(DonationCheckout, {
+    relationName: 'DonationCheckoutToDonation',
+    fields: [Donation.checkoutId],
+    references: [DonationCheckout.id],
+  }),
+  subscription: one(DonationSubscription, {
+    relationName: 'DonationSubscriptionToDonation',
+    fields: [Donation.subscriptionId],
+    references: [DonationSubscription.id],
   }),
 }));
 

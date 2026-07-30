@@ -128,6 +128,7 @@ export const createChurchSchema = z.object({
   // value could break out of an attribute. Matches the channel slug convention.
   slug: z
     .string()
+    .trim()
     .regex(
       /^[a-zA-Z0-9_-]+$/,
       'Slug can only contain letters, numbers, underscores, and hyphens',
@@ -153,7 +154,7 @@ export const createChurchSchema = z.object({
       'Invalid email',
     ),
   primaryPhoneNumber: z.string().optional(),
-  tags: z.array(z.string()).optional(),
+  tags: z.array(z.string().trim().min(1)).optional(),
   associatedOrganizations: z.array(IncomingIdSchema).optional(),
   addresses: z.array(addressSchema).optional(),
 });
@@ -180,7 +181,7 @@ export const updateChurchSchema = z.object({
       'Invalid email',
     ),
   primaryPhoneNumber: z.string().optional(),
-  tags: z.array(z.string()).optional(),
+  tags: z.array(z.string().trim().min(1)).optional(),
   associatedOrganizations: z.array(IncomingIdSchema).optional(),
   addresses: z.array(addressSchema).optional(),
   facebookUrl: z

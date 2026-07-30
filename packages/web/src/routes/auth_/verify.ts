@@ -46,7 +46,9 @@ export const Route = createFileRoute('/auth_/verify')({
             .returning();
 
           if (result.length > 0) {
-            // Email verified successfully
+            const { claimDonorsForVerifiedUser } =
+              await import('@/donations/identity');
+            await claimDonorsForVerifiedUser(userIdFull);
           } else {
             // Verification failed
           }

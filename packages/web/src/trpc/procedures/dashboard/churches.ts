@@ -51,7 +51,7 @@ import { getPublicImageUrl } from '@/util/server-env';
 import { slugify } from '@/util/slugify';
 import { uuidTranslator } from '@/util/uuid';
 
-import { authProcedure, router } from '../../trpc';
+import { authProcedure, participationProcedure, router } from '../../trpc';
 
 const moduleLogger = logger.child({
   module: 'trpc/procedures/dashboard/churches',
@@ -146,7 +146,7 @@ export const churchRouter = router({
     return tags;
   }),
 
-  createChurch: authProcedure
+  createChurch: participationProcedure
     .input(createChurchSchema)
     .mutation(async ({ ctx, input }) => {
       moduleLogger.info(

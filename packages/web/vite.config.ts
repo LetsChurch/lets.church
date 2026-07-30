@@ -90,6 +90,7 @@ export default defineConfig((_config) => ({
       'playwright',
       'rimraf',
       'sharp',
+      'stripe',
       'subtitle',
     ],
   },

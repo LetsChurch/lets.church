@@ -12,7 +12,7 @@ import {
 } from '@tanstack/react-router';
 import { useState } from 'react';
 
-import { Alert, Text } from '@/components/ui';
+import { Alert, Button, Text } from '@/components/ui';
 import { useAppForm } from '@/components/ui/form';
 import { loginSchema } from '@/schemas/auth';
 import { useTRPC } from '@/trpc/react';
@@ -160,6 +160,15 @@ function LoginRoute() {
           <form.AppForm>
             <form.SubmitButton label="Submit" />
           </form.AppForm>
+          <Button
+            component={Link}
+            to="/auth/email-sign-in"
+            search={redirectTo ? { redirect: redirectTo } : {}}
+            variant="light"
+            fullWidth
+          >
+            Email me a sign-in link
+          </Button>
           <Text size="sm" ta="center" c="dimmed">
             Don't have an account?{' '}
             <Link

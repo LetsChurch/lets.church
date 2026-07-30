@@ -1,16 +1,16 @@
 import { z } from 'zod';
 
-import { usernameSchema } from './auth';
+import { emailSchema, usernameSchema } from './auth';
 
 export const profileUpdateSchema = z.object({
   fullName: z.string(),
-  email: z.email('Invalid email address').min(1, 'Email is required'),
+  email: emailSchema,
   username: usernameSchema,
 });
 
 export const passwordChangeSchema = z
   .object({
-    currentPassword: z.string().min(1, 'Current password is required'),
+    currentPassword: z.string().max(1024, 'Password is too long'),
     newPassword: z
       .string()
       .min(8, 'Password must be at least 8 characters')
