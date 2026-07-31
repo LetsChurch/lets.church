@@ -178,7 +178,7 @@ export function MediaActions({
   const [showRightFade, setShowRightFade] = useState(false);
 
   // Per-video suggested questions for the Ask dropdown. Generated server-side
-  // (gpt-5.4-nano) once and cached in Valkey, so this fires on mount —
+  // (gpt-5.6-luna) once and cached in Valkey, so this fires on mount —
   // pre-generating as the page loads — and the menu has them ready with no delay.
   const trpc = useTRPC();
   const { data: suggestedQuestions = [], isLoading: isLoadingQuestions } =

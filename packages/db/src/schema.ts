@@ -3065,7 +3065,7 @@ export const LlmCall = pgTable(
   'llm_call',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    // OpenRouter model id, e.g. 'openai/gpt-5.4-mini'. Stored verbatim
+    // OpenRouter model id, e.g. 'openai/gpt-5.6-luna'. Stored verbatim
     // because pricing windows are keyed on this exact string.
     model: text('model').notNull(),
     // Logical activity tag — 'annotateTranscript', 'summarizeUpload',

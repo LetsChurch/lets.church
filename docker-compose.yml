@@ -88,8 +88,8 @@ services:
       # dev-only seed bootstrap scripts (`just generate-seed-annotations`) —
       # all execute inside this container.
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-      OPENROUTER_SUMMARY_MODEL: ${OPENROUTER_SUMMARY_MODEL:-openai/gpt-5.4-mini}
-      OPENROUTER_ANNOTATE_MODEL: ${OPENROUTER_ANNOTATE_MODEL:-openai/gpt-5.4-mini}
+      OPENROUTER_SUMMARY_MODEL: ${OPENROUTER_SUMMARY_MODEL:-openai/gpt-5.6-luna}
+      OPENROUTER_ANNOTATE_MODEL: ${OPENROUTER_ANNOTATE_MODEL:-openai/gpt-5.6-luna}
       # Mux live streaming. Webhook secret is the signing secret printed by
       # `mux webhooks listen` (mux-webhooks service) — persists across runs.
       MUX_WEBHOOK_SECRET: ${MUX_WEBHOOK_SECRET:-}
@@ -199,8 +199,8 @@ services:
       WEB_URL: ${HOST_WEB_URL}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-      OPENROUTER_SUMMARY_MODEL: ${OPENROUTER_SUMMARY_MODEL:-openai/gpt-5.4-mini}
-      OPENROUTER_ANNOTATE_MODEL: ${OPENROUTER_ANNOTATE_MODEL:-openai/gpt-5.4-mini}
+      OPENROUTER_SUMMARY_MODEL: ${OPENROUTER_SUMMARY_MODEL:-openai/gpt-5.6-luna}
+      OPENROUTER_ANNOTATE_MODEL: ${OPENROUTER_ANNOTATE_MODEL:-openai/gpt-5.6-luna}
       OPENROUTER_ANNOTATE_FALLBACK_MODEL: ${OPENROUTER_ANNOTATE_FALLBACK_MODEL:-anthropic/claude-haiku-4-5}
       OPENROUTER_SUMMARY_FALLBACK_MODEL: ${OPENROUTER_SUMMARY_FALLBACK_MODEL:-anthropic/claude-haiku-4-5}
       <<: [*s3-ingest-env, *s3-public-env, *s3-backup-env, *mux-env]

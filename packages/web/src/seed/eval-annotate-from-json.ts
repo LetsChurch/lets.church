@@ -9,7 +9,7 @@
 // hand-authored debate dumps) without going through the full upload
 // pipeline. The call is `tracking: undefined` so it doesn't pollute
 // `llm_call`. Costs the price of one annotate call (~$0.01-0.03 on
-// gpt-5.4-mini).
+// gpt-5.6-luna).
 //
 // Usage (inside the web container):
 //   pnpm exec tsx src/seed/eval-annotate-from-json.ts \

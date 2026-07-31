@@ -13,7 +13,7 @@ const { OPENROUTER_SEARCH_PARSE_MODEL } = z
   .object({
     // Cheap/fast structured-extraction model. Separate env from the
     // summarize/annotate models so search parsing can be tuned independently.
-    OPENROUTER_SEARCH_PARSE_MODEL: z.string().default('openai/gpt-5.4-nano'),
+    OPENROUTER_SEARCH_PARSE_MODEL: z.string().default('openai/gpt-5.6-luna'),
   })
   .parse(process.env);
 
@@ -195,7 +195,7 @@ function normalize(raw: z.infer<typeof RawParsedQuerySchema>): ParsedQuery {
 }
 
 /**
- * Parse a raw search query into structured fields with gpt-5.4-nano. Always
+ * Parse a raw search query into structured fields with gpt-5.6-luna. Always
  * resolves — on any model/parse/validation error it falls back to treating the
  * whole query as keywords, so search never breaks because parsing did. The LLM
  * call is recorded in `llm_call` (activity `searchParseQuery`).

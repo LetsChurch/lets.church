@@ -7,9 +7,9 @@ const moduleLogger = logger.child({ module: 'ai/answer-gate' });
 
 const { OPENROUTER_SEARCH_PARSE_MODEL } = z
   .object({
-    // Same cheap nano tier used for query parsing — reused here for the
+    // Same model setting used for query parsing — reused here for the
     // answerability pre-check so it can be tuned independently of the agent.
-    OPENROUTER_SEARCH_PARSE_MODEL: z.string().default('openai/gpt-5.4-nano'),
+    OPENROUTER_SEARCH_PARSE_MODEL: z.string().default('openai/gpt-5.6-luna'),
   })
   .parse(process.env);
 
@@ -48,7 +48,7 @@ Critical bias: when the passages are genuinely on the query's topic, choose "ans
 Prefer "answer" when the passages clearly support one. Output ONLY the JSON object.`;
 
 /**
- * Cheap nano gate run before the (more expensive) answer agent. Classifies the
+ * Answerability gate run before the answer agent. Classifies the
  * retrieved passages relative to the query into:
  *   - 'answer'  → generate a direct, grounded answer
  *   - 'overview'→ summarize the on-topic-but-incomplete related material
@@ -101,7 +101,7 @@ const OPERATOR_RE = /[":<>()]|\b(AND|OR|NOT)\b/;
 
 // 'dig' → run the detective loop; 'summarize' → the existing cheap answer/
 // overview path; 'skip' → clearly navigational (also handled by the cheap path);
-// 'ambiguous' → let the nano tie-breaker decide.
+// 'ambiguous' → let the model tie-breaker decide.
 export type DigDecision = 'dig' | 'summarize' | 'skip' | 'ambiguous';
 
 /**
@@ -113,9 +113,9 @@ export type DigDecision = 'dig' | 'summarize' | 'skip' | 'ambiguous';
  * detective loop makes it hunt for a "story" that isn't there (forced
  * corrections / false declines). So this NEVER returns 'dig' outright: the only
  * signals that a real "re-find a specific remembered moment" intent exists (an NL
- * question, or a thin Lane-1 that keywords missed) are handed to the nano
+ * question, or a thin Lane-1 that keywords missed) are handed to the model
  * classifier via 'ambiguous', which digs ONLY for an actual recollection. A plain
- * on-topic browse (no question, healthy cosine) stays cheap with no nano call.
+ * on-topic browse (no question, healthy cosine) skips the classifier call.
  * See docs/agentic-search-overview.md ("The gate — when to dig").
  */
 export function recollectionGate(args: {
@@ -127,16 +127,16 @@ export function recollectionGate(args: {
   const tokens = trimmed.split(/\s+/).filter(Boolean);
   if (OPERATOR_RE.test(trimmed) || tokens.length <= 2) return 'skip';
   if (tokens.length < RECOLLECTION_MIN_TOKENS) return 'summarize';
-  // Any substantive natural-language query → hand to the nano recollection
+  // Any substantive natural-language query → hand to the model recollection
   // classifier. IMPORTANT: do NOT gate this on `isAnswerWorthy`/thin-cosine.
   // Recollections are frequently NOUN PHRASES ("the story where James White met
   // his first two missionaries", "James White's granddaughter and the Jehovah's
   // Witnesses") — not questions — and they often retrieve a healthy (non-thin)
   // cosine, so gating on question-ness meant those never reached the classifier
-  // and got a cheap-path answer or, worse, a cold decline. The nano call is
-  // cheap and returns false for genuine questions/topics (which then take the
-  // cheap answer/overview path), so routing all substantive queries here costs
-  // little and closes the recollection under-trigger. (`isAnswerWorthy` /
+  // and got a cheap-path answer or, worse, a cold decline. The classifier
+  // returns false for genuine questions/topics (which then take the
+  // answer/overview path), closing the recollection under-trigger.
+  // (`isAnswerWorthy` /
   // `topCosine` stay in the signature for future tuning.)
   return 'ambiguous';
 }

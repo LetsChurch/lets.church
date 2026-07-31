@@ -15,9 +15,9 @@ const MAX_RELATED = 6;
 
 const { OPENROUTER_SEARCH_RELATED_MODEL } = z
   .object({
-    // Same cheap/fast nano default as the query parser, but a separate env so
-    // related-search generation can be tuned independently.
-    OPENROUTER_SEARCH_RELATED_MODEL: z.string().default('openai/gpt-5.4-nano'),
+    // Same default model as the query parser, but a separate env so related-search
+    // generation can be tuned independently.
+    OPENROUTER_SEARCH_RELATED_MODEL: z.string().default('openai/gpt-5.6-luna'),
   })
   .parse(process.env);
 
@@ -53,7 +53,7 @@ Rules:
 
 /**
  * Generate related searches / follow-up questions for a query with
- * gpt-5.4-nano. Best-effort: any model/parse error resolves to an empty list so
+ * gpt-5.6-luna. Best-effort: any model/parse error resolves to an empty list so
  * search never breaks. Cached by model + query (suggestions don't depend on the
  * date, unlike the query parse). The LLM call is recorded in `llm_call`
  * (activity `searchRelatedSearches`).

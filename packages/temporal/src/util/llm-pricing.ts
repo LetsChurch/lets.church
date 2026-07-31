@@ -43,7 +43,7 @@ export type PriceWindow = {
 };
 
 export type ModelPricing = {
-  /** OpenRouter model id, e.g. 'openai/gpt-5.4-mini'. */
+  /** OpenRouter model id, e.g. 'openai/gpt-5.6-luna'. */
   model: string;
   /** Windows in any order — `priceFor` sorts them when picking the active one. */
   windows: PriceWindow[];
@@ -58,7 +58,7 @@ export const MODEL_PRICING: ModelPricing[] = [
     // Production annotate + summarize model. `effectiveFrom` is the date
     // we landed on these prices on OpenRouter for this model; bump when
     // they change rather than overwriting.
-    model: 'openai/gpt-5.4-mini',
+    model: 'openai/gpt-5.6-luna',
     windows: [
       {
         effectiveFrom: '2026-05-01',
@@ -70,7 +70,7 @@ export const MODEL_PRICING: ModelPricing[] = [
   },
   {
     // Annotate fallback model — fires only when OpenAI's content filter
-    // rejects the gpt-5.4-mini response. Listed so the (relatively rare)
+    // rejects the gpt-5.6-luna response. Listed so the (relatively rare)
     // fallback calls land with a populated `computed_cost_usd` instead of
     // null. Cached input pricing isn't exposed via OpenRouter.
     model: 'anthropic/claude-haiku-4-5',
@@ -187,7 +187,7 @@ export function computeCost(
  * open-weight routes — gemma, llama-on-Cloudflare, etc.) but returns
  * `null` or `0` for direct-from-vendor routes (`openai/*`, `anthropic/*`,
  * `google/*`). Using `providerCostUsd` blindly makes the badge read "$0"
- * on every production gpt-5.4-mini call. Use the provider value only
+ * on every production gpt-5.6-luna call. Use the provider value only
  * when it's present AND positive; otherwise fall back to our table.
  */
 export function resolveCostUsd(

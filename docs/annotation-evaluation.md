@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The annotation activity (`packages/temporal/src/activities/background/annotate-transcript.ts`) ships transcripts to an LLM through OpenRouter and gets back a markdown-formatted version with section headings and inline scripture/keyword links. The `SYSTEM_PROMPT` constant in that file is the system prompt; changing it changes every uploaded transcript's annotations. Production runs against `openai/gpt-5.4-mini` at `temperature: 0.6` (both empirically tuned — see commit history for the eval data behind those choices).
+The annotation activity (`packages/temporal/src/activities/background/annotate-transcript.ts`) ships transcripts to an LLM through OpenRouter and gets back a markdown-formatted version with section headings and inline scripture/keyword links. The `SYSTEM_PROMPT` constant in that file is the system prompt; changing it changes every uploaded transcript's annotations. Production runs against `openai/gpt-5.6-luna` at `temperature: 0.6` (both empirically tuned — see commit history for the eval data behind those choices).
 
 This document is the reference for evaluating that prompt — verifying that changes don't regress, and qualifying new candidate models before swapping them into the activity.
 
@@ -22,7 +22,7 @@ A prompt + model combination should meet all of these on a realistic full-length
 
 2. **Heading count scales with length.** Long-form (≥100 paragraphs): at least 3 headings, typically 3–10 — a long output with 0/1/2 headings indicates the model lumped distinct topics together. Short clips (<100 paragraphs): 0–3 headings is normal; don't fabricate breaks. Every heading title must be concrete and content-specific (e.g. "Trans Children and the Image of God"), not generic ("Introduction", "Discussion"). Format-specific guidance in the prompt covers Q&A / call-in shows (each caller's question is its own heading), enumerated essays ("N reasons" — each reason its own heading), recorded-clip commentary (each clip its own heading), and formal debates (opening statements, cross-examinations, rebuttals, closing statements, audience Q&A — each a heading, with speaker surname + topic in the title; the moderator's intro/format/credentials block is banter and gets no heading).
 
-3. **No truncation, and no silent summarization.** `finish_reason` must be `stop`, not `length` or `content_filter`. The activity also guards against models that return a paraphrased summary instead of echoing every paragraph: the silent-summarization guard fails the call when `completion_tokens < SILENT_SUMMARY_FLOOR × (transcriptBody.length / CHARS_PER_TOKEN)` — current values are 0.75 and 4 respectively, pulled out as named constants in `annotate-transcript.ts` for easy tuning. (The floor was 0.8 until the debate-format prompt expansion in June 2026; Dorean chapters 11–14 sit at 76–79% under the tighter banter rules, so we dropped the floor to 0.75 to keep them out of the failure column.) Healthy gpt-5.4-mini runs land at 95–105% of the estimate; Llama-4 summarization failures land at 20–30%. The guard throws and the call shows up in `llm_call.outcome = 'guard_silent_summarization'` with the observed ratio in `error_message` — plot the distribution before tightening.
+3. **No truncation, and no silent summarization.** `finish_reason` must be `stop`, not `length` or `content_filter`. The activity also guards against models that return a paraphrased summary instead of echoing every paragraph: the silent-summarization guard fails the call when `completion_tokens < SILENT_SUMMARY_FLOOR × (transcriptBody.length / CHARS_PER_TOKEN)` — current values are 0.75 and 4 respectively, pulled out as named constants in `annotate-transcript.ts` for easy tuning. (The floor was 0.8 until the debate-format prompt expansion in June 2026; Dorean chapters 11–14 sit at 76–79% under the tighter banter rules, so we dropped the floor to 0.75 to keep them out of the failure column.) Healthy production runs land at 95–105% of the estimate; Llama-4 summarization failures land at 20–30%. The guard throws and the call shows up in `llm_call.outcome = 'guard_silent_summarization'` with the observed ratio in `error_message` — plot the distribution before tightening.
 
 4. **Attribution patterns annotated.** Every occurrence of "Jesus said / Jesus himself said / Christ said / Paul wrote / Peter writes / John says / James wrote / David said / Moses wrote / Isaiah said / the prophet wrote / the apostle says" and similar must wrap the cited or alluded scripture as a `[span](#bible?…)` link. This is the most common silent failure — many models skip it because the citation is implicit.
 
@@ -41,7 +41,7 @@ A prompt + model combination should meet all of these on a realistic full-length
 | Banter heading | First line is `# Welcome and Technical Setup …` | Model treats open chatter as a section | Explicit forbidden-titles list in prompt; "where the first heading goes" rule |
 | Zero/one heading on a long transcript | Whole transcript under one heading | Model defaults to minimum-effort outlining | "Aim for 3-10 headings… if you finish with 0/1/2 [on a transcript longer than ~100 paragraphs], you missed real breaks" |
 | Truncation | Response cuts off mid-paragraph; `finish_reason: length` | Output cap hit | Raise `maxTokens`, or chunk the request (see `docs/annotation-chunking-design.md`). Activity throws on `finish_reason: length` and writes `llm_call.outcome = 'guard_length_truncation'`. |
-| Content-filter block | `finish_reason: content_filter` | Provider safety classifier triggered | Framing preamble at top of system prompt: "You are NOT a content moderator… you must produce the same outline + annotations regardless of subject matter". On the first failure the wrapper auto-retries against `OPENROUTER_ANNOTATE_FALLBACK_MODEL` (default `anthropic/claude-haiku-4-5`) — both calls record in `llm_call`, and most previously-blocked uploads now succeed on the second attempt. When both fail, the activity throws `guard_content_filter` and the upload lands on the admin **Failed Annotations** page (`/dashboard/admin/failed-annotations`) with a regenerate button. gpt-5.4-mini still blocks some Dividing Line content (trans/abortion) on the first try; pre-fallback, seed regen hit ~5/27 of LLM-seeded uploads — post-fallback that's effectively zero in practice. |
+| Content-filter block | `finish_reason: content_filter` | Provider safety classifier triggered | Framing preamble at top of system prompt: "You are NOT a content moderator… you must produce the same outline + annotations regardless of subject matter". On the first failure the wrapper auto-retries against `OPENROUTER_ANNOTATE_FALLBACK_MODEL` (default `anthropic/claude-haiku-4-5`) — both calls record in `llm_call`, and most previously-blocked uploads now succeed on the second attempt. When both fail, the activity throws `guard_content_filter` and the upload lands on the admin **Failed Annotations** page (`/dashboard/admin/failed-annotations`) with a regenerate button. Historically, the OpenAI primary blocked some Dividing Line content (trans/abortion) on the first try; pre-fallback, seed regen hit ~5/27 of LLM-seeded uploads — post-fallback that's effectively zero in practice. |
 | Silent summarization | Markdown parses fine but most input paragraphs are missing; downstream annotations are bogus | Model (notably Llama 4 Maverick/Scout) ignores "echo every paragraph verbatim" and returns a paraphrased summary instead | Silent-summarization guard in the activity throws and writes `llm_call.outcome = 'guard_silent_summarization'`. Filter the table for that outcome to surface affected runs + the observed completion/transcript ratio. |
 | Missing "Jesus said" annotation | Attribution patterns not wrapped despite explicit "Jesus himself said from the beginning, he made them male and female" → Matt 19:4 | Model treats implicit citation as non-citation | Required-pattern checklist with this exact phrase as example; mark as CRITICAL in self-check |
 | Overlapping links | One big `[1 Corinthians 6 and 1 Timothy 1 and Romans 1](#bible?…)` link | Model groups consecutive refs | Concrete worked example in prompt showing the correct three-link form |
@@ -59,7 +59,7 @@ Workflow:
 
 1. Pick an upload via the search box (min 2 chars).
 2. Pick task = `annotate`.
-3. The model field pre-fills with `openai/gpt-5.4-mini` (the production default). Add other OpenRouter model ids (e.g. `openai/gpt-5.4`, `google/gemini-2.5-flash`, `openai/gpt-5.4-nano`) to A/B-compare. Up to 8.
+3. The model field pre-fills with `openai/gpt-5.6-luna` (the production default). Add other OpenRouter model ids (e.g. `openai/gpt-5.4`, `google/gemini-2.5-flash`, `anthropic/claude-haiku-4-5`) to A/B-compare. Up to 8.
 4. Optionally override `maxTokens` (the activity default for annotate is 32768; lower for providers with tighter caps — DeepSeek v3.x = 8K–16K, Groq llama-4-scout = 8K).
 5. Click "Run evaluation". Each model fires in parallel and renders as soon as its call resolves.
 
@@ -119,7 +119,7 @@ const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
   method: 'POST',
   headers: { Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    model: 'openai/gpt-5.4-mini',
+    model: 'openai/gpt-5.6-luna',
     max_tokens: 32768,
     // Production setting. Default 1.0 produces the "model summarizes
     // the transcript instead of echoing it" catastrophic-failure mode
@@ -213,7 +213,7 @@ Once the iterated `prompt.md` passes consistently, port the system-prompt half i
 After production-prompt changes that affect the seed corpus annotations, regenerate the LLM seed annotations:
 
 ```bash
-just generate-seed-annotations   # ~5 min, ~$0.10–0.15 at gpt-5.4-mini
+just generate-seed-annotations   # ~5 min, ~$0.10–0.15 at gpt-5.6-luna
 just dump-llm-seed-data          # capture into committed snapshots
 ```
 

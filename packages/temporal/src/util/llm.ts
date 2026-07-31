@@ -22,15 +22,15 @@ const env = z
     // workflow replays/eval calls. Batch processing never switches providers.
     OPENAI_API_KEY: z.string().min(1),
     OPENROUTER_API_KEY: z.string().min(1),
-    OPENROUTER_SUMMARY_MODEL: openaiBatchModel.default('openai/gpt-5.4-mini'),
-    // Annotation defaults to gpt-5.4-mini. The full-doc markdown-output
+    OPENROUTER_SUMMARY_MODEL: openaiBatchModel.default('openai/gpt-5.6-luna'),
+    // Annotation defaults to gpt-5.6-luna. The full-doc markdown-output
     // approach (paragraph-echo + inline links, see annotate-transcript.ts)
     // is the only output format the activity supports; the earlier
     // strict-JSON-schema path that ran into OpenAI's response-side
     // safety classifier was retired with that rewrite. Temperature 0.6
     // + the silent-summarization guard in the activity together close
     // the residual variance we measured during prompt tuning.
-    OPENROUTER_ANNOTATE_MODEL: openaiBatchModel.default('openai/gpt-5.4-mini'),
+    OPENROUTER_ANNOTATE_MODEL: openaiBatchModel.default('openai/gpt-5.6-luna'),
     // Live-path fallback for annotate when the primary's response is blocked
     // by the provider content filter. This is retained for legacy workflow
     // replay and eval tooling; the always-batched production path cannot route
@@ -74,9 +74,7 @@ export function stripOpenaiPrefix(model: string): string {
 }
 
 // Env-configurable: safe to swap because changing the chat model only affects
-// new output. Default is the cheap mini tier (~$0.00075/$0.0045 per 1M tok);
-// override via `OPENROUTER_SUMMARY_MODEL` for `openai/gpt-5.4-nano` (cheaper)
-// or `openai/gpt-5.4` / `openai/gpt-5.5` (better).
+// new output. Override via `OPENROUTER_SUMMARY_MODEL` when needed.
 export const SUMMARY_MODEL = env.OPENROUTER_SUMMARY_MODEL;
 export const ANNOTATE_MODEL = env.OPENROUTER_ANNOTATE_MODEL;
 export const ANNOTATE_FALLBACK_MODEL =

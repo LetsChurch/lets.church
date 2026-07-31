@@ -6,13 +6,13 @@ It is the lets.bible analog of `docs/search-adversarial-qa.md` (the web app). A 
 
 ## Result
 
-Run on **gpt-5.4-mini** (the production default; `LETS_BIBLE_ANSWER_MODEL`), gate on **gpt-5.4-nano** (`LETS_BIBLE_PARSE_MODEL`): **73/73 auto-clean.** 46 queries took the verse-finder (dig) lane, 27 the cheap topical lane.
+Run on **gpt-5.6-luna** (the production default; `LETS_BIBLE_ANSWER_MODEL`), gate on **gpt-5.6-luna** (`LETS_BIBLE_PARSE_MODEL`): **73/73 auto-clean.** 46 queries took the verse-finder (dig) lane, 27 the cheap topical lane.
 
 The one residual auto-flag is a harness marker gap, not a defect: *"everything happens for a reason"* (a borderline saying that genuinely maps onto biblical providence) is answered by pointing to [Romans 8:28] as "the closest biblical wording" with the clarification that "it does not teach a vague fate" — no fabricated citation. Every clear non-biblical misquote ("God helps those who help themselves", "cleanliness is next to godliness", "to thine own self be true") is still refused outright.
 
 Key tuning outcomes:
 
-- **Reference + wording ⇒ dig, deterministically.** A non-question phrase that embeds a reference ("John 3:17, for God so loved the world") is definitionally a verse to verify, so the deterministic gate digs it outright rather than relying on the nano classifier (which read them as topical). A colon in a reference must **not** be treated as a filter operator (that bug forced these to the cheap path).
+- **Reference + wording ⇒ dig, deterministically.** A non-question phrase that embeds a reference ("John 3:17, for God so loved the world") is definitionally a verse to verify, so the deterministic gate digs it outright rather than relying on the model classifier (which read them as topical). A colon in a reference must **not** be treated as a filter operator (that bug forced these to the cheap path).
 - **Proverbial misquotes ⇒ dig.** Sayings people believe are verses ("the Lord works in mysterious ways", "everything happens for a reason", "hate the sin, love the sinner") route to the verse-finder, which says plainly they aren’t Scripture and points to the real counterpart — never a fabricated citation.
 - **"Not in the Bible" ≠ "couldn’t find it."** A "this isn’t a verse" claim rests on the model’s knowledge of Scripture, not on empty retrieval — a real but oddly-paraphrased verse can be missed by search, so empty tool results yield "I couldn’t locate that verse" (with an invite for more wording), not a false denial.
 - **Multi-verse thoughts get a whole-passage lane.** Verse boundaries (Stephanus 1551) split thoughts, so a paraphrase of an argument/list often matches no single verse. The `semanticPassages` tool embeds the translators’ own paragraphs (reading blocks) whole — "faith without works is dead" → the James 2 argument; "put on the whole armor of God" → Ephesians 6:11-17 — and the model cites the anchor verse inside the passage. ~24k paragraphs across BSB/MSB/WEB (KJV is prose-only, so it’s covered cross-translation).

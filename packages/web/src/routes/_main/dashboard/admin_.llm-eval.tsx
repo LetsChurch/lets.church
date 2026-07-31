@@ -329,7 +329,7 @@ function LlmEvalPage() {
   // on the page already able to run a baseline comparison with one click.
   const [models, setModels] = useState<string[]>(() => {
     const fromUrl = parseModels(search.models);
-    return fromUrl.length > 0 ? fromUrl : ['openai/gpt-5.4-mini'];
+    return fromUrl.length > 0 ? fromUrl : ['openai/gpt-5.6-luna'];
   });
   const [uploadId, setUploadId] = useState<string | undefined>(search.uploadId);
   const [maxTokens, setMaxTokens] = useState<number | undefined>(
@@ -555,7 +555,7 @@ function LlmEvalPage() {
 
             <ModelsInput
               label="OpenRouter models"
-              description="Free-form OpenRouter model ids. Defaults to openai/gpt-5.4-mini (our production annotate model). Add others like openai/gpt-5.4, google/gemini-2.5-pro, etc. to A/B-compare. Press Enter to add."
+              description="Free-form OpenRouter model ids. Defaults to openai/gpt-5.6-luna (our production annotate model). Add others like openai/gpt-5.4, google/gemini-2.5-pro, etc. to A/B-compare. Press Enter to add."
               placeholder="Type a model id and press Enter…"
               value={models}
               onChange={setModels}

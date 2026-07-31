@@ -3,16 +3,15 @@ import { z } from 'zod';
 
 // LLM config for the search-answer feature. Calls OpenAI directly with the Vercel
 // AI SDK (`streamText`) — no agent framework. Env-configurable model id, stored
-// canonically as `openai/…` for audit/pricing; the default mini tier is plenty
-// for grounded Scripture Q&A.
+// canonically as `openai/…` for audit/pricing.
 const { OPENAI_API_KEY, LETS_BIBLE_ANSWER_MODEL, LETS_BIBLE_PARSE_MODEL } = z
   .object({
     OPENAI_API_KEY: z.string().trim().min(1),
-    LETS_BIBLE_ANSWER_MODEL: z.string().default('openai/gpt-5.4-mini'),
-    // Cheap nano tier for the deterministic-then-nano gates (is this a verse
+    LETS_BIBLE_ANSWER_MODEL: z.string().default('openai/gpt-5.6-luna'),
+    // Parse model for the deterministic-then-model gates (is this a verse
     // recollection worth the detective loop? is this even a Scripture question?).
-    // Tunable independently of the answer model.
-    LETS_BIBLE_PARSE_MODEL: z.string().default('openai/gpt-5.4-nano'),
+    // Tunable independently of the answer model, even when both defaults match.
+    LETS_BIBLE_PARSE_MODEL: z.string().default('openai/gpt-5.6-luna'),
   })
   .parse(process.env);
 
@@ -26,8 +25,7 @@ export const answerModel = openai(
 // Canonical id (kept `openai/…`) for any audit logging.
 export const ANSWER_MODEL = LETS_BIBLE_ANSWER_MODEL;
 
-// The gate model — the cheap nano tier used before the (more expensive) answer
-// generation / detective loop.
+// The gate model used before answer generation / the multi-step detective loop.
 export const parseModel = openai(
   LETS_BIBLE_PARSE_MODEL.replace(/^openai\//, ''),
 );

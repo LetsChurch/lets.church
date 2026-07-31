@@ -4118,7 +4118,7 @@ export const adminRouter = router({
   // Re-runs only the annotation pipeline for this upload (annotate +
   // lc_media_v1 reindex). Independent of summary regen so admins can fix
   // annotations after a prompt change without paying for the summary
-  // (~$0.02 / call each for gpt-5.4-mini on a typical sermon-length
+  // (~$0.02 / call each for gpt-5.6-luna on a typical sermon-length
   // transcript). Same legacy-upload guard and RUNNING-check as the summary
   // procedure.
   regenerateUploadAnnotations: adminProcedure

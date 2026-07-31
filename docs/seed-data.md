@@ -51,7 +51,7 @@ produced with `large-v3` for maximum quality (the run takes ~3 hours of
 CPU but is a one-time process; subsequent seeds load from the snapshot
 JSONs in milliseconds). The summaries + embeddings on top were produced
 by the real workflow against those transcripts
-(`openai/gpt-5.4-mini` + `openai/text-embedding-3-small` via OpenRouter),
+(`openai/gpt-5.6-luna` + `openai/text-embedding-3-small` via OpenRouter),
 then snapshotted.
 
 ## Refreshing the LLM snapshots
@@ -243,11 +243,11 @@ Refreshing the snapshots (`just dump-llm-seed-data` against a freshly
 live-pipeline-seeded DB):
 
 - 1 chat completion per upload against `OPENROUTER_ANNOTATE_MODEL` (default
-  `openai/gpt-5.4-mini`) — ~$0.01–0.03 per upload. Annotate echoes the
+  `openai/gpt-5.6-luna`) — ~$0.01–0.03 per upload. Annotate echoes the
   transcript back with inline section headings and scripture/keyword
   annotations, so completion tokens scale with transcript length.
 - 1 chat completion per upload against `OPENROUTER_SUMMARY_MODEL` (default
-  `openai/gpt-5.4-mini`) — ~$0.005–0.01 per upload. Summarize consumes
+  `openai/gpt-5.6-luna`) — ~$0.005–0.01 per upload. Summarize consumes
   the outline + paragraphs and emits prose summary + searchSummary +
   per-section descriptions.
 - 1 embedding call per paragraph (`embedTranscriptParagraphs`) + 2

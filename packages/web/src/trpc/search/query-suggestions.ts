@@ -15,9 +15,9 @@ const MAX_SUGGESTIONS = 5;
 
 const { OPENROUTER_SEARCH_SUGGEST_MODEL } = z
   .object({
-    // Same cheap/fast nano default as the parser/related-search, but a separate
-    // env so palette query-suggestion generation can be tuned independently.
-    OPENROUTER_SEARCH_SUGGEST_MODEL: z.string().default('openai/gpt-5.4-nano'),
+    // Same default model as the parser/related-search, but a separate env so
+    // palette query-suggestion generation can be tuned independently.
+    OPENROUTER_SEARCH_SUGGEST_MODEL: z.string().default('openai/gpt-5.6-luna'),
   })
   .parse(process.env);
 
@@ -79,7 +79,7 @@ function contextBlock(ctx: SuggestContext): string {
 
 /**
  * Generate grounded, Grok-style search suggestions for the command palette's
- * left column with gpt-5.4-nano. Best-effort: any model/parse error resolves to
+ * left column with gpt-5.6-luna. Best-effort: any model/parse error resolves to
  * an empty list so the palette never breaks. Cached by model + query (the corpus
  * context is a deterministic function of the query, so it isn't part of the key).
  * The LLM call is recorded in `llm_call` (activity `searchQuerySuggestions`).

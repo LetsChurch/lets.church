@@ -216,8 +216,8 @@ In scope (everything implemented to date):
   more-quoted verse edges out an equally-good text match — a `rank_feature` boost
   server-side, a log term in the FlexSearch `score()` client-side.
 - **AI answer (agentic search)** — a two-lane, streamed answer card at the top of
-  the results page (`src/components/ai-answer.tsx` → `/api/answer`, gpt-5.4-mini).
-  A deterministic-then-nano **gate** (`src/ai/gate.ts`, gpt-5.4-nano) routes each
+  the results page (`src/components/ai-answer.tsx` → `/api/answer`, gpt-5.6-luna).
+  A deterministic-then-model **gate** (`src/ai/gate.ts`, gpt-5.6-luna) routes each
   query to one of two lanes:
   - **Verse-finder (dig).** For a half-remembered verse — a paraphrase, a partial
     quote, a reference paired with wording, or a proverbial saying — a streamed
@@ -250,7 +250,7 @@ In scope (everything implemented to date):
   questions or declined). The gate/answer/reasoning are cached in Valkey per
   (model, day, translation, mode, query). Degrades to an empty card (hidden) when
   no `OPENAI_API_KEY` is set. Tuned + regression-tested by
-  **`docs/letsbible-adversarial-qa.md`** (68/68 clean on gpt-5.4-mini). Abuse
+  **`docs/letsbible-adversarial-qa.md`** (68/68 clean on gpt-5.6-luna). Abuse
   controls (rate-limit / spend cap) are a documented follow-up (the endpoint is
   unauthenticated + expensive) — see `docs/search-answer-abuse-mitigation.md`.
 - Compare translations: side-by-side verse-aligned view (`/compare/$book/$chapter`),
@@ -1113,7 +1113,7 @@ The streamed, two-lane AI answer card at the top of `/search` (`src/components/
 ai-answer.tsx` → `/api/answer`; gate `src/ai/gate.ts`; verse-finder `src/ai/agent.ts`
 + `src/ai/tools/*`). **Requires `OPENAI_API_KEY` on the server** (dev has it); with
 no key the card is hidden (LB-AI-14). The tuning + regression fixture is
-`docs/letsbible-adversarial-qa.md` (68/68 clean on gpt-5.4-mini) — extend it, not
+`docs/letsbible-adversarial-qa.md` (68/68 clean on gpt-5.6-luna) — extend it, not
 just this suite, when you change the gate or prompts. Answers cache per (model,
 day, translation, mode, query) in Valkey; **bust `letsbible-answer:*` when
 re-verifying** (the cache is read before the gate). The card renders only inside the

@@ -812,7 +812,7 @@ export async function runAnnotation(
     fallbackModel: ANNOTATE_FALLBACK_MODEL,
     max_completion_tokens: maxTokens,
     // Empirically the best temperature for verbatim-echo + outlining on
-    // gpt-5.4-mini across our seed-corpus transcripts (4 transcripts × 4
+    // gpt-5.6-luna across our seed-corpus transcripts (4 transcripts × 4
     // temperatures × 3 runs each, May 2026). The provider default (1.0)
     // produced the catastrophic "model summarizes the transcript instead
     // of echoing it" failure mode on ~1/12 runs (one run scored 0 on

@@ -1,9 +1,9 @@
 # Agentic search — adversarial QA transcript
 
-**System under test:** the two-lane agentic search answer endpoint (`/api/search-answer`).  
-**Answer/detective model:** `openai/gpt-5.4-mini` (production default).  
-**Gate/parse model:** `openai/gpt-5.4-nano`.  
-**Corpus:** the *Alpha & Omega Ministries* (aomin) channel, loaded into dev (3,907 uploads / 761k paragraphs).  
+**System under test:** the two-lane agentic search answer endpoint (`/api/search-answer`).<br>
+**Answer/detective model:** `openai/gpt-5.6-luna` (production default).<br>
+**Gate/parse model:** `openai/gpt-5.6-luna`.<br>
+**Corpus:** the *Alpha & Omega Ministries* (aomin) channel, loaded into dev (3,907 uploads / 761k paragraphs).<br>
 **Date:** 2026-07-14. Single run per query (LLM output has run-to-run variance).
 
 This set stress-tests behavior, not just happy paths: false-premise traps, wrong-label recollections, nonexistent stories, off-topic bait, and prompt-injection. It was used to find + fix two tuning bugs (recollection-gate under-trigger; false-premise acceptance); the responses below are from the **tuned** system.
