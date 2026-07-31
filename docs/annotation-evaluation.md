@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The annotation activity (`packages/temporal/src/activities/background/annotate-transcript.ts`) ships transcripts to an LLM through OpenRouter and gets back a markdown-formatted version with section headings and inline scripture/keyword links. The `SYSTEM_PROMPT` constant in that file is the system prompt; changing it changes every uploaded transcript's annotations. Production runs against `openai/gpt-5.6-luna` at `temperature: 0.6` (both empirically tuned — see commit history for the eval data behind those choices).
+The annotation activity (`packages/temporal/src/activities/background/annotate-transcript.ts`) ships transcripts to an LLM through OpenRouter and gets back a markdown-formatted version with section headings and inline scripture/keyword links. The `SYSTEM_PROMPT` constant in that file is the system prompt; changing it changes every uploaded transcript's annotations. Production runs against `openai/gpt-5.6-luna` using the model's default sampling parameters. The production and eval paths intentionally do not send `temperature`, because supported overrides vary by model.
 
 This document is the reference for evaluating that prompt — verifying that changes don't regress, and qualifying new candidate models before swapping them into the activity.
 
@@ -121,10 +121,8 @@ const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
   body: JSON.stringify({
     model: 'openai/gpt-5.6-luna',
     max_tokens: 32768,
-    // Production setting. Default 1.0 produces the "model summarizes
-    // the transcript instead of echoing it" catastrophic-failure mode
-    // on ~1/12 runs; 0.6 eliminates it.
-    temperature: 0.6,
+    // Intentionally omit temperature so this request uses the model's
+    // provider default, matching production and the in-app eval page.
     messages: [
       { role: 'system', content: system },
       { role: 'user', content: user },

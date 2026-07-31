@@ -27,9 +27,8 @@ const env = z
     // approach (paragraph-echo + inline links, see annotate-transcript.ts)
     // is the only output format the activity supports; the earlier
     // strict-JSON-schema path that ran into OpenAI's response-side
-    // safety classifier was retired with that rewrite. Temperature 0.6
-    // + the silent-summarization guard in the activity together close
-    // the residual variance we measured during prompt tuning.
+    // safety classifier was retired with that rewrite. Sampling parameters
+    // stay at the provider default because supported overrides vary by model.
     OPENROUTER_ANNOTATE_MODEL: openaiBatchModel.default('openai/gpt-5.6-luna'),
     // Live-path fallback for annotate when the primary's response is blocked
     // by the provider content filter. This is retained for legacy workflow

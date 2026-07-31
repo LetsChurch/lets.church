@@ -268,7 +268,9 @@ export function buildAnnotationChatBody(
     // anthropic/claude-haiku-4-5), so both the direct-OpenAI batch
     // path and the live OpenRouter path stay on the same field.
     max_completion_tokens: maxTokens,
-    temperature: 0.6,
+    // Intentionally omit `temperature`. Production uses the model's default,
+    // and this body is also shared by evals that target models with different
+    // sampling-parameter contracts.
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
       {
@@ -811,15 +813,8 @@ export async function runAnnotation(
     // admin failed-annotations surface picks up.
     fallbackModel: ANNOTATE_FALLBACK_MODEL,
     max_completion_tokens: maxTokens,
-    // Empirically the best temperature for verbatim-echo + outlining on
-    // gpt-5.6-luna across our seed-corpus transcripts (4 transcripts × 4
-    // temperatures × 3 runs each, May 2026). The provider default (1.0)
-    // produced the catastrophic "model summarizes the transcript instead
-    // of echoing it" failure mode on ~1/12 runs (one run scored 0 on
-    // paragraph fidelity). 0.6 had the highest heading count, lowest
-    // within-cell variance, highest paragraph fidelity (99.3%), and no
-    // catastrophic failures.
-    temperature: 0.6,
+    // Intentionally omit `temperature`. Production and the admin eval page
+    // both use provider defaults so arbitrary eval models remain compatible.
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: userContent },
