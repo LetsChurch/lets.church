@@ -176,6 +176,184 @@ const adminProcedure = authProcedure.use(async ({ ctx, next }) => {
   return next();
 });
 
+type FailedLlmRetryKind = 'annotations' | 'summaries';
+
+async function retryAllFailedLlmWorkflows({
+  appUserId,
+  kind,
+}: {
+  appUserId: string;
+  kind: FailedLlmRetryKind;
+}) {
+  const activity =
+    kind === 'annotations' ? 'annotateTranscript' : 'summarizeUpload';
+  const failedRows = await db
+    .select({
+      uploadId: UploadRecord.id,
+      channelId: UploadRecord.channelId,
+    })
+    .from(UploadRecord)
+    .innerJoin(
+      LlmCall,
+      and(
+        eq(LlmCall.uploadRecordId, UploadRecord.id),
+        eq(LlmCall.activity, activity),
+        notExists(
+          db
+            .select({ one: sql<number>`1` })
+            .from(sql`${LlmCall} AS later`)
+            .where(
+              and(
+                sql`later.upload_record_id = ${UploadRecord.id}`,
+                sql`later.activity = ${activity}`,
+                sql`later.created_at > ${LlmCall.createdAt}`,
+              ),
+            ),
+        ),
+      ),
+    )
+    .where(
+      and(
+        isNotNull(UploadRecord.transcribingFinishedAt),
+        ne(LlmCall.outcome, 'success'),
+      ),
+    );
+
+  // Two calls can share a timestamp, so preserve one retry target per upload
+  // even if the latest-row query returns a tie.
+  const uploads = [
+    ...new Map(failedRows.map((row) => [row.uploadId, row])).values(),
+  ];
+  let retriedCount = 0;
+  let skippedCount = 0;
+  let failedCount = 0;
+
+  if (uploads.length === 0) {
+    return {
+      success: true,
+      totalCount: 0,
+      retriedCount,
+      skippedCount,
+      failedCount,
+    };
+  }
+
+  const temporalClient = await client;
+
+  for (const upload of uploads) {
+    const workflowId =
+      kind === 'annotations'
+        ? makeAnnotateTranscriptWorkflowId(upload.uploadId)
+        : makeSummarizeUploadWorkflowId(upload.uploadId);
+
+    try {
+      try {
+        const description = await temporalClient.workflow
+          .getHandle(workflowId)
+          .describe();
+        if (description.status.name === 'RUNNING') {
+          skippedCount += 1;
+          continue;
+        }
+      } catch (error) {
+        // A missing workflow is the normal first-run case. Fail closed on
+        // connectivity/auth errors so a bulk action never starts duplicates
+        // merely because Temporal could not answer the status check.
+        if (
+          !(error instanceof Error && error.name === 'WorkflowNotFoundError')
+        ) {
+          throw error;
+        }
+      }
+
+      const commonOptions = {
+        taskQueue: BACKGROUND_QUEUE,
+        workflowId,
+        links: uploadDashboardLinks(upload.channelId, upload.uploadId),
+      };
+
+      if (kind === 'annotations') {
+        await startBackground('annotateTranscriptWorkflow', {
+          taskQueue: commonOptions.taskQueue,
+          workflowId: commonOptions.workflowId,
+          ...staticMeta({
+            summary: 'Retry failed annotations',
+            links: commonOptions.links,
+          }),
+          args: [upload.uploadId, { force: true }],
+          retry: { maximumAttempts: 3 },
+          typedSearchAttributes: [
+            { key: UPLOAD_ID_KEY, value: upload.uploadId },
+          ],
+          workflowIdReusePolicy: 'ALLOW_DUPLICATE',
+        });
+      } else {
+        await startBackground('summarizeUploadWorkflow', {
+          taskQueue: commonOptions.taskQueue,
+          workflowId: commonOptions.workflowId,
+          ...staticMeta({
+            summary: 'Retry failed summary',
+            links: commonOptions.links,
+          }),
+          args: [upload.uploadId, { force: true }],
+          retry: { maximumAttempts: 3 },
+          typedSearchAttributes: [
+            { key: UPLOAD_ID_KEY, value: upload.uploadId },
+          ],
+          workflowIdReusePolicy: 'ALLOW_DUPLICATE',
+        });
+      }
+
+      retriedCount += 1;
+    } catch (error) {
+      // Another admin action may win the race between describe() and start().
+      // Treat that as an already-running skip rather than a failed retry.
+      if (
+        error instanceof Error &&
+        error.name === 'WorkflowExecutionAlreadyStartedError'
+      ) {
+        skippedCount += 1;
+        continue;
+      }
+      failedCount += 1;
+      moduleLogger.error(
+        {
+          appUserId,
+          targetId: upload.uploadId,
+          workflowId,
+          context: {
+            kind,
+            error: error instanceof Error ? error.message : String(error),
+          },
+        },
+        `Failed to retry failed ${kind} workflow`,
+      );
+    }
+  }
+
+  moduleLogger.info(
+    {
+      appUserId,
+      context: {
+        kind,
+        totalCount: uploads.length,
+        retriedCount,
+        skippedCount,
+        failedCount,
+      },
+    },
+    `Finished retrying all failed ${kind}`,
+  );
+
+  return {
+    success: failedCount === 0,
+    totalCount: uploads.length,
+    retriedCount,
+    skippedCount,
+    failedCount,
+  };
+}
+
 export const adminRouter = router({
   // Site-wide labeling data across every channel with transcribed content:
   // `queue` = segments matching an existing named speaker (channels without
@@ -3578,6 +3756,17 @@ export const adminRouter = router({
     return rows[0]?.cnt ?? 0;
   }),
 
+  retryAllFailedAnnotations: adminProcedure.mutation(async ({ ctx }) => {
+    moduleLogger.info(
+      { appUserId: ctx.session.appUserId },
+      'Retrying all failed annotation workflows',
+    );
+    return retryAllFailedLlmWorkflows({
+      appUserId: ctx.session.appUserId,
+      kind: 'annotations',
+    });
+  }),
+
   /**
    * Uploads whose most recent summarize attempt failed. Same shape as
    * `getFailedAnnotations` — gated purely on the most-recent
@@ -3697,6 +3886,17 @@ export const adminRouter = router({
         ),
       );
     return rows[0]?.cnt ?? 0;
+  }),
+
+  retryAllFailedSummaries: adminProcedure.mutation(async ({ ctx }) => {
+    moduleLogger.info(
+      { appUserId: ctx.session.appUserId },
+      'Retrying all failed summary workflows',
+    );
+    return retryAllFailedLlmWorkflows({
+      appUserId: ctx.session.appUserId,
+      kind: 'summaries',
+    });
   }),
 
   retryUploadProcessing: adminProcedure

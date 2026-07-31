@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import {
   ActionIcon,
   Badge,
+  Button,
   Table,
   Text,
   Title,
@@ -87,15 +88,48 @@ function RouteComponent() {
     }),
   );
 
+  const retryAllMutation = useMutation(
+    trpc.dashboard.admin.retryAllFailedSummaries.mutationOptions({
+      onSuccess: async ({ retriedCount, skippedCount, failedCount }) => {
+        const message = `Summary retries: ${retriedCount} started${skippedCount > 0 ? `, ${skippedCount} skipped (already running)` : ''}${failedCount > 0 ? `, ${failedCount} failed to start` : ''}`;
+        if (failedCount > 0) {
+          showFailure({ message });
+        } else {
+          showSuccess({ message });
+        }
+        await refetch();
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to retry all summaries',
+        });
+      },
+    }),
+  );
+
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <Title order={1}>Failed Summaries</Title>
-        <Text c="dimmed">
-          {data.uploads.length} upload{data.uploads.length === 1 ? '' : 's'}{' '}
-          whose summarize pipeline failed (primary and fallback model) and have
-          no stored summary
-        </Text>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <Title order={1}>Failed Summaries</Title>
+          <Text c="dimmed">
+            {data.uploads.length} upload{data.uploads.length === 1 ? '' : 's'}{' '}
+            whose summarize pipeline failed (primary and fallback model) and
+            have no stored summary
+          </Text>
+        </div>
+        {data.uploads.length > 0 ? (
+          <Button
+            variant="light"
+            color="blue"
+            leftSection={<IconRefresh size={16} />}
+            onClick={() => retryAllMutation.mutate()}
+            loading={retryAllMutation.isPending}
+            disabled={regenerateMutation.isPending}
+          >
+            Retry All
+          </Button>
+        ) : null}
       </div>
 
       <Table>
@@ -179,6 +213,7 @@ function RouteComponent() {
                         })
                       }
                       loading={regenerateMutation.isPending}
+                      disabled={retryAllMutation.isPending}
                     >
                       <IconRefresh size={16} />
                     </ActionIcon>
