@@ -510,6 +510,12 @@ function ChannelUploadsPage() {
     { open: openImportModal, close: closeImportModal },
   ] = useDisclosure();
 
+  const [
+    bulkImportModalOpened,
+    { open: openBulkImportModal, close: closeBulkImportModal },
+  ] = useDisclosure();
+  const [bulkImportFile, setBulkImportFile] = useState<File | null>(null);
+
   // Auto-open upload modal when navigating here with ?upload=true
   useEffect(() => {
     if (search.upload && canUpload) {
@@ -609,6 +615,58 @@ function ChannelUploadsPage() {
     });
   };
 
+  const bulkImportMutation = useMutation(
+    trpc.dashboard.channels.bulkImportMedia.mutationOptions({
+      onSuccess: ({ itemCount }) => {
+        notifications.show({
+          title: 'Bulk import started',
+          message: `${itemCount.toLocaleString()} media items were queued for import.`,
+          color: 'green',
+        });
+        closeBulkImportModal();
+        setBulkImportFile(null);
+      },
+      onError: (error) => {
+        notifications.show({
+          title: 'Could not start bulk import',
+          message: error.message,
+          color: 'red',
+        });
+      },
+    }),
+  );
+
+  const handleOpenBulkImport = () => {
+    setBulkImportFile(null);
+    openBulkImportModal();
+  };
+
+  const handleBulkImport = async () => {
+    if (!bulkImportFile) return;
+    if (bulkImportFile.size > 64 * 1024 * 1024) {
+      notifications.show({
+        title: 'CSV file is too large',
+        message: 'Choose a CSV file no larger than 64 MiB.',
+        color: 'red',
+      });
+      return;
+    }
+
+    try {
+      bulkImportMutation.mutate({
+        channelId: channel.id,
+        filename: bulkImportFile.name,
+        csv: await bulkImportFile.text(),
+      });
+    } catch {
+      notifications.show({
+        title: 'Could not read CSV file',
+        message: 'Choose the file again and retry.',
+        color: 'red',
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -621,14 +679,24 @@ function ChannelUploadsPage() {
 
         <div className="flex flex-wrap items-center justify-start gap-4">
           {isSiteAdmin && (
-            <Button
-              variant="light"
-              color="blue"
-              leftSection={<IconDownload size={16} />}
-              onClick={openImportModal}
-            >
-              Import URL
-            </Button>
+            <>
+              <Button
+                variant="light"
+                color="blue"
+                leftSection={<IconDownload size={16} />}
+                onClick={openImportModal}
+              >
+                Import URL
+              </Button>
+              <Button
+                variant="light"
+                color="blue"
+                leftSection={<IconUpload size={16} />}
+                onClick={handleOpenBulkImport}
+              >
+                Bulk Import CSV
+              </Button>
+            </>
           )}
           {canUpload && (
             <Button
@@ -985,6 +1053,68 @@ function ChannelUploadsPage() {
                   disabled={!importFormData.url || !importFormData.title}
                 >
                   Start Import
+                </Button>
+              </div>
+            </div>
+          </LcModal.Popup>
+        </LcModal.Portal>
+      </LcModal.Root>
+
+      <LcModal.Root
+        open={bulkImportModalOpened}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            closeBulkImportModal();
+            setBulkImportFile(null);
+          }
+        }}
+      >
+        <LcModal.Portal>
+          <LcModal.Backdrop />
+          <LcModal.Popup size="lg">
+            <ModalHeader title={`Bulk Import to ${channel.name}`} />
+            <div className="flex flex-col gap-4">
+              <Text size="sm" c="dimmed">
+                Each CSV row launches a Temporal media-import job for this
+                channel, just like importing a single URL. It does not use or
+                change recurring import sources.
+              </Text>
+
+              <div>
+                <Text size="sm" fw={500}>
+                  CSV file
+                </Text>
+                <Text size="xs" c="dimmed" className="mb-1">
+                  Required columns: url, title. Optional: description,
+                  publishedAt (ISO 8601). Maximum file size: 64 MiB.
+                </Text>
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={(event) =>
+                    setBulkImportFile(event.target.files?.[0] ?? null)
+                  }
+                  className="text-primary file:bg-brand/10 file:text-brand mt-1 block w-full text-sm file:mr-3 file:rounded-full file:border-0 file:px-3 file:py-2 file:font-semibold"
+                />
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center justify-end gap-4">
+                <Button
+                  variant="subtle"
+                  onClick={() => {
+                    closeBulkImportModal();
+                    setBulkImportFile(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  leftSection={<IconUpload size={16} />}
+                  onClick={handleBulkImport}
+                  loading={bulkImportMutation.isPending}
+                  disabled={!bulkImportFile}
+                >
+                  Start Bulk Import
                 </Button>
               </div>
             </div>

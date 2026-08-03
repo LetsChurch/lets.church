@@ -11,6 +11,7 @@ describe('redactLogInput', () => {
         nested: {
           token: 'one-time-token',
           plansCsv: 'private donor data',
+          csv: 'private media import data',
         },
       }),
     ).toEqual({
@@ -19,6 +20,7 @@ describe('redactLogInput', () => {
       nested: {
         token: '[REDACTED]',
         plansCsv: '[REDACTED]',
+        csv: '[REDACTED]',
       },
     });
   });

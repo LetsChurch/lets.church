@@ -21,6 +21,11 @@ export {
 } from './backfill-upload-states';
 export { backupToGlacierWorkflow } from './backup-to-glacier';
 export {
+  type BulkImportMediaWorkflowParams,
+  type BulkMediaImportItem,
+  bulkImportMediaWorkflow,
+} from './bulk-import-media';
+export {
   type BulkBackupToGlacierWorkflowParams,
   bulkBackupToGlacierWorkflow,
   getBulkBackupProgressQuery,

@@ -24,6 +24,7 @@ import {
 import {
   makeAnnotateTranscriptWorkflowId,
   makeBackupToGlacierWorkflowId,
+  makeBulkMediaImportWorkflowId,
   makeCreateUploadRecordWorkflowId,
   makeDeleteStorageAuditReportWorkflowId,
   makeDeleteUploadWorkflowId,
@@ -69,6 +70,7 @@ import type {
 
 export type { ReindexKind } from '@letschurch/temporal/activities/background/reindex';
 
+import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 
 // Runtime signal/query refs (plain { type, name } objects — no @temporalio/workflow dep).
@@ -1147,6 +1149,118 @@ export async function triggerManualImport(importSourceId: string) {
         : []),
     ],
   });
+}
+
+/**
+ * Trigger a one-time import from media items parsed from an uploaded CSV.
+ * Each item becomes its own importMediaWorkflow, using the same channel
+ * defaults as the single-URL import. Recurring import sources are not used.
+ */
+export async function triggerBulkMediaImport(
+  channelId: string,
+  userId: string,
+  filename: string,
+  items: Array<{
+    url: string;
+    title: string;
+    description?: string;
+    publishedAt?: string;
+  }>,
+) {
+  const [channel, user] = await Promise.all([
+    db.query.Channel.findFirst({
+      where: (t, { eq }) => eq(t.id, channelId),
+      columns: {
+        id: true,
+        slug: true,
+        defaultUploadLicense: true,
+        defaultUploadVisibility: true,
+        defaultUploadCommentsEnabled: true,
+      },
+    }),
+    db.query.AppUser.findFirst({
+      where: (t, { eq }) => eq(t.id, userId),
+      columns: { id: true, username: true },
+    }),
+  ]);
+
+  if (!channel) {
+    throw new Error(`Channel ${channelId} not found`);
+  }
+  if (!user) {
+    throw new Error(`User ${userId} not found`);
+  }
+
+  // Internal coordinator workflows keep Temporal payloads and event histories
+  // bounded. They are not an import limit: every CSV item is dispatched as an
+  // independent importMediaWorkflow.
+  const batchSize = 250;
+  const batches = Array.from(
+    { length: Math.ceil(items.length / batchSize) },
+    (_, index) => items.slice(index * batchSize, (index + 1) * batchSize),
+  );
+  const bulkImportId = randomUUID();
+  const displayFilename = filename.replaceAll(/[\r\n`]/g, ' ');
+  const channelHref = absoluteWebUrl(dashboardPaths.channel(channel.id));
+  const channelLinks: LcLink[] = channelHref
+    ? [{ href: channelHref, text: 'Channel dashboard' }]
+    : [];
+  const typedSearchAttributes = [
+    { key: CHANNEL_ID_KEY, value: channel.id },
+    { key: CHANNEL_SLUG_KEY, value: channel.slug },
+    { key: USER_ID_KEY, value: user.id },
+    { key: USERNAME_KEY, value: user.username },
+  ];
+
+  let nextBatchIndex = 0;
+  const startNextBatch = async () => {
+    while (nextBatchIndex < batches.length) {
+      const batchIndex = nextBatchIndex++;
+      const batch = batches[batchIndex]!;
+      await startBackground('bulkImportMediaWorkflow', {
+        ...retryOps,
+        taskQueue: BACKGROUND_QUEUE,
+        priority: { priorityKey: PRIORITY_IMPORT },
+        ...staticMeta({
+          summary: `Bulk import — ${channel.slug}`,
+          detailLines: [
+            `File \`${displayFilename}\``,
+            `${items.length.toLocaleString()} total media items`,
+            `${batch.length.toLocaleString()} items dispatched by this coordinator`,
+          ],
+          links: channelLinks,
+        }),
+        workflowId: makeBulkMediaImportWorkflowId(
+          channel.slug,
+          bulkImportId,
+          batchIndex,
+        ),
+        args: [
+          {
+            bulkImportId,
+            firstItemIndex: batchIndex * batchSize,
+            channelId: channel.id,
+            channelSlug: channel.slug,
+            userId: user.id,
+            username: user.username,
+            license: channel.defaultUploadLicense ?? 'STANDARD',
+            visibility: channel.defaultUploadVisibility ?? 'PUBLIC',
+            userCommentsEnabled: channel.defaultUploadCommentsEnabled ?? true,
+            webUrl: process.env.WEB_URL,
+            items: batch,
+          },
+        ],
+        typedSearchAttributes,
+      });
+    }
+  };
+
+  await Promise.all(
+    Array.from({ length: Math.min(10, batches.length) }, async () =>
+      startNextBatch(),
+    ),
+  );
+  return { bulkImportId, workflowCount: batches.length };
 }
 
 /**

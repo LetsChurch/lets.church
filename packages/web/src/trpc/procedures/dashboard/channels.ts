@@ -46,6 +46,10 @@ import sanitizeFilename from 'sanitize-filename';
 import { z } from 'zod';
 
 import {
+  MAX_BULK_MEDIA_IMPORT_BYTES,
+  parseBulkMediaImportCsv,
+} from '@/imports/bulk-media-import';
+import {
   finalizeMultipartUploadSchema,
   getThumbnailResize,
   multipartUploadSchema,
@@ -102,6 +106,7 @@ import {
   sendInvitationEmail,
   startBackground,
   startIndexMediaDocument,
+  triggerBulkMediaImport,
 } from '@/temporal';
 import {
   mantineAvatarLg2x,
@@ -217,6 +222,20 @@ const channelUploadProcedure = channelProcedure.use(async ({ ctx, next }) => {
 
   return next();
 });
+
+const siteAdminChannelProcedure = channelProcedure.use(
+  async ({ ctx, next }) => {
+    if (!ctx.isSiteAdmin) {
+      moduleLogger.warn(
+        { appUserId: ctx.session.appUserId },
+        'User is not site admin',
+      );
+      throw new TRPCError({ code: 'FORBIDDEN' });
+    }
+
+    return next();
+  },
+);
 
 const channelEditProcedure = channelProcedure.use(async ({ ctx, next }) => {
   if (!ctx.canEdit) {
@@ -3839,6 +3858,63 @@ export const channelRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to start import',
+        });
+      }
+    }),
+
+  bulkImportMedia: siteAdminChannelProcedure
+    .input(
+      z.object({
+        channelId: z.string().uuid(),
+        filename: z.string().trim().min(1).max(255),
+        csv: z.string().min(1).max(MAX_BULK_MEDIA_IMPORT_BYTES),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      let items: ReturnType<typeof parseBulkMediaImportCsv>;
+      try {
+        items = parseBulkMediaImportCsv(input.csv);
+      } catch (error) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            error instanceof Error ? error.message : 'The CSV is invalid.',
+        });
+      }
+
+      try {
+        const { workflowCount } = await triggerBulkMediaImport(
+          input.channelId,
+          ctx.session.appUserId,
+          input.filename,
+          items,
+        );
+
+        moduleLogger.info(
+          {
+            channelId: input.channelId,
+            appUserId: ctx.session.appUserId,
+            context: { itemCount: items.length, workflowCount },
+          },
+          'Bulk import workflows started',
+        );
+
+        return { success: true, itemCount: items.length, workflowCount };
+      } catch (error) {
+        moduleLogger.error(
+          {
+            channelId: input.channelId,
+            appUserId: ctx.session.appUserId,
+            context: {
+              itemCount: items.length,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to start bulk import workflows',
+        );
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to start the bulk import.',
         });
       }
     }),

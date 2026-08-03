@@ -170,3 +170,11 @@ export function makeScrapeAndImportWorkflowId(
   const suffix = type === 'scheduled' ? type : `${type}:${Date.now()}`;
   return `scrapeAndImport:${channelSlug}:${importSourceId}:${suffix}`;
 }
+
+export function makeBulkMediaImportWorkflowId(
+  channelSlug: string,
+  bulkImportId: string,
+  batchIndex: number,
+) {
+  return `bulkImportMedia:${channelSlug}:${bulkImportId}:${batchIndex}`;
+}
