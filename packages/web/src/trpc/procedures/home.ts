@@ -652,6 +652,7 @@ export const homeProcedures = {
             id: OutgoingIdSchema.parse(uploadRest.id),
             thumbnailUrl,
             progress,
+            resumeAtSeconds: lastSecond,
             channel: {
               ...channelRest,
               id: OutgoingIdSchema.parse(channel.id),

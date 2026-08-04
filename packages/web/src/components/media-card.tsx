@@ -12,6 +12,7 @@ export type Props = {
   duration?: string;
   timestamp?: string;
   progress?: number;
+  resumeAtSeconds?: number;
   playlistId?: string;
 };
 
@@ -24,6 +25,7 @@ export function MediaCard({
   duration,
   timestamp,
   progress,
+  resumeAtSeconds,
   playlistId,
 }: Props) {
   return (
@@ -77,6 +79,11 @@ export function MediaCard({
               to="/media/$mediaId"
               params={{ mediaId }}
               search={playlistId ? { list: playlistId } : undefined}
+              hash={
+                resumeAtSeconds === undefined
+                  ? undefined
+                  : `t=${resumeAtSeconds}`
+              }
               className="after:absolute after:inset-0"
             >
               {title ?? 'Untitled'}

@@ -19,6 +19,7 @@ type MediaCarouselProps = {
     duration?: string;
     timestamp?: string;
     progress?: number;
+    resumeAtSeconds?: number;
   }>;
   showPagination?: boolean;
   tailerCard?: ReactNode;
@@ -117,6 +118,7 @@ export function MediaCarousel({
                   duration={item.duration}
                   timestamp={item.timestamp}
                   progress={item.progress}
+                  resumeAtSeconds={item.resumeAtSeconds}
                 />
               </div>
             ))}

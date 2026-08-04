@@ -175,6 +175,7 @@ function ContentSection({
     };
     duration?: string;
     progress?: number;
+    resumeAtSeconds?: number;
   }>;
   showViewAll?: boolean;
   viewAllText?: string;
@@ -191,6 +192,7 @@ function ContentSection({
     channelAvatarUrl: upload.channel.avatarUrl,
     duration: upload.duration,
     progress: upload.progress,
+    resumeAtSeconds: upload.resumeAtSeconds,
   }));
 
   return (
@@ -489,6 +491,7 @@ function Home() {
         ? formatTime(upload.lengthSeconds * 1000)
         : undefined,
       progress: upload.progress,
+      resumeAtSeconds: upload.resumeAtSeconds,
     })) ?? [];
 
   // Transform featured uploads for carousel
