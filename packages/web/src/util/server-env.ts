@@ -31,9 +31,15 @@ export async function makeDownloadServiceUrl(
   uploadId: string,
   variant: string,
   filename: string,
+  includeAudio = false,
 ): Promise<string> {
   const expiry = Math.floor(Date.now() / 1000) + 15 * 60;
-  const token = await new SignJWT({ uploadId, variant, filename })
+  const token = await new SignJWT({
+    uploadId,
+    variant,
+    filename,
+    includeAudio,
+  })
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime(expiry)
     .sign(jwtSecret);

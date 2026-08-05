@@ -607,6 +607,7 @@ export const mediaProcedures = {
               media.id,
               entry.variant,
               filename,
+              entry.kind !== 'AUDIO' && variants.includes('AUDIO'),
             ),
           });
         }
