@@ -8,7 +8,7 @@ verification gate, and update the status row when finished.
 
 | Plan                                                 | Title                                               | Priority | Effort | Depends on                                                   | Status |
 | ---------------------------------------------------- | --------------------------------------------------- | -------- | ------ | ------------------------------------------------------------ | ------ |
-| [001](./001-restore-prisma-drizzle-schema-parity.md) | Restore intentional Prisma-to-Drizzle schema parity | P1       | L      | Donation/auth/CITEXT migration `0022` committed and reviewed | TODO   |
+| [001](./001-restore-prisma-drizzle-schema-parity.md) | Restore intentional Prisma-to-Drizzle schema parity | P1       | L      | Donation/auth/CITEXT migration `0022` committed and reviewed | DONE   |
 
 Status values: `TODO`, `IN PROGRESS`, `DONE`, `BLOCKED` with a one-line reason,
 or `REJECTED` with a one-line rationale.

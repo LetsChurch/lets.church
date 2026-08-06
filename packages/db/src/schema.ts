@@ -19,6 +19,7 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  varchar,
 } from 'drizzle-orm/pg-core';
 
 // PostgreSQL citext preserves string values while applying case-insensitive
@@ -258,11 +259,13 @@ export const AppUser = pgTable('app_user', {
   id: uuid('id').primaryKey().defaultRandom(),
   username: citext('username').notNull().unique(),
   password: text('password'),
-  fullName: text('full_name'),
-  avatarPath: text('avatar_path'),
-  avatarBlurhash: text('avatar_blurhash'),
+  fullName: varchar('full_name', { length: 100 }),
+  avatarPath: varchar('avatar_path', { length: 255 }),
+  avatarBlurhash: varchar('avatar_blurhash', { length: 255 }),
   createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+  updatedAt: timestamp('updated_at', { precision: 3 })
+    .notNull()
+    .$onUpdate(() => new Date()),
   deletedAt: timestamp('deleted_at', { precision: 3 }),
   role: AppUserRole('role').notNull().default('USER'),
   bannedAt: timestamp('banned_at', { precision: 3 }),
@@ -304,7 +307,9 @@ export const AppSession = pgTable(
       .notNull()
       .default(sql`(now() + '30 days'::interval)`),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+    updatedAt: timestamp('updated_at', { precision: 3 })
+      .notNull()
+      .$onUpdate(() => new Date()),
     deletedAt: timestamp('deleted_at', { precision: 3 }),
   },
   (AppSession) => ({
@@ -817,11 +822,15 @@ export const Organization = pgTable(
     description: text('description'),
     automaticallyApproveOrganizationAssociations: boolean(
       'automatically_approve_organization_associations',
-    ).notNull(),
+    )
+      .notNull()
+      .default(false),
     approvedById: uuid('approved_by_id'),
     approvedAt: timestamp('approved_at', { precision: 3 }),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+    updatedAt: timestamp('updated_at', { precision: 3 })
+      .notNull()
+      .$onUpdate(() => new Date()),
   },
   (Organization) => ({
     organization_approvedBy_fkey: foreignKey({
@@ -889,10 +898,12 @@ export const OrganizationMembership = pgTable(
   {
     organizationId: uuid('organization_id').notNull(),
     appUserId: uuid('app_user_id').notNull(),
-    isAdmin: boolean('is_admin').notNull(),
-    canEdit: boolean('can_edit').notNull(),
+    isAdmin: boolean('is_admin').notNull().default(false),
+    canEdit: boolean('can_edit').notNull().default(false),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+    updatedAt: timestamp('updated_at', { precision: 3 })
+      .notNull()
+      .$onUpdate(() => new Date()),
   },
   (OrganizationMembership) => ({
     organization_membership_organization_fkey: foreignKey({
@@ -927,8 +938,8 @@ export const OrganizationInvitation = pgTable(
     email: citext('email').notNull(),
     token: uuid('token').notNull().unique().defaultRandom(),
     status: InvitationStatus('status').notNull().default('PENDING'),
-    isAdmin: boolean('is_admin').notNull(),
-    canEdit: boolean('can_edit').notNull(),
+    isAdmin: boolean('is_admin').notNull().default(false),
+    canEdit: boolean('can_edit').notNull().default(false),
     invitedById: uuid('invited_by_id'),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
     expiresAt: timestamp('expires_at', { precision: 3 }).notNull(),
@@ -952,6 +963,12 @@ export const OrganizationInvitation = pgTable(
     OrganizationInvitation_organizationId_email_unique_idx: uniqueIndex(
       'OrganizationInvitation_organizationId_email_key',
     ).on(OrganizationInvitation.organizationId, OrganizationInvitation.email),
+    organization_invitation_email_idx: index(
+      'organization_invitation_email_idx',
+    ).on(OrganizationInvitation.email),
+    organization_invitation_status_expires_at_idx: index(
+      'organization_invitation_status_expires_at_idx',
+    ).on(OrganizationInvitation.status, OrganizationInvitation.expiresAt),
   }),
 );
 
@@ -960,10 +977,12 @@ export const OrganizationOrganizationAssociation = pgTable(
   {
     upstreamOrganizationId: uuid('upstream_organization_id').notNull(),
     downstreamOrganizationId: uuid('downstream_organization_id').notNull(),
-    upstreamApproved: boolean('upstream_approved').notNull(),
-    downstreamApproved: boolean('downstream_approved').notNull(),
+    upstreamApproved: boolean('upstream_approved').notNull().default(false),
+    downstreamApproved: boolean('downstream_approved').notNull().default(false),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+    updatedAt: timestamp('updated_at', { precision: 3 })
+      .notNull()
+      .$onUpdate(() => new Date()),
   },
   (OrganizationOrganizationAssociation) => ({
     organization_organization_association_upstreamOrganization_fkey: foreignKey(
@@ -998,9 +1017,11 @@ export const OrganizationChannelAssociation = pgTable(
   {
     organizationId: uuid('organization_id').notNull(),
     channelId: uuid('channel_id').notNull(),
-    officialChannel: boolean('official_channel').notNull(),
+    officialChannel: boolean('official_channel').notNull().default(false),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+    updatedAt: timestamp('updated_at', { precision: 3 })
+      .notNull()
+      .$onUpdate(() => new Date()),
   },
   (OrganizationChannelAssociation) => ({
     organization_channel_association_organization_fkey: foreignKey({
@@ -1033,10 +1054,10 @@ export const Channel = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     name: text('name').notNull(),
     visibility: ChannelVisibility('visibility').notNull().default('PUBLIC'),
-    avatarPath: text('avatar_path'),
-    avatarBlurhash: text('avatar_blurhash'),
-    coverPath: text('cover_path'),
-    coverBlurhash: text('cover_blurhash'),
+    avatarPath: varchar('avatar_path', { length: 255 }),
+    avatarBlurhash: varchar('avatar_blurhash', { length: 255 }),
+    coverPath: varchar('cover_path', { length: 255 }),
+    coverBlurhash: varchar('cover_blurhash', { length: 255 }),
     slug: citext('slug').notNull().unique(),
     description: text('description'),
     websiteUrl: text('website_url'),
@@ -1053,10 +1074,14 @@ export const Channel = pgTable(
     approvedById: uuid('approved_by_id'),
     approvedAt: timestamp('approved_at', { precision: 3 }),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+    updatedAt: timestamp('updated_at', { precision: 3 })
+      .notNull()
+      .$onUpdate(() => new Date()),
     deletedAt: timestamp('deleted_at', { precision: 3 }),
-    defaultThumbnailPath: text('default_thumbnail_path'),
-    defaultThumbnailBlurhash: text('default_thumbnail_blurhash'),
+    defaultThumbnailPath: varchar('default_thumbnail_path', { length: 255 }),
+    defaultThumbnailBlurhash: varchar('default_thumbnail_blurhash', {
+      length: 255,
+    }),
     defaultUploadVisibility: UploadVisibility('default_upload_visibility'),
     defaultUploadLicense: UploadLicense('default_upload_license'),
     defaultUploadCommentsEnabled: boolean('default_upload_comments_enabled'),
@@ -1078,12 +1103,14 @@ export const ChannelMembership = pgTable(
   {
     channelId: uuid('channel_id').notNull(),
     appUserId: uuid('app_user_id').notNull(),
-    isAdmin: boolean('is_admin').notNull(),
-    canEdit: boolean('can_edit').notNull(),
+    isAdmin: boolean('is_admin').notNull().default(false),
+    canEdit: boolean('can_edit').notNull().default(false),
     canUpload: boolean('can_upload').notNull().default(true),
-    canDownload: boolean('can_download').notNull(),
+    canDownload: boolean('can_download').notNull().default(false),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+    updatedAt: timestamp('updated_at', { precision: 3 })
+      .notNull()
+      .$onUpdate(() => new Date()),
   },
   (ChannelMembership) => ({
     channel_membership_channel_fkey: foreignKey({
@@ -1115,10 +1142,10 @@ export const ChannelInvitation = pgTable(
     email: citext('email').notNull(),
     token: uuid('token').notNull().unique().defaultRandom(),
     status: InvitationStatus('status').notNull().default('PENDING'),
-    isAdmin: boolean('is_admin').notNull(),
-    canEdit: boolean('can_edit').notNull(),
+    isAdmin: boolean('is_admin').notNull().default(false),
+    canEdit: boolean('can_edit').notNull().default(false),
     canUpload: boolean('can_upload').notNull().default(true),
-    canDownload: boolean('can_download').notNull(),
+    canDownload: boolean('can_download').notNull().default(false),
     invitedById: uuid('invited_by_id'),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
     expiresAt: timestamp('expires_at', { precision: 3 }).notNull(),
@@ -1142,6 +1169,12 @@ export const ChannelInvitation = pgTable(
     ChannelInvitation_channelId_email_unique_idx: uniqueIndex(
       'ChannelInvitation_channelId_email_key',
     ).on(ChannelInvitation.channelId, ChannelInvitation.email),
+    channel_invitation_email_idx: index('channel_invitation_email_idx').on(
+      ChannelInvitation.email,
+    ),
+    channel_invitation_status_expires_at_idx: index(
+      'channel_invitation_status_expires_at_idx',
+    ).on(ChannelInvitation.status, ChannelInvitation.expiresAt),
   }),
 );
 
@@ -1247,7 +1280,9 @@ export const UploadState = pgTable(
     backupKey: text('backup_key'),
     backedUpAt: timestamp('backed_up_at', { precision: 3 }),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+    updatedAt: timestamp('updated_at', { precision: 3 })
+      .notNull()
+      .$onUpdate(() => new Date()),
   },
   (UploadState) => ({
     upload_state_uploadRecord_fkey: foreignKey({
@@ -1278,6 +1313,12 @@ export const UploadState = pgTable(
     })
       .onDelete('set null')
       .onUpdate('cascade'),
+    upload_state_backup_status_idx: index('upload_state_backup_status_idx').on(
+      UploadState.backupStatus,
+    ),
+    upload_state_upload_type_idx: index('upload_state_upload_type_idx').on(
+      UploadState.uploadType,
+    ),
   }),
 );
 
@@ -1323,7 +1364,7 @@ export const UploadRecord = pgTable(
     channelId: uuid('channel_id').notNull(),
     visibility: UploadVisibility('visibility').notNull(),
     uploadSizeBytes: bigint('upload_size_bytes', { mode: 'bigint' }),
-    uploadFinalized: boolean('upload_finalized').notNull(),
+    uploadFinalized: boolean('upload_finalized').notNull().default(false),
     uploadFinalizedAt: timestamp('upload_finalized_at', { precision: 3 }),
     uploadFinalizedById: uuid('upload_finalized_by_id'),
     finalizedUploadKey: text('finalized_upload_key'),
@@ -1336,7 +1377,9 @@ export const UploadRecord = pgTable(
     thumbnailCount: integer('thumbnail_count'),
     lengthSeconds: doublePrecision('length_seconds'),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+    updatedAt: timestamp('updated_at', { precision: 3 })
+      .notNull()
+      .$onUpdate(() => new Date()),
     publishedAt: timestamp('published_at', { precision: 3 })
       .notNull()
       .defaultNow(),
@@ -1344,7 +1387,9 @@ export const UploadRecord = pgTable(
     transcodingFinishedAt: timestamp('transcoding_finished_at', {
       precision: 3,
     }),
-    transcodingProgress: doublePrecision('transcoding_progress').notNull(),
+    transcodingProgress: doublePrecision('transcoding_progress')
+      .notNull()
+      .default(0),
     transcribingStartedAt: timestamp('transcribing_started_at', {
       precision: 3,
     }),
@@ -1356,7 +1401,7 @@ export const UploadRecord = pgTable(
       .default(0),
     deletedAt: timestamp('deleted_at', { precision: 3 }),
     variants: UploadVariant('variants').array().notNull(),
-    score: doublePrecision('score').notNull(),
+    score: doublePrecision('score').notNull().default(0),
     scoreStaleAt: timestamp('score_stale_at', { precision: 3 }).defaultNow(),
     userCommentsEnabled: boolean('user_comments_enabled')
       .notNull()
@@ -1425,6 +1470,15 @@ export const UploadRecord = pgTable(
     })
       .onDelete('set null')
       .onUpdate('cascade'),
+    upload_record_created_at_id_idx: index(
+      'upload_record_created_at_id_idx',
+    ).on(UploadRecord.createdAt, UploadRecord.id),
+    upload_record_score_idx: index('upload_record_score_idx').on(
+      UploadRecord.score,
+    ),
+    upload_record_score_stale_at_idx: index(
+      'upload_record_score_stale_at_idx',
+    ).on(UploadRecord.scoreStaleAt),
   }),
 );
 
@@ -1841,6 +1895,12 @@ export const UploadUserRating = pgTable(
       name: 'UploadUserRating_cpk',
       columns: [UploadUserRating.appUserId, UploadUserRating.uploadRecordId],
     }),
+    upload_user_rating_upload_id_rating_idx: index(
+      'upload_user_rating_upload_id_rating_idx',
+    ).on(UploadUserRating.uploadRecordId, UploadUserRating.rating),
+    upload_user_rating_app_user_id_rating_idx: index(
+      'upload_user_rating_app_user_id_rating_idx',
+    ).on(UploadUserRating.appUserId, UploadUserRating.rating),
   }),
 );
 
@@ -1849,12 +1909,14 @@ export const UploadUserComment = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+    updatedAt: timestamp('updated_at', { precision: 3 })
+      .notNull()
+      .$onUpdate(() => new Date()),
     authorId: uuid('author_id').notNull(),
     uploadRecordId: uuid('upload_id').notNull(),
     replyingToId: uuid('replying_to_id'),
     text: text('text').notNull(),
-    score: doublePrecision('score').notNull(),
+    score: doublePrecision('score').notNull().default(0),
     scoreStaleAt: timestamp('score_stale_at', { precision: 3 }).defaultNow(),
   },
   (UploadUserComment) => ({
@@ -1865,6 +1927,15 @@ export const UploadUserComment = pgTable(
     })
       .onDelete('cascade')
       .onUpdate('cascade'),
+    upload_user_comment_replying_to_id_idx: index(
+      'upload_user_comment_replying_to_id_idx',
+    ).on(UploadUserComment.replyingToId),
+    upload_user_comment_score_idx: index('upload_user_comment_score_idx').on(
+      UploadUserComment.score,
+    ),
+    upload_user_comment_score_stale_at_idx: index(
+      'upload_user_comment_score_stale_at_idx',
+    ).on(UploadUserComment.scoreStaleAt),
     upload_user_comment_upload_fkey: foreignKey({
       name: 'upload_user_comment_upload_fkey',
       columns: [UploadUserComment.uploadRecordId],
@@ -1877,7 +1948,7 @@ export const UploadUserComment = pgTable(
       columns: [UploadUserComment.replyingToId],
       foreignColumns: [UploadUserComment.id],
     })
-      .onDelete('cascade')
+      .onDelete('set null')
       .onUpdate('cascade'),
   }),
 );
@@ -1912,6 +1983,15 @@ export const UploadUserCommentRating = pgTable(
         UploadUserCommentRating.uploadUserCommentId,
       ],
     }),
+    upload_user_comment_rating_upload_user_comment_id_rating_idx: index(
+      'upload_user_comment_rating_upload_user_comment_id_rating_idx',
+    ).on(
+      UploadUserCommentRating.uploadUserCommentId,
+      UploadUserCommentRating.rating,
+    ),
+    upload_user_comment_rating_app_user_id_rating_idx: index(
+      'upload_user_comment_rating_app_user_id_rating_idx',
+    ).on(UploadUserCommentRating.appUserId, UploadUserCommentRating.rating),
   }),
 );
 
@@ -1938,12 +2018,18 @@ export const UploadView = pgTable(
       columns: [UploadView.appUserId],
       foreignColumns: [AppUser.id],
     })
-      .onDelete('cascade')
+      .onDelete('set null')
       .onUpdate('cascade'),
     UploadView_cpk: primaryKey({
       name: 'UploadView_cpk',
       columns: [UploadView.uploadRecordId, UploadView.viewHash],
     }),
+    upload_view_app_user_id_upload_record_id_idx: index(
+      'upload_view_app_user_id_upload_record_id_idx',
+    ).on(UploadView.appUserId, UploadView.uploadRecordId),
+    upload_view_created_at_idx: index('upload_view_created_at_idx').on(
+      UploadView.createdAt,
+    ),
   }),
 );
 
@@ -1970,6 +2056,9 @@ export const UploadViewSecond = pgTable(
         UploadViewSecond.second,
       ],
     }),
+    upload_view_second_upload_record_id_second_idx: index(
+      'upload_view_second_upload_record_id_second_idx',
+    ).on(UploadViewSecond.uploadRecordId, UploadViewSecond.second),
   }),
 );
 
@@ -2000,6 +2089,13 @@ export const UploadListEntry = pgTable(
       name: 'UploadListEntry_cpk',
       columns: [UploadListEntry.uploadListId, UploadListEntry.uploadRecordId],
     }),
+    upload_list_entry_upload_list_id_rank_created_at_idx: index(
+      'upload_list_entry_upload_list_id_rank_created_at_idx',
+    ).on(
+      UploadListEntry.uploadListId,
+      UploadListEntry.rank,
+      UploadListEntry.createdAt,
+    ),
   }),
 );
 
@@ -2008,7 +2104,9 @@ export const UploadList = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+    updatedAt: timestamp('updated_at', { precision: 3 })
+      .notNull()
+      .$onUpdate(() => new Date()),
     title: text('title').notNull(),
     authorId: uuid('author_id').notNull(),
     channelId: uuid('channel_id'),
@@ -2027,7 +2125,7 @@ export const UploadList = pgTable(
       columns: [UploadList.channelId],
       foreignColumns: [Channel.id],
     })
-      .onDelete('cascade')
+      .onDelete('set null')
       .onUpdate('cascade'),
     UploadList_createdAt_id_unique_idx: uniqueIndex(
       'UploadList_createdAt_id_key',
@@ -2044,9 +2142,9 @@ export const SearchLogEntry = pgTable(
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
     appUserId: uuid('app_user_id'),
     userDeletedAt: timestamp('user_deleted_at', { precision: 3 }),
-    mediaCount: integer('media_count').notNull(),
-    transcriptCount: integer('transcript_count').notNull(),
-    channelCount: integer('channel_count').notNull(),
+    mediaCount: integer('media_count').notNull().default(0),
+    transcriptCount: integer('transcript_count').notNull().default(0),
+    channelCount: integer('channel_count').notNull().default(0),
   },
   (SearchLogEntry) => ({
     search_log_entry_appUser_fkey: foreignKey({
@@ -2056,6 +2154,16 @@ export const SearchLogEntry = pgTable(
     })
       .onDelete('set null')
       .onUpdate('cascade'),
+    search_log_entry_app_user_id_user_deleted_at_created_at_idx: index(
+      'search_log_entry_app_user_id_user_deleted_at_created_at_idx',
+    ).on(
+      SearchLogEntry.appUserId,
+      SearchLogEntry.userDeletedAt,
+      SearchLogEntry.createdAt.desc().nullsFirst(),
+    ),
+    search_log_entry_created_at_idx: index(
+      'search_log_entry_created_at_idx',
+    ).on(SearchLogEntry.createdAt.desc().nullsFirst()),
   }),
 );
 
@@ -2085,6 +2193,9 @@ export const SavedMedia = pgTable(
     SavedMedia_appUserId_uploadRecordId_unique_idx: uniqueIndex(
       'SavedMedia_appUserId_uploadRecordId_key',
     ).on(SavedMedia.appUserId, SavedMedia.uploadRecordId),
+    saved_media_app_user_id_created_at_idx: index(
+      'saved_media_app_user_id_created_at_idx',
+    ).on(SavedMedia.appUserId, SavedMedia.createdAt),
   }),
 );
 
@@ -2094,7 +2205,9 @@ export const FeaturedUpload = pgTable(
     uploadRecordId: uuid('upload_record_id').notNull().primaryKey(),
     rank: integer('rank').notNull(),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+    updatedAt: timestamp('updated_at', { precision: 3 })
+      .notNull()
+      .$onUpdate(() => new Date()),
   },
   (FeaturedUpload) => ({
     featured_upload_uploadRecord_fkey: foreignKey({
@@ -2108,6 +2221,9 @@ export const FeaturedUpload = pgTable(
       name: 'FeaturedUpload_cpk',
       columns: [FeaturedUpload.uploadRecordId],
     }),
+    featured_upload_rank_idx: index('featured_upload_rank_idx').on(
+      FeaturedUpload.rank,
+    ),
   }),
 );
 
@@ -2138,9 +2254,13 @@ export const NewsletterMailingList = pgTable('newsletter_mailing_list', {
   type: NewsletterListType('type').notNull().default('public'),
   optin: NewsletterListOptin('optin').notNull().default('single'),
   enabled: boolean('enabled').notNull().default(true),
-  subscribeOnRegistration: boolean('subscribe_on_registration').notNull(),
+  subscribeOnRegistration: boolean('subscribe_on_registration')
+    .notNull()
+    .default(false),
   createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+  updatedAt: timestamp('updated_at', { precision: 3 })
+    .notNull()
+    .$onUpdate(() => new Date()),
 });
 
 export const ChannelImportSource = pgTable(
@@ -2162,15 +2282,19 @@ export const ChannelImportSource = pgTable(
     lastImportedUploadDate: timestamp('last_imported_upload_date', {
       precision: 3,
     }),
-    deduplicationEnabled: boolean('deduplication_enabled').notNull(),
+    deduplicationEnabled: boolean('deduplication_enabled')
+      .notNull()
+      .default(false),
     deduplicationFields: jsonb('deduplication_fields'),
-    workflowId: text('workflow_id'),
+    workflowId: varchar('workflow_id', { length: 255 }),
     workflowStatus: ChannelImportSourceWorkflowStatus('workflow_status')
       .notNull()
       .default('NOT_STARTED'),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
     createdById: uuid('created_by_id'),
-    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+    updatedAt: timestamp('updated_at', { precision: 3 })
+      .notNull()
+      .$onUpdate(() => new Date()),
     updatedById: uuid('updated_by_id'),
   },
   (ChannelImportSource) => ({
@@ -2195,6 +2319,15 @@ export const ChannelImportSource = pgTable(
     })
       .onDelete('set null')
       .onUpdate('cascade'),
+    channel_import_source_channel_id_idx: index(
+      'channel_import_source_channel_id_idx',
+    ).on(ChannelImportSource.channelId),
+    channel_import_source_enabled_idx: index(
+      'channel_import_source_enabled_idx',
+    ).on(ChannelImportSource.enabled),
+    channel_import_source_workflow_status_idx: index(
+      'channel_import_source_workflow_status_idx',
+    ).on(ChannelImportSource.workflowStatus),
   }),
 );
 
@@ -2206,10 +2339,10 @@ export const ChannelImportRun = pgTable(
     startedAt: timestamp('started_at', { precision: 3 }).notNull().defaultNow(),
     completedAt: timestamp('completed_at', { precision: 3 }),
     status: ChannelImportRunStatus('status').notNull(),
-    itemsFound: integer('items_found').notNull(),
-    itemsImported: integer('items_imported').notNull(),
-    itemsSkipped: integer('items_skipped').notNull(),
-    itemsFailed: integer('items_failed').notNull(),
+    itemsFound: integer('items_found').notNull().default(0),
+    itemsImported: integer('items_imported').notNull().default(0),
+    itemsSkipped: integer('items_skipped').notNull().default(0),
+    itemsFailed: integer('items_failed').notNull().default(0),
     errorMessage: text('error_message'),
     errorDetails: jsonb('error_details'),
   },
@@ -2221,6 +2354,12 @@ export const ChannelImportRun = pgTable(
     })
       .onDelete('cascade')
       .onUpdate('cascade'),
+    channel_import_run_import_source_id_started_at_idx: index(
+      'channel_import_run_import_source_id_started_at_idx',
+    ).on(ChannelImportRun.importSourceId, ChannelImportRun.startedAt),
+    channel_import_run_status_idx: index('channel_import_run_status_idx').on(
+      ChannelImportRun.status,
+    ),
   }),
 );
 
@@ -2252,6 +2391,15 @@ export const ImportHistory = pgTable(
     })
       .onDelete('set null')
       .onUpdate('cascade'),
+    import_history_import_source_id_published_at_idx: index(
+      'import_history_import_source_id_published_at_idx',
+    ).on(ImportHistory.importSourceId, ImportHistory.publishedAt),
+    import_history_import_source_id_title_idx: index(
+      'import_history_import_source_id_title_idx',
+    ).on(ImportHistory.importSourceId, ImportHistory.title),
+    import_history_import_source_id_url_idx: index(
+      'import_history_import_source_id_url_idx',
+    ).on(ImportHistory.importSourceId, ImportHistory.url),
   }),
 );
 
@@ -2838,9 +2986,7 @@ export const UploadRecordRelations = relations(
     savedByUsers: many(SavedMedia, {
       relationName: 'SavedMediaToUploadRecord',
     }),
-    featuredUpload: many(FeaturedUpload, {
-      relationName: 'FeaturedUploadToUploadRecord',
-    }),
+    featuredUpload: one(FeaturedUpload),
     uploadStates: many(UploadState, {
       relationName: 'UploadRecordToUploadState',
     }),

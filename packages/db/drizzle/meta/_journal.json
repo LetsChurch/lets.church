@@ -162,6 +162,20 @@
       "when": 1784942555247,
       "tag": "0022_donations_auth_participation",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1785961597080,
+      "tag": "0023_restore_legacy_schema_parity",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1785962349281,
+      "tag": "0024_align_search_index_null_order",
+      "breakpoints": true
     }
   ]
 }

@@ -2711,7 +2711,7 @@ export const channelRouter = router({
           overrideThumbnailUrl,
           generatedThumbnailsReady,
           generatedThumbnails,
-          isFeatured: featuredUpload.length > 0,
+          isFeatured: featuredUpload !== null,
           mediaSource,
           audioSource,
           series: seriesEntry

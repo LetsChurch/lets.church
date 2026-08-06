@@ -21,7 +21,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/migrate.ts",
     "db:studio": "drizzle-kit studio",
-    "db:truncate": "DB_LOG=0 tsx prisma/truncate.ts"
+    "db:truncate": "DB_LOG=0 tsx prisma/truncate.ts",
+    "test:schema-parity": "tsx --test src/schema-parity.test.ts"
   },
   "dependencies": {
     "@letschurch/util": "workspace:*",
