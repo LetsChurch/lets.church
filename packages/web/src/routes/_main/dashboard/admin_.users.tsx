@@ -1,6 +1,5 @@
 import {
   IconBan,
-  IconDots,
   IconEdit,
   IconKey,
   IconLockOpen,
@@ -11,17 +10,9 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
 
-import { LcMenu, MenuItemButton } from '@/components/lc-menu';
+import { MenuItemButton, OverflowMenu } from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
-import {
-  ActionIcon,
-  Badge,
-  Button,
-  Table,
-  Text,
-  Textarea,
-  Title,
-} from '@/components/ui';
+import { Badge, Button, Table, Text, Textarea, Title } from '@/components/ui';
 import { modals } from '@/components/ui/confirm-modal';
 import { useAppForm } from '@/components/ui/form';
 import { useDisclosure } from '@/hooks/use-disclosure';
@@ -352,58 +343,47 @@ function UsersPage() {
                   </Text>
                 </Table.Td>
                 <Table.Td>
-                  <LcMenu.Root>
-                    <LcMenu.Trigger
-                      render={
-                        <ActionIcon variant="light" size="sm">
-                          <IconDots size={14} />
-                        </ActionIcon>
-                      }
-                    />
-                    <LcMenu.Portal>
-                      <LcMenu.Positioner align="end" sideOffset={4}>
-                        <LcMenu.Popup>
-                          <MenuItemButton
-                            icon={<IconEdit size={14} />}
-                            onClick={() => handleEdit(user)}
-                          >
-                            Edit User
-                          </MenuItemButton>
-                          <MenuItemButton
-                            icon={<IconKey size={14} />}
-                            onClick={() => handleResetPassword(user.id)}
-                          >
-                            Reset Password
-                          </MenuItemButton>
-                          {hasUnverified ? (
-                            <MenuItemButton
-                              icon={<IconMail size={14} />}
-                              onClick={() =>
-                                handleResendVerificationEmail(user.id)
-                              }
-                            >
-                              Resend Verification Email
-                            </MenuItemButton>
-                          ) : null}
-                          {user.bannedAt ? (
-                            <MenuItemButton
-                              icon={<IconLockOpen size={14} />}
-                              onClick={() => handleUnban(user)}
-                            >
-                              Unban User
-                            </MenuItemButton>
-                          ) : (
-                            <MenuItemButton
-                              icon={<IconBan size={14} />}
-                              onClick={() => handleBan(user)}
-                            >
-                              Ban User
-                            </MenuItemButton>
-                          )}
-                        </LcMenu.Popup>
-                      </LcMenu.Positioner>
-                    </LcMenu.Portal>
-                  </LcMenu.Root>
+                  <OverflowMenu
+                    label={`Actions for ${user.fullName?.trim() || user.username}`}
+                    iconSize={14}
+                    triggerProps={{ variant: 'light', size: 'sm' }}
+                  >
+                    <MenuItemButton
+                      icon={<IconEdit size={14} />}
+                      onClick={() => handleEdit(user)}
+                    >
+                      Edit User
+                    </MenuItemButton>
+                    <MenuItemButton
+                      icon={<IconKey size={14} />}
+                      onClick={() => handleResetPassword(user.id)}
+                    >
+                      Reset Password
+                    </MenuItemButton>
+                    {hasUnverified ? (
+                      <MenuItemButton
+                        icon={<IconMail size={14} />}
+                        onClick={() => handleResendVerificationEmail(user.id)}
+                      >
+                        Resend Verification Email
+                      </MenuItemButton>
+                    ) : null}
+                    {user.bannedAt ? (
+                      <MenuItemButton
+                        icon={<IconLockOpen size={14} />}
+                        onClick={() => handleUnban(user)}
+                      >
+                        Unban User
+                      </MenuItemButton>
+                    ) : (
+                      <MenuItemButton
+                        icon={<IconBan size={14} />}
+                        onClick={() => handleBan(user)}
+                      >
+                        Ban User
+                      </MenuItemButton>
+                    )}
+                  </OverflowMenu>
                 </Table.Td>
               </Table.Tr>
             );

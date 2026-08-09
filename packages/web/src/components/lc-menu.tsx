@@ -1,7 +1,10 @@
 import { Menu } from '@base-ui/react/menu';
+import { IconDotsVertical } from '@tabler/icons-react';
 import type { LinkProps } from '@tanstack/react-router';
 import { Link } from '@tanstack/react-router';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+
+import { ActionIcon } from '@/components/ui';
 
 type LcMenuRootProps = ComponentPropsWithoutRef<typeof Menu.Root>;
 
@@ -82,6 +85,47 @@ export const LcMenu = {
   Item: LcMenuItem,
   Separator: LcMenuSeparator,
 };
+
+type OverflowMenuProps = {
+  label: string;
+  children: ReactNode;
+  iconSize?: number;
+  sideOffset?: number;
+  triggerProps?: Omit<
+    ComponentPropsWithoutRef<typeof ActionIcon>,
+    'aria-label' | 'children'
+  >;
+};
+
+export function OverflowMenu({
+  label,
+  children,
+  iconSize = 16,
+  sideOffset = 4,
+  triggerProps,
+}: OverflowMenuProps) {
+  return (
+    <LcMenu.Root>
+      <LcMenu.Trigger
+        render={
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            {...triggerProps}
+            aria-label={label}
+          >
+            <IconDotsVertical size={iconSize} />
+          </ActionIcon>
+        }
+      />
+      <LcMenu.Portal>
+        <LcMenu.Positioner align="end" sideOffset={sideOffset}>
+          <LcMenu.Popup>{children}</LcMenu.Popup>
+        </LcMenu.Positioner>
+      </LcMenu.Portal>
+    </LcMenu.Root>
+  );
+}
 
 // Shared styling for all menu item variants
 const menuItemClassName =

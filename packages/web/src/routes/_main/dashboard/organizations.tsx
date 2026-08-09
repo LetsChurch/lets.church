@@ -1,31 +1,18 @@
-import {
-  IconDots,
-  IconEye,
-  IconSettings,
-  IconUserMinus,
-} from '@tabler/icons-react';
+import { IconEye, IconSettings, IconUserMinus } from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute, Link, redirect } from '@tanstack/react-router';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 
 import {
-  LcMenu,
   MenuItemButton,
   MenuItemRouterLink,
+  OverflowMenu,
 } from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
-import {
-  ActionIcon,
-  Anchor,
-  Badge,
-  Button,
-  Text,
-  Title,
-} from '@/components/ui';
+import { Anchor, Badge, Button, Text, Title } from '@/components/ui';
 import { useDisclosure } from '@/hooks/use-disclosure';
 import { useTRPC } from '@/trpc/react';
-import { cn } from '@/util/cn';
 
-import classes from './-churches.module.css';
+import { DashboardEntityCard } from './-components/dashboard-entity-card';
 
 export const Route = createFileRoute('/_main/dashboard/organizations')({
   component: OrganizationsPage,
@@ -86,81 +73,53 @@ function OrganizationsPage() {
             const isAdmin = membership?.isAdmin ?? false;
 
             return (
-              <div
+              <DashboardEntityCard
                 key={organization.id}
-                className={cn(
-                  classes.card,
-                  'overflow-hidden rounded-lg border-fancy-pants bg-white p-5 shadow-sm dark:bg-zinc-900',
-                )}
-              >
-                <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
-                  <Link
-                    to="/dashboard/organizations/$orgId"
-                    params={{ orgId: organization.id }}
-                    className={classes.titleLink}
-                  >
-                    <Text fw={500} truncate>
-                      {organization.name}
-                    </Text>
-                  </Link>
-                  <div className="flex flex-wrap items-center justify-start gap-2.5">
+                heading={organization.name}
+                truncateHeading
+                description={
+                  organization.description ||
+                  (isAdmin
+                    ? 'You have administrative access to this organization.'
+                    : 'You are a member of this organization.')
+                }
+                controls={
+                  <>
                     <Badge color={isAdmin ? 'blue' : 'green'} size="sm">
                       {isAdmin ? 'Admin' : 'Member'}
                     </Badge>
-                    <LcMenu.Root>
-                      <LcMenu.Trigger
-                        render={(props) => (
-                          <ActionIcon
-                            {...props}
-                            variant="subtle"
-                            color="gray"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              props.onClick?.(e);
-                            }}
-                          >
-                            <IconDots size={16} />
-                          </ActionIcon>
-                        )}
-                      />
-                      <LcMenu.Portal>
-                        <LcMenu.Positioner sideOffset={8} align="end">
-                          <LcMenu.Popup>
-                            <MenuItemRouterLink
-                              to="/dashboard/organizations/$orgId"
-                              params={{ orgId: organization.id }}
-                              icon={<IconEye size={14} />}
-                            >
-                              View Details
-                            </MenuItemRouterLink>
-                            {isAdmin && (
-                              <MenuItemRouterLink
-                                to="/dashboard/organizations/$orgId/edit"
-                                params={{ orgId: organization.id }}
-                                icon={<IconSettings size={14} />}
-                              >
-                                Manage
-                              </MenuItemRouterLink>
-                            )}
-                            <MenuItemButton
-                              icon={<IconUserMinus size={14} />}
-                              className="text-red-600 dark:text-red-400"
-                            >
-                              Leave Organization
-                            </MenuItemButton>
-                          </LcMenu.Popup>
-                        </LcMenu.Positioner>
-                      </LcMenu.Portal>
-                    </LcMenu.Root>
-                  </div>
-                </div>
-                <Text size="sm" c="dimmed">
-                  {organization.description ||
-                    (isAdmin
-                      ? 'You have administrative access to this organization.'
-                      : 'You are a member of this organization.')}
-                </Text>
-              </div>
+                    <OverflowMenu
+                      label={`Actions for ${organization.name}`}
+                      sideOffset={8}
+                    >
+                      <MenuItemRouterLink
+                        to="/dashboard/organizations/$orgId"
+                        params={{ orgId: organization.id }}
+                        icon={<IconEye size={14} />}
+                      >
+                        View Details
+                      </MenuItemRouterLink>
+                      {isAdmin && (
+                        <MenuItemRouterLink
+                          to="/dashboard/organizations/$orgId/edit"
+                          params={{ orgId: organization.id }}
+                          icon={<IconSettings size={14} />}
+                        >
+                          Manage
+                        </MenuItemRouterLink>
+                      )}
+                      <MenuItemButton
+                        icon={<IconUserMinus size={14} />}
+                        className="text-red-600 dark:text-red-400"
+                      >
+                        Leave Organization
+                      </MenuItemButton>
+                    </OverflowMenu>
+                  </>
+                }
+                to="/dashboard/organizations/$orgId"
+                params={{ orgId: organization.id }}
+              />
             );
           })}
         </div>

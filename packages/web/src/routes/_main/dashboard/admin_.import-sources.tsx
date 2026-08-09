@@ -1,5 +1,4 @@
 import {
-  IconDotsVertical,
   IconEdit,
   IconPlayerPause,
   IconPlayerPlay,
@@ -15,10 +14,9 @@ import {
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
 
-import { LcMenu, MenuItemButton } from '@/components/lc-menu';
+import { LcMenu, MenuItemButton, OverflowMenu } from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import {
-  ActionIcon,
   Badge,
   Button,
   Checkbox,
@@ -421,74 +419,59 @@ function ImportSourcesPage() {
                   </Table.Td>
                   <Table.Td>{source._count.importRuns}</Table.Td>
                   <Table.Td>
-                    <LcMenu.Root>
-                      <LcMenu.Trigger
-                        render={(props) => (
-                          <ActionIcon
-                            {...props}
-                            variant="subtle"
-                            aria-label="Import source actions"
-                          >
-                            <IconDotsVertical size={16} />
-                          </ActionIcon>
-                        )}
-                      />
-                      <LcMenu.Portal>
-                        <LcMenu.Positioner align="end" sideOffset={4}>
-                          <LcMenu.Popup>
-                            <MenuItemButton
-                              icon={<IconUpload size={16} />}
-                              onClick={() =>
-                                triggerManualMutation.mutate({ id: source.id })
-                              }
-                            >
-                              Trigger Manual Import
-                            </MenuItemButton>
-                            {source.enabled ? (
-                              <MenuItemButton
-                                icon={<IconPlayerPause size={16} />}
-                                onClick={() =>
-                                  pauseMutation.mutate({ id: source.id })
-                                }
-                              >
-                                Pause
-                              </MenuItemButton>
-                            ) : (
-                              <MenuItemButton
-                                icon={<IconPlayerPlay size={16} />}
-                                onClick={() =>
-                                  resumeMutation.mutate({ id: source.id })
-                                }
-                              >
-                                Resume
-                              </MenuItemButton>
-                            )}
-                            <MenuItemButton
-                              icon={<IconEdit size={16} />}
-                              onClick={() => handleOpenEdit(source)}
-                            >
-                              Edit
-                            </MenuItemButton>
-                            <LcMenu.Separator />
-                            <MenuItemButton
-                              className="text-red-600 dark:text-red-400"
-                              icon={<IconTrash size={16} />}
-                              onClick={() => {
-                                if (
-                                  confirm(
-                                    `Are you sure you want to delete this import source for ${source.channel.name}?`,
-                                  )
-                                ) {
-                                  deleteMutation.mutate({ id: source.id });
-                                }
-                              }}
-                            >
-                              Delete
-                            </MenuItemButton>
-                          </LcMenu.Popup>
-                        </LcMenu.Positioner>
-                      </LcMenu.Portal>
-                    </LcMenu.Root>
+                    <OverflowMenu
+                      label={`Actions for ${source.channel.name} import source`}
+                    >
+                      <MenuItemButton
+                        icon={<IconUpload size={16} />}
+                        onClick={() =>
+                          triggerManualMutation.mutate({ id: source.id })
+                        }
+                      >
+                        Trigger Manual Import
+                      </MenuItemButton>
+                      {source.enabled ? (
+                        <MenuItemButton
+                          icon={<IconPlayerPause size={16} />}
+                          onClick={() =>
+                            pauseMutation.mutate({ id: source.id })
+                          }
+                        >
+                          Pause
+                        </MenuItemButton>
+                      ) : (
+                        <MenuItemButton
+                          icon={<IconPlayerPlay size={16} />}
+                          onClick={() =>
+                            resumeMutation.mutate({ id: source.id })
+                          }
+                        >
+                          Resume
+                        </MenuItemButton>
+                      )}
+                      <MenuItemButton
+                        icon={<IconEdit size={16} />}
+                        onClick={() => handleOpenEdit(source)}
+                      >
+                        Edit
+                      </MenuItemButton>
+                      <LcMenu.Separator />
+                      <MenuItemButton
+                        className="text-red-600 dark:text-red-400"
+                        icon={<IconTrash size={16} />}
+                        onClick={() => {
+                          if (
+                            confirm(
+                              `Are you sure you want to delete this import source for ${source.channel.name}?`,
+                            )
+                          ) {
+                            deleteMutation.mutate({ id: source.id });
+                          }
+                        }}
+                      >
+                        Delete
+                      </MenuItemButton>
+                    </OverflowMenu>
                   </Table.Td>
                 </Table.Tr>
               ))}

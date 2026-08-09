@@ -3,7 +3,6 @@ import { useStore } from '@nanostores/react';
 import {
   IconChevronDown,
   IconCube3dSphere,
-  IconDotsVertical,
   IconDownload,
   IconEdit,
   IconEye,
@@ -25,10 +24,9 @@ import { map } from 'nanostores';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 
-import { LcMenu, MenuItemButton } from '@/components/lc-menu';
+import { LcMenu, MenuItemButton, OverflowMenu } from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import {
-  ActionIcon,
   Badge,
   Button,
   Checkbox,
@@ -1250,6 +1248,17 @@ function ChannelUploadsPage() {
             uploads.map((upload) => {
               const isSelected = selection.includes(upload.id);
               const isDeleted = deletedUploads[upload.id];
+              const canEditUpload = (isAdmin || canEdit) && !isDeleted;
+              const canDownloadUpload =
+                !isDeleted &&
+                (isAdmin || (channel.userMembership?.canDownload ?? false));
+              const canFeatureUpload = isSiteAdmin && !isDeleted;
+              const canDeleteUpload = canDelete && !isDeleted;
+              const hasUploadActions =
+                canEditUpload ||
+                (canDownloadUpload && Boolean(upload.finalizedUploadKey)) ||
+                canFeatureUpload ||
+                canDeleteUpload;
               return (
                 <Table.Tr
                   key={upload.id}
@@ -1367,134 +1376,78 @@ function ChannelUploadsPage() {
                     </Text>
                   </Table.Td>
                   <Table.Td onClick={(e) => e.stopPropagation()}>
-                    <LcMenu.Root>
-                      <LcMenu.Trigger
-                        render={(props) => (
-                          <ActionIcon
-                            {...props}
-                            variant="subtle"
-                            color="gray"
-                            size="sm"
+                    {hasUploadActions ? (
+                      <OverflowMenu
+                        label={`Actions for ${upload.title || 'untitled upload'}`}
+                        triggerProps={{ size: 'sm' }}
+                      >
+                        {canEditUpload ? (
+                          <MenuItemButton
+                            icon={<IconEdit size={16} />}
+                            onClick={() =>
+                              navigate({
+                                to: `/dashboard/channels/${data.channel.id}/uploads/${upload.id}`,
+                              })
+                            }
                           >
-                            <IconDotsVertical size={16} />
-                          </ActionIcon>
-                        )}
-                      />
-                      <LcMenu.Portal>
-                        <LcMenu.Positioner align="end" sideOffset={4}>
-                          <LcMenu.Popup>
-                            {(() => {
-                              const canEditUpload =
-                                (isAdmin || canEdit) && !isDeleted;
-                              return canEditUpload ? (
-                                <LcMenu.Item
-                                  render={(props) => (
-                                    <button
-                                      {...props}
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate({
-                                          to: `/dashboard/channels/${data.channel.id}/uploads/${upload.id}`,
-                                        });
-                                      }}
-                                      className="text-primary flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-zinc-800"
-                                    >
-                                      <IconEdit size={16} />
-                                      Edit
-                                    </button>
-                                  )}
-                                />
-                              ) : null;
-                            })()}
+                            Edit
+                          </MenuItemButton>
+                        ) : null}
 
-                            {(() => {
-                              const canDownloadUpload =
-                                isAdmin ||
-                                (channel.userMembership?.canDownload ?? false);
-                              return canDownloadUpload &&
-                                upload.finalizedUploadKey ? (
-                                <LcMenu.Item
-                                  render={(props) => (
-                                    <button
-                                      {...props}
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        downloadOriginalMutation.mutate({
-                                          channelId: channel.id,
-                                          uploadId: upload.id,
-                                        });
-                                      }}
-                                      className="text-primary flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-zinc-800"
-                                    >
-                                      <IconDownload size={16} />
-                                      Download Original
-                                    </button>
-                                  )}
-                                />
-                              ) : null;
-                            })()}
+                        {canDownloadUpload && upload.finalizedUploadKey ? (
+                          <MenuItemButton
+                            icon={<IconDownload size={16} />}
+                            onClick={() =>
+                              downloadOriginalMutation.mutate({
+                                channelId: channel.id,
+                                uploadId: upload.id,
+                              })
+                            }
+                          >
+                            Download Original
+                          </MenuItemButton>
+                        ) : null}
 
-                            {isSiteAdmin ? (
-                              <LcMenu.Item
-                                render={(props) => (
-                                  <button
-                                    {...props}
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      toggleFeaturedMutation.mutate({
-                                        uploadId: upload.id,
-                                      });
-                                    }}
-                                    className="text-primary flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-zinc-800"
-                                  >
-                                    {upload.isFeatured ? (
-                                      <IconStarFilled size={16} />
-                                    ) : (
-                                      <IconStar size={16} />
-                                    )}
-                                    {upload.isFeatured
-                                      ? 'Remove from Featured'
-                                      : 'Add to Featured'}
-                                  </button>
-                                )}
-                              />
-                            ) : null}
+                        {canFeatureUpload ? (
+                          <MenuItemButton
+                            icon={
+                              upload.isFeatured ? (
+                                <IconStarFilled size={16} />
+                              ) : (
+                                <IconStar size={16} />
+                              )
+                            }
+                            onClick={() =>
+                              toggleFeaturedMutation.mutate({
+                                uploadId: upload.id,
+                              })
+                            }
+                          >
+                            {upload.isFeatured
+                              ? 'Remove from Featured'
+                              : 'Add to Featured'}
+                          </MenuItemButton>
+                        ) : null}
 
-                            {(() => {
-                              const canDeleteUpload = canDelete && !isDeleted;
-                              return canDeleteUpload ? (
-                                <>
-                                  <LcMenu.Separator />
-                                  <LcMenu.Item
-                                    render={(props) => (
-                                      <button
-                                        {...props}
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setUploadToDelete({
-                                            id: upload.id,
-                                            title:
-                                              upload.title || 'Untitled Upload',
-                                          });
-                                        }}
-                                        className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-zinc-800"
-                                      >
-                                        <IconTrash size={16} />
-                                        Delete
-                                      </button>
-                                    )}
-                                  />
-                                </>
-                              ) : null;
-                            })()}
-                          </LcMenu.Popup>
-                        </LcMenu.Positioner>
-                      </LcMenu.Portal>
-                    </LcMenu.Root>
+                        {canDeleteUpload ? (
+                          <>
+                            <LcMenu.Separator />
+                            <MenuItemButton
+                              icon={<IconTrash size={16} />}
+                              className="text-red-600 dark:text-red-400"
+                              onClick={() =>
+                                setUploadToDelete({
+                                  id: upload.id,
+                                  title: upload.title || 'Untitled Upload',
+                                })
+                              }
+                            >
+                              Delete
+                            </MenuItemButton>
+                          </>
+                        ) : null}
+                      </OverflowMenu>
+                    ) : null}
                   </Table.Td>
                 </Table.Tr>
               );
