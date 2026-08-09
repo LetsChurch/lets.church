@@ -2,8 +2,6 @@ import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 
 import { Button, Text, Title } from '@/components/ui';
 
-import styles from './-styles.module.css';
-
 export const Route = createFileRoute('/_main/dashboard/account')({
   component: AccountPage,
   beforeLoad: async ({ context }) => {
@@ -41,7 +39,7 @@ function AccountPage() {
               variant="light"
               size="sm"
               style={{ width: actionWidth }}
-              className={styles.buttonLink}
+              className="content-center"
             >
               Edit
             </Button>
@@ -60,7 +58,7 @@ function AccountPage() {
               variant="light"
               size="sm"
               style={{ width: actionWidth }}
-              className={styles.buttonLink}
+              className="content-center"
             >
               Review
             </Button>
@@ -79,7 +77,7 @@ function AccountPage() {
               variant="light"
               size="sm"
               style={{ width: actionWidth }}
-              className={styles.buttonLink}
+              className="content-center"
             >
               Change
             </Button>
@@ -98,7 +96,7 @@ function AccountPage() {
               variant="light"
               size="sm"
               style={{ width: actionWidth }}
-              className={styles.buttonLink}
+              className="content-center"
             >
               View
             </Button>
@@ -117,7 +115,7 @@ function AccountPage() {
               variant="light"
               size="sm"
               style={{ width: actionWidth }}
-              className={styles.buttonLink}
+              className="content-center"
             >
               Manage
             </Button>

@@ -8,8 +8,6 @@ import { formatDate } from '@/util/format';
 
 import { StatCard } from './-components/stat-card';
 
-import styles from './-styles.module.css';
-
 export const Route = createFileRoute('/_main/dashboard/churches_/$churchId')({
   component: ChurchDetailsPage,
   beforeLoad: async ({ context }) => {
@@ -93,7 +91,7 @@ function ChurchDetailsPage() {
               component={Link}
               to="/dashboard/churches/$churchId/edit"
               params={{ churchId: church.id }}
-              className={styles.buttonLink}
+              className="content-center"
             >
               Edit Church
             </Button>

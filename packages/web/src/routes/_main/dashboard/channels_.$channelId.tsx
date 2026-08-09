@@ -32,8 +32,6 @@ import { formatDate } from '@/util/format';
 
 import { StatCard } from './-components/stat-card';
 
-import styles from './-styles.module.css';
-
 export const Route = createFileRoute('/_main/dashboard/channels_/$channelId')({
   component: ChannelDetailsPage,
   beforeLoad: async ({ context, params }) => {
@@ -270,7 +268,7 @@ function ChannelDetailsPage() {
               to="/dashboard/channels/$channelId/edit"
               params={{ channelId: channel.id }}
               variant="light"
-              className={styles.buttonLink}
+              className="content-center"
             >
               Edit Channel
             </Button>

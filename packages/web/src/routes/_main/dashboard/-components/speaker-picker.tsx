@@ -9,8 +9,6 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 
-import styles from './speaker-picker.module.css';
-
 export type PickedSpeaker = {
   speakerId: string;
   name: string;
@@ -43,8 +41,7 @@ export function PickerRow({
     <button
       type="button"
       onClick={onClick}
-      style={{ padding: '5px 8px' }}
-      className={`block cursor-pointer appearance-none border-0 bg-transparent text-left ${styles.row}`}
+      className="block w-full cursor-pointer appearance-none rounded border-0 bg-transparent px-2 py-[5px] text-left hover:bg-gray-100 dark:hover:bg-zinc-800"
     >
       <div className="flex flex-nowrap items-center justify-between gap-2.5">
         <div

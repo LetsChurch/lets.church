@@ -15,8 +15,6 @@ import { useDisclosure } from '@/hooks/use-disclosure';
 import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
 
-import styles from './-styles.module.css';
-
 export const Route = createFileRoute(
   '/_main/dashboard/channels_/$channelId_/playlists',
 )({
@@ -182,7 +180,7 @@ function PlaylistsPage() {
                     channelId: params.channelId,
                     playlistId: playlist.id,
                   }}
-                  className={styles.buttonLink}
+                  className="content-center"
                 >
                   Manage
                 </Button>

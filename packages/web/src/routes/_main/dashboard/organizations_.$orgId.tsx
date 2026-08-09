@@ -5,7 +5,6 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
-import clsx from 'clsx';
 
 import { Avatar, Badge, Button, Text, Title, Tooltip } from '@/components/ui';
 import { notifications } from '@/components/ui/notifications';
@@ -13,8 +12,6 @@ import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
 
 import { StatCard } from './-components/stat-card';
-
-import styles from './-styles.module.css';
 
 export const Route = createFileRoute('/_main/dashboard/organizations_/$orgId')({
   component: OrganizationDetailsPage,
@@ -231,7 +228,7 @@ function OrganizationDetailsPage() {
             <Button
               variant="light"
               component={Link}
-              className={clsx(styles.buttonLink)}
+              className="content-center"
               to="/dashboard/organizations/$orgId/edit"
               params={{ orgId: organization.id }}
             >

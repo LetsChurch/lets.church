@@ -14,7 +14,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { type CSSProperties, type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 
 import { LcMenu, MenuItemButton } from '@/components/lc-menu';
 import { LcModal } from '@/components/lc-modal';
@@ -32,8 +32,6 @@ import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 
 import { PickerRow } from './speaker-picker';
-
-import styles from './speaker-labeling-modal.module.css';
 
 type SpeakerLabelingModalProps = {
   opened: boolean;
@@ -525,10 +523,7 @@ export function SpeakerLabelingModal({
                             {turn.paragraphs.map((para) => (
                               <div
                                 key={para.id}
-                                className={cn(
-                                  styles.paragraph,
-                                  'flex flex-nowrap items-start justify-start gap-2.5',
-                                )}
+                                className="group flex flex-nowrap items-start justify-start gap-2.5"
                               >
                                 <Text
                                   size="sm"
@@ -691,8 +686,7 @@ function PersonRow({
         labelForSpeakerId={labelForSpeakerId}
         displayLabel={displayLabel}
         onChannelSpeakersChanged={onChannelSpeakersChanged}
-        triggerClassName={styles.row}
-        triggerStyle={{ padding: '6px 8px', flex: 1, minWidth: 0 }}
+        triggerClassName="min-w-0 flex-1 rounded px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800"
       >
         <div className="flex flex-nowrap items-center justify-start gap-3">
           <div
@@ -780,7 +774,6 @@ function SpeakerAssignPopover({
   onChannelSpeakersChanged,
   position = 'left-start',
   triggerClassName,
-  triggerStyle,
   turnMenu,
   children,
 }: {
@@ -797,7 +790,6 @@ function SpeakerAssignPopover({
   onChannelSpeakersChanged: () => void;
   position?: 'left-start' | 'bottom-start';
   triggerClassName?: string;
-  triggerStyle?: CSSProperties;
   turnMenu?: TurnMenuConfig;
   children: ReactNode;
 }) {
@@ -922,7 +914,6 @@ function SpeakerAssignPopover({
               'cursor-pointer border-0 bg-transparent p-0 text-left',
               triggerClassName,
             )}
-            style={triggerStyle}
           >
             {children}
           </button>
@@ -1144,7 +1135,7 @@ function ParagraphSplitControl({
             variant="subtle"
             color="gray"
             size="sm"
-            className={styles.splitControl}
+            className="opacity-0 transition-opacity duration-[80ms] group-focus-within:opacity-100 group-hover:opacity-100 aria-expanded:opacity-100"
             aria-label="Split this paragraph out"
           >
             <IconScissors size={15} />

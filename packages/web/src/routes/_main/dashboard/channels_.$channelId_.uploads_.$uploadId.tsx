@@ -81,8 +81,6 @@ import {
   retainLocalVideoThumbnails,
 } from './channels_.$channelId_.uploads';
 
-import styles from './-styles.module.css';
-
 export const Route = createFileRoute(
   '/_main/dashboard/channels_/$channelId_/uploads_/$uploadId',
 )({
@@ -1571,7 +1569,7 @@ function ChannelUploadPage() {
                 <HlsVideo
                   ref={setPreviewVideo}
                   src={upload.mediaSource}
-                  className={styles.fullWidth}
+                  className="w-full"
                   playsInline
                   controls
                 />
@@ -1579,7 +1577,7 @@ function ChannelUploadPage() {
                 <HlsVideo
                   ref={setPreviewVideo}
                   src={upload.audioSource}
-                  className={styles.fullWidth}
+                  className="w-full"
                   controls
                   style={{ height: '54px' }}
                 />
