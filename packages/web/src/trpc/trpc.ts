@@ -62,21 +62,31 @@ const loggingMiddleware = t.middleware(
       const errorObj =
         error instanceof Error ? error : new Error(String(error));
 
-      // Log error
-      moduleLogger.error(
-        {
-          appUserId,
-          err: errorObj,
-          context: {
-            procedure: path,
-            type,
-            durationMs,
-            errorName: errorObj.name,
-            input: redactLogInput(input),
-          },
+      const isRateLimit =
+        error instanceof TRPCError && error.code === 'TOO_MANY_REQUESTS';
+      const logContext = {
+        appUserId,
+        err: errorObj,
+        context: {
+          procedure: path,
+          type,
+          durationMs,
+          errorName: errorObj.name,
+          errorCode: error instanceof TRPCError ? error.code : undefined,
+          retryAfter: isRateLimit
+            ? ctx.resHeaders.get('Retry-After')
+            : undefined,
+          input: redactLogInput(input),
         },
-        `tRPC ${type} error: ${path}`,
-      );
+      };
+
+      // Expected abuse-control responses should remain visible without
+      // flooding error monitoring during a traffic spike.
+      if (isRateLimit) {
+        moduleLogger.warn(logContext, `tRPC ${type} rate limited: ${path}`);
+      } else {
+        moduleLogger.error(logContext, `tRPC ${type} error: ${path}`);
+      }
 
       throw error;
     }

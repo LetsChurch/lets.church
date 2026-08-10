@@ -11,6 +11,7 @@ import {
   suggestMediaPalette,
 } from '@letschurch/opensearch';
 import { publicS3 } from '@letschurch/s3/public';
+import { TRPCError } from '@trpc/server';
 import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -21,6 +22,8 @@ import { facetMatchScore } from '@/util/facet-score';
 import logger from '@/util/logger';
 import { isChannelRoutable } from '@/util/media-visibility';
 import { getQueryEmbeddingCached, shouldWarmEmbed } from '@/util/query-embed';
+import { enforceSearchRateLimit } from '@/util/search-rate-limit';
+import { SEARCH_RATE_LIMIT_MESSAGE } from '@/util/search-rate-limit-error';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { getVerseParagraphsByUpload } from '@/util/verse-paragraphs';
@@ -321,6 +324,27 @@ export const searchProcedures = {
         deep,
       } = input;
 
+      // Search is intentionally public, but each request fans out into several
+      // OpenSearch operations. Bound sustained anonymous traffic per client;
+      // authenticated sessions remain unrestricted.
+      if (!ctx.session) {
+        const rateLimit = await enforceSearchRateLimit({
+          headers: ctx.req.headers,
+          kind: deep ? 'search-deep' : 'search',
+        });
+        if (!rateLimit.allowed) {
+          ctx.resHeaders.set('Cache-Control', 'no-store');
+          ctx.resHeaders.set(
+            'Retry-After',
+            String(rateLimit.retryAfterSeconds),
+          );
+          throw new TRPCError({
+            code: 'TOO_MANY_REQUESTS',
+            message: SEARCH_RATE_LIMIT_MESSAGE,
+          });
+        }
+      }
+
       const channelIds =
         channelSlugs && channelSlugs.length > 0
           ? await channelSlugsToIds(channelSlugs)
@@ -487,8 +511,11 @@ export const searchProcedures = {
           // Present only on the deep fallback pass → hybrid path; null keeps the
           // instant list a pure-BM25 query (no embed, no kNN, no cold-graph tail).
           queryVector: queryVector ?? undefined,
-          // Surface (nearly) all of a video's lexical matches under "show more".
-          innerHitsSize: 25,
+          // Nested inner_hits materialize paragraph sources on the OpenSearch
+          // heap. Keep the eager page bounded; more transcript context can be
+          // loaded from the media page without multiplying every search cost.
+          innerHitsSize: 3,
+          knnInnerHitsSize: 1,
         }),
         // All facet lists (channels, speakers, verses, years) with leave-one-out
         // scoping: each facet drops its OWN selection but respects the others, so

@@ -6,12 +6,18 @@ import { isIP } from 'is-ip';
  * This is the list of headers, in order of preference, that will be used to
  * determine the client's IP address.
  */
+// Public traffic reaches the app through Cloudflare Tunnel. Cloudflare sets
+// CF-Connecting-IP to the visitor address, while forwarding arbitrary incoming
+// headers such as X-Client-IP and pre-existing X-Forwarded-For values. Prefer
+// the Cloudflare-owned header so callers cannot select their own rate-limit
+// bucket. The remaining headers are fallbacks for local development and other
+// direct/internal deployments.
 const headerNames = Object.freeze([
+  'CF-Connecting-IP',
   'X-Client-IP',
   'X-Forwarded-For',
   'HTTP-X-Forwarded-For',
   'Fly-Client-IP',
-  'CF-Connecting-IP',
   'Fastly-Client-Ip',
   'True-Client-Ip',
   'X-Real-IP',
@@ -29,11 +35,11 @@ const headerNames = Object.freeze([
  * It receives the Request object or the headers object and use it to get the
  * IP address from one of the following headers in order.
  *
+ * - CF-Connecting-IP
  * - X-Client-IP
  * - X-Forwarded-For
  * - HTTP-X-Forwarded-For
  * - Fly-Client-IP
- * - CF-Connecting-IP
  * - Fastly-Client-Ip
  * - True-Client-Ip
  * - X-Real-IP

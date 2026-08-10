@@ -38,6 +38,10 @@ import { useTRPC } from '@/trpc/react';
 import { bibleBookName, formatVerseRef } from '@/util/bible-url';
 import { formatTime } from '@/util/format';
 import { joinAdjacentMarks } from '@/util/highlight';
+import {
+  isTooManyRequestsError,
+  SEARCH_RATE_LIMIT_MESSAGE,
+} from '@/util/search-rate-limit-error';
 
 type TranscriptSegment = {
   start: number;
@@ -112,8 +116,8 @@ export const Route = createFileRoute('/_main/search')({
       deps.dateStart != null ||
       deps.dateEnd != null;
     if (deps.q || hasFacets) {
-      const searchOptions =
-        context.trpc.search.hybridSearch.infiniteQueryOptions({
+      const searchOptions = {
+        ...context.trpc.search.hybridSearch.infiniteQueryOptions({
           q: deps.q ?? '',
           channelSlugs: deps.channelSlugs,
           bibleRefs: deps.bibleRefs,
@@ -125,7 +129,12 @@ export const Route = createFileRoute('/_main/search')({
           dateGte: deps.dateStart,
           dateLte: deps.dateEnd,
           skipLogging: deps.skipLogging,
-        });
+        }),
+        // Search requests are expensive and should never multiply themselves
+        // after a server or network failure.
+        retry: false,
+        refetchOnWindowFocus: false,
+      };
 
       // On the server (initial load / crawlers) await results so the HTML and
       // the OG `<meta>` image (first result's thumbnail) are complete. On client
@@ -134,8 +143,19 @@ export const Route = createFileRoute('/_main/search')({
       // clicking a related-search pill transitions instantly instead of freezing
       // on the old page.
       if (typeof window === 'undefined') {
-        const searchData =
-          await context.queryClient.fetchInfiniteQuery(searchOptions);
+        let searchData;
+        try {
+          searchData =
+            await context.queryClient.fetchInfiniteQuery(searchOptions);
+        } catch (error) {
+          if (!isTooManyRequestsError(error)) throw error;
+
+          return {
+            query: deps.q,
+            firstResultThumbnailUrl: null,
+            rateLimited: true,
+          };
+        }
         const firstItem = searchData?.pages?.[0]?.items?.[0] as
           | SearchResultItem
           | undefined;
@@ -146,11 +166,19 @@ export const Route = createFileRoute('/_main/search')({
               }),
             )
           : null;
-        return { query: deps.q, firstResultThumbnailUrl };
+        return {
+          query: deps.q,
+          firstResultThumbnailUrl,
+          rateLimited: false,
+        };
       }
 
       void context.queryClient.prefetchInfiniteQuery(searchOptions);
-      return { query: deps.q, firstResultThumbnailUrl: null };
+      return {
+        query: deps.q,
+        firstResultThumbnailUrl: null,
+        rateLimited: false,
+      };
     }
 
     // Prefetch trending uploads for empty search
@@ -161,6 +189,7 @@ export const Route = createFileRoute('/_main/search')({
     return {
       query: undefined,
       firstResultThumbnailUrl: null,
+      rateLimited: false,
     };
   },
   head: ({ loaderData }) => {
@@ -266,6 +295,7 @@ export const Route = createFileRoute('/_main/search')({
 
 function RouteComponent() {
   const search = Route.useSearch();
+  const { rateLimited } = Route.useLoaderData();
   const { q } = search;
   // A facet-only browse (e.g. a `?bibleRefs=[...]` link with no free text) shows
   // results too, not the empty/trending state.
@@ -288,7 +318,13 @@ function RouteComponent() {
         </div>
       }
     >
-      {q || hasFacets ? <SearchResults q={q ?? ''} /> : <NoSearch />}
+      {rateLimited ? (
+        <SearchRateLimited />
+      ) : q || hasFacets ? (
+        <SearchResults q={q ?? ''} />
+      ) : (
+        <NoSearch />
+      )}
     </MainLayout>
   );
 }
@@ -371,6 +407,48 @@ function FindingRelated() {
   );
 }
 
+function SearchRateLimited() {
+  return (
+    <EmptyState
+      emptyTitle="Search is temporarily limited"
+      emptyBody={SEARCH_RATE_LIMIT_MESSAGE}
+      variant="error"
+    />
+  );
+}
+
+function SearchRateLimitNotice() {
+  return (
+    <p
+      className="rounded-lg border border-orange-400/30 bg-orange-400/10 px-4 py-3 text-sm text-orange-700 dark:text-orange-200"
+      role="status"
+    >
+      Search limit reached. Wait a moment before loading more results.
+    </p>
+  );
+}
+
+function SearchFailed() {
+  return (
+    <EmptyState
+      emptyTitle="Search could not be loaded"
+      emptyBody="Please wait a moment and try again"
+      variant="error"
+    />
+  );
+}
+
+function SearchFailureNotice() {
+  return (
+    <p
+      className="text-muted rounded-lg border border-white/10 px-4 py-3 text-sm"
+      role="status"
+    >
+      Some results could not be loaded. Try the search again in a moment.
+    </p>
+  );
+}
+
 function SearchResults({ q }: { q: string }) {
   const {
     channelSlugs,
@@ -427,6 +505,7 @@ function SearchResults({ q }: { q: string }) {
     isFetchingNextPage: fastIsFetchingNextPage,
     isPending,
     isPlaceholderData,
+    error: fastError,
   } = useInfiniteQuery({
     ...trpc.search.hybridSearch.infiniteQueryOptions({
       q,
@@ -449,6 +528,8 @@ function SearchResults({ q }: { q: string }) {
     // (which is filter-independent anyway). A genuinely new query still
     // skeletons, gated below.
     placeholderData: keepPreviousData,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   const fastFirstPage = fastData?.pages?.[0];
@@ -473,6 +554,7 @@ function SearchResults({ q }: { q: string }) {
     hasNextPage: deepHasNextPage,
     isFetchingNextPage: deepIsFetchingNextPage,
     isPending: deepIsPending,
+    error: deepError,
   } = useInfiniteQuery({
     ...trpc.search.hybridSearch.infiniteQueryOptions({
       q,
@@ -491,6 +573,8 @@ function SearchResults({ q }: { q: string }) {
     getNextPageParam,
     initialPageParam: 0,
     enabled: wantDeep,
+    retry: false,
+    refetchOnWindowFocus: false,
     // No keepPreviousData: on a new query the deep cache must reset to undefined
     // (not show the prior query's deep hits) until this query's fallback resolves.
   });
@@ -511,6 +595,10 @@ function SearchResults({ q }: { q: string }) {
   const isFetchingNextPage = showDeep
     ? deepIsFetchingNextPage
     : fastIsFetchingNextPage;
+  const fastRateLimited = isTooManyRequestsError(fastError);
+  const deepRateLimited = isTooManyRequestsError(deepError);
+  const activeError = showDeep ? deepError : fastError;
+  const partialError = activeError ?? deepError;
 
   // The search-log id ALWAYS comes from the fast pass — the deep pass re-runs the
   // same query and deliberately doesn't log (so no duplicate row), returning a
@@ -664,7 +752,7 @@ function SearchResults({ q }: { q: string }) {
       (entries) => {
         const target = entries[0];
         if (target?.isIntersecting) {
-          if (hasNextPage && !isFetchingNextPage) {
+          if (hasNextPage && !isFetchingNextPage && activeError == null) {
             fetchNextPage();
           }
         }
@@ -683,7 +771,7 @@ function SearchResults({ q }: { q: string }) {
     return () => {
       observer.disconnect();
     };
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [activeError, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const mediaCount = firstPage?.mediaCount ?? 0;
   const channels = firstPage
@@ -705,6 +793,10 @@ function SearchResults({ q }: { q: string }) {
 
   if (!q && !hasFacets) {
     return <NoSearch />;
+  }
+
+  if (fastError != null && fastData == null) {
+    return fastRateLimited ? <SearchRateLimited /> : <SearchFailed />;
   }
 
   return (
@@ -797,13 +889,21 @@ function SearchResults({ q }: { q: string }) {
           ) : digging ? (
             // No lexical hits at all yet — the fallback is the only thing running.
             <FindingRelated />
-          ) : (
+          ) : partialError != null ? null : (
             <EmptyState
               emptyTitle="There are no matches"
               emptyBody="Try rephrasing your query or removing filters"
               variant="error"
             />
           )}
+
+          {partialError != null ? (
+            fastRateLimited || deepRateLimited ? (
+              <SearchRateLimitNotice />
+            ) : (
+              <SearchFailureNotice />
+            )
+          ) : null}
 
           {/* Infinite scroll trigger */}
           <div ref={loadMoreRef} className="h-20" />

@@ -16,6 +16,8 @@ import {
 import { createTRPCOptionsProxy } from '@trpc/tanstack-react-query';
 import superjson from 'superjson';
 
+import { getForwardedTrpcHeaders } from './forwarded-headers';
+
 function getUrl() {
   const base = (() => {
     if (typeof window !== 'undefined') {
@@ -37,15 +39,7 @@ const getIncomingHeaders = createIsomorphicFn()
   .client(() => ({}))
   .server(() => {
     const request = getRequest();
-    const headers: Record<string, string> = {};
-
-    // Explicitly forward the cookie header for authentication during SSR
-    const cookie = request.headers.get('cookie');
-    if (cookie) {
-      headers.cookie = cookie;
-    }
-
-    return headers;
+    return getForwardedTrpcHeaders(request.headers);
   });
 
 /**
