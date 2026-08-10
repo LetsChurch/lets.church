@@ -22,7 +22,10 @@ const targetMappings: Record<
   string, // index name
   {
     properties: Record<string, Record<string, unknown>>;
+    // Creation-only settings may be static. Dynamic settings are also applied
+    // to existing indexes on every push-mappings run.
     settings?: Record<string, unknown>;
+    dynamicSettings?: Record<string, unknown>;
   }
 > = {
   lc_channels: {
@@ -80,6 +83,13 @@ const targetMappings: Record<
       // Static setting — applied at index creation, so a fresh reindex is
       // required to turn it on for an existing index.
       'index.knn': true,
+    },
+    dynamicSettings: {
+      // Large sermon documents contain several vector fields. Refreshing once
+      // per second creates many tiny vector segments during imports, which then
+      // compete with searches while OpenSearch merges them. A short visibility
+      // delay substantially reduces that merge churn.
+      refresh_interval: '30s',
     },
     properties: {
       // identity + access-control denormalization
@@ -312,7 +322,23 @@ for (const [name, mappings] of Object.entries(targetMappings)) {
     moduleLogger.info(`Creating index: ${name}`);
     await client.indices.create({
       index: name,
-      body: { settings: mappings.settings },
+      body: {
+        settings: {
+          ...mappings.settings,
+          ...mappings.dynamicSettings,
+        },
+      },
+    });
+  }
+
+  // Dynamic settings are deliberately reconciled for existing indexes too.
+  // Keeping this in push-mappings makes the checked-in configuration the source
+  // of truth instead of requiring one-off production API calls.
+  if (mappings.dynamicSettings) {
+    moduleLogger.info(`PUTting dynamic index settings for ${name}`);
+    await client.indices.putSettings({
+      index: name,
+      body: mappings.dynamicSettings,
     });
   }
 
