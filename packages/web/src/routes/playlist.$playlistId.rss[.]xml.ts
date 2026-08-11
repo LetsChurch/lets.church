@@ -1,11 +1,14 @@
-import { db } from '@letschurch/db';
+import { db, UploadListEntry, UploadRecord } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import { createFileRoute } from '@tanstack/react-router';
+import { and, asc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { Feed } from 'feed';
 
 import { IncomingIdSchema, idTranslator } from '@/schemas/common';
 import { rssFeedIcon } from '@/util/image-sizes';
+import { getListUploadVisibilities } from '@/util/list-visibility-rules';
 import logger from '@/util/logger';
+import { isChannelRoutable } from '@/util/media-visibility';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { escapeHtml } from '@/util/xss';
@@ -34,6 +37,7 @@ export const Route = createFileRoute('/playlist/$playlistId/rss.xml')({
               id: true,
               title: true,
               type: true,
+              visibility: true,
             },
             with: {
               author: {
@@ -87,11 +91,7 @@ export const Route = createFileRoute('/playlist/$playlistId/rss.xml')({
             });
           }
 
-          if (
-            playlist.channel.visibility !== 'PUBLIC' ||
-            !playlist.channel.approvedAt ||
-            playlist.channel.deletedAt
-          ) {
+          if (!isChannelRoutable(playlist.channel)) {
             moduleLogger.warn(
               {
                 context: {
@@ -137,40 +137,36 @@ export const Route = createFileRoute('/playlist/$playlistId/rss.xml')({
             }),
           });
 
-          // Fetch playlist entries ordered by rank
-          const entries = await db.query.UploadListEntry.findMany({
-            where: (t, { eq }) => eq(t.uploadListId, parsedPlaylistId),
-            columns: {},
-            with: {
-              upload: {
-                columns: {
-                  id: true,
-                  title: true,
-                  description: true,
-                  publishedAt: true,
-                  defaultThumbnailPath: true,
-                  overrideThumbnailPath: true,
-                  visibility: true,
-                  transcodingFinishedAt: true,
-                  deletedAt: true,
-                },
-              },
-            },
-            orderBy: (t, { asc }) => [asc(t.rank), asc(t.createdAt)],
-            limit: 500,
-          });
-
-          // Filter to public, transcoded, non-deleted uploads
-          const filteredEntries = entries.filter(
-            (e) =>
-              e.upload.visibility === 'PUBLIC' &&
-              e.upload.transcodingFinishedAt !== null &&
-              e.upload.deletedAt === null,
-          );
+          // Filter before applying the feed limit so hidden entries cannot
+          // crowd visible uploads out of the feed.
+          const uploads = await db
+            .select({
+              id: UploadRecord.id,
+              title: UploadRecord.title,
+              description: UploadRecord.description,
+              publishedAt: UploadRecord.publishedAt,
+              defaultThumbnailPath: UploadRecord.defaultThumbnailPath,
+              overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
+            })
+            .from(UploadListEntry)
+            .innerJoin(
+              UploadRecord,
+              and(
+                eq(UploadListEntry.uploadRecordId, UploadRecord.id),
+                inArray(
+                  UploadRecord.visibility,
+                  getListUploadVisibilities(playlist.visibility),
+                ),
+                isNotNull(UploadRecord.transcodingFinishedAt),
+                isNull(UploadRecord.deletedAt),
+              ),
+            )
+            .where(eq(UploadListEntry.uploadListId, parsedPlaylistId))
+            .orderBy(asc(UploadListEntry.rank), asc(UploadListEntry.createdAt))
+            .limit(500);
 
           // Add items to feed
-          for (const entry of filteredEntries) {
-            const upload = entry.upload;
+          for (const upload of uploads) {
             const thumbnailUrl = resolveThumbnailUrl({
               overrideThumbnailPath: upload.overrideThumbnailPath,
               defaultThumbnailPath: upload.defaultThumbnailPath,
@@ -217,7 +213,7 @@ export const Route = createFileRoute('/playlist/$playlistId/rss.xml')({
             {
               context: {
                 playlistTitle: playlist.title,
-                itemCount: filteredEntries.length,
+                itemCount: uploads.length,
               },
             },
             'Playlist RSS feed generated successfully',
@@ -227,7 +223,13 @@ export const Route = createFileRoute('/playlist/$playlistId/rss.xml')({
             status: 200,
             headers: {
               'Content-Type': 'application/rss+xml; charset=utf-8',
-              'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+              'Cache-Control':
+                playlist.visibility === 'UNLISTED'
+                  ? 'private, no-store'
+                  : 'public, max-age=3600',
+              ...(playlist.visibility === 'UNLISTED'
+                ? { 'X-Robots-Tag': 'noindex, nofollow' }
+                : {}),
             },
           });
         } catch (error) {

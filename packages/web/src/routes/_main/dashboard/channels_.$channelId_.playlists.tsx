@@ -108,6 +108,7 @@ function PlaylistsPage() {
     defaultValues: {
       title: '',
       type: 'PLAYLIST' as const,
+      visibility: 'PUBLIC' as const,
     },
     onSubmit: async ({ value }) => {
       createPlaylistMutation.mutate({
@@ -159,6 +160,13 @@ function PlaylistsPage() {
                     color={playlist.type === 'PLAYLIST' ? 'blue' : 'green'}
                   >
                     {playlist.type}
+                  </Badge>
+                  <Badge
+                    color={
+                      playlist.visibility === 'PUBLIC' ? 'green' : 'yellow'
+                    }
+                  >
+                    {playlist.visibility}
                   </Badge>
                 </div>
                 <div className="flex flex-wrap items-center justify-start gap-4">
@@ -238,6 +246,18 @@ function PlaylistsPage() {
                       data={[
                         { value: 'PLAYLIST', label: 'Playlist' },
                         { value: 'SERIES', label: 'Series' },
+                      ]}
+                    />
+                  )}
+                </form.AppField>
+                <form.AppField name="visibility">
+                  {(field) => (
+                    <field.SelectField
+                      label="Visibility"
+                      description="Unlisted lists are available to anyone with the link but do not appear on your channel."
+                      data={[
+                        { value: 'PUBLIC', label: 'Public' },
+                        { value: 'UNLISTED', label: 'Unlisted' },
                       ]}
                     />
                   )}

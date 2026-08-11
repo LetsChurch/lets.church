@@ -243,6 +243,7 @@ function PlaylistDetailsPage() {
     defaultValues: {
       title: playlist.title,
       type: playlist.type,
+      visibility: playlist.visibility,
     },
     onSubmit: async ({ value }) => {
       updatePlaylistMutation.mutate({
@@ -335,6 +336,11 @@ function PlaylistDetailsPage() {
             <Title order={2}>{playlist.title}</Title>
             <Badge color={playlist.type === 'PLAYLIST' ? 'blue' : 'green'}>
               {playlist.type}
+            </Badge>
+            <Badge
+              color={playlist.visibility === 'PUBLIC' ? 'green' : 'yellow'}
+            >
+              {playlist.visibility}
             </Badge>
           </div>
           <Text size="sm" c="dimmed">
@@ -529,6 +535,18 @@ function PlaylistDetailsPage() {
                       data={[
                         { value: 'PLAYLIST', label: 'Playlist' },
                         { value: 'SERIES', label: 'Series' },
+                      ]}
+                    />
+                  )}
+                </editForm.AppField>
+                <editForm.AppField name="visibility">
+                  {(field) => (
+                    <field.SelectField
+                      label="Visibility"
+                      description="Unlisted lists are available to anyone with the link but do not appear on your channel."
+                      data={[
+                        { value: 'PUBLIC', label: 'Public' },
+                        { value: 'UNLISTED', label: 'Unlisted' },
                       ]}
                     />
                   )}

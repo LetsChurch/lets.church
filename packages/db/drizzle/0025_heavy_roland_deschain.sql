@@ -1,0 +1,2 @@
+CREATE TYPE "public"."upload_list_visibility" AS ENUM('PUBLIC', 'UNLISTED');--> statement-breakpoint
+ALTER TABLE "upload_list" ADD COLUMN "visibility" "upload_list_visibility" DEFAULT 'PUBLIC' NOT NULL;

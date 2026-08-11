@@ -3002,6 +3002,7 @@ export const channelRouter = router({
         id: UploadList.id,
         title: UploadList.title,
         type: UploadList.type,
+        visibility: UploadList.visibility,
         createdAt: UploadList.createdAt,
         updatedAt: UploadList.updatedAt,
         uploadCount: sql<number>`coalesce(${uploadCountSq.cnt}, 0)::int`,
@@ -3015,6 +3016,7 @@ export const channelRouter = router({
       id: playlist.id,
       title: playlist.title,
       type: playlist.type,
+      visibility: playlist.visibility,
       createdAt: playlist.createdAt,
       updatedAt: playlist.updatedAt,
       _count: { uploads: playlist.uploadCount },
@@ -3082,6 +3084,7 @@ export const channelRouter = router({
           id: true,
           title: true,
           type: true,
+          visibility: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -3152,6 +3155,7 @@ export const channelRouter = router({
           .values({
             title: input.title,
             type: input.type,
+            visibility: input.visibility,
             authorId: ctx.session.appUser.id,
             channelId: input.channelId,
             updatedAt: new Date(),
@@ -3160,6 +3164,7 @@ export const channelRouter = router({
             id: UploadList.id,
             title: UploadList.title,
             type: UploadList.type,
+            visibility: UploadList.visibility,
             createdAt: UploadList.createdAt,
           });
 
@@ -3219,6 +3224,7 @@ export const channelRouter = router({
           .set({
             title: input.title,
             type: input.type,
+            ...(input.visibility ? { visibility: input.visibility } : {}),
             updatedAt: new Date(),
           })
           .where(
@@ -3231,6 +3237,7 @@ export const channelRouter = router({
             id: UploadList.id,
             title: UploadList.title,
             type: UploadList.type,
+            visibility: UploadList.visibility,
             updatedAt: UploadList.updatedAt,
           });
 

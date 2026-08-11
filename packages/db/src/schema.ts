@@ -227,6 +227,11 @@ export const UploadListType = pgEnum('upload_list_type', [
   'PLAYLIST',
 ]);
 
+export const UploadListVisibility = pgEnum('upload_list_visibility', [
+  'PUBLIC',
+  'UNLISTED',
+]);
+
 export const NewsletterListType = pgEnum('newsletter_list_type', [
   'public',
   'private',
@@ -2111,6 +2116,7 @@ export const UploadList = pgTable(
     authorId: uuid('author_id').notNull(),
     channelId: uuid('channel_id'),
     type: UploadListType('type').notNull(),
+    visibility: UploadListVisibility('visibility').notNull().default('PUBLIC'),
   },
   (UploadList) => ({
     upload_list_author_fkey: foreignKey({

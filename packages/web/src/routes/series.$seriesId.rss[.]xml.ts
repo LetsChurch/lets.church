@@ -1,12 +1,14 @@
 import { db, UploadListEntry, UploadRecord } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import { createFileRoute } from '@tanstack/react-router';
-import { and, asc, eq, isNotNull, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { Feed } from 'feed';
 
 import { IncomingIdSchema, idTranslator } from '@/schemas/common';
 import { rssFeedIcon } from '@/util/image-sizes';
+import { getListUploadVisibilities } from '@/util/list-visibility-rules';
 import logger from '@/util/logger';
+import { isChannelRoutable } from '@/util/media-visibility';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { escapeHtml } from '@/util/xss';
@@ -35,6 +37,7 @@ export const Route = createFileRoute('/series/$seriesId/rss.xml')({
               id: true,
               title: true,
               type: true,
+              visibility: true,
             },
             with: {
               author: {
@@ -88,11 +91,7 @@ export const Route = createFileRoute('/series/$seriesId/rss.xml')({
             });
           }
 
-          if (
-            series.channel.visibility !== 'PUBLIC' ||
-            !series.channel.approvedAt ||
-            series.channel.deletedAt
-          ) {
+          if (!isChannelRoutable(series.channel)) {
             moduleLogger.warn(
               {
                 context: {
@@ -151,7 +150,10 @@ export const Route = createFileRoute('/series/$seriesId/rss.xml')({
               UploadRecord,
               and(
                 eq(UploadListEntry.uploadRecordId, UploadRecord.id),
-                eq(UploadRecord.visibility, 'PUBLIC'),
+                inArray(
+                  UploadRecord.visibility,
+                  getListUploadVisibilities(series.visibility),
+                ),
                 isNotNull(UploadRecord.transcodingFinishedAt),
                 isNull(UploadRecord.deletedAt),
               ),
@@ -217,7 +219,13 @@ export const Route = createFileRoute('/series/$seriesId/rss.xml')({
             status: 200,
             headers: {
               'Content-Type': 'application/rss+xml; charset=utf-8',
-              'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+              'Cache-Control':
+                series.visibility === 'UNLISTED'
+                  ? 'private, no-store'
+                  : 'public, max-age=3600',
+              ...(series.visibility === 'UNLISTED'
+                ? { 'X-Robots-Tag': 'noindex, nofollow' }
+                : {}),
             },
           });
         } catch (error) {

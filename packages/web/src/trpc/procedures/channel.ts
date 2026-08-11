@@ -504,7 +504,12 @@ export const channelProcedures = {
           firstThumbnailSq,
           eq(UploadList.id, firstThumbnailSq.uploadListId),
         )
-        .where(eq(UploadList.channelId, channelRecord.id))
+        .where(
+          and(
+            eq(UploadList.channelId, channelRecord.id),
+            eq(UploadList.visibility, 'PUBLIC'),
+          ),
+        )
         .orderBy(desc(UploadList.createdAt));
 
       return playlists.map((playlist) => {

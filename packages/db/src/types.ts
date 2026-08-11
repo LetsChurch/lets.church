@@ -17,6 +17,7 @@ import {
   type UploadListEntry as UploadListEntryTable,
   type UploadList as UploadListTable,
   UploadListType as UploadListTypeEnum,
+  UploadListVisibility as UploadListVisibilityEnum,
   type UploadRecord as UploadRecordTable,
   type UploadUserCommentRating as UploadUserCommentRatingTable,
   type UploadUserComment as UploadUserCommentTable,
@@ -72,6 +73,11 @@ export const UploadListType = makeEnum(UploadListTypeEnum);
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export type UploadListType =
   (typeof UploadListType)[keyof typeof UploadListType];
+
+export const UploadListVisibility = makeEnum(UploadListVisibilityEnum);
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export type UploadListVisibility =
+  (typeof UploadListVisibility)[keyof typeof UploadListVisibility];
 
 export const UploadViewSource = makeEnum(UploadViewSourceEnum);
 // eslint-disable-next-line @typescript-eslint/no-redeclare

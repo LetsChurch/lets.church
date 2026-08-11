@@ -675,6 +675,13 @@ enum UploadListType {
   @@map("upload_list_type")
 }
 
+enum UploadListVisibility {
+  PUBLIC
+  UNLISTED
+
+  @@map("upload_list_visibility")
+}
+
 model UploadListEntry {
   uploadList     UploadList   @relation(fields: [uploadListId], references: [id])
   uploadListId   String       @map("upload_list_id") @db.Uuid
@@ -689,16 +696,17 @@ model UploadListEntry {
 }
 
 model UploadList {
-  id        String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  createdAt DateTime          @default(now()) @map("created_at")
-  updatedAt DateTime          @updatedAt @map("updated_at")
-  title     String
-  author    AppUser           @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  authorId  String            @map("author_id") @db.Uuid
-  channel   Channel?          @relation(fields: [channelId], references: [id])
-  channelId String?           @map("channel_id") @db.Uuid
-  type      UploadListType
-  uploads   UploadListEntry[]
+  id         String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt  DateTime             @default(now()) @map("created_at")
+  updatedAt  DateTime             @updatedAt @map("updated_at")
+  title      String
+  author     AppUser              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId   String               @map("author_id") @db.Uuid
+  channel    Channel?             @relation(fields: [channelId], references: [id])
+  channelId  String?              @map("channel_id") @db.Uuid
+  type       UploadListType
+  visibility UploadListVisibility @default(PUBLIC)
+  uploads    UploadListEntry[]
 
   @@unique([createdAt, id])
   @@map("upload_list")

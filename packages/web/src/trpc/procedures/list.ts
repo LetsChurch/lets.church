@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarXs2x } from '@/util/avatar-sizes';
+import { canShowUploadInList } from '@/util/list-visibility-rules';
 import logger from '@/util/logger';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
@@ -33,6 +34,7 @@ export const listProcedures = {
           id: true,
           title: true,
           type: true,
+          visibility: true,
         },
         with: {
           channel: {
@@ -123,14 +125,14 @@ export const listProcedures = {
         orderBy: (t, { asc }) => [asc(t.rank), asc(t.createdAt)],
       });
 
-      // Filter to viewable, transcoded, non-deleted uploads. Mirror
-      // getMediaById's access model: UNLISTED uploads stay reachable by direct
-      // link, so only PRIVATE is gated. Without this, an UNLISTED media item
-      // reached directly would render with an empty series sidebar because its
-      // own entry (and any sibling UNLISTED entries) got filtered out.
+      // The list's visibility defines the collection's share boundary. A
+      // PUBLIC list must not reveal UNLISTED siblings when its id arrives via a
+      // public media link; an UNLISTED list may reveal both PUBLIC and UNLISTED
+      // uploads to anyone who has the list link. PRIVATE uploads never inherit
+      // access from a list.
       const filteredEntries = entries.filter(
         (e) =>
-          e.upload.visibility !== 'PRIVATE' &&
+          canShowUploadInList(list.visibility, e.upload.visibility) &&
           e.upload.transcodingFinishedAt !== null &&
           e.upload.deletedAt === null,
       );

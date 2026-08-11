@@ -31,6 +31,7 @@ import { z } from 'zod';
 
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarXs2x } from '@/util/avatar-sizes';
+import { canExposeListWithoutDirectLink } from '@/util/list-visibility-rules';
 import logger from '@/util/logger';
 import { canViewMediaById } from '@/util/media-visibility';
 import { getMuxLivePlaybackUrl } from '@/util/mux';
@@ -672,7 +673,11 @@ export const mediaProcedures = {
 
       // Look up the upload's series (if any)
       const [seriesRow] = await db
-        .select({ id: UploadList.id, title: UploadList.title })
+        .select({
+          id: UploadList.id,
+          title: UploadList.title,
+          visibility: UploadList.visibility,
+        })
         .from(UploadListEntry)
         .innerJoin(UploadList, eq(UploadListEntry.uploadListId, UploadList.id))
         .where(
@@ -683,9 +688,14 @@ export const mediaProcedures = {
         )
         .limit(1);
 
-      const series = seriesRow
-        ? { id: OutgoingIdSchema.parse(seriesRow.id), title: seriesRow.title }
-        : null;
+      // An UNLISTED series has its own direct-link capability. Possessing one
+      // media URL must not disclose that series id or grant access to its other
+      // uploads. Links rendered from a series carry an explicit ?list= value,
+      // which preserves collection context without weakening this boundary.
+      const series =
+        seriesRow && canExposeListWithoutDirectLink(seriesRow.visibility)
+          ? { id: OutgoingIdSchema.parse(seriesRow.id), title: seriesRow.title }
+          : null;
 
       const { sections: _sections, ...mediaRestNoSections } = mediaRest;
 

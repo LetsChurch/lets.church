@@ -69,6 +69,14 @@ export const Route = createFileRoute('/_main/playlist/$playlistId')({
           name: 'description',
           content: description,
         },
+        ...(playlist.visibility === 'UNLISTED'
+          ? [
+              {
+                name: 'robots',
+                content: 'noindex, nofollow',
+              },
+            ]
+          : []),
         // OpenGraph tags
         {
           property: 'og:url',
@@ -133,12 +141,16 @@ export const Route = createFileRoute('/_main/playlist/$playlistId')({
           rel: 'canonical',
           href: `https://lets.church/playlist/${playlist.id}`,
         },
-        {
-          rel: 'alternate',
-          type: 'application/rss+xml',
-          title: `${playlist.title} - RSS Feed`,
-          href: `https://lets.church/playlist/${playlist.id}/rss.xml`,
-        },
+        ...(playlist.visibility === 'PUBLIC'
+          ? [
+              {
+                rel: 'alternate',
+                type: 'application/rss+xml',
+                title: `${playlist.title} - RSS Feed`,
+                href: `https://lets.church/playlist/${playlist.id}/rss.xml`,
+              },
+            ]
+          : []),
       ],
     };
   },
@@ -253,6 +265,10 @@ function RouteComponent() {
             {playlist.uploadCount === 1 ? 'upload' : 'uploads'}
           </span>
 
+          {playlist.visibility === 'UNLISTED' ? (
+            <span className="text-zinc-400">Unlisted</span>
+          ) : null}
+
           <span className="text-zinc-400">
             Created {formatDistanceToNow(new Date(playlist.createdAt))} ago
           </span>
@@ -300,8 +316,8 @@ function RouteComponent() {
         </>
       ) : (
         <EmptyState
-          emptyTitle="No public uploads"
-          emptyBody="This playlist doesn't have any public uploads yet."
+          emptyTitle="No available uploads"
+          emptyBody="This playlist doesn't have any available uploads yet."
           emptyCta="Browse Content"
           emptyCtaHref="/"
         />

@@ -1,11 +1,29 @@
 import { Channel, db, UploadListEntry, UploadRecord } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
-import { and, asc, count, eq, isNotNull, isNull } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  eq,
+  exists,
+  inArray,
+  isNotNull,
+  isNull,
+} from 'drizzle-orm';
 import { z } from 'zod';
 
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarMd2x, appAvatarXs2x } from '@/util/avatar-sizes';
+import {
+  encodeListMediaCursor,
+  listMediaCursorSchema,
+} from '@/util/list-pagination';
+import {
+  canShowUploadInList,
+  getListUploadVisibilities,
+} from '@/util/list-visibility-rules';
 import logger from '@/util/logger';
+import { isChannelRoutable } from '@/util/media-visibility';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 
@@ -22,7 +40,7 @@ const seriesQuerySchema = z.object({
 const seriesMediaQuerySchema = z.object({
   seriesId: IncomingIdSchema,
   limit: z.number().min(1).max(50).default(20),
-  cursor: z.string().nullable().optional(), // ISO date string
+  cursor: listMediaCursorSchema.nullable().optional(),
 });
 
 export const seriesProcedures = {
@@ -33,13 +51,14 @@ export const seriesProcedures = {
 
       moduleLogger.info({ context: { seriesId } }, 'Fetching all series items');
 
-      // First verify series exists and channel is public
+      // First verify the series and its channel are directly routable.
       const series = await db.query.UploadList.findFirst({
         where: (t, { eq }) => eq(t.id, seriesId),
         columns: {
           id: true,
           title: true,
           type: true,
+          visibility: true,
         },
         with: {
           channel: {
@@ -58,11 +77,7 @@ export const seriesProcedures = {
       }
 
       if (series.channel) {
-        if (
-          series.channel.visibility !== 'PUBLIC' ||
-          !series.channel.approvedAt ||
-          series.channel.deletedAt
-        ) {
+        if (!isChannelRoutable(series.channel)) {
           moduleLogger.warn(
             {
               context: {
@@ -111,10 +126,10 @@ export const seriesProcedures = {
         orderBy: (t, { asc }) => [asc(t.rank), asc(t.createdAt)],
       });
 
-      // Filter to public, transcoded, non-deleted uploads
+      // UNLISTED series can reveal UNLISTED uploads to direct-link viewers.
       const filteredEntries = entries.filter(
         (e) =>
-          e.upload.visibility === 'PUBLIC' &&
+          canShowUploadInList(series.visibility, e.upload.visibility) &&
           e.upload.transcodingFinishedAt !== null &&
           e.upload.deletedAt === null,
       );
@@ -170,54 +185,37 @@ export const seriesProcedures = {
 
       moduleLogger.info({ context: { seriesId } }, 'Fetching public series');
 
-      const [series, mediaCountResult] = await Promise.all([
-        db.query.UploadList.findFirst({
-          where: (t, { eq }) => eq(t.id, seriesId),
-          columns: {
-            id: true,
-            title: true,
-            type: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-          with: {
-            author: {
-              columns: {
-                id: true,
-                username: true,
-                avatarPath: true,
-              },
-            },
-            channel: {
-              columns: {
-                id: true,
-                name: true,
-                slug: true,
-                avatarPath: true,
-                visibility: true,
-                approvedAt: true,
-                deletedAt: true,
-              },
+      const series = await db.query.UploadList.findFirst({
+        where: (t, { eq }) => eq(t.id, seriesId),
+        columns: {
+          id: true,
+          title: true,
+          type: true,
+          visibility: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        with: {
+          author: {
+            columns: {
+              id: true,
+              username: true,
+              avatarPath: true,
             },
           },
-        }),
-        db
-          .select({ count: count() })
-          .from(UploadListEntry)
-          .innerJoin(
-            UploadRecord,
-            eq(UploadListEntry.uploadRecordId, UploadRecord.id),
-          )
-          .where(
-            and(
-              eq(UploadListEntry.uploadListId, seriesId),
-              eq(UploadRecord.visibility, 'PUBLIC'),
-              isNotNull(UploadRecord.transcodingFinishedAt),
-              isNull(UploadRecord.deletedAt),
-            ),
-          )
-          .then((r) => r[0]),
-      ]);
+          channel: {
+            columns: {
+              id: true,
+              name: true,
+              slug: true,
+              avatarPath: true,
+              visibility: true,
+              approvedAt: true,
+              deletedAt: true,
+            },
+          },
+        },
+      });
 
       if (!series) {
         moduleLogger.warn({ context: { seriesId } }, 'Series not found');
@@ -232,13 +230,9 @@ export const seriesProcedures = {
         throw new Error('Series not found');
       }
 
-      // Check if channel exists and is public/approved
+      // UNLISTED channels remain reachable by direct link, matching media.
       if (series.channel) {
-        if (
-          series.channel.visibility !== 'PUBLIC' ||
-          !series.channel.approvedAt ||
-          series.channel.deletedAt
-        ) {
+        if (!isChannelRoutable(series.channel)) {
           moduleLogger.warn(
             {
               context: {
@@ -254,7 +248,27 @@ export const seriesProcedures = {
         }
       }
 
-      const mediaCount = mediaCountResult?.count ?? 0;
+      const mediaCountResult = await db
+        .select({ count: count() })
+        .from(UploadListEntry)
+        .innerJoin(
+          UploadRecord,
+          eq(UploadListEntry.uploadRecordId, UploadRecord.id),
+        )
+        .where(
+          and(
+            eq(UploadListEntry.uploadListId, seriesId),
+            inArray(
+              UploadRecord.visibility,
+              getListUploadVisibilities(series.visibility),
+            ),
+            isNotNull(UploadRecord.transcodingFinishedAt),
+            isNull(UploadRecord.deletedAt),
+          ),
+        )
+        .then((r) => r[0]);
+
+      const mediaCount = Number(mediaCountResult?.count ?? 0);
 
       const authorAvatarUrl = series.author.avatarPath
         ? getPublicImageUrl(
@@ -278,6 +292,7 @@ export const seriesProcedures = {
         id: OutgoingIdSchema.parse(series.id),
         title: series.title,
         type: series.type,
+        visibility: series.visibility,
         createdAt: series.createdAt,
         updatedAt: series.updatedAt,
         author: {
@@ -312,7 +327,7 @@ export const seriesProcedures = {
       // thumbnail URL through this endpoint.
       const series = await db.query.UploadList.findFirst({
         where: (t, { eq }) => eq(t.id, seriesId),
-        columns: { id: true, type: true },
+        columns: { id: true, type: true, visibility: true },
         with: {
           channel: {
             columns: {
@@ -328,12 +343,7 @@ export const seriesProcedures = {
         return null;
       }
 
-      if (
-        series.channel &&
-        (series.channel.visibility !== 'PUBLIC' ||
-          !series.channel.approvedAt ||
-          series.channel.deletedAt)
-      ) {
+      if (series.channel && !isChannelRoutable(series.channel)) {
         return null;
       }
 
@@ -352,7 +362,10 @@ export const seriesProcedures = {
         .where(
           and(
             eq(UploadListEntry.uploadListId, seriesId),
-            eq(UploadRecord.visibility, 'PUBLIC'),
+            inArray(
+              UploadRecord.visibility,
+              getListUploadVisibilities(series.visibility),
+            ),
             isNotNull(UploadRecord.transcodingFinishedAt),
             isNull(UploadRecord.deletedAt),
           ),
@@ -383,12 +396,13 @@ export const seriesProcedures = {
         'Fetching public series media',
       );
 
-      // First verify series exists and channel is public
+      // First verify the series and its channel are directly routable.
       const series = await db.query.UploadList.findFirst({
         where: (t, { eq }) => eq(t.id, seriesId),
         columns: {
           id: true,
           type: true,
+          visibility: true,
         },
         with: {
           channel: {
@@ -407,11 +421,7 @@ export const seriesProcedures = {
       }
 
       if (series.channel) {
-        if (
-          series.channel.visibility !== 'PUBLIC' ||
-          !series.channel.approvedAt ||
-          series.channel.deletedAt
-        ) {
+        if (!isChannelRoutable(series.channel)) {
           moduleLogger.warn(
             {
               context: {
@@ -427,16 +437,63 @@ export const seriesProcedures = {
         }
       }
 
-      // Fetch series entries with uploads
+      // Filter before pagination so hidden entries cannot consume the page
+      // limit and make later visible uploads unreachable.
       const entries = await db.query.UploadListEntry.findMany({
-        where: (t, { eq, and, gt }) =>
-          and(
-            eq(t.uploadListId, seriesId),
-            ...(cursor ? [gt(t.createdAt, new Date(cursor))] : []),
-          ),
+        where: (t, operators) => {
+          const afterCursor = cursor
+            ? cursor.rank === null
+              ? operators.and(
+                  operators.isNull(t.rank),
+                  operators.or(
+                    operators.gt(t.createdAt, cursor.createdAt),
+                    operators.and(
+                      operators.eq(t.createdAt, cursor.createdAt),
+                      operators.gt(t.uploadRecordId, cursor.uploadRecordId),
+                    ),
+                  ),
+                )
+              : operators.or(
+                  operators.gt(t.rank, cursor.rank),
+                  operators.isNull(t.rank),
+                  operators.and(
+                    operators.eq(t.rank, cursor.rank),
+                    operators.or(
+                      operators.gt(t.createdAt, cursor.createdAt),
+                      operators.and(
+                        operators.eq(t.createdAt, cursor.createdAt),
+                        operators.gt(t.uploadRecordId, cursor.uploadRecordId),
+                      ),
+                    ),
+                  ),
+                )
+            : undefined;
+
+          return operators.and(
+            operators.eq(t.uploadListId, seriesId),
+            afterCursor,
+            exists(
+              db
+                .select({ id: UploadRecord.id })
+                .from(UploadRecord)
+                .where(
+                  and(
+                    eq(UploadRecord.id, t.uploadRecordId),
+                    inArray(
+                      UploadRecord.visibility,
+                      getListUploadVisibilities(series.visibility),
+                    ),
+                    isNotNull(UploadRecord.transcodingFinishedAt),
+                    isNull(UploadRecord.deletedAt),
+                  ),
+                ),
+            ),
+          );
+        },
         columns: {
           createdAt: true,
           rank: true,
+          uploadRecordId: true,
         },
         with: {
           upload: {
@@ -465,23 +522,25 @@ export const seriesProcedures = {
             },
           },
         },
-        orderBy: (t, { asc }) => [asc(t.rank), asc(t.createdAt)],
+        orderBy: (t, { asc }) => [
+          asc(t.rank),
+          asc(t.createdAt),
+          asc(t.uploadRecordId),
+        ],
         limit: limit + 1, // Fetch one extra to determine if there are more
       });
 
-      // Filter to public, transcoded, non-deleted uploads
-      const filteredEntries = entries.filter(
-        (e) =>
-          e.upload.visibility === 'PUBLIC' &&
-          e.upload.transcodingFinishedAt !== null &&
-          e.upload.deletedAt === null,
-      );
-
-      const hasMore = filteredEntries.length > limit;
-      const items = hasMore ? filteredEntries.slice(0, limit) : filteredEntries;
-      const nextCursor = hasMore
-        ? (items[items.length - 1].createdAt.toISOString() ?? null)
-        : null;
+      const hasMore = entries.length > limit;
+      const items = hasMore ? entries.slice(0, limit) : entries;
+      const lastItem = items.at(-1);
+      const nextCursor =
+        hasMore && lastItem
+          ? encodeListMediaCursor({
+              rank: lastItem.rank,
+              createdAt: lastItem.createdAt,
+              uploadRecordId: lastItem.uploadRecordId,
+            })
+          : null;
 
       const uploadsWithThumbnails = items.map((entry) => {
         const upload = entry.upload;

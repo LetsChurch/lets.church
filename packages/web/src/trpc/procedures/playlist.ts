@@ -1,11 +1,29 @@
 import { Channel, db, UploadListEntry, UploadRecord } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
-import { and, asc, count, eq, isNotNull, isNull } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  eq,
+  exists,
+  inArray,
+  isNotNull,
+  isNull,
+} from 'drizzle-orm';
 import { z } from 'zod';
 
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarMd2x, appAvatarXs2x } from '@/util/avatar-sizes';
+import {
+  encodeListMediaCursor,
+  listMediaCursorSchema,
+} from '@/util/list-pagination';
+import {
+  canShowUploadInList,
+  getListUploadVisibilities,
+} from '@/util/list-visibility-rules';
 import logger from '@/util/logger';
+import { isChannelRoutable } from '@/util/media-visibility';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 
@@ -22,7 +40,7 @@ const playlistQuerySchema = z.object({
 const playlistMediaQuerySchema = z.object({
   playlistId: IncomingIdSchema,
   limit: z.number().min(1).max(50).default(20),
-  cursor: z.string().nullable().optional(), // ISO date string
+  cursor: listMediaCursorSchema.nullable().optional(),
 });
 
 export const playlistProcedures = {
@@ -36,13 +54,14 @@ export const playlistProcedures = {
         'Fetching all playlist items',
       );
 
-      // First verify playlist exists and channel is public
+      // First verify the playlist and its channel are directly routable.
       const playlist = await db.query.UploadList.findFirst({
         where: (t, { eq }) => eq(t.id, playlistId),
         columns: {
           id: true,
           title: true,
           type: true,
+          visibility: true,
         },
         with: {
           channel: {
@@ -61,11 +80,7 @@ export const playlistProcedures = {
       }
 
       if (playlist.channel) {
-        if (
-          playlist.channel.visibility !== 'PUBLIC' ||
-          !playlist.channel.approvedAt ||
-          playlist.channel.deletedAt
-        ) {
+        if (!isChannelRoutable(playlist.channel)) {
           moduleLogger.warn(
             {
               context: {
@@ -114,10 +129,12 @@ export const playlistProcedures = {
         orderBy: (t, { asc }) => [asc(t.rank), asc(t.createdAt)],
       });
 
-      // Filter to public, transcoded, non-deleted uploads
+      // An UNLISTED playlist is itself the direct-link capability for its
+      // UNLISTED uploads. PUBLIC playlists continue to expose only PUBLIC
+      // uploads, and PRIVATE uploads never inherit access from a playlist.
       const filteredEntries = entries.filter(
         (e) =>
-          e.upload.visibility === 'PUBLIC' &&
+          canShowUploadInList(playlist.visibility, e.upload.visibility) &&
           e.upload.transcodingFinishedAt !== null &&
           e.upload.deletedAt === null,
       );
@@ -176,54 +193,37 @@ export const playlistProcedures = {
         'Fetching public playlist',
       );
 
-      const [playlist, uploadCountResult] = await Promise.all([
-        db.query.UploadList.findFirst({
-          where: (t, { eq }) => eq(t.id, playlistId),
-          columns: {
-            id: true,
-            title: true,
-            type: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-          with: {
-            author: {
-              columns: {
-                id: true,
-                username: true,
-                avatarPath: true,
-              },
-            },
-            channel: {
-              columns: {
-                id: true,
-                name: true,
-                slug: true,
-                avatarPath: true,
-                visibility: true,
-                approvedAt: true,
-                deletedAt: true,
-              },
+      const playlist = await db.query.UploadList.findFirst({
+        where: (t, { eq }) => eq(t.id, playlistId),
+        columns: {
+          id: true,
+          title: true,
+          type: true,
+          visibility: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        with: {
+          author: {
+            columns: {
+              id: true,
+              username: true,
+              avatarPath: true,
             },
           },
-        }),
-        db
-          .select({ count: count() })
-          .from(UploadListEntry)
-          .innerJoin(
-            UploadRecord,
-            eq(UploadListEntry.uploadRecordId, UploadRecord.id),
-          )
-          .where(
-            and(
-              eq(UploadListEntry.uploadListId, playlistId),
-              eq(UploadRecord.visibility, 'PUBLIC'),
-              isNotNull(UploadRecord.transcodingFinishedAt),
-              isNull(UploadRecord.deletedAt),
-            ),
-          )
-          .then((r) => r[0]),
-      ]);
+          channel: {
+            columns: {
+              id: true,
+              name: true,
+              slug: true,
+              avatarPath: true,
+              visibility: true,
+              approvedAt: true,
+              deletedAt: true,
+            },
+          },
+        },
+      });
 
       if (!playlist) {
         moduleLogger.warn({ context: { playlistId } }, 'Playlist not found');
@@ -238,13 +238,9 @@ export const playlistProcedures = {
         throw new Error('Playlist not found');
       }
 
-      // Check if channel exists and is public/approved
+      // UNLISTED channels remain reachable by direct link, matching media.
       if (playlist.channel) {
-        if (
-          playlist.channel.visibility !== 'PUBLIC' ||
-          !playlist.channel.approvedAt ||
-          playlist.channel.deletedAt
-        ) {
+        if (!isChannelRoutable(playlist.channel)) {
           moduleLogger.warn(
             {
               context: {
@@ -259,6 +255,26 @@ export const playlistProcedures = {
           throw new Error('Playlist not found');
         }
       }
+
+      const uploadCountResult = await db
+        .select({ count: count() })
+        .from(UploadListEntry)
+        .innerJoin(
+          UploadRecord,
+          eq(UploadListEntry.uploadRecordId, UploadRecord.id),
+        )
+        .where(
+          and(
+            eq(UploadListEntry.uploadListId, playlistId),
+            inArray(
+              UploadRecord.visibility,
+              getListUploadVisibilities(playlist.visibility),
+            ),
+            isNotNull(UploadRecord.transcodingFinishedAt),
+            isNull(UploadRecord.deletedAt),
+          ),
+        )
+        .then((r) => r[0]);
 
       const uploadCount = Number(uploadCountResult?.count ?? 0);
 
@@ -283,6 +299,7 @@ export const playlistProcedures = {
       return {
         id: OutgoingIdSchema.parse(playlist.id),
         title: playlist.title,
+        visibility: playlist.visibility,
         createdAt: playlist.createdAt,
         updatedAt: playlist.updatedAt,
         author: {
@@ -317,7 +334,7 @@ export const playlistProcedures = {
       // thumbnail URL through this endpoint.
       const playlist = await db.query.UploadList.findFirst({
         where: (t, { eq }) => eq(t.id, playlistId),
-        columns: { id: true, type: true },
+        columns: { id: true, type: true, visibility: true },
         with: {
           channel: {
             columns: {
@@ -333,16 +350,11 @@ export const playlistProcedures = {
         return null;
       }
 
-      if (
-        playlist.channel &&
-        (playlist.channel.visibility !== 'PUBLIC' ||
-          !playlist.channel.approvedAt ||
-          playlist.channel.deletedAt)
-      ) {
+      if (playlist.channel && !isChannelRoutable(playlist.channel)) {
         return null;
       }
 
-      // Get first public, transcoded, non-deleted entry for SEO thumbnail
+      // Resolve the first upload visible through this list's own visibility.
       const firstEntry = await db
         .select({
           overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
@@ -358,7 +370,10 @@ export const playlistProcedures = {
         .where(
           and(
             eq(UploadListEntry.uploadListId, playlistId),
-            eq(UploadRecord.visibility, 'PUBLIC'),
+            inArray(
+              UploadRecord.visibility,
+              getListUploadVisibilities(playlist.visibility),
+            ),
             isNotNull(UploadRecord.transcodingFinishedAt),
             isNull(UploadRecord.deletedAt),
           ),
@@ -389,12 +404,13 @@ export const playlistProcedures = {
         'Fetching public playlist media',
       );
 
-      // First verify playlist exists and channel is public
+      // First verify the playlist and its channel are directly routable.
       const playlist = await db.query.UploadList.findFirst({
         where: (t, { eq }) => eq(t.id, playlistId),
         columns: {
           id: true,
           type: true,
+          visibility: true,
         },
         with: {
           channel: {
@@ -413,11 +429,7 @@ export const playlistProcedures = {
       }
 
       if (playlist.channel) {
-        if (
-          playlist.channel.visibility !== 'PUBLIC' ||
-          !playlist.channel.approvedAt ||
-          playlist.channel.deletedAt
-        ) {
+        if (!isChannelRoutable(playlist.channel)) {
           moduleLogger.warn(
             {
               context: {
@@ -433,16 +445,63 @@ export const playlistProcedures = {
         }
       }
 
-      // Fetch playlist entries with uploads
+      // Filter before pagination so hidden entries cannot consume the page
+      // limit and make later visible uploads unreachable.
       const entries = await db.query.UploadListEntry.findMany({
-        where: (t, { eq, and, gt }) =>
-          and(
-            eq(t.uploadListId, playlistId),
-            ...(cursor ? [gt(t.createdAt, new Date(cursor))] : []),
-          ),
+        where: (t, operators) => {
+          const afterCursor = cursor
+            ? cursor.rank === null
+              ? operators.and(
+                  operators.isNull(t.rank),
+                  operators.or(
+                    operators.gt(t.createdAt, cursor.createdAt),
+                    operators.and(
+                      operators.eq(t.createdAt, cursor.createdAt),
+                      operators.gt(t.uploadRecordId, cursor.uploadRecordId),
+                    ),
+                  ),
+                )
+              : operators.or(
+                  operators.gt(t.rank, cursor.rank),
+                  operators.isNull(t.rank),
+                  operators.and(
+                    operators.eq(t.rank, cursor.rank),
+                    operators.or(
+                      operators.gt(t.createdAt, cursor.createdAt),
+                      operators.and(
+                        operators.eq(t.createdAt, cursor.createdAt),
+                        operators.gt(t.uploadRecordId, cursor.uploadRecordId),
+                      ),
+                    ),
+                  ),
+                )
+            : undefined;
+
+          return operators.and(
+            operators.eq(t.uploadListId, playlistId),
+            afterCursor,
+            exists(
+              db
+                .select({ id: UploadRecord.id })
+                .from(UploadRecord)
+                .where(
+                  and(
+                    eq(UploadRecord.id, t.uploadRecordId),
+                    inArray(
+                      UploadRecord.visibility,
+                      getListUploadVisibilities(playlist.visibility),
+                    ),
+                    isNotNull(UploadRecord.transcodingFinishedAt),
+                    isNull(UploadRecord.deletedAt),
+                  ),
+                ),
+            ),
+          );
+        },
         columns: {
           createdAt: true,
           rank: true,
+          uploadRecordId: true,
         },
         with: {
           upload: {
@@ -471,23 +530,25 @@ export const playlistProcedures = {
             },
           },
         },
-        orderBy: (t, { asc }) => [asc(t.rank), asc(t.createdAt)],
+        orderBy: (t, { asc }) => [
+          asc(t.rank),
+          asc(t.createdAt),
+          asc(t.uploadRecordId),
+        ],
         limit: limit + 1, // Fetch one extra to determine if there are more
       });
 
-      // Filter to public, transcoded, non-deleted uploads
-      const filteredEntries = entries.filter(
-        (e) =>
-          e.upload.visibility === 'PUBLIC' &&
-          e.upload.transcodingFinishedAt !== null &&
-          e.upload.deletedAt === null,
-      );
-
-      const hasMore = filteredEntries.length > limit;
-      const items = hasMore ? filteredEntries.slice(0, limit) : filteredEntries;
-      const nextCursor = hasMore
-        ? (items[items.length - 1].createdAt.toISOString() ?? null)
-        : null;
+      const hasMore = entries.length > limit;
+      const items = hasMore ? entries.slice(0, limit) : entries;
+      const lastItem = items.at(-1);
+      const nextCursor =
+        hasMore && lastItem
+          ? encodeListMediaCursor({
+              rank: lastItem.rank,
+              createdAt: lastItem.createdAt,
+              uploadRecordId: lastItem.uploadRecordId,
+            })
+          : null;
 
       const uploadsWithThumbnails = items.map((entry) => {
         const upload = entry.upload;

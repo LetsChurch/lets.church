@@ -69,6 +69,14 @@ export const Route = createFileRoute('/_main/series/$seriesId')({
           name: 'description',
           content: description,
         },
+        ...(series.visibility === 'UNLISTED'
+          ? [
+              {
+                name: 'robots',
+                content: 'noindex, nofollow',
+              },
+            ]
+          : []),
         // OpenGraph tags
         {
           property: 'og:url',
@@ -133,12 +141,16 @@ export const Route = createFileRoute('/_main/series/$seriesId')({
           rel: 'canonical',
           href: `https://lets.church/series/${series.id}`,
         },
-        {
-          rel: 'alternate',
-          type: 'application/rss+xml',
-          title: `${series.title} - RSS Feed`,
-          href: `https://lets.church/series/${series.id}/rss.xml`,
-        },
+        ...(series.visibility === 'PUBLIC'
+          ? [
+              {
+                rel: 'alternate',
+                type: 'application/rss+xml',
+                title: `${series.title} - RSS Feed`,
+                href: `https://lets.church/series/${series.id}/rss.xml`,
+              },
+            ]
+          : []),
       ],
     };
   },
@@ -248,6 +260,10 @@ function RouteComponent() {
 
           <span className="text-zinc-400">{series.mediaCount} media</span>
 
+          {series.visibility === 'UNLISTED' ? (
+            <span className="text-zinc-400">Unlisted</span>
+          ) : null}
+
           <span className="text-zinc-400">
             Created {formatDistanceToNow(new Date(series.createdAt))} ago
           </span>
@@ -278,6 +294,7 @@ function RouteComponent() {
                       })
                     : undefined
                 }
+                playlistId={seriesId}
               />
             ))}
           </MediaGrid>
@@ -294,8 +311,8 @@ function RouteComponent() {
         </>
       ) : (
         <EmptyState
-          emptyTitle="No public media"
-          emptyBody="This series doesn't have any public media yet."
+          emptyTitle="No available media"
+          emptyBody="This series doesn't have any available media yet."
           emptyCta="Browse Content"
           emptyCtaHref="/"
         />

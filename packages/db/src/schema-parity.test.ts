@@ -329,6 +329,7 @@ const ENUM_MANIFEST = {
     'CC0',
   ],
   upload_list_type: ['SERIES', 'PLAYLIST'],
+  upload_list_visibility: ['PUBLIC', 'UNLISTED'],
   upload_state_type: [
     'MEDIA',
     'THUMBNAIL',
@@ -878,16 +879,17 @@ async function assertBehavior(pool: Pool) {
   );
   assert.deepEqual(viewAfterDelete.rows, [{ app_user_id: null }]);
 
-  const list = await pool.query<{ id: string }>(
+  const list = await pool.query<{ id: string; visibility: string }>(
     `
     INSERT INTO upload_list (updated_at, title, author_id, channel_id, type)
     VALUES ('2000-01-01T00:00:00Z', 'Parity list', $1, $2, 'PLAYLIST')
-    RETURNING id
+    RETURNING id, visibility
   `,
     [creatorId, channelId],
   );
   const listId = list.rows[0]?.id;
   assert.ok(listId);
+  assert.equal(list.rows[0]?.visibility, 'PUBLIC');
   await pool.query('DELETE FROM channel WHERE id = $1', [channelId]);
   const listAfterDelete = await pool.query<{ channel_id: string | null }>(
     'SELECT channel_id FROM upload_list WHERE id = $1',

@@ -2,6 +2,7 @@ import {
   ChannelVisibility,
   UploadLicense,
   UploadListType,
+  UploadListVisibility,
   UploadVisibility,
 } from '@letschurch/db/types';
 import sanitizeFilename from 'sanitize-filename';
@@ -413,11 +414,14 @@ export const playlistFormSchema = z.object({
 
 export const createPlaylistSchema = playlistFormSchema.extend({
   channelId: channelIdSchema,
+  visibility: z.nativeEnum(UploadListVisibility).default('PUBLIC'),
 });
 
 export const updatePlaylistSchema = playlistFormSchema.extend({
   channelId: channelIdSchema,
   playlistId: playlistIdSchema,
+  // Optional for compatibility with clients deployed before list visibility.
+  visibility: z.nativeEnum(UploadListVisibility).optional(),
 });
 
 export const playlistQuerySchema = z.object({
