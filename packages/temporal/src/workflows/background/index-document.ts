@@ -8,7 +8,10 @@ import { emptySignal } from '../../refs';
 const { indexDocument: indexDocumentActivity } = proxyActivities<
   typeof activities
 >({
-  startToCloseTimeout: '1 minute',
+  // Indexing large vector documents can take several minutes while OpenSearch
+  // is merging. The old one-minute timeout caused Temporal retries to overlap
+  // with requests that OpenSearch was still processing, amplifying overload.
+  startToCloseTimeout: '15 minutes',
   taskQueue: BACKGROUND_QUEUE,
   retry: { maximumAttempts: 5 },
 });

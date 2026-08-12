@@ -64,6 +64,11 @@ const backgroundWorker = await Worker.create({
   activities,
   taskQueue: BACKGROUND_QUEUE,
   shutdownGraceTime: TEMPORAL_SHUTDOWN_GRACE_TIME as `${number}`, // TODO: fix this
+  // The default is 100 activity slots per Worker. With three replicas, that
+  // allowed hundreds of multi-megabyte vector indexing activities to compete
+  // for a single OpenSearch shard. Keep the fleet-wide ceiling at 12 while the
+  // indexing workload shares this queue with other background work.
+  maxConcurrentActivityTaskExecutions: 4,
 });
 
 const glacierWorker = await Worker.create({
