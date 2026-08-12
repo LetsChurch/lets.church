@@ -107,6 +107,29 @@ function RouteComponent() {
     }),
   );
 
+  const retryContentFiltersMutation = useMutation(
+    trpc.dashboard.admin.retryContentFilteredAnnotations.mutationOptions({
+      onSuccess: async ({ retriedCount, skippedCount, failedCount }) => {
+        const message = `Content-filter retries: ${retriedCount} started${skippedCount > 0 ? `, ${skippedCount} skipped (already running)` : ''}${failedCount > 0 ? `, ${failedCount} failed to start` : ''}`;
+        if (failedCount > 0) {
+          showFailure({ message });
+        } else {
+          showSuccess({ message });
+        }
+        await refetch();
+      },
+      onError: (error) => {
+        showFailure({
+          message:
+            error.message || 'Failed to retry content-filtered annotations',
+        });
+      },
+    }),
+  );
+
+  const bulkRetryPending =
+    retryAllMutation.isPending || retryContentFiltersMutation.isPending;
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -119,16 +142,36 @@ function RouteComponent() {
           </Text>
         </div>
         {data.uploads.length > 0 ? (
-          <Button
-            variant="light"
-            color="blue"
-            leftSection={<IconRefresh size={16} />}
-            onClick={() => retryAllMutation.mutate()}
-            loading={retryAllMutation.isPending}
-            disabled={regenerateMutation.isPending}
-          >
-            Retry All
-          </Button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {data.contentFilterCount > 0 ? (
+              <Button
+                variant="light"
+                color="blue"
+                leftSection={<IconRefresh size={16} />}
+                onClick={() => retryContentFiltersMutation.mutate()}
+                loading={retryContentFiltersMutation.isPending}
+                disabled={
+                  regenerateMutation.isPending || retryAllMutation.isPending
+                }
+              >
+                Retry Content Filter Failures (
+                {data.contentFilterCount.toLocaleString()})
+              </Button>
+            ) : null}
+            <Button
+              variant="light"
+              color="blue"
+              leftSection={<IconRefresh size={16} />}
+              onClick={() => retryAllMutation.mutate()}
+              loading={retryAllMutation.isPending}
+              disabled={
+                regenerateMutation.isPending ||
+                retryContentFiltersMutation.isPending
+              }
+            >
+              Retry All
+            </Button>
+          </div>
         ) : null}
       </div>
 
@@ -213,7 +256,7 @@ function RouteComponent() {
                         })
                       }
                       loading={regenerateMutation.isPending}
-                      disabled={retryAllMutation.isPending}
+                      disabled={bulkRetryPending}
                     >
                       <IconRefresh size={16} />
                     </ActionIcon>

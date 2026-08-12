@@ -60,6 +60,7 @@ import {
   sql,
   sum,
 } from 'drizzle-orm';
+import { chunk } from 'es-toolkit';
 import { z } from 'zod';
 
 import { releaseDonorEmailForUser } from '@/donations/identity';
@@ -181,9 +182,11 @@ type FailedLlmRetryKind = 'annotations' | 'summaries';
 async function retryAllFailedLlmWorkflows({
   appUserId,
   kind,
+  outcome,
 }: {
   appUserId: string;
   kind: FailedLlmRetryKind;
+  outcome?: 'guard_content_filter';
 }) {
   const activity =
     kind === 'annotations' ? 'annotateTranscript' : 'summarizeUpload';
@@ -215,7 +218,7 @@ async function retryAllFailedLlmWorkflows({
     .where(
       and(
         isNotNull(UploadRecord.transcribingFinishedAt),
-        ne(LlmCall.outcome, 'success'),
+        outcome ? eq(LlmCall.outcome, outcome) : ne(LlmCall.outcome, 'success'),
       ),
     );
 
@@ -240,95 +243,107 @@ async function retryAllFailedLlmWorkflows({
 
   const temporalClient = await client;
 
-  for (const upload of uploads) {
-    const workflowId =
-      kind === 'annotations'
-        ? makeAnnotateTranscriptWorkflowId(upload.uploadId)
-        : makeSummarizeUploadWorkflowId(upload.uploadId);
+  // The failed-annotations queue can contain thousands of uploads. A serial
+  // loop is too slow for an HTTP mutation, while starting every workflow at
+  // once can spike Temporal. Keep a modest bounded fan-out.
+  for (const batch of chunk(uploads, 20)) {
+    await Promise.all(
+      batch.map(async (upload) => {
+        const workflowId =
+          kind === 'annotations'
+            ? makeAnnotateTranscriptWorkflowId(upload.uploadId)
+            : makeSummarizeUploadWorkflowId(upload.uploadId);
 
-    try {
-      try {
-        const description = await temporalClient.workflow
-          .getHandle(workflowId)
-          .describe();
-        if (description.status.name === 'RUNNING') {
-          skippedCount += 1;
-          continue;
+        try {
+          try {
+            const description = await temporalClient.workflow
+              .getHandle(workflowId)
+              .describe();
+            if (description.status.name === 'RUNNING') {
+              skippedCount += 1;
+              return;
+            }
+          } catch (error) {
+            // A missing workflow is the normal first-run case. Fail closed on
+            // connectivity/auth errors so a bulk action never starts duplicates
+            // merely because Temporal could not answer the status check.
+            if (
+              !(
+                error instanceof Error && error.name === 'WorkflowNotFoundError'
+              )
+            ) {
+              throw error;
+            }
+          }
+
+          const commonOptions = {
+            taskQueue: BACKGROUND_QUEUE,
+            workflowId,
+            links: uploadDashboardLinks(upload.channelId, upload.uploadId),
+          };
+
+          if (kind === 'annotations') {
+            await startBackground('annotateTranscriptWorkflow', {
+              taskQueue: commonOptions.taskQueue,
+              workflowId: commonOptions.workflowId,
+              ...staticMeta({
+                summary:
+                  outcome === 'guard_content_filter'
+                    ? 'Retry content-filtered annotations'
+                    : 'Retry failed annotations',
+                links: commonOptions.links,
+              }),
+              args: [upload.uploadId, { force: true }],
+              retry: { maximumAttempts: 3 },
+              typedSearchAttributes: [
+                { key: UPLOAD_ID_KEY, value: upload.uploadId },
+              ],
+              workflowIdReusePolicy: 'ALLOW_DUPLICATE',
+            });
+          } else {
+            await startBackground('summarizeUploadWorkflow', {
+              taskQueue: commonOptions.taskQueue,
+              workflowId: commonOptions.workflowId,
+              ...staticMeta({
+                summary: 'Retry failed summary',
+                links: commonOptions.links,
+              }),
+              args: [upload.uploadId, { force: true }],
+              retry: { maximumAttempts: 3 },
+              typedSearchAttributes: [
+                { key: UPLOAD_ID_KEY, value: upload.uploadId },
+              ],
+              workflowIdReusePolicy: 'ALLOW_DUPLICATE',
+            });
+          }
+
+          retriedCount += 1;
+        } catch (error) {
+          // Another admin action may win the race between describe() and start().
+          // Treat that as an already-running skip rather than a failed retry.
+          if (
+            error instanceof Error &&
+            error.name === 'WorkflowExecutionAlreadyStartedError'
+          ) {
+            skippedCount += 1;
+            return;
+          }
+          failedCount += 1;
+          moduleLogger.error(
+            {
+              appUserId,
+              targetId: upload.uploadId,
+              workflowId,
+              context: {
+                kind,
+                error: error instanceof Error ? error.message : String(error),
+              },
+            },
+            `Failed to retry failed ${kind} workflow`,
+          );
         }
-      } catch (error) {
-        // A missing workflow is the normal first-run case. Fail closed on
-        // connectivity/auth errors so a bulk action never starts duplicates
-        // merely because Temporal could not answer the status check.
-        if (
-          !(error instanceof Error && error.name === 'WorkflowNotFoundError')
-        ) {
-          throw error;
-        }
-      }
-
-      const commonOptions = {
-        taskQueue: BACKGROUND_QUEUE,
-        workflowId,
-        links: uploadDashboardLinks(upload.channelId, upload.uploadId),
-      };
-
-      if (kind === 'annotations') {
-        await startBackground('annotateTranscriptWorkflow', {
-          taskQueue: commonOptions.taskQueue,
-          workflowId: commonOptions.workflowId,
-          ...staticMeta({
-            summary: 'Retry failed annotations',
-            links: commonOptions.links,
-          }),
-          args: [upload.uploadId, { force: true }],
-          retry: { maximumAttempts: 3 },
-          typedSearchAttributes: [
-            { key: UPLOAD_ID_KEY, value: upload.uploadId },
-          ],
-          workflowIdReusePolicy: 'ALLOW_DUPLICATE',
-        });
-      } else {
-        await startBackground('summarizeUploadWorkflow', {
-          taskQueue: commonOptions.taskQueue,
-          workflowId: commonOptions.workflowId,
-          ...staticMeta({
-            summary: 'Retry failed summary',
-            links: commonOptions.links,
-          }),
-          args: [upload.uploadId, { force: true }],
-          retry: { maximumAttempts: 3 },
-          typedSearchAttributes: [
-            { key: UPLOAD_ID_KEY, value: upload.uploadId },
-          ],
-          workflowIdReusePolicy: 'ALLOW_DUPLICATE',
-        });
-      }
-
-      retriedCount += 1;
-    } catch (error) {
-      // Another admin action may win the race between describe() and start().
-      // Treat that as an already-running skip rather than a failed retry.
-      if (
-        error instanceof Error &&
-        error.name === 'WorkflowExecutionAlreadyStartedError'
-      ) {
-        skippedCount += 1;
-        continue;
-      }
-      failedCount += 1;
-      moduleLogger.error(
-        {
-          appUserId,
-          targetId: upload.uploadId,
-          workflowId,
-          context: {
-            kind,
-            error: error instanceof Error ? error.message : String(error),
-          },
-        },
-        `Failed to retry failed ${kind} workflow`,
-      );
-    }
+      }),
+    );
   }
 
   moduleLogger.info(
@@ -336,6 +351,7 @@ async function retryAllFailedLlmWorkflows({
       appUserId,
       context: {
         kind,
+        outcome: outcome ?? 'any_failure',
         totalCount: uploads.length,
         retriedCount,
         skippedCount,
@@ -3628,9 +3644,10 @@ export const adminRouter = router({
    * annotations. Surface for the admin failed-annotations page so an
    * operator can review the failure reason (typically OpenAI's content
    * filter on politically/theologically frank content) and decide whether to
-   * retry or accept that this content can't be annotated. Production
-   * processing is Batch-only, so the non-OpenAI live/eval fallback is not
-   * available on this path.
+   * retry or accept that this content can't be annotated. OpenAI Batch
+   * content-filter responses retry through the configured live fallback; this
+   * page also offers a targeted bulk retry for any content-filter failures that
+   * remain after that path.
    *
    * "Failure" = the most recent `llm_call` row for this upload with
    * `activity='annotateTranscript'` has a non-success outcome (e.g.
@@ -3657,6 +3674,10 @@ export const adminRouter = router({
           outcome: LlmCall.outcome,
           errorMessage: LlmCall.errorMessage,
           lastAttemptAt: LlmCall.createdAt,
+          contentFilterCount:
+            sql<number>`count(*) filter (where ${LlmCall.outcome} = 'guard_content_filter') over ()`.mapWith(
+              Number,
+            ),
         })
         .from(UploadRecord)
         .innerJoin(Channel, eq(UploadRecord.channelId, Channel.id))
@@ -3701,6 +3722,7 @@ export const adminRouter = router({
         .offset(input.offset);
 
       return {
+        contentFilterCount: failedRows[0]?.contentFilterCount ?? 0,
         uploads: failedRows.map((row) => ({
           id: row.uploadId,
           title: row.title,
@@ -3764,6 +3786,18 @@ export const adminRouter = router({
     return retryAllFailedLlmWorkflows({
       appUserId: ctx.session.appUserId,
       kind: 'annotations',
+    });
+  }),
+
+  retryContentFilteredAnnotations: adminProcedure.mutation(async ({ ctx }) => {
+    moduleLogger.info(
+      { appUserId: ctx.session.appUserId },
+      'Retrying content-filtered annotation workflows',
+    );
+    return retryAllFailedLlmWorkflows({
+      appUserId: ctx.session.appUserId,
+      kind: 'annotations',
+      outcome: 'guard_content_filter',
     });
   }),
 

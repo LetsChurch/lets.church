@@ -10,6 +10,7 @@ import { and, asc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 
 import {
+  ANNOTATE_FALLBACK_MODEL,
   ANNOTATE_MODEL,
   EMBED_DIMS,
   EMBED_MAX_INPUTS,
@@ -38,6 +39,7 @@ import {
 import {
   type EvalParagraph,
   parseAnnotationResponse,
+  runAnnotation,
 } from './annotate-transcript';
 import type { LlmBatchKind } from './submit-llm-batch';
 import {
@@ -354,15 +356,120 @@ async function handleSummary(
   if (result.guard.errorMessage) throw new Error(result.guard.errorMessage);
 }
 
-async function handleAnnotate(
+export async function handleAnnotate(
   uploadId: string,
   sourceFingerprint: string | null,
   line: BatchResponseLine,
 ): Promise<void> {
   const body = line.response?.body as ChatCompletionResponse;
-  const result = await db.transaction(
+  const uploads = await db
+    .select({
+      title: UploadRecord.title,
+      description: UploadRecord.description,
+      channelName: Channel.name,
+    })
+    .from(UploadRecord)
+    .innerJoin(Channel, eq(Channel.id, UploadRecord.channelId))
+    .where(eq(UploadRecord.id, uploadId));
+  const upload = uploads[0];
+  invariant(upload, `Annotate batch ${line.custom_id}: upload not found`);
+
+  // Reload paragraphs so the parser can map heading + link positions back to
+  // word indices, then validate the exact source submitted to OpenAI.
+  const paragraphs = await db
+    .select({
+      id: TranscriptParagraph.id,
+      order: TranscriptParagraph.order,
+      text: TranscriptParagraph.text,
+      words: TranscriptParagraph.words,
+    })
+    .from(TranscriptParagraph)
+    .where(eq(TranscriptParagraph.uploadRecordId, uploadId))
+    .orderBy(asc(TranscriptParagraph.order));
+  invariant(
+    paragraphs.length > 0,
+    `Annotate batch ${line.custom_id}: no paragraphs for upload`,
+  );
+  assertBatchSourceCurrent(
+    line.custom_id,
+    sourceFingerprint,
+    fingerprintAnnotationSource(upload, paragraphs),
+  );
+
+  const builtInGuard = getBuiltInCompletionGuard(body?.choices?.[0]);
+  const guard =
+    builtInGuard ??
+    getAnnotationCompletenessGuard(
+      paragraphs.map((paragraph) => paragraph.text),
+      body.usage?.completion_tokens,
+    );
+  const raw = body?.choices?.[0]?.message?.content ?? null;
+  const result = { guard, raw };
+
+  const evalParagraphs: EvalParagraph[] = paragraphs.map((paragraph) => ({
+    id: paragraph.id,
+    order: paragraph.order,
+    text: paragraph.text,
+    words: paragraph.words,
+  }));
+  let annotations;
+  if (guard.outcome === 'guard_content_filter' && ANNOTATE_FALLBACK_MODEL) {
+    // Preserve the rejected OpenAI Batch call before making the fallback so
+    // both billable attempts remain visible even if Anthropic also fails.
+    await recordBatchChatResult({
+      model: ANNOTATE_MODEL,
+      activity: 'annotateTranscript',
+      uploadId,
+      body,
+      result,
+    });
+    moduleLogger.info(
+      {
+        uploadRecordId: uploadId,
+        context: {
+          primaryModel: ANNOTATE_MODEL,
+          fallbackModel: ANNOTATE_FALLBACK_MODEL,
+        },
+      },
+      'OpenAI Batch annotation was content-filtered; retrying with fallback model',
+    );
+    const fallback = await runAnnotation(
+      evalParagraphs,
+      upload,
+      ANNOTATE_FALLBACK_MODEL,
+      {
+        tracking: {
+          activity: 'annotateTranscript',
+          uploadRecordId: uploadId,
+        },
+        via: 'openrouter',
+        // This request already is the fallback. Do not recursively retry the
+        // same model if its provider also returns a content-filter response.
+        fallbackModel: null,
+      },
+    );
+    annotations = fallback.annotations;
+  } else {
+    if (guard.errorMessage) {
+      await recordBatchChatResult({
+        model: ANNOTATE_MODEL,
+        activity: 'annotateTranscript',
+        uploadId,
+        body,
+        result,
+      });
+      throw new Error(guard.errorMessage);
+    }
+    invariant(raw, `Annotate batch ${line.custom_id}: empty content`);
+    ({ annotations } = parseAnnotationResponse(raw, evalParagraphs));
+  }
+
+  await db.transaction(
     async (tx) => {
-      const uploads = await tx
+      // A live fallback can take long enough for the transcript to be replaced.
+      // Re-read and fingerprint inside the write transaction so fallback output
+      // is never attached to a different transcript version.
+      const currentUploads = await tx
         .select({
           title: UploadRecord.title,
           description: UploadRecord.description,
@@ -371,12 +478,12 @@ async function handleAnnotate(
         .from(UploadRecord)
         .innerJoin(Channel, eq(Channel.id, UploadRecord.channelId))
         .where(eq(UploadRecord.id, uploadId));
-      const upload = uploads[0];
-      invariant(upload, `Annotate batch ${line.custom_id}: upload not found`);
-
-      // Reload paragraphs so the parser can map heading + link positions back
-      // to word indices, then validate the exact source submitted to OpenAI.
-      const paragraphs = await tx
+      const currentUpload = currentUploads[0];
+      invariant(
+        currentUpload,
+        `Annotate batch ${line.custom_id}: upload not found before write`,
+      );
+      const currentParagraphs = await tx
         .select({
           id: TranscriptParagraph.id,
           order: TranscriptParagraph.order,
@@ -386,35 +493,13 @@ async function handleAnnotate(
         .from(TranscriptParagraph)
         .where(eq(TranscriptParagraph.uploadRecordId, uploadId))
         .orderBy(asc(TranscriptParagraph.order));
-      invariant(
-        paragraphs.length > 0,
-        `Annotate batch ${line.custom_id}: no paragraphs for upload`,
-      );
       assertBatchSourceCurrent(
         line.custom_id,
         sourceFingerprint,
-        fingerprintAnnotationSource(upload, paragraphs),
+        fingerprintAnnotationSource(currentUpload, currentParagraphs),
       );
 
-      const builtInGuard = getBuiltInCompletionGuard(body?.choices?.[0]);
-      const guard =
-        builtInGuard ??
-        getAnnotationCompletenessGuard(
-          paragraphs.map((paragraph) => paragraph.text),
-          body.usage?.completion_tokens,
-        );
-      const raw = body?.choices?.[0]?.message?.content ?? null;
-      if (guard.errorMessage) return { guard, raw };
-      invariant(raw, `Annotate batch ${line.custom_id}: empty content`);
-
-      const evalParagraphs: EvalParagraph[] = paragraphs.map((paragraph) => ({
-        id: paragraph.id,
-        order: paragraph.order,
-        text: paragraph.text,
-        words: paragraph.words,
-      }));
-      const { annotations } = parseAnnotationResponse(raw, evalParagraphs);
-      const paragraphIds = paragraphs.map((paragraph) => paragraph.id);
+      const paragraphIds = currentParagraphs.map((paragraph) => paragraph.id);
       await tx
         .delete(Annotation)
         .where(inArray(Annotation.paragraphId, paragraphIds));
@@ -433,19 +518,21 @@ async function handleAnnotate(
         .update(UploadRecord)
         .set({ sections: [] })
         .where(eq(UploadRecord.id, uploadId));
-      return { guard, raw };
     },
     { isolationLevel: 'serializable' },
   );
 
-  await recordBatchChatResult({
-    model: ANNOTATE_MODEL,
-    activity: 'annotateTranscript',
-    uploadId,
-    body,
-    result,
-  });
-  if (result.guard.errorMessage) throw new Error(result.guard.errorMessage);
+  if (!guard.errorMessage) {
+    // Match the existing audit semantics for successful Batch output: only
+    // record success after parsing and persistence have both completed.
+    await recordBatchChatResult({
+      model: ANNOTATE_MODEL,
+      activity: 'annotateTranscript',
+      uploadId,
+      body,
+      result,
+    });
+  }
 }
 
 async function handleEmbedParagraphs(

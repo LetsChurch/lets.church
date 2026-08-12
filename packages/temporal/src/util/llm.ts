@@ -17,9 +17,9 @@ const openaiBatchModel = z
 
 const env = z
   .object({
-    // Production processing goes through OpenAI Batch. OpenRouter remains for
-    // the admin LLM-eval page, and for the live fallback used only by legacy
-    // workflow replays/eval calls. Batch processing never switches providers.
+    // Primary production processing goes through OpenAI Batch. OpenRouter is
+    // used by the admin LLM-eval page, legacy live workflow replays, and the
+    // live Anthropic fallback after a Batch content-filter response.
     OPENAI_API_KEY: z.string().min(1),
     OPENROUTER_API_KEY: z.string().min(1),
     OPENROUTER_SUMMARY_MODEL: openaiBatchModel.default('openai/gpt-5.6-luna'),
@@ -30,10 +30,10 @@ const env = z
     // safety classifier was retired with that rewrite. Sampling parameters
     // stay at the provider default because supported overrides vary by model.
     OPENROUTER_ANNOTATE_MODEL: openaiBatchModel.default('openai/gpt-5.6-luna'),
-    // Live-path fallback for annotate when the primary's response is blocked
-    // by the provider content filter. This is retained for legacy workflow
-    // replay and eval tooling; the always-batched production path cannot route
-    // a request to a non-OpenAI provider.
+    // Fallback for annotate when the primary's response is blocked by the
+    // provider content filter. Live calls switch inside the tracked-completion
+    // wrapper; the OpenAI Batch output handler makes the equivalent live
+    // OpenRouter call after recording the rejected Batch response.
     OPENROUTER_ANNOTATE_FALLBACK_MODEL: z
       .string()
       .default('anthropic/claude-haiku-4-5'),
@@ -55,8 +55,8 @@ export const openaiClient = new OpenAI({
   maxRetries: 5,
 });
 
-// OpenRouter client — used by the admin LLM-eval page and replay-only live
-// content-filter fallback. Current production processing uses OpenAI Batch.
+// OpenRouter client — used by the admin LLM-eval page and live content-filter
+// fallback. Primary production processing still uses OpenAI Batch.
 export const openrouterClient = new OpenAI({
   apiKey: env.OPENROUTER_API_KEY,
   baseURL: 'https://openrouter.ai/api/v1',

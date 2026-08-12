@@ -88,9 +88,10 @@ function isBatchTerminal(status: BatchStatus['status']): boolean {
  * shard, apply the results, and clean up successful files. This is shared by
  * normal single-upload processing and every retry/regeneration path.
  *
- * A batch can complete while individual request lines fail. Treat those as a
- * workflow failure so Temporal retries the same regular job through Batch
- * again; never fall back to a live OpenAI request.
+ * A batch can complete while individual request lines fail. The output handler
+ * can recover annotation content-filter responses through the configured live
+ * OpenRouter fallback. Treat every other failed line as a workflow failure so
+ * Temporal retries the same regular job through Batch again.
  */
 export async function runLlmBatch(
   uploadRecordIds: string[],

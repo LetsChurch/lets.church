@@ -765,6 +765,12 @@ export async function runAnnotation(
      * models. Defaults to `'openai'`.
      */
     via?: 'openai' | 'openrouter';
+    /**
+     * Model used after a content-filter rejection. Defaults to the configured
+     * annotation fallback; pass null when this call is already the fallback so
+     * a rejection cannot recursively retry the same model.
+     */
+    fallbackModel?: string | null;
   } = {},
 ): Promise<RunAnnotationResult> {
   invariant(paragraphs.length > 0, 'runAnnotation: no paragraphs provided');
@@ -811,7 +817,10 @@ export async function runAnnotation(
     // but is fine for our use case. Both attempts are recorded in
     // `llm_call` for auditing; both failing leaves a paper trail the
     // admin failed-annotations surface picks up.
-    fallbackModel: ANNOTATE_FALLBACK_MODEL,
+    fallbackModel:
+      options.fallbackModel === undefined
+        ? ANNOTATE_FALLBACK_MODEL
+        : options.fallbackModel,
     max_completion_tokens: maxTokens,
     // Intentionally omit `temperature`. Production and the admin eval page
     // both use provider defaults so arbitrary eval models remain compatible.
