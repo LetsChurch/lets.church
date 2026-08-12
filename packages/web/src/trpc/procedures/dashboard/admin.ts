@@ -209,7 +209,9 @@ async function retryAllFailedLlmWorkflows({
               and(
                 sql`later.upload_record_id = ${UploadRecord.id}`,
                 sql`later.activity = ${activity}`,
-                sql`later.created_at > ${LlmCall.createdAt}`,
+                // created_at has millisecond precision, so use the UUID as a
+                // stable tie-breaker when calls land in the same millisecond.
+                sql`(later.created_at, later.id) > (${LlmCall.createdAt}, ${LlmCall.id})`,
               ),
             ),
         ),
@@ -222,11 +224,7 @@ async function retryAllFailedLlmWorkflows({
       ),
     );
 
-  // Two calls can share a timestamp, so preserve one retry target per upload
-  // even if the latest-row query returns a tie.
-  const uploads = [
-    ...new Map(failedRows.map((row) => [row.uploadId, row])).values(),
-  ];
+  const uploads = failedRows;
   let retriedCount = 0;
   let skippedCount = 0;
   let failedCount = 0;
@@ -243,6 +241,25 @@ async function retryAllFailedLlmWorkflows({
 
   const temporalClient = await client;
 
+  // Admin retries use a deterministic workflow ID, while the same workflow
+  // running as a processMedia child has a different ID. Visibility search by
+  // workflow type + UploadId catches both forms so a bulk action does not
+  // duplicate an in-flight LLM call under a second workflow ID. Keep the
+  // deterministic describe below as a strongly consistent guard for a newly
+  // started admin workflow that visibility has not indexed yet.
+  const workflowType =
+    kind === 'annotations'
+      ? 'annotateTranscriptWorkflow'
+      : 'summarizeUploadWorkflow';
+  const runningUploadIds = new Set<string>();
+  for await (const execution of temporalClient.workflow.list({
+    query: `WorkflowType = '${workflowType}' AND ExecutionStatus = 'Running'`,
+    pageSize: 1_000,
+  })) {
+    const runningUploadId = execution.typedSearchAttributes.get(UPLOAD_ID_KEY);
+    if (runningUploadId) runningUploadIds.add(runningUploadId);
+  }
+
   // The failed-annotations queue can contain thousands of uploads. A serial
   // loop is too slow for an HTTP mutation, while starting every workflow at
   // once can spike Temporal. Keep a modest bounded fan-out.
@@ -255,6 +272,11 @@ async function retryAllFailedLlmWorkflows({
             : makeSummarizeUploadWorkflowId(upload.uploadId);
 
         try {
+          if (runningUploadIds.has(upload.uploadId)) {
+            skippedCount += 1;
+            return;
+          }
+
           try {
             const description = await temporalClient.workflow
               .getHandle(workflowId)
@@ -3674,6 +3696,8 @@ export const adminRouter = router({
           outcome: LlmCall.outcome,
           errorMessage: LlmCall.errorMessage,
           lastAttemptAt: LlmCall.createdAt,
+          // Window aggregates run before LIMIT/OFFSET, so this is the total
+          // database-wide count rather than merely the current page's count.
           contentFilterCount:
             sql<number>`count(*) filter (where ${LlmCall.outcome} = 'guard_content_filter') over ()`.mapWith(
               Number,
@@ -3696,7 +3720,7 @@ export const adminRouter = router({
                   and(
                     sql`later.upload_record_id = ${UploadRecord.id}`,
                     sql`later.activity = 'annotateTranscript'`,
-                    sql`later.created_at > ${LlmCall.createdAt}`,
+                    sql`(later.created_at, later.id) > (${LlmCall.createdAt}, ${LlmCall.id})`,
                   ),
                 ),
             ),
@@ -3763,7 +3787,7 @@ export const adminRouter = router({
                 and(
                   sql`later.upload_record_id = ${UploadRecord.id}`,
                   sql`later.activity = 'annotateTranscript'`,
-                  sql`later.created_at > ${LlmCall.createdAt}`,
+                  sql`(later.created_at, later.id) > (${LlmCall.createdAt}, ${LlmCall.id})`,
                 ),
               ),
           ),
@@ -3847,7 +3871,7 @@ export const adminRouter = router({
                   and(
                     sql`later.upload_record_id = ${UploadRecord.id}`,
                     sql`later.activity = 'summarizeUpload'`,
-                    sql`later.created_at > ${LlmCall.createdAt}`,
+                    sql`(later.created_at, later.id) > (${LlmCall.createdAt}, ${LlmCall.id})`,
                   ),
                 ),
             ),
@@ -3907,7 +3931,7 @@ export const adminRouter = router({
                 and(
                   sql`later.upload_record_id = ${UploadRecord.id}`,
                   sql`later.activity = 'summarizeUpload'`,
-                  sql`later.created_at > ${LlmCall.createdAt}`,
+                  sql`(later.created_at, later.id) > (${LlmCall.createdAt}, ${LlmCall.id})`,
                 ),
               ),
           ),

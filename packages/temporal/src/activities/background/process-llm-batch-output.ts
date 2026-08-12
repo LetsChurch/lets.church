@@ -433,21 +433,51 @@ export async function handleAnnotate(
       },
       'OpenAI Batch annotation was content-filtered; retrying with fallback model',
     );
-    const fallback = await runAnnotation(
-      evalParagraphs,
-      upload,
-      ANNOTATE_FALLBACK_MODEL,
-      {
-        tracking: {
-          activity: 'annotateTranscript',
-          uploadRecordId: uploadId,
+    const activityContext = Context.current();
+    activityContext.heartbeat({
+      kind: 'annotate',
+      phase: 'fallback',
+      status: 'starting',
+      uploadRecordId: uploadId,
+    });
+    // The output-processing activity has a heartbeat timeout, while a live
+    // provider call can spend several minutes retrying. Keep the activity
+    // alive throughout the fallback instead of only heartbeating between
+    // Batch result lines.
+    const fallbackHeartbeat = setInterval(() => {
+      activityContext.heartbeat({
+        kind: 'annotate',
+        phase: 'fallback',
+        status: 'running',
+        uploadRecordId: uploadId,
+      });
+    }, 60_000);
+    let fallback;
+    try {
+      fallback = await runAnnotation(
+        evalParagraphs,
+        upload,
+        ANNOTATE_FALLBACK_MODEL,
+        {
+          tracking: {
+            activity: 'annotateTranscript',
+            uploadRecordId: uploadId,
+          },
+          via: 'openrouter',
+          // This request already is the fallback. Do not recursively retry the
+          // same model if its provider also returns a content-filter response.
+          fallbackModel: null,
         },
-        via: 'openrouter',
-        // This request already is the fallback. Do not recursively retry the
-        // same model if its provider also returns a content-filter response.
-        fallbackModel: null,
-      },
-    );
+      );
+    } finally {
+      clearInterval(fallbackHeartbeat);
+    }
+    activityContext.heartbeat({
+      kind: 'annotate',
+      phase: 'fallback',
+      status: 'completed',
+      uploadRecordId: uploadId,
+    });
     annotations = fallback.annotations;
   } else {
     if (guard.errorMessage) {

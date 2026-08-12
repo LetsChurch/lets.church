@@ -3,6 +3,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   assertBatchSourceCurrent: vi.fn(),
   fingerprintAnnotationSource: vi.fn(() => 'source-fingerprint'),
+  heartbeat: vi.fn(),
   insertValues: vi.fn(),
   recordLlmCall: vi.fn(),
   runAnnotation: vi.fn(),
@@ -93,7 +94,7 @@ vi.mock('drizzle-orm', () => ({
 }));
 
 vi.mock('@temporalio/activity', () => ({
-  Context: { current: () => ({ heartbeat: vi.fn() }) },
+  Context: { current: () => ({ heartbeat: mocks.heartbeat }) },
 }));
 
 vi.mock('../../util/llm', () => ({
@@ -202,6 +203,18 @@ describe('handleAnnotate', () => {
         via: 'openrouter',
       },
     );
+    expect(mocks.heartbeat).toHaveBeenNthCalledWith(1, {
+      kind: 'annotate',
+      phase: 'fallback',
+      status: 'starting',
+      uploadRecordId: 'upload-1',
+    });
+    expect(mocks.heartbeat).toHaveBeenNthCalledWith(2, {
+      kind: 'annotate',
+      phase: 'fallback',
+      status: 'completed',
+      uploadRecordId: 'upload-1',
+    });
     expect(mocks.insertValues).toHaveBeenCalledWith([
       expect.objectContaining(fallbackAnnotations[0]),
     ]);
