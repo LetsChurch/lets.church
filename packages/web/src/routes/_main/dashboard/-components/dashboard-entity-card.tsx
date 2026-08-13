@@ -22,13 +22,17 @@ export function DashboardEntityCard({
   ...linkProps
 }: DashboardEntityCardProps) {
   return (
-    <div className="border-fancy-pants relative overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
-      <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
+    <div className="dashboard-card" data-interactive="true">
+      <div className="mb-2.5 flex flex-wrap items-start justify-between gap-4">
         <Link
           {...linkProps}
-          className="min-w-0 flex-1 text-inherit no-underline after:absolute after:inset-0 after:block after:content-['']"
+          className="focus-visible:ring-brand/40 min-w-0 flex-1 rounded-md text-inherit no-underline outline-none after:absolute after:inset-0 after:block after:content-[''] focus-visible:ring-2"
         >
-          <Text fw={500} truncate={truncateHeading}>
+          <Text
+            fw={600}
+            truncate={truncateHeading}
+            className="text-dashboard-ink"
+          >
             {heading}
           </Text>
         </Link>

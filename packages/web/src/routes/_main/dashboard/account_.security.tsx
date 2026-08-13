@@ -91,7 +91,7 @@ function SecurityPage() {
       </Title>
 
       <div className="flex max-w-[600px] flex-col gap-5">
-        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+        <div className="dashboard-panel p-5">
           <Text fw={500} className="mb-4">
             {security.hasPassword ? 'Change password' : 'Set a password'}
           </Text>
@@ -158,7 +158,7 @@ function SecurityPage() {
           </form>
         </div>
 
-        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+        <div className="dashboard-panel p-5">
           <div className="mb-2.5 flex flex-wrap items-start justify-between gap-4">
             <div>
               <Text fw={500}>Two-Factor Authentication</Text>
@@ -172,7 +172,7 @@ function SecurityPage() {
           </div>
         </div>
 
-        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+        <div className="dashboard-panel p-5">
           <div className="mb-2.5 flex flex-wrap items-start justify-between gap-4">
             <div>
               <Text fw={500}>Active Sessions</Text>

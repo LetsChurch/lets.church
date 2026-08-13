@@ -1,6 +1,19 @@
-import { createFileRoute, Link, redirect } from '@tanstack/react-router';
+import {
+  IconBell,
+  IconCreditCard,
+  IconLock,
+  IconMail,
+  IconUser,
+  IconWritingSign,
+} from '@tabler/icons-react';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 
-import { Button, Text, Title } from '@/components/ui';
+import {
+  DashboardLinkCard,
+  DashboardPageHeader,
+  DashboardPanel,
+} from '@/components/dashboard/dashboard-ui';
+import { Badge, Text } from '@/components/ui';
 
 export const Route = createFileRoute('/_main/dashboard/account')({
   component: AccountPage,
@@ -20,127 +33,62 @@ export const Route = createFileRoute('/_main/dashboard/account')({
   }),
 });
 
-const actionWidth = 140;
-
 function AccountPage() {
   return (
     <>
-      <Title order={1} className="mb-5">
-        Account Settings
-      </Title>
+      <DashboardPageHeader
+        eyebrow="Personal settings"
+        title="Account"
+        description="Manage your identity, security, giving history, and communication preferences."
+      />
 
-      <div className="flex flex-col gap-5">
-        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
-          <div className="mb-2.5 flex flex-wrap items-start justify-between gap-4">
-            <Text fw={500}>Profile Information</Text>
-            <Button
-              component={Link}
-              to="/dashboard/account/profile"
-              variant="light"
-              size="sm"
-              style={{ width: actionWidth }}
-              className="content-center"
-            >
-              Edit
-            </Button>
+      <div className="grid gap-4 md:grid-cols-2">
+        <DashboardLinkCard
+          to="/dashboard/account/profile"
+          title="Profile information"
+          description="Update your name, username, and profile image."
+          icon={<IconUser size={18} />}
+        />
+        <DashboardLinkCard
+          to="/dashboard/account/participation"
+          title="Participation policies"
+          description="Review the policies required to comment or create a channel."
+          icon={<IconWritingSign size={18} />}
+        />
+        <DashboardLinkCard
+          to="/dashboard/account/security"
+          title="Password & security"
+          description="Change your password and review account protection."
+          icon={<IconLock size={18} />}
+        />
+        <DashboardLinkCard
+          to="/dashboard/account/donations"
+          title="Donations"
+          description="View receipts, annual statements, and recurring gifts."
+          icon={<IconCreditCard size={18} />}
+        />
+        <DashboardLinkCard
+          to="/dashboard/account/newsletter"
+          title="Newsletter subscription"
+          description="Choose whether to receive the Let’s Church newsletter."
+          icon={<IconMail size={18} />}
+        />
+        <DashboardPanel className="flex min-h-32 items-start gap-3.5">
+          <span className="bg-dashboard-accent-soft text-brand flex size-9 shrink-0 items-center justify-center rounded-lg">
+            <IconBell size={18} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Text fw={600} className="text-dashboard-ink">
+                Notifications
+              </Text>
+              <Badge color="gray">Coming soon</Badge>
+            </div>
+            <Text size="sm" c="dimmed" className="mt-1">
+              Choose which activity and publishing updates you receive.
+            </Text>
           </div>
-          <Text size="sm" c="dimmed">
-            Update your personal information and profile settings.
-          </Text>
-        </div>
-
-        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
-          <div className="mb-2.5 flex flex-wrap items-start justify-between gap-4">
-            <Text fw={500}>Participation Policies</Text>
-            <Button
-              component={Link}
-              to="/dashboard/account/participation"
-              variant="light"
-              size="sm"
-              style={{ width: actionWidth }}
-              className="content-center"
-            >
-              Review
-            </Button>
-          </div>
-          <Text size="sm" c="dimmed">
-            Review the policies required to comment or create a channel.
-          </Text>
-        </div>
-
-        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
-          <div className="mb-2.5 flex flex-wrap items-start justify-between gap-4">
-            <Text fw={500}>Password & Security</Text>
-            <Button
-              component={Link}
-              to="/dashboard/account/security"
-              variant="light"
-              size="sm"
-              style={{ width: actionWidth }}
-              className="content-center"
-            >
-              Change
-            </Button>
-          </div>
-          <Text size="sm" c="dimmed">
-            Manage your password and security preferences.
-          </Text>
-        </div>
-
-        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
-          <div className="mb-2.5 flex flex-wrap items-start justify-between gap-4">
-            <Text fw={500}>Donations</Text>
-            <Button
-              component={Link}
-              to="/dashboard/account/donations"
-              variant="light"
-              size="sm"
-              style={{ width: actionWidth }}
-              className="content-center"
-            >
-              View
-            </Button>
-          </div>
-          <Text size="sm" c="dimmed">
-            View receipts, annual statements, and recurring donations.
-          </Text>
-        </div>
-
-        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
-          <div className="mb-2.5 flex flex-wrap items-start justify-between gap-4">
-            <Text fw={500}>Newsletter Subscription</Text>
-            <Button
-              component={Link}
-              to="/dashboard/account/newsletter"
-              variant="light"
-              size="sm"
-              style={{ width: actionWidth }}
-              className="content-center"
-            >
-              Manage
-            </Button>
-          </div>
-          <Text size="sm" c="dimmed">
-            Subscribe or unsubscribe from the Let's Church newsletter.
-          </Text>
-        </div>
-
-        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
-          <div className="mb-2.5 flex flex-wrap items-start justify-between gap-4">
-            <Text fw={500}>Notifications</Text>
-            <Button
-              variant="light"
-              size="sm"
-              style={{ width: actionWidth }}
-              disabled
-            >
-              Coming Soon
-            </Button>
-          </div>
-          <Text size="sm" c="dimmed">
-            Choose what notifications you want to receive.
-          </Text>
-        </div>
+        </DashboardPanel>
       </div>
     </>
   );

@@ -1,7 +1,7 @@
 import { Autocomplete } from '@base-ui/react/autocomplete';
 import { IconSearch } from '@tabler/icons-react';
-import { useNavigate } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useLocation, useNavigate } from '@tanstack/react-router';
+import { useEffect, useState } from 'react';
 
 import { controlClasses } from '@/components/ui/input';
 import { cn } from '@/util/cn';
@@ -106,6 +106,14 @@ const searchItems: SearchItem[] = [
     group: 'Admin',
   },
   {
+    id: 'admin-featured-media',
+    label: 'Featured Media',
+    description: 'Manage featured media and display order',
+    route: '/dashboard/admin/featured',
+    keywords: ['featured', 'media', 'uploads', 'homepage', 'admin'],
+    group: 'Admin',
+  },
+  {
     id: 'admin-channels',
     label: 'Channels',
     description: 'Manage all channels and approvals',
@@ -142,6 +150,11 @@ export function DashboardSearchBar({
 }: DashboardSearchBarProps) {
   const navigate = useNavigate();
   const [value, setValue] = useState('');
+  const location = useLocation();
+
+  useEffect(() => {
+    setValue('');
+  }, [location.href]);
 
   // Filter items based on user permissions first
   const accessibleItems = searchItems.filter((item) => {

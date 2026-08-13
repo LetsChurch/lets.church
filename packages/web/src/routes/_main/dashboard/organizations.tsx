@@ -1,14 +1,20 @@
-import { IconEye, IconSettings, IconUserMinus } from '@tabler/icons-react';
+import {
+  IconEye,
+  IconPlus,
+  IconSettings,
+  IconUserMinus,
+} from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 
+import { DashboardPageHeader } from '@/components/dashboard/dashboard-ui';
 import {
   MenuItemButton,
   MenuItemRouterLink,
   OverflowMenu,
 } from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
-import { Anchor, Badge, Button, Text, Title } from '@/components/ui';
+import { Anchor, Badge, Button, Text } from '@/components/ui';
 import { useDisclosure } from '@/hooks/use-disclosure';
 import { useTRPC } from '@/trpc/react';
 
@@ -47,22 +53,18 @@ function OrganizationsPage() {
 
   return (
     <>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-        <Title order={1}>Organizations</Title>
-        <Button onClick={openModal}>Add Organization</Button>
-      </div>
+      <DashboardPageHeader
+        eyebrow="Ministry profiles"
+        title="Organizations"
+        description="Maintain ministry profiles, memberships, and associations connected to your account."
+        actions={
+          <Button onClick={openModal} leftSection={<IconPlus size={16} />}>
+            Add organization
+          </Button>
+        }
+      />
 
       <div className="flex flex-col gap-5">
-        <div>
-          <Text fw={500} className="mb-2.5">
-            Organization Management
-          </Text>
-          <Text size="sm" c="dimmed" className="mb-5">
-            Manage your ministry organization profiles and information. Update
-            details, manage users, and maintain your organizational presence.
-          </Text>
-        </div>
-
         <Text fw={500} size="lg">
           My Organizations
         </Text>

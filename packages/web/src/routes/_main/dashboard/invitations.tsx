@@ -93,7 +93,7 @@ function InvitationsRoute() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto max-w-4xl p-4">
+      <div className="w-full">
         <Title order={2} className="mb-5">
           Pending Invitations
         </Title>
@@ -104,7 +104,7 @@ function InvitationsRoute() {
 
   if (!invitations || invitations.length === 0) {
     return (
-      <div className="container mx-auto max-w-4xl p-4">
+      <div className="w-full">
         <Title order={2} className="mb-5">
           Pending Invitations
         </Title>
@@ -116,7 +116,7 @@ function InvitationsRoute() {
   }
 
   return (
-    <div className="container mx-auto max-w-4xl p-4">
+    <div className="w-full">
       <Title order={2} className="mb-5">
         Pending Invitations
       </Title>

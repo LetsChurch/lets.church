@@ -295,7 +295,7 @@ function ChurchEditPage() {
   };
 
   return (
-    <div className="relative mx-auto w-full max-w-7xl px-4 py-4">
+    <div className="relative w-full">
       <LoadingOverlay visible={updateChurchMutation.isPending} />
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-3">

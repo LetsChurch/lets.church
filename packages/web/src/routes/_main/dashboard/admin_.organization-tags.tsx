@@ -233,7 +233,7 @@ function OrganizationTagsPage() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-4">
+    <div className="w-full">
       <div className="flex flex-col gap-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>

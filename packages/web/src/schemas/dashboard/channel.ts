@@ -155,6 +155,10 @@ export const channelUploadsQuerySchema = channelQuerySchema
   .and(
     z.object({
       search: z.string().optional(),
+      sort: z
+        .enum(['title', 'visibility', 'views', 'createdAt'])
+        .default('createdAt'),
+      direction: z.enum(['asc', 'desc']).default('desc'),
     }),
   );
 

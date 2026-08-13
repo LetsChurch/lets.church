@@ -22,6 +22,8 @@ import { notifications } from '@/components/ui/notifications';
 import { useTRPC } from '@/trpc/react';
 import { formatTime } from '@/util/format';
 
+import { FeaturedMediaSearchResult } from './-featured-media-search-result';
+
 export const Route = createFileRoute('/_main/dashboard/admin_/featured')({
   component: FeaturedUploadsPage,
   beforeLoad: async ({ context }) => {
@@ -56,13 +58,14 @@ function FeaturedUploadsPage() {
     trpc.dashboard.admin.getFeaturedUploads.queryOptions(),
   );
 
+  const canSearch = debouncedSearchValue.trim().length >= 2;
   // Search for uploads to add (search across all public uploads)
-  const { data: searchData } = useQuery({
+  const { data: searchData, isLoading: isSearching } = useQuery({
     ...trpc.search.hybridSearch.queryOptions({
       q: debouncedSearchValue,
       limit: 20,
     }),
-    enabled: debouncedSearchValue.length >= 2,
+    enabled: canSearch,
   });
 
   const [items, setItems] = useState(featuredUploads);
@@ -182,20 +185,22 @@ function FeaturedUploadsPage() {
     addFeaturedUploadMutation.mutate({ uploadId });
   };
 
-  // Filter out uploads that are already featured
-  const availableUploads =
-    debouncedSearchValue.length >= 2 && searchData?.items
-      ? (
-          searchData.items as Array<{ id: string; title?: string | null }>
-        ).filter(
-          (upload) =>
-            !featuredUploads.some((item) => item.uploadRecord.id === upload.id),
-        )
-      : [];
+  const availableUploads = canSearch
+    ? (searchData?.items ?? []).filter(
+        (upload) =>
+          !featuredUploads.some((item) => item.uploadRecord.id === upload.id),
+      )
+    : [];
 
   const autocompleteData = availableUploads.map((upload) => ({
     value: upload.id,
     label: upload.title || 'Untitled',
+    description: upload.description,
+    thumbnailUrl: upload.thumbnailUrl,
+    channelName: upload.channel.name,
+    lengthSeconds: upload.lengthSeconds,
+    publishedAt: upload.publishedAt,
+    viewCount: upload._count.uploadViews,
   }));
 
   const handleAutocompleteSelect = (value: string) => {
@@ -222,9 +227,7 @@ function FeaturedUploadsPage() {
         value={searchValue}
         onValueChange={(value) => setSearchValue(value)}
         mode="none"
-        itemToStringValue={(item: { value: string; label: string }) =>
-          item.label
-        }
+        itemToStringValue={(item) => item.label}
       >
         <InputWrapper label="Add Upload to Featured">
           <div className="relative">
@@ -245,19 +248,42 @@ function FeaturedUploadsPage() {
         </InputWrapper>
         <Autocomplete.Portal>
           <Autocomplete.Positioner sideOffset={4} className="z-50">
-            <Autocomplete.Popup className="border-fancy-pants max-h-72 w-[var(--anchor-width)] overflow-y-auto rounded-lg bg-white p-1 shadow-xl dark:bg-zinc-900">
-              <Autocomplete.List>
-                {autocompleteData.map((item) => (
-                  <Autocomplete.Item
-                    key={item.value}
-                    value={item}
-                    onClick={() => handleAutocompleteSelect(item.value)}
-                    className="text-primary cursor-pointer rounded-md px-3 py-2 text-sm transition-colors outline-none hover:bg-gray-100 data-highlighted:bg-gray-100 dark:hover:bg-zinc-800 dark:data-highlighted:bg-zinc-800"
-                  >
-                    {item.label}
-                  </Autocomplete.Item>
-                ))}
-              </Autocomplete.List>
+            <Autocomplete.Popup className="border-fancy-pants bg-dashboard-surface max-h-96 w-[var(--anchor-width)] max-w-[calc(100vw-2rem)] min-w-[min(32rem,calc(100vw-2rem))] overflow-y-auto rounded-lg p-1 shadow-xl">
+              {searchValue.trim().length < 2 ? (
+                <div className="text-secondary px-3 py-4 text-center text-sm">
+                  Type at least 2 characters to search media
+                </div>
+              ) : isSearching ? (
+                <div className="text-secondary px-3 py-4 text-center text-sm">
+                  Searching media…
+                </div>
+              ) : (
+                <>
+                  <Autocomplete.Empty className="text-secondary px-3 py-4 text-center text-sm">
+                    No available media found
+                  </Autocomplete.Empty>
+                  <Autocomplete.List>
+                    {autocompleteData.map((item) => (
+                      <Autocomplete.Item
+                        key={item.value}
+                        value={item}
+                        onClick={() => handleAutocompleteSelect(item.value)}
+                        className="hover:bg-brand/10 data-[highlighted]:border-brand/60 data-[highlighted]:bg-brand/15 cursor-pointer rounded-md border border-transparent p-2 transition-[background-color,border-color,box-shadow] outline-none data-[highlighted]:shadow-sm"
+                      >
+                        <FeaturedMediaSearchResult
+                          title={item.label}
+                          description={item.description}
+                          thumbnailUrl={item.thumbnailUrl}
+                          channelName={item.channelName}
+                          lengthSeconds={item.lengthSeconds}
+                          publishedAt={item.publishedAt}
+                          viewCount={item.viewCount}
+                        />
+                      </Autocomplete.Item>
+                    ))}
+                  </Autocomplete.List>
+                </>
+              )}
             </Autocomplete.Popup>
           </Autocomplete.Positioner>
         </Autocomplete.Portal>

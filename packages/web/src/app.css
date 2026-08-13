@@ -20,11 +20,28 @@
   --color-brand-600: var(--color-indigo-600);
   --color-brand-700: var(--color-indigo-700);
 
+  /* Dashboard palette */
+  --color-dashboard-canvas: var(--dashboard-canvas);
+  --color-dashboard-surface: var(--dashboard-surface);
+  --color-dashboard-raised: var(--dashboard-raised);
+  --color-dashboard-rule: var(--dashboard-rule);
+  --color-dashboard-ink: var(--dashboard-ink);
+  --color-dashboard-accent-soft: var(--dashboard-accent-soft);
+
   /* Layout dimensions */
   --header-height: calc(var(--spacing) * 16); /* 64px */
 
   /* Custom easing */
   --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+:root {
+  --dashboard-canvas: #f3f5f8;
+  --dashboard-surface: #ffffff;
+  --dashboard-raised: #ffffff;
+  --dashboard-rule: #dfe4ec;
+  --dashboard-ink: #172033;
+  --dashboard-accent-soft: #e8edff;
 }
 
 /* Dark theme */
@@ -34,6 +51,67 @@
   --color-muted: var(--color-zinc-400);
   --color-page: var(--color-zinc-950);
   --color-edge-fade: var(--color-zinc-900);
+  --dashboard-canvas: #111318;
+  --dashboard-surface: #171a21;
+  --dashboard-raised: #1d2028;
+  --dashboard-rule: #2c303a;
+  --dashboard-ink: #f5f7fb;
+  --dashboard-accent-soft: #282c4d;
+}
+
+.dashboard-page-title {
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+.dashboard-content h1 {
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+.dashboard-content a:has(> .dashboard-card) {
+  border-radius: 0.875rem;
+  outline: none;
+}
+
+.dashboard-content a:has(> .dashboard-card):focus-visible {
+  box-shadow:
+    0 0 0 2px var(--dashboard-canvas),
+    0 0 0 4px color-mix(in srgb, var(--color-brand) 70%, transparent);
+}
+
+.dashboard-card,
+.dashboard-panel {
+  border: 1px solid var(--dashboard-rule);
+  background: var(--dashboard-surface);
+  border-radius: 0.875rem;
+  box-shadow:
+    0 1px 1px color-mix(in srgb, var(--dashboard-ink) 4%, transparent),
+    0 8px 24px color-mix(in srgb, var(--dashboard-ink) 4%, transparent);
+}
+
+.dashboard-card {
+  position: relative;
+  overflow: hidden;
+  padding: 1.25rem;
+  transition: border-color 160ms ease;
+}
+
+.dashboard-card[data-interactive='true']:hover {
+  border-color: color-mix(
+    in srgb,
+    var(--color-brand) 38%,
+    var(--dashboard-rule)
+  );
+}
+
+.dashboard-card[data-interactive='true']:focus-within {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand) 18%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-card {
+    transition: none;
+  }
 }
 
 @utility border-fancy-pants {

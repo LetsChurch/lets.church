@@ -2,6 +2,7 @@ import type { UploadLicense, UploadVisibility } from '@letschurch/db/types';
 import { useStore } from '@nanostores/react';
 import {
   IconChevronDown,
+  IconChevronUp,
   IconCube3dSphere,
   IconDownload,
   IconEdit,
@@ -11,6 +12,7 @@ import {
   IconStar,
   IconStarFilled,
   IconTrash,
+  IconSelector,
   IconUpload,
 } from '@tabler/icons-react';
 import {
@@ -24,6 +26,10 @@ import { map } from 'nanostores';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 
+import {
+  DataTableSearch,
+  DataTableToolbar,
+} from '@/components/dashboard/data-table';
 import { LcMenu, MenuItemButton, OverflowMenu } from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import {
@@ -165,17 +171,23 @@ export const Route = createFileRoute(
     page: z.number().min(1).default(1),
     limit: z.number().min(1).max(100).default(20),
     search: z.string().optional(),
+    sort: z
+      .enum(['title', 'visibility', 'views', 'createdAt'])
+      .default('createdAt'),
+    direction: z.enum(['asc', 'desc']).default('desc'),
     upload: z.boolean().optional(),
   }),
   loaderDeps: ({ search }) => ({
     page: search.page,
     limit: search.limit,
     search: search.search,
+    sort: search.sort,
+    direction: search.direction,
   }),
   loader: async ({
     context: { queryClient, trpc },
     params,
-    deps: { page, limit, search },
+    deps: { page, limit, search, sort, direction },
   }) => {
     const data = await queryClient.ensureQueryData(
       trpc.dashboard.channels.getChannelUploads.queryOptions({
@@ -183,6 +195,8 @@ export const Route = createFileRoute(
         page,
         limit,
         search,
+        sort,
+        direction,
       }),
     );
     return {
@@ -193,6 +207,62 @@ export const Route = createFileRoute(
     };
   },
 });
+
+type UploadSort = 'title' | 'visibility' | 'views' | 'createdAt';
+type SortDirection = 'asc' | 'desc';
+
+function SortableUploadHeader({
+  column,
+  direction,
+  label,
+  sort,
+  onSort,
+}: {
+  column: UploadSort;
+  direction: SortDirection;
+  label: string;
+  sort: UploadSort;
+  onSort: (column: UploadSort) => void;
+}) {
+  const isSorted = sort === column;
+
+  return (
+    <Table.Th
+      aria-sort={
+        isSorted ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'
+      }
+    >
+      <button
+        type="button"
+        onClick={() => onSort(column)}
+        className="hover:bg-dashboard-accent-soft focus-visible:ring-brand/40 -mx-2 flex min-h-8 w-[calc(100%+1rem)] items-center gap-1.5 rounded-md px-2 text-left outline-none focus-visible:ring-2"
+      >
+        <span>{label}</span>
+        {isSorted ? (
+          direction === 'asc' ? (
+            <IconChevronUp
+              aria-hidden="true"
+              className="text-brand"
+              size={14}
+            />
+          ) : (
+            <IconChevronDown
+              aria-hidden="true"
+              className="text-brand"
+              size={14}
+            />
+          )
+        ) : (
+          <IconSelector
+            aria-hidden="true"
+            className="text-muted opacity-50"
+            size={14}
+          />
+        )}
+      </button>
+    </Table.Th>
+  );
+}
 
 function ChannelUploadsPage() {
   const search = Route.useSearch();
@@ -208,6 +278,8 @@ function ChannelUploadsPage() {
       page: search.page,
       limit: search.limit,
       search: search.search,
+      sort: search.sort,
+      direction: search.direction,
     }),
   );
 
@@ -255,6 +327,28 @@ function ChannelUploadsPage() {
         s.includes(id) ? s.filter((x) => x !== id) : [...s, id],
       ),
   };
+  const handleSort = (column: UploadSort) => {
+    const defaultDirection: SortDirection =
+      column === 'title' || column === 'visibility' ? 'asc' : 'desc';
+    const direction =
+      search.sort === column
+        ? search.direction === 'asc'
+          ? 'desc'
+          : 'asc'
+        : defaultDirection;
+
+    handlers.resetSelection();
+    navigate({
+      to: '.',
+      search: {
+        page: 1,
+        limit: search.limit,
+        search: search.search,
+        sort: column,
+        direction,
+      },
+    });
+  };
 
   // Debounced search
   const [searchValue, setSearchValue] = useState(search.search ?? '');
@@ -274,10 +368,19 @@ function ChannelUploadsPage() {
           page: 1,
           limit: search.limit,
           search: debouncedSearch || undefined,
+          sort: search.sort,
+          direction: search.direction,
         },
       });
     }
-  }, [debouncedSearch, search.limit, navigate, search.search]);
+  }, [
+    debouncedSearch,
+    search.limit,
+    search.sort,
+    search.direction,
+    navigate,
+    search.search,
+  ]);
 
   const createUploadMutation = useMutation(
     trpc.dashboard.channels.createUploadRecord.mutationOptions({
@@ -409,6 +512,8 @@ function ChannelUploadsPage() {
             page: search.page,
             limit: search.limit,
             search: search.search,
+            sort: search.sort,
+            direction: search.direction,
           }),
         );
       },
@@ -439,6 +544,8 @@ function ChannelUploadsPage() {
             page: search.page,
             limit: search.limit,
             search: search.search,
+            sort: search.sort,
+            direction: search.direction,
           }),
         );
 
@@ -524,6 +631,8 @@ function ChannelUploadsPage() {
           page: search.page,
           limit: search.limit,
           search: search.search,
+          sort: search.sort,
+          direction: search.direction,
         },
         replace: true,
       });
@@ -535,6 +644,8 @@ function ChannelUploadsPage() {
     navigate,
     search.page,
     search.limit,
+    search.sort,
+    search.direction,
     search.search,
   ]);
 
@@ -706,15 +817,6 @@ function ChannelUploadsPage() {
           )}
         </div>
       </div>
-
-      <TextInput
-        placeholder="Search uploads by title..."
-        value={searchValue}
-        onChange={(e) => {
-          setSearchValue(e.currentTarget.value);
-        }}
-        style={{ maxWidth: 400 }}
-      />
 
       {selection.length > 0 ? (
         <div className="rounded-md border border-blue-300 bg-blue-50 p-4">
@@ -1212,293 +1314,331 @@ function ChannelUploadsPage() {
         </LcModal.Portal>
       </LcModal.Root>
 
-      <Table>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>
-              <Checkbox
-                checked={handlers.isAllSelected()}
-                indeterminate={handlers.isSomeSelected()}
-                onChange={() => {
-                  if (handlers.isAllSelected()) {
-                    handlers.resetSelection();
-                  } else {
-                    handlers.setSelection(uploadIds);
-                  }
-                }}
-              />
-            </Table.Th>
-            <Table.Th>Video</Table.Th>
-            <Table.Th>Visibility</Table.Th>
-            <Table.Th>Views</Table.Th>
-            <Table.Th>Created</Table.Th>
-            <Table.Th>Actions</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {uploads.length === 0 ? (
+      <div className="dashboard-panel overflow-hidden">
+        <DataTableToolbar>
+          <DataTableSearch
+            value={searchValue}
+            onChange={setSearchValue}
+            placeholder="Search uploads by title..."
+          />
+        </DataTableToolbar>
+        <Table highlightOnHover withRowBorders withTableBorder={false}>
+          <Table.Thead>
             <Table.Tr>
-              <Table.Td colSpan={6}>
-                <Text ta="center" c="dimmed" className="py-8">
-                  No uploads found
-                </Text>
-              </Table.Td>
-            </Table.Tr>
-          ) : (
-            uploads.map((upload) => {
-              const isSelected = selection.includes(upload.id);
-              const isDeleted = deletedUploads[upload.id];
-              const canEditUpload = (isAdmin || canEdit) && !isDeleted;
-              const canDownloadUpload =
-                !isDeleted &&
-                (isAdmin || (channel.userMembership?.canDownload ?? false));
-              const canFeatureUpload = isSiteAdmin && !isDeleted;
-              const canDeleteUpload = canDelete && !isDeleted;
-              const hasUploadActions =
-                canEditUpload ||
-                (canDownloadUpload && Boolean(upload.finalizedUploadKey)) ||
-                canFeatureUpload ||
-                canDeleteUpload;
-              return (
-                <Table.Tr
-                  key={upload.id}
-                  className={
-                    isSelected ? 'bg-blue-50 dark:bg-blue-950/30' : undefined
-                  }
-                  style={{
-                    cursor: isDeleted ? 'default' : 'pointer',
-                    opacity: isDeleted ? 0.5 : 1,
+              <Table.Th>
+                <Checkbox
+                  aria-label="Select all uploads on this page"
+                  checked={handlers.isAllSelected()}
+                  indeterminate={handlers.isSomeSelected()}
+                  onChange={() => {
+                    if (handlers.isAllSelected()) {
+                      handlers.resetSelection();
+                    } else {
+                      handlers.setSelection(uploadIds);
+                    }
                   }}
-                  onClick={
-                    isDeleted
-                      ? undefined
-                      : () => {
-                          navigate({
-                            to: `/dashboard/channels/${data.channel.id}/uploads/${upload.id}`,
-                          });
-                        }
-                  }
-                >
-                  <Table.Td onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={isSelected}
-                      onChange={() => handlers.toggle(upload.id)}
-                      disabled={isDeleted}
-                    />
-                  </Table.Td>
-                  <Table.Td>
-                    <div className="flex flex-wrap items-start justify-start gap-3">
-                      <div className="relative">
-                        <div className="aspect-video" style={{ width: 120 }}>
-                          {upload.thumbnailUrl ? (
-                            <img
-                              src={upload.thumbnailUrl}
-                              alt={upload.title || 'Video thumbnail'}
-                              style={{
-                                borderRadius: 4,
-                                objectFit: 'cover',
-                                width: '100%',
-                                height: '100%',
-                              }}
-                            />
-                          ) : (
+                />
+              </Table.Th>
+              <SortableUploadHeader
+                column="title"
+                direction={search.direction}
+                label="Video"
+                sort={search.sort}
+                onSort={handleSort}
+              />
+              <SortableUploadHeader
+                column="visibility"
+                direction={search.direction}
+                label="Visibility"
+                sort={search.sort}
+                onSort={handleSort}
+              />
+              <SortableUploadHeader
+                column="views"
+                direction={search.direction}
+                label="Views"
+                sort={search.sort}
+                onSort={handleSort}
+              />
+              <SortableUploadHeader
+                column="createdAt"
+                direction={search.direction}
+                label="Created"
+                sort={search.sort}
+                onSort={handleSort}
+              />
+              <Table.Th>Actions</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {uploads.length === 0 ? (
+              <Table.Tr>
+                <Table.Td colSpan={6}>
+                  <Text ta="center" c="dimmed" className="py-8">
+                    No uploads found
+                  </Text>
+                </Table.Td>
+              </Table.Tr>
+            ) : (
+              uploads.map((upload) => {
+                const isSelected = selection.includes(upload.id);
+                const isDeleted = deletedUploads[upload.id];
+                const canEditUpload = (isAdmin || canEdit) && !isDeleted;
+                const canDownloadUpload =
+                  !isDeleted &&
+                  (isAdmin || (channel.userMembership?.canDownload ?? false));
+                const canFeatureUpload = isSiteAdmin && !isDeleted;
+                const canDeleteUpload = canDelete && !isDeleted;
+                const hasUploadActions =
+                  canEditUpload ||
+                  (canDownloadUpload && Boolean(upload.finalizedUploadKey)) ||
+                  canFeatureUpload ||
+                  canDeleteUpload;
+                return (
+                  <Table.Tr
+                    key={upload.id}
+                    className={
+                      isSelected ? 'bg-blue-50 dark:bg-blue-950/30' : undefined
+                    }
+                    style={{
+                      cursor: isDeleted ? 'default' : 'pointer',
+                      opacity: isDeleted ? 0.5 : 1,
+                    }}
+                    onClick={
+                      isDeleted
+                        ? undefined
+                        : () => {
+                            navigate({
+                              to: `/dashboard/channels/${data.channel.id}/uploads/${upload.id}`,
+                            });
+                          }
+                    }
+                  >
+                    <Table.Td onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={isSelected}
+                        onChange={() => handlers.toggle(upload.id)}
+                        disabled={isDeleted}
+                      />
+                    </Table.Td>
+                    <Table.Td>
+                      <div className="flex flex-wrap items-start justify-start gap-3">
+                        <div className="relative">
+                          <div className="aspect-video" style={{ width: 120 }}>
+                            {upload.thumbnailUrl ? (
+                              <img
+                                src={upload.thumbnailUrl}
+                                alt={upload.title || 'Video thumbnail'}
+                                style={{
+                                  borderRadius: 4,
+                                  objectFit: 'cover',
+                                  width: '100%',
+                                  height: '100%',
+                                }}
+                              />
+                            ) : (
+                              <div
+                                className="bg-gray-300"
+                                style={{
+                                  borderRadius: 4,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: '100%',
+                                  height: '100%',
+                                }}
+                              >
+                                <IconCube3dSphere
+                                  size={24}
+                                  stroke={1}
+                                  color="#adb5bd"
+                                />
+                              </div>
+                            )}
+                          </div>
+                          {upload.lengthSeconds && (
                             <div
-                              className="bg-gray-300"
+                              className="absolute"
                               style={{
-                                borderRadius: 4,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                width: '100%',
-                                height: '100%',
+                                bottom: 4,
+                                right: 4,
+                                padding: '1px 4px',
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                borderRadius: 2,
+                                fontSize: '11px',
+                                color: 'white',
+                                fontFamily: 'monospace',
+                                lineHeight: 1,
                               }}
                             >
-                              <IconCube3dSphere
-                                size={24}
-                                stroke={1}
-                                color="#adb5bd"
-                              />
+                              {formatTime(upload.lengthSeconds * 1000)}
                             </div>
                           )}
                         </div>
-                        {upload.lengthSeconds && (
-                          <div
-                            className="absolute"
-                            style={{
-                              bottom: 4,
-                              right: 4,
-                              padding: '1px 4px',
-                              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                              borderRadius: 2,
-                              fontSize: '11px',
-                              color: 'white',
-                              fontFamily: 'monospace',
-                              lineHeight: 1,
-                            }}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <Text fw={500} lineClamp={2} size="sm">
+                            {upload.title}
+                          </Text>
+                          <Text
+                            size="xs"
+                            c="dimmed"
+                            lineClamp={2}
+                            className={cn(
+                              upload.description ? undefined : 'italic',
+                              'mt-[2px]',
+                            )}
                           >
-                            {formatTime(upload.lengthSeconds * 1000)}
-                          </div>
-                        )}
+                            {upload.description || 'No description'}
+                          </Text>
+                        </div>
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <Text fw={500} lineClamp={2} size="sm">
-                          {upload.title}
-                        </Text>
-                        <Text
-                          size="xs"
-                          c="dimmed"
-                          lineClamp={2}
-                          className={cn(
-                            upload.description ? undefined : 'italic',
-                            'mt-[2px]',
-                          )}
-                        >
-                          {upload.description || 'No description'}
-                        </Text>
-                      </div>
-                    </div>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge
-                      color={getVisibilityColor(upload.visibility)}
-                      size="sm"
-                      leftSection={getVisibilityIcon(upload.visibility)}
-                    >
-                      {upload.visibility}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">{upload._count.uploadViews}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">
-                      {formatDate(upload.createdAt, 'short')}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td onClick={(e) => e.stopPropagation()}>
-                    {hasUploadActions ? (
-                      <OverflowMenu
-                        label={`Actions for ${upload.title || 'untitled upload'}`}
-                        triggerProps={{ size: 'sm' }}
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge
+                        color={getVisibilityColor(upload.visibility)}
+                        size="sm"
+                        leftSection={getVisibilityIcon(upload.visibility)}
                       >
-                        {canEditUpload ? (
-                          <MenuItemButton
-                            icon={<IconEdit size={16} />}
-                            onClick={() =>
-                              navigate({
-                                to: `/dashboard/channels/${data.channel.id}/uploads/${upload.id}`,
-                              })
-                            }
-                          >
-                            Edit
-                          </MenuItemButton>
-                        ) : null}
-
-                        {canDownloadUpload && upload.finalizedUploadKey ? (
-                          <MenuItemButton
-                            icon={<IconDownload size={16} />}
-                            onClick={() =>
-                              downloadOriginalMutation.mutate({
-                                channelId: channel.id,
-                                uploadId: upload.id,
-                              })
-                            }
-                          >
-                            Download Original
-                          </MenuItemButton>
-                        ) : null}
-
-                        {canFeatureUpload ? (
-                          <MenuItemButton
-                            icon={
-                              upload.isFeatured ? (
-                                <IconStarFilled size={16} />
-                              ) : (
-                                <IconStar size={16} />
-                              )
-                            }
-                            onClick={() =>
-                              toggleFeaturedMutation.mutate({
-                                uploadId: upload.id,
-                              })
-                            }
-                          >
-                            {upload.isFeatured
-                              ? 'Remove from Featured'
-                              : 'Add to Featured'}
-                          </MenuItemButton>
-                        ) : null}
-
-                        {canDeleteUpload ? (
-                          <>
-                            <LcMenu.Separator />
+                        {upload.visibility}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm">{upload._count.uploadViews}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm">
+                        {formatDate(upload.createdAt, 'short')}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td onClick={(e) => e.stopPropagation()}>
+                      {hasUploadActions ? (
+                        <OverflowMenu
+                          label={`Actions for ${upload.title || 'untitled upload'}`}
+                          triggerProps={{ size: 'sm' }}
+                        >
+                          {canEditUpload ? (
                             <MenuItemButton
-                              icon={<IconTrash size={16} />}
-                              className="text-red-600 dark:text-red-400"
+                              icon={<IconEdit size={16} />}
                               onClick={() =>
-                                setUploadToDelete({
-                                  id: upload.id,
-                                  title: upload.title || 'Untitled Upload',
+                                navigate({
+                                  to: `/dashboard/channels/${data.channel.id}/uploads/${upload.id}`,
                                 })
                               }
                             >
-                              Delete
+                              Edit
                             </MenuItemButton>
-                          </>
-                        ) : null}
-                      </OverflowMenu>
-                    ) : null}
-                  </Table.Td>
-                </Table.Tr>
-              );
-            })
-          )}
-        </Table.Tbody>
-      </Table>
+                          ) : null}
 
-      {pagination.totalPages > 1 && (
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-4">
-          <nav className="flex items-center gap-1" aria-label="Pagination">
-            <Button
-              variant="default"
-              size="sm"
-              disabled={pagination.page <= 1}
-              onClick={() => {
-                navigate({
-                  to: '.',
-                  search: {
-                    page: pagination.page - 1,
-                    limit: search.limit,
-                    search: search.search,
-                  },
-                });
-              }}
-            >
-              Previous
-            </Button>
-            <Text size="sm" c="dimmed">
-              Page {pagination.page} of {pagination.totalPages}
-            </Text>
-            <Button
-              variant="default"
-              size="sm"
-              disabled={pagination.page >= pagination.totalPages}
-              onClick={() => {
-                navigate({
-                  to: '.',
-                  search: {
-                    page: pagination.page + 1,
-                    limit: search.limit,
-                    search: search.search,
-                  },
-                });
-              }}
-            >
-              Next
-            </Button>
-          </nav>
-        </div>
-      )}
+                          {canDownloadUpload && upload.finalizedUploadKey ? (
+                            <MenuItemButton
+                              icon={<IconDownload size={16} />}
+                              onClick={() =>
+                                downloadOriginalMutation.mutate({
+                                  channelId: channel.id,
+                                  uploadId: upload.id,
+                                })
+                              }
+                            >
+                              Download Original
+                            </MenuItemButton>
+                          ) : null}
+
+                          {canFeatureUpload ? (
+                            <MenuItemButton
+                              icon={
+                                upload.isFeatured ? (
+                                  <IconStarFilled size={16} />
+                                ) : (
+                                  <IconStar size={16} />
+                                )
+                              }
+                              onClick={() =>
+                                toggleFeaturedMutation.mutate({
+                                  uploadId: upload.id,
+                                })
+                              }
+                            >
+                              {upload.isFeatured
+                                ? 'Remove from Featured'
+                                : 'Add to Featured'}
+                            </MenuItemButton>
+                          ) : null}
+
+                          {canDeleteUpload ? (
+                            <>
+                              <LcMenu.Separator />
+                              <MenuItemButton
+                                icon={<IconTrash size={16} />}
+                                className="text-red-600 dark:text-red-400"
+                                onClick={() =>
+                                  setUploadToDelete({
+                                    id: upload.id,
+                                    title: upload.title || 'Untitled Upload',
+                                  })
+                                }
+                              >
+                                Delete
+                              </MenuItemButton>
+                            </>
+                          ) : null}
+                        </OverflowMenu>
+                      ) : null}
+                    </Table.Td>
+                  </Table.Tr>
+                );
+              })
+            )}
+          </Table.Tbody>
+        </Table>
+
+        {pagination.totalPages > 1 && (
+          <div className="border-dashboard-rule bg-dashboard-raised flex flex-wrap items-center justify-center gap-4 border-t px-4 py-3">
+            <nav className="flex items-center gap-1" aria-label="Pagination">
+              <Button
+                variant="default"
+                size="sm"
+                disabled={pagination.page <= 1}
+                onClick={() => {
+                  navigate({
+                    to: '.',
+                    search: {
+                      page: pagination.page - 1,
+                      limit: search.limit,
+                      search: search.search,
+                      sort: search.sort,
+                      direction: search.direction,
+                    },
+                  });
+                }}
+              >
+                Previous
+              </Button>
+              <Text size="sm" c="dimmed">
+                Page {pagination.page} of {pagination.totalPages}
+              </Text>
+              <Button
+                variant="default"
+                size="sm"
+                disabled={pagination.page >= pagination.totalPages}
+                onClick={() => {
+                  navigate({
+                    to: '.',
+                    search: {
+                      page: pagination.page + 1,
+                      limit: search.limit,
+                      search: search.search,
+                      sort: search.sort,
+                      direction: search.direction,
+                    },
+                  });
+                }}
+              >
+                Next
+              </Button>
+            </nav>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

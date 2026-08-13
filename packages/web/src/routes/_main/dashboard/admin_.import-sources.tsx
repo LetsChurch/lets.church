@@ -354,7 +354,7 @@ function ImportSourcesPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-8">
+    <div className="w-full">
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <Title order={2}>Import Sources</Title>

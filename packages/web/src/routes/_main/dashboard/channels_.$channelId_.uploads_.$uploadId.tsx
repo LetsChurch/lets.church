@@ -768,7 +768,7 @@ function ChannelUploadPage() {
     previewUrl ?? selectedGeneratedThumbnail?.url ?? upload.thumbnailUrl;
 
   return (
-    <div className="relative mx-auto w-full max-w-7xl px-4 py-4">
+    <div className="relative w-full">
       <form.Subscribe selector={(state) => state.isSubmitting}>
         {(isSubmitting) => <LoadingOverlay visible={isSubmitting} />}
       </form.Subscribe>

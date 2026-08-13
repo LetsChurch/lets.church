@@ -1,6 +1,7 @@
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 
+import { DashboardPageHeader } from '@/components/dashboard/dashboard-ui';
 import { Badge, Loader, Text, Title } from '@/components/ui';
 import { useTRPC } from '@/trpc/react';
 
@@ -110,9 +111,11 @@ function AdminPage() {
 
   return (
     <>
-      <Title order={1} className="mb-5">
-        Admin
-      </Title>
+      <DashboardPageHeader
+        eyebrow="Administration"
+        title="Admin"
+        description="Monitor publishing queues, review exceptions, and maintain system operations."
+      />
 
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <Title order={2} className="text-lg font-semibold">
@@ -132,10 +135,7 @@ function AdminPage() {
           aria-hidden="true"
         >
           {Array.from({ length: 3 }).map((_, i) => (
-            <div
-              key={i}
-              className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900"
-            >
+            <div key={i} className="dashboard-panel p-5">
               <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
                 <div className="h-5 w-32 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
                 <div className="h-5 w-16 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" />
@@ -147,10 +147,7 @@ function AdminPage() {
       ) : queueStats && queueStats.length > 0 ? (
         <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {queueStats.map((queue) => (
-            <div
-              key={queue.name}
-              className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900"
-            >
+            <div key={queue.name} className="dashboard-panel p-5">
               <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
                 <Text fw={500}>{queue.label}</Text>
                 <Badge
@@ -185,7 +182,7 @@ function AdminPage() {
       </Title>
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Link to="/dashboard/admin/speaker-queue" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Speaker Labeling</Text>
             </div>
@@ -196,7 +193,7 @@ function AdminPage() {
           </div>
         </Link>
         <Link to="/dashboard/admin/speakers" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Speakers</Text>
             </div>
@@ -206,7 +203,7 @@ function AdminPage() {
           </div>
         </Link>
         <Link to="/dashboard/admin/featured" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Featured Media</Text>
             </div>
@@ -216,7 +213,7 @@ function AdminPage() {
           </div>
         </Link>
         <Link to="/dashboard/admin/channels" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Channels</Text>
               {pendingApprovals.channels.length > 0 ? (
@@ -231,7 +228,7 @@ function AdminPage() {
           </div>
         </Link>
         <Link to="/dashboard/admin/organizations" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Organizations</Text>
               {pendingApprovals.organizations.length > 0 ? (
@@ -246,7 +243,7 @@ function AdminPage() {
           </div>
         </Link>
         <Link to="/dashboard/admin/organization-tags" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Organization Tags</Text>
             </div>
@@ -262,7 +259,7 @@ function AdminPage() {
       </Title>
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Link to="/dashboard/admin/donations" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Donations</Text>
             </div>
@@ -272,7 +269,7 @@ function AdminPage() {
           </div>
         </Link>
         <Link to="/dashboard/admin/users" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Users</Text>
               <Badge color="blue" size="sm">
@@ -285,7 +282,7 @@ function AdminPage() {
           </div>
         </Link>
         <Link to="/dashboard/admin/newsletter-lists" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Newsletter Lists</Text>
             </div>
@@ -301,7 +298,7 @@ function AdminPage() {
       </Title>
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Link to="/dashboard/admin/import-sources" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Import Sources</Text>
             </div>
@@ -311,7 +308,7 @@ function AdminPage() {
           </div>
         </Link>
         <Link to="/dashboard/admin/processing-uploads" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Processing Uploads</Text>
               {isLoadingProcessing ? (
@@ -328,7 +325,7 @@ function AdminPage() {
           </div>
         </Link>
         <Link to="/dashboard/admin/duplicate-uploads" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Duplicate Uploads</Text>
             </div>
@@ -338,7 +335,7 @@ function AdminPage() {
           </div>
         </Link>
         <Link to="/dashboard/admin/failed-uploads" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Failed Uploads</Text>
               {isLoadingFailed ? (
@@ -358,7 +355,7 @@ function AdminPage() {
           </div>
         </Link>
         <Link to="/dashboard/admin/deleting-uploads" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Deleting Uploads</Text>
               {isLoadingDeleting ? (
@@ -378,7 +375,7 @@ function AdminPage() {
           </div>
         </Link>
         <Link to="/dashboard/admin/upload-backups" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Upload Backups</Text>
               <Badge
@@ -412,7 +409,7 @@ function AdminPage() {
           search={{ task: 'annotate' }}
           className="block"
         >
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>LLM Eval</Text>
             </div>
@@ -422,7 +419,7 @@ function AdminPage() {
           </div>
         </Link>
         <Link to="/dashboard/admin/failed-annotations" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Failed Annotations</Text>
               {isLoadingFailedAnnotations ? (
@@ -444,7 +441,7 @@ function AdminPage() {
           </div>
         </Link>
         <Link to="/dashboard/admin/failed-summaries" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Failed Summaries</Text>
               {isLoadingFailedSummaries ? (
@@ -470,7 +467,7 @@ function AdminPage() {
       </Title>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Link to="/dashboard/admin/backfill-filenames" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Backfill Filenames</Text>
               {backfillStatus?.workflowStatus?.status === 'running' ? (
@@ -489,7 +486,7 @@ function AdminPage() {
           </div>
         </Link>
         <Link to="/dashboard/admin/searches" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Search Logs</Text>
             </div>
@@ -499,7 +496,7 @@ function AdminPage() {
           </div>
         </Link>
         <Link to="/dashboard/admin/reindex" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Reindex</Text>
             </div>
@@ -509,7 +506,7 @@ function AdminPage() {
           </div>
         </Link>
         <Link to="/dashboard/admin/reprocess" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Reprocess Media</Text>
             </div>
@@ -519,7 +516,7 @@ function AdminPage() {
           </div>
         </Link>
         <Link to="/dashboard/admin/storage-audit" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Storage Audit</Text>
             </div>
@@ -530,7 +527,7 @@ function AdminPage() {
           </div>
         </Link>
         <Link to="/dashboard/admin/maintenance" className="block">
-          <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+          <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Maintenance Mode</Text>
               {maintenance?.maintenanceMode ? (

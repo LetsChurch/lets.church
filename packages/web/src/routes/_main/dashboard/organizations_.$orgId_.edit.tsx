@@ -111,7 +111,7 @@ function OrganizationEditPage() {
   });
 
   return (
-    <div className="relative mx-auto w-full max-w-4xl px-4 py-4">
+    <div className="relative w-full max-w-4xl">
       <form.Subscribe selector={(state) => state.isSubmitting}>
         {(isSubmitting) => <LoadingOverlay visible={isSubmitting} />}
       </form.Subscribe>

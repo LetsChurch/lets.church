@@ -12,7 +12,7 @@ type TableProps = ComponentPropsWithoutRef<'table'> & {
 export function Table({
   highlightOnHover,
   striped,
-  withTableBorder,
+  withTableBorder = true,
   withRowBorders = true,
   className,
   children,
@@ -23,18 +23,16 @@ export function Table({
       className={cn(
         'w-full overflow-x-auto',
         withTableBorder &&
-          'rounded-lg border border-gray-200 dark:border-zinc-800',
+          'rounded-xl border border-dashboard-rule bg-dashboard-surface',
       )}
     >
       <table
         className={cn(
           'w-full border-collapse text-left text-sm',
-          highlightOnHover &&
-            '[&_tbody_tr:hover]:bg-gray-50 dark:[&_tbody_tr:hover]:bg-white/5',
-          striped &&
-            '[&_tbody_tr:nth-child(odd)]:bg-gray-50 dark:[&_tbody_tr:nth-child(odd)]:bg-white/5',
+          highlightOnHover && '[&_tbody_tr:hover]:bg-dashboard-accent-soft/55',
+          striped && '[&_tbody_tr:nth-child(odd)]:bg-dashboard-canvas/70',
           withRowBorders &&
-            '[&_tbody_tr]:border-gray-100 [&_tbody_tr]:border-t dark:[&_tbody_tr]:border-zinc-800',
+            '[&_tbody_tr]:border-dashboard-rule [&_tbody_tr]:border-t',
           className,
         )}
         {...rest}
@@ -48,7 +46,10 @@ export function Table({
 function Thead({ className, ...rest }: ComponentPropsWithoutRef<'thead'>) {
   return (
     <thead
-      className={cn('border-gray-200 border-b dark:border-zinc-800', className)}
+      className={cn(
+        'border-dashboard-rule border-b bg-dashboard-raised',
+        className,
+      )}
       {...rest}
     />
   );
@@ -61,7 +62,10 @@ function Tbody(props: ComponentPropsWithoutRef<'tbody'>) {
 function Tfoot({ className, ...rest }: ComponentPropsWithoutRef<'tfoot'>) {
   return (
     <tfoot
-      className={cn('border-gray-200 border-t dark:border-zinc-800', className)}
+      className={cn(
+        'border-dashboard-rule border-t bg-dashboard-raised',
+        className,
+      )}
       {...rest}
     />
   );
@@ -75,7 +79,7 @@ function Th({ className, ...rest }: ComponentPropsWithoutRef<'th'>) {
   return (
     <th
       className={cn(
-        'px-3 py-2 font-medium text-secondary text-xs uppercase tracking-wide',
+        'px-4 py-2.5 font-mono font-semibold text-[0.68rem] text-secondary uppercase tracking-[0.09em]',
         className,
       )}
       {...rest}
@@ -86,7 +90,7 @@ function Th({ className, ...rest }: ComponentPropsWithoutRef<'th'>) {
 function Td({ className, ...rest }: ComponentPropsWithoutRef<'td'>) {
   return (
     <td
-      className={cn('px-3 py-2 align-middle text-primary', className)}
+      className={cn('px-4 py-3 align-middle text-primary', className)}
       {...rest}
     />
   );

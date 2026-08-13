@@ -510,7 +510,7 @@ function LlmEvalPage() {
   }, [orderedResults]);
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-4">
+    <div className="w-full">
       <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-2.5">
           <Title order={1}>LLM model evaluation</Title>

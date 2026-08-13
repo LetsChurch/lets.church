@@ -1,13 +1,19 @@
-import { IconEye, IconSettings, IconUserMinus } from '@tabler/icons-react';
+import {
+  IconEye,
+  IconPlus,
+  IconSettings,
+  IconUserMinus,
+} from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 
+import { DashboardPageHeader } from '@/components/dashboard/dashboard-ui';
 import {
   MenuItemButton,
   MenuItemRouterLink,
   OverflowMenu,
 } from '@/components/lc-menu';
-import { Badge, Button, Text, Title, Tooltip } from '@/components/ui';
+import { Badge, Button, Text, Tooltip } from '@/components/ui';
 import { useTRPC } from '@/trpc/react';
 
 import { DashboardEntityCard } from './-components/dashboard-entity-card';
@@ -44,28 +50,22 @@ function ChurchesPage() {
 
   return (
     <>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-        <Title order={1}>Churches</Title>
-        <Button
-          component={Link}
-          to="/dashboard/churches/new"
-          className="content-center"
-        >
-          Add Church
-        </Button>
-      </div>
+      <DashboardPageHeader
+        eyebrow="Ministry profiles"
+        title="Churches"
+        description="Maintain church profiles, memberships, and the public information connected to your account."
+        actions={
+          <Button
+            component={Link}
+            to="/dashboard/churches/new"
+            leftSection={<IconPlus size={16} />}
+          >
+            Add church
+          </Button>
+        }
+      />
 
       <div className="flex flex-col gap-5">
-        <div>
-          <Text fw={500} className="mb-2.5">
-            Church Management
-          </Text>
-          <Text size="sm" c="dimmed" className="mb-5">
-            Manage your church profiles and organizational information. Update
-            details, manage users, and maintain your church presence.
-          </Text>
-        </div>
-
         <Text fw={500} size="lg">
           My Churches
         </Text>

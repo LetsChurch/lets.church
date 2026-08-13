@@ -8,11 +8,14 @@ import {
 } from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
+import type { ColumnDef } from '@tanstack/react-table';
 import { useState } from 'react';
 
+import { DashboardPageHeader } from '@/components/dashboard/dashboard-ui';
+import { DataTable } from '@/components/dashboard/data-table';
 import { MenuItemButton, OverflowMenu } from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
-import { Badge, Button, Table, Text, Textarea, Title } from '@/components/ui';
+import { Badge, Button, Text, Textarea } from '@/components/ui';
 import { modals } from '@/components/ui/confirm-modal';
 import { useAppForm } from '@/components/ui/form';
 import { useDisclosure } from '@/hooks/use-disclosure';
@@ -67,6 +70,148 @@ type User = {
   banReason: string | null;
   emails: { email: string; verifiedAt: Date | null }[];
 };
+
+type UserTableMeta = {
+  onBan: (user: User) => void;
+  onEdit: (user: User) => void;
+  onResendVerification: (userId: string) => void;
+  onResetPassword: (userId: string) => void;
+  onUnban: (user: User) => void;
+};
+
+function roleBadgeColor(role: string) {
+  if (role === 'ADMIN') return 'red';
+  if (role === 'MODERATOR') return 'orange';
+  return 'gray';
+}
+
+function preferredEmail(user: User) {
+  return (
+    user.emails.find((email) => email.verifiedAt) ?? user.emails[0] ?? null
+  );
+}
+
+const USER_COLUMNS: ColumnDef<User>[] = [
+  {
+    accessorKey: 'username',
+    header: 'Username',
+    cell: ({ row }) => <Text fw={600}>{row.original.username}</Text>,
+  },
+  {
+    id: 'name',
+    accessorFn: (user) => user.fullName ?? '',
+    header: 'Name',
+    cell: ({ row }) => (
+      <Text size="sm">{row.original.fullName || 'No name'}</Text>
+    ),
+  },
+  {
+    id: 'email',
+    accessorFn: (user) => user.emails.map(({ email }) => email).join(' '),
+    sortingFn: (rowA, rowB) =>
+      (preferredEmail(rowA.original)?.email ?? '').localeCompare(
+        preferredEmail(rowB.original)?.email ?? '',
+      ),
+    header: 'Email',
+    cell: ({ row }) => {
+      const displayEmail = preferredEmail(row.original);
+      const hasUnverified = row.original.emails.some(
+        (email) => !email.verifiedAt,
+      );
+      return (
+        <div className="flex flex-wrap items-center gap-2">
+          <Text size="sm" c="dimmed">
+            {displayEmail?.email || 'No email'}
+          </Text>
+          {hasUnverified ? (
+            <Badge size="xs" color="yellow">
+              Unverified
+            </Badge>
+          ) : null}
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: 'role',
+    header: 'Role',
+    cell: ({ row }) => (
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge color={roleBadgeColor(row.original.role)} size="sm">
+          {row.original.role}
+        </Badge>
+        {row.original.bannedAt ? (
+          <Badge color="red" size="sm">
+            Banned
+          </Badge>
+        ) : null}
+      </div>
+    ),
+  },
+  {
+    accessorKey: 'createdAt',
+    header: 'Created',
+    cell: ({ row }) => (
+      <Text size="sm" c="dimmed">
+        {new Date(row.original.createdAt).toLocaleDateString()}
+      </Text>
+    ),
+  },
+  {
+    id: 'actions',
+    header: 'Actions',
+    enableGlobalFilter: false,
+    enableSorting: false,
+    cell: ({ row, table }) => {
+      const meta = table.options.meta as UserTableMeta;
+      const user = row.original;
+      const hasUnverified = user.emails.some((email) => !email.verifiedAt);
+      return (
+        <OverflowMenu
+          label={`Actions for ${user.fullName?.trim() || user.username}`}
+          iconSize={14}
+          triggerProps={{ variant: 'light', size: 'sm' }}
+        >
+          <MenuItemButton
+            icon={<IconEdit size={14} />}
+            onClick={() => meta.onEdit(user)}
+          >
+            Edit user
+          </MenuItemButton>
+          <MenuItemButton
+            icon={<IconKey size={14} />}
+            onClick={() => meta.onResetPassword(user.id)}
+          >
+            Reset password
+          </MenuItemButton>
+          {hasUnverified ? (
+            <MenuItemButton
+              icon={<IconMail size={14} />}
+              onClick={() => meta.onResendVerification(user.id)}
+            >
+              Resend verification email
+            </MenuItemButton>
+          ) : null}
+          {user.bannedAt ? (
+            <MenuItemButton
+              icon={<IconLockOpen size={14} />}
+              onClick={() => meta.onUnban(user)}
+            >
+              Unban user
+            </MenuItemButton>
+          ) : (
+            <MenuItemButton
+              icon={<IconBan size={14} />}
+              onClick={() => meta.onBan(user)}
+            >
+              Ban user
+            </MenuItemButton>
+          )}
+        </OverflowMenu>
+      );
+    },
+  },
+];
 
 function UsersPage() {
   const trpc = useTRPC();
@@ -268,128 +413,35 @@ function UsersPage() {
     });
   };
 
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'ADMIN':
-        return 'red';
-      case 'MODERATOR':
-        return 'orange';
-      default:
-        return 'gray';
-    }
-  };
-
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <Title order={1}>Users</Title>
-        <Button leftSection={<IconPlus size={16} />} onClick={handleCreate}>
-          Add User
-        </Button>
-      </div>
+      <DashboardPageHeader
+        eyebrow="Administration · People"
+        title="Users"
+        description="Review account status, access level, and verification state."
+        actions={
+          <Button leftSection={<IconPlus size={16} />} onClick={handleCreate}>
+            Add user
+          </Button>
+        }
+      />
 
-      <Table>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Username</Table.Th>
-            <Table.Th>Name</Table.Th>
-            <Table.Th>Email</Table.Th>
-            <Table.Th>Role</Table.Th>
-            <Table.Th>Created</Table.Th>
-            <Table.Th>Actions</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {users.map((user) => {
-            const verifiedEmail = user.emails.find((e) => e.verifiedAt);
-            const hasUnverified = user.emails.some((e) => !e.verifiedAt);
-            const displayEmail = verifiedEmail ?? user.emails[0];
-
-            return (
-              <Table.Tr key={user.id}>
-                <Table.Td>
-                  <Text fw={500}>{user.username}</Text>
-                </Table.Td>
-                <Table.Td>
-                  <Text size="sm">{user.fullName || 'No name'}</Text>
-                </Table.Td>
-                <Table.Td>
-                  <div className="flex flex-wrap items-center justify-start gap-2.5">
-                    <Text size="sm" c="dimmed">
-                      {displayEmail?.email || 'No email'}
-                    </Text>
-                    {hasUnverified ? (
-                      <Badge size="xs" color="yellow">
-                        Unverified
-                      </Badge>
-                    ) : null}
-                  </div>
-                </Table.Td>
-                <Table.Td>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge color={getRoleBadgeColor(user.role)} size="sm">
-                      {user.role}
-                    </Badge>
-                    {user.bannedAt ? (
-                      <Badge color="red" size="sm">
-                        Banned
-                      </Badge>
-                    ) : null}
-                  </div>
-                </Table.Td>
-                <Table.Td>
-                  <Text size="sm" c="dimmed">
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </Text>
-                </Table.Td>
-                <Table.Td>
-                  <OverflowMenu
-                    label={`Actions for ${user.fullName?.trim() || user.username}`}
-                    iconSize={14}
-                    triggerProps={{ variant: 'light', size: 'sm' }}
-                  >
-                    <MenuItemButton
-                      icon={<IconEdit size={14} />}
-                      onClick={() => handleEdit(user)}
-                    >
-                      Edit User
-                    </MenuItemButton>
-                    <MenuItemButton
-                      icon={<IconKey size={14} />}
-                      onClick={() => handleResetPassword(user.id)}
-                    >
-                      Reset Password
-                    </MenuItemButton>
-                    {hasUnverified ? (
-                      <MenuItemButton
-                        icon={<IconMail size={14} />}
-                        onClick={() => handleResendVerificationEmail(user.id)}
-                      >
-                        Resend Verification Email
-                      </MenuItemButton>
-                    ) : null}
-                    {user.bannedAt ? (
-                      <MenuItemButton
-                        icon={<IconLockOpen size={14} />}
-                        onClick={() => handleUnban(user)}
-                      >
-                        Unban User
-                      </MenuItemButton>
-                    ) : (
-                      <MenuItemButton
-                        icon={<IconBan size={14} />}
-                        onClick={() => handleBan(user)}
-                      >
-                        Ban User
-                      </MenuItemButton>
-                    )}
-                  </OverflowMenu>
-                </Table.Td>
-              </Table.Tr>
-            );
-          })}
-        </Table.Tbody>
-      </Table>
+      <DataTable
+        data={users}
+        columns={USER_COLUMNS}
+        getRowId={(user) => user.id}
+        initialSorting={[{ id: 'createdAt', desc: true }]}
+        pageSize={20}
+        searchPlaceholder="Search users by name, username, email, or role"
+        emptyState="No user accounts match this view."
+        meta={{
+          onBan: handleBan,
+          onEdit: handleEdit,
+          onResendVerification: handleResendVerificationEmail,
+          onResetPassword: handleResetPassword,
+          onUnban: handleUnban,
+        }}
+      />
 
       <LcModal.Root
         open={opened}

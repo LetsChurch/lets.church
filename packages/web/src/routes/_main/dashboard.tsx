@@ -1,4 +1,13 @@
-import { IconHelp, IconMenu2 } from '@tabler/icons-react';
+import {
+  IconBuildingChurch,
+  IconBuildingCommunity,
+  IconHelp,
+  IconHome,
+  IconMenu2,
+  IconRadio,
+  IconShieldLock,
+  IconUserCircle,
+} from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import {
   createFileRoute,
@@ -7,7 +16,9 @@ import {
   redirect,
   useLocation,
 } from '@tanstack/react-router';
+import { useEffect } from 'react';
 
+import { DashboardUserMenu } from '@/components/dashboard/dashboard-user-menu';
 import EmailVerificationBanner from '@/components/email-verification-banner';
 import PendingInvitationsBanner from '@/components/pending-invitations-banner';
 import { useDisclosure } from '@/hooks/use-disclosure';
@@ -32,10 +43,15 @@ export const Route = createFileRoute('/_main/dashboard')({
 });
 
 const NAV_ITEMS = [
-  { label: 'Account', to: '/dashboard/account' },
-  { label: 'Channels', to: '/dashboard/channels' },
-  { label: 'Churches', to: '/dashboard/churches' },
-  { label: 'Organizations', to: '/dashboard/organizations' },
+  { label: 'Overview', to: '/dashboard', icon: IconHome },
+  { label: 'Account', to: '/dashboard/account', icon: IconUserCircle },
+  { label: 'Channels', to: '/dashboard/channels', icon: IconRadio },
+  { label: 'Churches', to: '/dashboard/churches', icon: IconBuildingChurch },
+  {
+    label: 'Organizations',
+    to: '/dashboard/organizations',
+    icon: IconBuildingCommunity,
+  },
 ] as const;
 
 function DashboardLayout() {
@@ -46,83 +62,127 @@ function DashboardLayout() {
   const { data: currentUser } = useQuery(
     trpc.common.getCurrentUser.queryOptions(),
   );
+  const { data: profile } = useQuery({
+    ...trpc.account.getProfile.queryOptions(),
+    enabled: Boolean(currentUser),
+  });
+
+  useEffect(() => {
+    closeNav();
+  }, [closeNav, location.pathname]);
 
   const navItems = [
     ...NAV_ITEMS,
     ...(currentUser?.role === 'ADMIN'
-      ? [{ label: 'Admin', to: '/dashboard/admin' as const }]
+      ? [
+          {
+            label: 'Admin',
+            to: '/dashboard/admin' as const,
+            icon: IconShieldLock,
+          },
+        ]
       : []),
   ];
 
-  const isActive = (to: string) => location.pathname.startsWith(to);
+  const isActive = (to: string) =>
+    to === '/dashboard'
+      ? location.pathname === '/dashboard' ||
+        location.pathname === '/dashboard/'
+      : location.pathname.startsWith(to);
 
   const navLinks = (
-    <nav className="flex flex-col gap-1">
-      {navItems.map((item) => (
-        <Link
-          key={item.to}
-          to={item.to}
-          onClick={closeNav}
-          className={cn(
-            'rounded-lg px-3 py-2 font-medium text-sm transition-colors',
-            isActive(item.to)
-              ? 'bg-brand/10 text-brand dark:text-indigo-300'
-              : 'text-secondary hover:bg-gray-950/5 hover:text-primary dark:hover:bg-white/5',
-          )}
-        >
-          {item.label}
-        </Link>
-      ))}
+    <nav aria-label="Dashboard" className="flex flex-col gap-1">
+      <div className="text-muted mb-2 px-3 font-mono text-[0.65rem] tracking-[0.16em] uppercase">
+        Workspace
+      </div>
+      {navItems.map((item) => {
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.to}
+            to={item.to}
+            onClick={closeNav}
+            className={cn(
+              'relative flex items-center gap-3 rounded-lg px-3 py-2.5 font-medium text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40',
+              isActive(item.to)
+                ? 'bg-dashboard-accent-soft text-brand before:absolute before:top-2 before:bottom-2 before:left-0 before:w-0.5 before:rounded-full before:bg-brand dark:text-white'
+                : 'text-secondary hover:bg-dashboard-raised hover:text-dashboard-ink',
+            )}
+          >
+            <Icon aria-hidden="true" size={17} stroke={1.8} />
+            {item.label}
+          </Link>
+        );
+      })}
     </nav>
   );
 
   return (
-    <div className="bg-page flex min-h-screen flex-col">
-      {/* Header */}
-      <header className="bg-page/80 sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-gray-100 px-4 backdrop-blur dark:border-zinc-900">
-        <button
-          type="button"
-          onClick={toggleNav}
-          aria-label="Toggle navigation"
-          className="text-secondary hover:text-primary flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-gray-950/5 md:hidden dark:hover:bg-white/5"
-        >
-          <IconMenu2 size={20} />
-        </button>
+    <div className="bg-dashboard-canvas flex min-h-screen flex-col">
+      <header className="border-dashboard-rule bg-dashboard-surface/90 sticky top-0 z-30 grid h-16 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center border-b backdrop-blur md:grid-cols-[15rem_minmax(0,1fr)_auto]">
+        <div className="border-dashboard-rule flex h-full items-center gap-2 px-3 md:border-r md:px-5">
+          <button
+            type="button"
+            onClick={toggleNav}
+            aria-label="Toggle navigation"
+            aria-expanded={navOpened}
+            className="text-secondary hover:bg-dashboard-accent-soft hover:text-dashboard-ink focus-visible:ring-brand/40 flex size-9 items-center justify-center rounded-lg transition-colors outline-none focus-visible:ring-2 md:hidden"
+          >
+            <IconMenu2 size={20} />
+          </button>
+          <Link
+            to="/dashboard"
+            className="dashboard-page-title text-dashboard-ink focus-visible:ring-brand/40 hidden min-w-0 truncate rounded-md text-lg outline-none focus-visible:ring-2 md:block"
+          >
+            Dashboard
+          </Link>
+        </div>
 
-        <div className="mx-auto w-full max-w-100">
-          <DashboardSearchBar currentUser={currentUser} />
+        <div className="flex min-w-0 items-center justify-center px-3 md:px-6">
+          <div className="w-full max-w-xl">
+            <DashboardSearchBar currentUser={currentUser} />
+          </div>
+        </div>
+
+        <div className="border-dashboard-rule flex h-full items-center border-l px-3 md:px-5">
+          <DashboardUserMenu
+            profile={profile}
+            isAdmin={currentUser?.role === 'ADMIN'}
+          />
         </div>
       </header>
 
-      <div className="flex flex-1">
-        {/* Sidebar */}
+      <div className="relative flex flex-1">
         <aside
           className={cn(
-            'w-60 shrink-0 flex-col border-gray-100 border-r p-4 md:flex dark:border-zinc-900',
+            'fixed inset-x-0 top-16 z-20 h-[calc(100vh-4rem)] w-full flex-col overflow-y-auto border-dashboard-rule border-r bg-dashboard-surface p-4 shadow-xl md:sticky md:flex md:w-60 md:shadow-none',
             navOpened ? 'flex' : 'hidden',
           )}
         >
           <div className="flex-1">{navLinks}</div>
-          <div className="mt-auto border-t border-gray-100 pt-4 dark:border-zinc-900">
+          <div className="border-dashboard-rule mt-auto border-t pt-4">
             <button
               type="button"
               onClick={openHelp}
-              className="text-secondary hover:text-primary flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-gray-950/5 dark:hover:bg-white/5"
+              className="text-secondary hover:bg-dashboard-accent-soft hover:text-dashboard-ink focus-visible:ring-brand/40 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2"
             >
-              <IconHelp size={16} />
+              <IconHelp size={17} stroke={1.8} />
               <span>Help</span>
             </button>
           </div>
         </aside>
 
-        {/* Main content */}
-        <main className="min-w-0 flex-1 p-4 md:p-6">
-          <EmailVerificationBanner />
-          <PendingInvitationsBanner />
-          <div className="mb-4">
-            <BackButton />
+        <main className="bg-dashboard-canvas min-w-0 flex-1 px-4 py-5 md:px-7 md:py-7 lg:px-10">
+          <div className="mx-auto w-full max-w-[96rem]">
+            <EmailVerificationBanner />
+            <PendingInvitationsBanner />
+            <div className="mb-4">
+              <BackButton />
+            </div>
+            <div className="dashboard-content">
+              <Outlet />
+            </div>
           </div>
-          <Outlet />
         </main>
       </div>
 

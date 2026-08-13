@@ -71,7 +71,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       variant = 'filled',
       color,
       size = 'md',
-      radius = 'xl',
+      radius = 'lg',
       loading = false,
       fullWidth = false,
       leftSection,
@@ -95,7 +95,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={component ? undefined : disabled || loading}
         aria-disabled={disabled || loading ? true : undefined}
         className={cn(
-          'relative inline-flex items-center justify-center gap-2 whitespace-nowrap border-fancy-pants font-semibold transition-colors disabled:pointer-events-none disabled:opacity-60',
+          'relative inline-flex items-center justify-center gap-2 whitespace-nowrap border-fancy-pants font-semibold transition-[background-color,border-color,color,box-shadow,transform] outline-none focus-visible:ring-2 focus-visible:ring-brand/45 focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-y-px disabled:pointer-events-none disabled:opacity-60 motion-reduce:transition-none motion-reduce:active:transform-none',
           BUTTON_SIZE[size],
           RADIUS[radius],
           BUTTON[resolved][variant],
@@ -167,7 +167,7 @@ export const ActionIcon = forwardRef<HTMLButtonElement, ActionIconProps>(
         disabled={component ? undefined : disabled || loading}
         aria-disabled={disabled || loading ? true : undefined}
         className={cn(
-          'inline-flex shrink-0 items-center justify-center transition-colors disabled:pointer-events-none disabled:opacity-60',
+          'inline-flex shrink-0 items-center justify-center transition-[background-color,border-color,color,box-shadow] outline-none focus-visible:ring-2 focus-visible:ring-brand/45 focus-visible:ring-offset-2 focus-visible:ring-offset-page disabled:pointer-events-none disabled:opacity-60 motion-reduce:transition-none',
           ACTION_ICON_SIZE[size],
           RADIUS[radius],
           BUTTON[resolved][variant],

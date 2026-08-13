@@ -84,7 +84,7 @@ function NewsletterPage() {
       </Title>
 
       <div className="flex max-w-[600px] flex-col gap-5">
-        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+        <div className="dashboard-panel p-5">
           <Title order={3} className="mb-4">
             Subscribe to Newsletter
           </Title>
@@ -152,7 +152,7 @@ function NewsletterPage() {
           </form>
         </div>
 
-        <div className="border-fancy-pants overflow-hidden rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+        <div className="dashboard-panel p-5">
           <Title order={3} className="mb-4">
             Unsubscribe
           </Title>

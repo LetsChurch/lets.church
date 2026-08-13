@@ -16,10 +16,16 @@ function RouteComponent() {
   return (
     <div className="bg-page flex h-screen">
       <Sidebar forceCollapsed={isDashboard} />
-      <main className="relative flex-1 overflow-x-hidden overflow-y-auto pb-16 sm:pb-0">
+      <main
+        className={
+          isDashboard
+            ? 'relative flex-1 overflow-x-hidden overflow-y-auto'
+            : 'relative flex-1 overflow-x-hidden overflow-y-auto pb-16 sm:pb-0'
+        }
+      >
         <Outlet />
       </main>
-      <BottomTabBar />
+      {isDashboard ? null : <BottomTabBar />}
     </div>
   );
 }

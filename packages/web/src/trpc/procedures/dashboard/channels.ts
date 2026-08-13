@@ -2283,6 +2283,16 @@ export const channelRouter = router({
         ),
       );
 
+      const uploadSortColumn =
+        input.sort === 'title'
+          ? UploadRecord.title
+          : input.sort === 'visibility'
+            ? sql<string>`${UploadRecord.visibility}::text`
+            : input.sort === 'views'
+              ? sql<number>`coalesce(${viewCountSq.cnt}, 0)`
+              : UploadRecord.createdAt;
+      const uploadSortDirection = input.direction === 'asc' ? asc : desc;
+
       const [uploads, totalCountResult] = await Promise.all([
         db
           .select({
@@ -2315,7 +2325,7 @@ export const channelRouter = router({
             eq(UploadRecord.id, commentCountSq.uploadRecordId),
           )
           .where(uploadsWhere)
-          .orderBy(desc(UploadRecord.createdAt))
+          .orderBy(uploadSortDirection(uploadSortColumn), desc(UploadRecord.id))
           .offset(offset)
           .limit(input.limit),
         db

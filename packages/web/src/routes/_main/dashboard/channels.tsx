@@ -1,13 +1,14 @@
-import { IconEdit, IconTrash } from '@tabler/icons-react';
+import { IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 
+import { DashboardPageHeader } from '@/components/dashboard/dashboard-ui';
 import {
   MenuItemButton,
   MenuItemRouterLink,
   OverflowMenu,
 } from '@/components/lc-menu';
-import { Badge, Button, Text, Title } from '@/components/ui';
+import { Badge, Button } from '@/components/ui';
 import { useTRPC } from '@/trpc/react';
 
 import { DashboardEntityCard } from './-components/dashboard-entity-card';
@@ -45,28 +46,22 @@ function ChannelsPage() {
 
   return (
     <>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-        <Title order={1}>My Channels</Title>
-        <Button
-          component={Link}
-          to="/dashboard/channels/new"
-          className="content-center"
-        >
-          Create Channel
-        </Button>
-      </div>
+      <DashboardPageHeader
+        eyebrow="Publishing"
+        title="My channels"
+        description="Create and maintain the channels that organize your sermons, livestreams, and other media."
+        actions={
+          <Button
+            component={Link}
+            to="/dashboard/channels/new"
+            leftSection={<IconPlus size={16} />}
+          >
+            Create channel
+          </Button>
+        }
+      />
 
       <div className="flex flex-col gap-5">
-        <div>
-          <Text fw={500} className="mb-2.5">
-            Channel Management
-          </Text>
-          <Text size="sm" c="dimmed" className="mb-5">
-            Create and manage your content channels. Organize your media,
-            sermons, and other content.
-          </Text>
-        </div>
-
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {channels.map((channel) => {
             const { isAdmin } = channel.memberships[0];

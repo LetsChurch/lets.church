@@ -194,7 +194,7 @@ function ProfilePage() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-4">
+    <div className="w-full">
       <div className="grid grid-cols-1 gap-8 md:grid-cols-12">
         <div className="md:col-span-8">
           <div className="flex flex-col gap-5">

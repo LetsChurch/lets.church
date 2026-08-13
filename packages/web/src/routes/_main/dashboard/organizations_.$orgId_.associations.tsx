@@ -1,4 +1,4 @@
-import { IconCheck, IconTrash, IconUsers, IconX } from '@tabler/icons-react';
+import { IconCheck, IconTrash, IconX } from '@tabler/icons-react';
 import {
   useMutation,
   useQueryClient,
@@ -219,14 +219,13 @@ function AssociationsPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-4">
+    <div className="w-full">
       <div className="flex flex-col gap-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="mb-2.5 flex flex-wrap items-center justify-start gap-3">
-              <IconUsers size={24} />
-              <Title order={1}>Organization Associations</Title>
-            </div>
+            <Title order={1} className="mb-2.5">
+              Organization Associations
+            </Title>
             <Text c="dimmed" size="sm">
               Manage associations where {organization.name} is the upstream
               organization
