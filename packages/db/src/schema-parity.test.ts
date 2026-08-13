@@ -988,7 +988,7 @@ test('fresh and upgraded databases converge on the legacy schema contract', asyn
   const upgradedDatabaseName = makeDatabaseName('upgraded');
   const databaseNames = [freshDatabaseName, upgradedDatabaseName];
   const adminPool = new Pool({ connectionString: adminDatabaseUrl, max: 1 });
-  const cleanupErrors: unknown[] = [];
+  const errors: unknown[] = [];
 
   try {
     await createDatabase(adminPool, freshDatabaseName);
@@ -1011,24 +1011,29 @@ test('fresh and upgraded databases converge on the legacy schema contract', asyn
     await t.test('upgraded Prisma history', async () => {
       await assertFixture(upgradedDatabaseUrl);
     });
+  } catch (error) {
+    errors.push(error);
   } finally {
     for (const databaseName of databaseNames) {
       try {
         await dropDatabase(adminPool, databaseName);
       } catch (error) {
-        cleanupErrors.push(error);
+        errors.push(error);
       }
     }
     try {
       await adminPool.end();
     } catch (error) {
-      cleanupErrors.push(error);
+      errors.push(error);
     }
   }
-  if (cleanupErrors.length > 0) {
+  if (errors.length === 1) {
+    throw errors[0];
+  }
+  if (errors.length > 1) {
     throw new AggregateError(
-      cleanupErrors,
-      'failed to fully clean up schema parity databases',
+      errors,
+      'schema parity fixture failed or could not be fully cleaned up',
     );
   }
 });
