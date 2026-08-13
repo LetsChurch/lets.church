@@ -3278,11 +3278,11 @@ export const LlmCall = pgTable(
     // plain `text` column with no index — query by joining on the other
     // indexed columns (upload, activity, created_at), never by scanning this.
     responseText: text('response_text'),
-    // True when the call was processed via OpenAI's Batch API rather
-    // than the live (OpenRouter) path — Batch invoices at 50% of the
-    // posted rate, so `computedCostUsd` for these rows is already
-    // halved before insert. Lets cost dashboards split live vs batch
-    // spend without inferring it.
+    // True when the call was processed through a provider Batch API. Both
+    // OpenAI Batch and Anthropic Message Batches invoice at 50% of the posted
+    // rate, so `computedCostUsd` for these rows is already halved before
+    // insert. Lets cost dashboards split live vs batch spend without inferring
+    // it from model ids.
     viaBatch: boolean('via_batch').notNull().default(false),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
   },

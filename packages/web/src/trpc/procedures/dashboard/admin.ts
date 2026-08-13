@@ -3667,9 +3667,9 @@ export const adminRouter = router({
    * operator can review the failure reason (typically OpenAI's content
    * filter on politically/theologically frank content) and decide whether to
    * retry or accept that this content can't be annotated. OpenAI Batch
-   * content-filter responses retry through the configured live fallback; this
-   * page also offers a targeted bulk retry for any content-filter failures that
-   * remain after that path.
+   * content-filter responses retry through a direct Anthropic Message Batch;
+   * this page also offers a targeted bulk retry for any content-filter
+   * failures that remain after that path.
    *
    * "Failure" = the most recent `llm_call` row for this upload with
    * `activity='annotateTranscript'` has a non-success outcome (e.g.

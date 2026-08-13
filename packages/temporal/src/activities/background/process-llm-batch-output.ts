@@ -39,7 +39,6 @@ import {
 import {
   type EvalParagraph,
   parseAnnotationResponse,
-  runAnnotation,
 } from './annotate-transcript';
 import type { LlmBatchKind } from './submit-llm-batch';
 import {
@@ -67,6 +66,10 @@ export type ProcessLlmBatchOutputArgs = {
 export type ProcessLlmBatchOutputResult = {
   succeeded: number;
   failed: number;
+  // Content-filtered OpenAI annotation responses that need a direct Anthropic
+  // Message Batch fallback. These count as processed OpenAI lines; the workflow
+  // does not finish until the fallback batch also succeeds.
+  fallbackUploadIds: string[];
   // Upload IDs whose batch line failed — either because the OpenAI batch
   // service rejected the request (errorFileId) or because applying the
   // response threw on our side (parse error, DB error, schema mismatch).
@@ -97,11 +100,15 @@ export default async function processLlmBatchOutput(
   let succeeded = 0;
   let failed = 0;
   const failedUploadIds = new Set<string>();
+  const fallbackUploadIds = new Set<string>();
 
   if (args.outputFileId) {
     for await (const line of downloadOutput(args.outputFileId)) {
       try {
-        await dispatchResponseLine(line, args.kind);
+        const disposition = await dispatchResponseLine(line, args.kind);
+        if (disposition === 'fallback') {
+          fallbackUploadIds.add(parseBatchCustomId(line.custom_id).uploadId);
+        }
         succeeded += 1;
       } catch (err) {
         failed += 1;
@@ -159,13 +166,20 @@ export default async function processLlmBatchOutput(
   activityLogger.info(
     `Processed batch ${args.batchId}: ${succeeded} succeeded, ${failed} failed`,
   );
-  return { succeeded, failed, failedUploadIds: [...failedUploadIds] };
+  return {
+    succeeded,
+    failed,
+    fallbackUploadIds: [...fallbackUploadIds],
+    failedUploadIds: [...failedUploadIds],
+  };
 }
+
+type BatchLineDisposition = 'applied' | 'fallback';
 
 async function dispatchResponseLine(
   line: BatchResponseLine,
   kind: LlmBatchKind,
-): Promise<void> {
+): Promise<BatchLineDisposition> {
   if (line.error) {
     throw new Error(
       `Batch line ${line.custom_id} returned error: ${line.error.message}`,
@@ -195,7 +209,7 @@ async function dispatchResponseLine(
   if (customKind === 'summarize') {
     await handleSummary(uploadId, sourceFingerprint, line);
   } else if (customKind === 'annotate') {
-    await handleAnnotate(uploadId, sourceFingerprint, line);
+    return handleAnnotate(uploadId, sourceFingerprint, line);
   } else if (customKind === 'embed-paragraphs') {
     if (chunkIdx === null) {
       throw new Error(
@@ -206,6 +220,7 @@ async function dispatchResponseLine(
   } else if (customKind === 'embed-summary') {
     await handleEmbedSummary(uploadId, sourceFingerprint, line);
   }
+  return 'applied';
 }
 
 function activityForCustomId(customId: string): string {
@@ -360,7 +375,11 @@ export async function handleAnnotate(
   uploadId: string,
   sourceFingerprint: string | null,
   line: BatchResponseLine,
-): Promise<void> {
+  options: {
+    model?: string;
+    allowFallback?: boolean;
+  } = {},
+): Promise<BatchLineDisposition> {
   const body = line.response?.body as ChatCompletionResponse;
   const uploads = await db
     .select({
@@ -412,12 +431,15 @@ export async function handleAnnotate(
     text: paragraph.text,
     words: paragraph.words,
   }));
-  let annotations;
-  if (guard.outcome === 'guard_content_filter' && ANNOTATE_FALLBACK_MODEL) {
-    // Preserve the rejected OpenAI Batch call before making the fallback so
-    // both billable attempts remain visible even if Anthropic also fails.
+  const model = options.model ?? ANNOTATE_MODEL;
+  const allowFallback = options.allowFallback ?? true;
+  if (
+    guard.outcome === 'guard_content_filter' &&
+    allowFallback &&
+    ANNOTATE_FALLBACK_MODEL
+  ) {
     await recordBatchChatResult({
-      model: ANNOTATE_MODEL,
+      model,
       activity: 'annotateTranscript',
       uploadId,
       body,
@@ -427,78 +449,31 @@ export async function handleAnnotate(
       {
         uploadRecordId: uploadId,
         context: {
-          primaryModel: ANNOTATE_MODEL,
+          primaryModel: model,
           fallbackModel: ANNOTATE_FALLBACK_MODEL,
         },
       },
-      'OpenAI Batch annotation was content-filtered; retrying with fallback model',
+      'OpenAI Batch annotation was content-filtered; queueing Anthropic batch fallback',
     );
-    const activityContext = Context.current();
-    activityContext.heartbeat({
-      kind: 'annotate',
-      phase: 'fallback',
-      status: 'starting',
-      uploadRecordId: uploadId,
-    });
-    // The output-processing activity has a heartbeat timeout, while a live
-    // provider call can spend several minutes retrying. Keep the activity
-    // alive throughout the fallback instead of only heartbeating between
-    // Batch result lines.
-    const fallbackHeartbeat = setInterval(() => {
-      activityContext.heartbeat({
-        kind: 'annotate',
-        phase: 'fallback',
-        status: 'running',
-        uploadRecordId: uploadId,
-      });
-    }, 60_000);
-    let fallback;
-    try {
-      fallback = await runAnnotation(
-        evalParagraphs,
-        upload,
-        ANNOTATE_FALLBACK_MODEL,
-        {
-          tracking: {
-            activity: 'annotateTranscript',
-            uploadRecordId: uploadId,
-          },
-          via: 'openrouter',
-          // This request already is the fallback. Do not recursively retry the
-          // same model if its provider also returns a content-filter response.
-          fallbackModel: null,
-        },
-      );
-    } finally {
-      clearInterval(fallbackHeartbeat);
-    }
-    activityContext.heartbeat({
-      kind: 'annotate',
-      phase: 'fallback',
-      status: 'completed',
-      uploadRecordId: uploadId,
-    });
-    annotations = fallback.annotations;
-  } else {
-    if (guard.errorMessage) {
-      await recordBatchChatResult({
-        model: ANNOTATE_MODEL,
-        activity: 'annotateTranscript',
-        uploadId,
-        body,
-        result,
-      });
-      throw new Error(guard.errorMessage);
-    }
-    invariant(raw, `Annotate batch ${line.custom_id}: empty content`);
-    ({ annotations } = parseAnnotationResponse(raw, evalParagraphs));
+    return 'fallback';
   }
+  if (guard.errorMessage) {
+    await recordBatchChatResult({
+      model,
+      activity: 'annotateTranscript',
+      uploadId,
+      body,
+      result,
+    });
+    throw new Error(guard.errorMessage);
+  }
+  invariant(raw, `Annotate batch ${line.custom_id}: empty content`);
+  const { annotations } = parseAnnotationResponse(raw, evalParagraphs);
 
   await db.transaction(
     async (tx) => {
-      // A live fallback can take long enough for the transcript to be replaced.
-      // Re-read and fingerprint inside the write transaction so fallback output
-      // is never attached to a different transcript version.
+      // Re-read and fingerprint inside the write transaction so output is
+      // never attached to a different transcript version.
       const currentUploads = await tx
         .select({
           title: UploadRecord.title,
@@ -556,13 +531,14 @@ export async function handleAnnotate(
     // Match the existing audit semantics for successful Batch output: only
     // record success after parsing and persistence have both completed.
     await recordBatchChatResult({
-      model: ANNOTATE_MODEL,
+      model,
       activity: 'annotateTranscript',
       uploadId,
       body,
       result,
     });
   }
+  return 'applied';
 }
 
 async function handleEmbedParagraphs(

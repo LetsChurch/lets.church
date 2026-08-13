@@ -161,6 +161,38 @@ export function buildBatchCustomId(
   }
   return customId;
 }
+const ANTHROPIC_ANNOTATE_CUSTOM_ID_RE =
+  /^a_([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})_([a-f0-9]{20})$/;
+
+export function buildAnthropicAnnotationBatchCustomId(
+  uploadId: string,
+  sourceFingerprint: string,
+): string {
+  const customId = `a_${uploadId}_${sourceFingerprint}`;
+  if (!ANTHROPIC_ANNOTATE_CUSTOM_ID_RE.test(customId)) {
+    throw new Error(
+      `Invalid Anthropic Message Batch annotation custom_id: ${customId}`,
+    );
+  }
+  return customId;
+}
+
+export function parseAnthropicAnnotationBatchCustomId(
+  customId: string,
+): ParsedBatchCustomId {
+  const match = ANTHROPIC_ANNOTATE_CUSTOM_ID_RE.exec(customId);
+  if (!match?.[1] || !match[2]) {
+    throw new Error(
+      `Malformed Anthropic Message Batch annotation custom_id: ${customId}`,
+    );
+  }
+  return {
+    kind: 'annotate',
+    uploadId: match[1],
+    sourceFingerprint: match[2],
+    chunkIdx: null,
+  };
+}
 
 /**
  * Parses current fingerprinted IDs and legacy IDs that may still be in flight

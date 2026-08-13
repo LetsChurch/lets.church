@@ -1,12 +1,16 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import processLlmBatchOutput, {
+  handleAnnotate,
+} from './process-llm-batch-output';
 
 const mocks = vi.hoisted(() => ({
   assertBatchSourceCurrent: vi.fn(),
+  downloadOutput: vi.fn(),
   fingerprintAnnotationSource: vi.fn(() => 'source-fingerprint'),
-  heartbeat: vi.fn(),
   insertValues: vi.fn(),
+  parseBatchCustomId: vi.fn(),
   recordLlmCall: vi.fn(),
-  runAnnotation: vi.fn(),
   select: vi.fn(),
   transaction: vi.fn(),
 }));
@@ -22,16 +26,6 @@ const paragraphs = [
     order: 0,
     text: 'Test paragraph',
     words: [{ word: 'Test', start: 0, end: 1 }],
-  },
-];
-const fallbackAnnotations = [
-  {
-    paragraphId: 'paragraph-1',
-    kind: 'OUTLINE' as const,
-    startWord: null,
-    endWord: null,
-    rawSpan: null,
-    metadata: { level: 1, title: 'Opening' },
   },
 ];
 
@@ -94,7 +88,7 @@ vi.mock('drizzle-orm', () => ({
 }));
 
 vi.mock('@temporalio/activity', () => ({
-  Context: { current: () => ({ heartbeat: mocks.heartbeat }) },
+  Context: { current: () => ({ heartbeat: vi.fn() }) },
 }));
 
 vi.mock('../../util/llm', () => ({
@@ -113,27 +107,28 @@ vi.mock('../../util/llm-batch-source', () => ({
   fingerprintParagraphEmbeddingSource: vi.fn(),
   fingerprintSummaryEmbeddingSource: vi.fn(),
   fingerprintSummarySource: vi.fn(),
-  parseBatchCustomId: vi.fn(),
+  parseBatchCustomId: mocks.parseBatchCustomId,
 }));
 
-vi.mock('../../util/logger', () => ({
-  default: { child: () => ({ info: vi.fn(), warn: vi.fn() }) },
-}));
+vi.mock('../../util/logger', () => {
+  const mockedLogger = {
+    child: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+  };
+  mockedLogger.child.mockReturnValue(mockedLogger);
+  return { default: mockedLogger };
+});
 
-vi.mock('../../util/openai-batch', () => ({ downloadOutput: vi.fn() }));
+vi.mock('../../util/openai-batch', () => ({
+  downloadOutput: mocks.downloadOutput,
+}));
 
 vi.mock('./annotate-transcript', () => ({
   parseAnnotationResponse: vi.fn(),
-  runAnnotation: mocks.runAnnotation,
 }));
 
 vi.mock('./summarize-upload', () => ({ parseSummaryResponse: vi.fn() }));
-
-let handleAnnotate: typeof import('./process-llm-batch-output').handleAnnotate;
-
-beforeAll(async () => {
-  ({ handleAnnotate } = await import('./process-llm-batch-output'));
-});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -143,43 +138,35 @@ beforeEach(() => {
     callback(transactionClient),
   );
   mocks.insertValues.mockResolvedValue(undefined);
-  mocks.runAnnotation.mockResolvedValue({
-    annotations: fallbackAnnotations,
-    prompt: { system: 'system', user: 'user' },
-    responseText: 'fallback output',
-    skippedItems: [],
-    stats: {
-      bible: 0,
-      completionTokens: 10,
-      costUsd: null,
-      durationMs: 1,
-      keyword: 0,
-      outline: 1,
-      paragraphs: 1,
-      promptTokens: 10,
-      skipped: 0,
-    },
+  mocks.parseBatchCustomId.mockReturnValue({
+    kind: 'annotate',
+    uploadId: 'upload-1',
+    sourceFingerprint: 'source-fingerprint',
+    chunkIdx: null,
   });
 });
 
-describe('handleAnnotate', () => {
-  it('retries an OpenAI Batch content-filter response with Anthropic', async () => {
-    await handleAnnotate('upload-1', 'source-fingerprint', {
-      custom_id: 'a:upload-1:source-fingerprint',
-      error: null,
-      id: 'batch-line-1',
-      response: {
-        body: {
-          choices: [
-            { finish_reason: 'content_filter', message: { content: null } },
-          ],
-          usage: { completion_tokens: 0, prompt_tokens: 100 },
-        },
-        request_id: 'request-1',
-        status_code: 200,
-      },
-    });
+const contentFilterLine = {
+  custom_id: 'a:upload-1:source-fingerprint',
+  error: null,
+  id: 'batch-line-1',
+  response: {
+    body: {
+      choices: [
+        { finish_reason: 'content_filter', message: { content: null } },
+      ],
+      usage: { completion_tokens: 0, prompt_tokens: 100 },
+    },
+    request_id: 'request-1',
+    status_code: 200,
+  },
+};
 
+describe('OpenAI annotation batch fallback', () => {
+  it('queues an Anthropic batch fallback for a content-filter response', async () => {
+    await expect(
+      handleAnnotate('upload-1', 'source-fingerprint', contentFilterLine),
+    ).resolves.toBe('fallback');
     expect(mocks.recordLlmCall).toHaveBeenCalledWith(
       expect.objectContaining({
         activity: 'annotateTranscript',
@@ -190,56 +177,46 @@ describe('handleAnnotate', () => {
         viaBatch: true,
       }),
     );
-    expect(mocks.runAnnotation).toHaveBeenCalledWith(
-      paragraphs,
-      upload,
-      'anthropic/claude-haiku-4-5',
-      {
-        fallbackModel: null,
-        tracking: {
-          activity: 'annotateTranscript',
-          uploadRecordId: 'upload-1',
-        },
-        via: 'openrouter',
-      },
-    );
-    expect(mocks.heartbeat).toHaveBeenNthCalledWith(1, {
-      kind: 'annotate',
-      phase: 'fallback',
-      status: 'starting',
-      uploadRecordId: 'upload-1',
-    });
-    expect(mocks.heartbeat).toHaveBeenNthCalledWith(2, {
-      kind: 'annotate',
-      phase: 'fallback',
-      status: 'completed',
-      uploadRecordId: 'upload-1',
-    });
-    expect(mocks.insertValues).toHaveBeenCalledWith([
-      expect.objectContaining(fallbackAnnotations[0]),
-    ]);
+    expect(mocks.transaction).not.toHaveBeenCalled();
   });
 
-  it('does not use Anthropic for non-content-filter guard failures', async () => {
+  it('returns fallback uploads to the workflow', async () => {
+    mocks.downloadOutput.mockReturnValue(
+      (async function* () {
+        yield contentFilterLine;
+      })(),
+    );
+
+    await expect(
+      processLlmBatchOutput({
+        batchId: 'batch-1',
+        outputFileId: 'output-1',
+        errorFileId: null,
+        kind: 'annotate',
+      }),
+    ).resolves.toEqual({
+      succeeded: 1,
+      failed: 0,
+      fallbackUploadIds: ['upload-1'],
+      failedUploadIds: [],
+    });
+  });
+
+  it('does not queue Anthropic for non-content-filter guard failures', async () => {
     await expect(
       handleAnnotate('upload-1', 'source-fingerprint', {
-        custom_id: 'a:upload-1:source-fingerprint',
-        error: null,
-        id: 'batch-line-1',
+        ...contentFilterLine,
         response: {
+          ...contentFilterLine.response,
           body: {
             choices: [
               { finish_reason: 'length', message: { content: 'truncated' } },
             ],
             usage: { completion_tokens: 10, prompt_tokens: 100 },
           },
-          request_id: 'request-1',
-          status_code: 200,
         },
       }),
     ).rejects.toThrow('finish_reason=length');
-
-    expect(mocks.runAnnotation).not.toHaveBeenCalled();
     expect(mocks.transaction).not.toHaveBeenCalled();
   });
 });

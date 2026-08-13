@@ -32,6 +32,24 @@ const { processLlmBatchOutput } = proxyActivities<typeof backgroundActivities>({
   taskQueue: BACKGROUND_QUEUE,
   retry: { maximumAttempts: 3 },
 });
+const { submitAnthropicAnnotationBatch } = proxyActivities<
+  typeof backgroundActivities
+>({
+  // Anthropic does not document idempotency for Message Batch creation.
+  // At-most-once submission avoids duplicate billable batches when a response
+  // is lost after Anthropic accepted the request.
+  startToCloseTimeout: '120 minutes',
+  taskQueue: BACKGROUND_QUEUE,
+  retry: { maximumAttempts: 1 },
+});
+const { processAnthropicAnnotationBatchOutput } = proxyActivities<
+  typeof backgroundActivities
+>({
+  startToCloseTimeout: '6 hours',
+  heartbeatTimeout: '10 minutes',
+  taskQueue: BACKGROUND_QUEUE,
+  retry: { maximumAttempts: 3 },
+});
 
 const { cleanupBatchFiles } = proxyActivities<typeof backgroundActivities>({
   startToCloseTimeout: '30 minutes',
@@ -40,6 +58,18 @@ const { cleanupBatchFiles } = proxyActivities<typeof backgroundActivities>({
 });
 
 const { getLlmBatchStatus, cancelLlmBatch } = proxyActivities<
+  typeof backgroundActivities
+>({
+  startToCloseTimeout: '1 minute',
+  taskQueue: BACKGROUND_QUEUE,
+  retry: {
+    maximumAttempts: 5,
+    initialInterval: '10 seconds',
+    backoffCoefficient: 2,
+    maximumInterval: '5 minutes',
+  },
+});
+const { getAnthropicBatchStatus, cancelAnthropicBatch } = proxyActivities<
   typeof backgroundActivities
 >({
   startToCloseTimeout: '1 minute',
@@ -73,6 +103,65 @@ async function waitForBatch(batchId: string): Promise<BatchStatus> {
     throw error;
   }
 }
+async function waitForAnthropicBatch(batchId: string) {
+  try {
+    while (true) {
+      const status = await getAnthropicBatchStatus(batchId);
+      if (status.status === 'ended') return status;
+      await sleep(POLL_INTERVAL_MS);
+    }
+  } catch (error) {
+    await CancellationScope.nonCancellable(() => cancelAnthropicBatch(batchId));
+    throw error;
+  }
+}
+
+async function runAnthropicAnnotationFallbackBatch(
+  uploadRecordIds: string[],
+): Promise<void> {
+  let submission;
+  try {
+    submission = await submitAnthropicAnnotationBatch(uploadRecordIds);
+  } catch (error) {
+    // The create response can be lost after Anthropic accepted the batch, and
+    // the API offers no idempotency key or request lookup. Stop automatic
+    // workflow retries rather than risk submitting a duplicate billable batch.
+    throw ApplicationFailure.nonRetryable(
+      `Anthropic annotation fallback batch submission failed: ${error instanceof Error ? error.message : String(error)}`,
+      'AnthropicBatchSubmissionFailed',
+    );
+  }
+  const status = await waitForAnthropicBatch(submission.batchId);
+  const result = await processAnthropicAnnotationBatchOutput(
+    submission.batchId,
+  );
+  const accountingErrors: string[] = [];
+  if (status.requestCount !== submission.requestCount) {
+    accountingErrors.push(
+      `provider total ${status.requestCount} != submitted ${submission.requestCount}`,
+    );
+  }
+  if (status.processingCount !== 0) {
+    accountingErrors.push(
+      `provider ended with ${status.processingCount} request(s) still processing`,
+    );
+  }
+  if (result.succeeded + result.failed !== submission.requestCount) {
+    accountingErrors.push(
+      `processed lines ${result.succeeded + result.failed} != submitted ${submission.requestCount}`,
+    );
+  }
+  if (
+    status.failedCount > 0 ||
+    result.failed > 0 ||
+    accountingErrors.length > 0
+  ) {
+    throw ApplicationFailure.retryable(
+      `Anthropic annotation fallback batch failed: ${Math.max(status.failedCount, result.failed)} request(s) failed${accountingErrors.length > 0 ? `; accounting: ${accountingErrors.join('; ')}` : ''}`,
+      'AnthropicBatchFailed',
+    );
+  }
+}
 
 function isBatchTerminal(status: BatchStatus['status']): boolean {
   return (
@@ -88,10 +177,9 @@ function isBatchTerminal(status: BatchStatus['status']): boolean {
  * shard, apply the results, and clean up successful files. This is shared by
  * normal single-upload processing and every retry/regeneration path.
  *
- * A batch can complete while individual request lines fail. The output handler
- * can recover annotation content-filter responses through the configured live
- * OpenRouter fallback. Treat every other failed line as a workflow failure so
- * Temporal retries the same regular job through Batch again.
+ * Annotation content-filter responses are recorded, then resubmitted through a
+ * direct Anthropic Message Batch. Every other failed line remains a workflow
+ * failure so Temporal retries the regular OpenAI Batch job.
  */
 export async function runLlmBatch(
   uploadRecordIds: string[],
@@ -209,6 +297,12 @@ export async function runLlmBatch(
       `OpenAI ${kind} batch failed: ${Math.max(failedRequestCount, providerFailedRequestCount)} request(s) failed${states.length > 0 ? `; terminal status ${states.join(', ')}` : ''}${accountingErrors.length > 0 ? `; accounting: ${accountingErrors.join('; ')}` : ''}`,
       states.includes('expired') ? 'OpenAIBatchExpired' : 'OpenAIBatchFailed',
     );
+  }
+  const fallbackUploadIds = [
+    ...new Set(results.flatMap((result) => result?.fallbackUploadIds ?? [])),
+  ];
+  if (fallbackUploadIds.length > 0) {
+    await runAnthropicAnnotationFallbackBatch(fallbackUploadIds);
   }
 
   return submission;

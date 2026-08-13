@@ -127,6 +127,7 @@ first so summarize gets the new outlines as input.
    "Connolly Owens"); use it for prompt iteration, switch to `large-v3`
    for the final snapshot. The `regen-manifest.tsv` is a throwaway — drop
    it after the run.
+
 2. `just seed-s3-public` — push the new transcripts into minio.
 3. `LIVE_PIPELINE=1 just truncate && LIVE_PIPELINE=1 just seed-db` —
    `dev.ts` detects the env var and runs the real `annotateTranscript`
@@ -162,8 +163,9 @@ just regenerate-seed-transcript <uploadId> [whisper-model]
 ```
 
 Defaults to `base.en`. Pass `large-v3` for prod-quality at the cost of disk
-+ time (`~3 GB` download on first use, then several minutes per hour of
-audio on CPU; once cached the subsequent runs are fast):
+
+- time (`~3 GB` download on first use, then several minutes per hour of
+  audio on CPU; once cached the subsequent runs are fast):
 
 ```bash
 just regenerate-seed-transcript 00000000-0000-4000-8000-000000000000 large-v3
@@ -258,13 +260,13 @@ live-pipeline-seeded DB):
   runs first, then summarize). With 27 uploads that's **~15–30 minutes**
   of one-time LLM cost.
 
-When the OpenAI content filter blocks either annotate or summarize
-(`finish_reason=content_filter`), the wrapper retries the same request
-against `OPENROUTER_ANNOTATE_FALLBACK_MODEL` /
-`OPENROUTER_SUMMARY_FALLBACK_MODEL` (default `anthropic/claude-haiku-4-5`
-for both). The fallback typically lands the call at ~2.9× the primary
-model's per-call cost, but only when the primary fails — for the seed
-corpus that's a handful of uploads per refresh.
+When the OpenAI content filter blocks annotation in the live seed script, the
+wrapper retries through OpenRouter with the model selected by
+`ANTHROPIC_ANNOTATE_BATCH_MODEL` (default `claude-haiku-4-5`). Production
+OpenAI Batch annotations use the same model through Anthropic's Message Batches
+API. Summary content-filter responses use the live
+`OPENROUTER_SUMMARY_FALLBACK_MODEL` (default
+`anthropic/claude-haiku-4-5`).
 
 Snapshot JSON shape per upload now includes a `sections` array keyed to
 OUTLINE annotation IDs (one entry per section with a 2–3 sentence
@@ -288,27 +290,27 @@ prompt changes.
 
 ## Where the moving parts live
 
-| Concern | File |
-|---|---|
-| Shared transcribe pipeline | `services/transcribe/src/pipeline.py` |
-| Production activity | `services/transcribe/src/activities.py` |
-| Seed transcript-regen CLI (single file) | `services/transcribe/scripts/transcribe_file.py` |
-| Seed transcript-regen CLI (batch, one model load) | `services/transcribe/scripts/transcribe_batch.py` |
-| `just regenerate-seed-transcript` | `Justfile` |
-| Bind mount of seed-data | `docker-compose.yml` (`transcribe-worker.volumes`) |
-| Dev seed script | `packages/web/src/seed/dev.ts` |
-| LLM snapshot id list + type + path | `packages/web/src/seed/llm-seed.ts` |
-| LLM snapshot JSONs (LFS-tracked) | `seed-data/llm/*.json` |
-| LLM snapshot dumper | `packages/web/src/seed/dump-llm-seed-data.ts` |
-| `just dump-llm-seed-data` | `Justfile` |
-| Narrow annotation bootstrap script | `packages/web/src/seed/generate-annotations.ts` |
-| `just generate-seed-annotations` | `Justfile` |
-| Narrow summary bootstrap script | `packages/web/src/seed/generate-summaries.ts` |
-| `just generate-seed-summaries` | `Justfile` |
-| Annotation pipeline activity | `packages/temporal/src/activities/background/annotate-transcript.ts` |
-| Bind mount of seed-data into web | `docker-compose.yml` (`web.volumes`) |
-| LFS rule for snapshots | `.gitattributes` (`seed-data/llm/*.json filter=lfs …`) |
-| Storage activity (live pipeline) | `packages/temporal/src/activities/background/store-transcript-paragraphs.ts` |
-| Summary workflow (live pipeline) | `packages/temporal/src/workflows/background/summarize-upload.ts` |
-| LLM client + models | `packages/temporal/src/util/llm.ts` |
-| ES mapping | `packages/opensearch/src/mappings.ts` (`lc_media_v1`) |
+| Concern                                           | File                                                                         |
+| ------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Shared transcribe pipeline                        | `services/transcribe/src/pipeline.py`                                        |
+| Production activity                               | `services/transcribe/src/activities.py`                                      |
+| Seed transcript-regen CLI (single file)           | `services/transcribe/scripts/transcribe_file.py`                             |
+| Seed transcript-regen CLI (batch, one model load) | `services/transcribe/scripts/transcribe_batch.py`                            |
+| `just regenerate-seed-transcript`                 | `Justfile`                                                                   |
+| Bind mount of seed-data                           | `docker-compose.yml` (`transcribe-worker.volumes`)                           |
+| Dev seed script                                   | `packages/web/src/seed/dev.ts`                                               |
+| LLM snapshot id list + type + path                | `packages/web/src/seed/llm-seed.ts`                                          |
+| LLM snapshot JSONs (LFS-tracked)                  | `seed-data/llm/*.json`                                                       |
+| LLM snapshot dumper                               | `packages/web/src/seed/dump-llm-seed-data.ts`                                |
+| `just dump-llm-seed-data`                         | `Justfile`                                                                   |
+| Narrow annotation bootstrap script                | `packages/web/src/seed/generate-annotations.ts`                              |
+| `just generate-seed-annotations`                  | `Justfile`                                                                   |
+| Narrow summary bootstrap script                   | `packages/web/src/seed/generate-summaries.ts`                                |
+| `just generate-seed-summaries`                    | `Justfile`                                                                   |
+| Annotation pipeline activity                      | `packages/temporal/src/activities/background/annotate-transcript.ts`         |
+| Bind mount of seed-data into web                  | `docker-compose.yml` (`web.volumes`)                                         |
+| LFS rule for snapshots                            | `.gitattributes` (`seed-data/llm/*.json filter=lfs …`)                       |
+| Storage activity (live pipeline)                  | `packages/temporal/src/activities/background/store-transcript-paragraphs.ts` |
+| Summary workflow (live pipeline)                  | `packages/temporal/src/workflows/background/summarize-upload.ts`             |
+| LLM client + models                               | `packages/temporal/src/util/llm.ts`                                          |
+| ES mapping                                        | `packages/opensearch/src/mappings.ts` (`lc_media_v1`)                        |

@@ -36,6 +36,7 @@ export {
   getBackfillCount,
 } from './backfill-upload-states';
 export { default as backupToGlacier, retryBackup } from './backup-to-glacier';
+export { default as cancelAnthropicBatch } from './cancel-anthropic-batch';
 export { default as cancelLlmBatch } from './cancel-llm-batch';
 export {
   type CleanupBatchFilesArgs,
@@ -86,6 +87,7 @@ export {
   validateGeocodeConfig,
 } from './geocode-organization';
 export { default as getFinalizedUploadKey } from './get-finalized-upload-key';
+export { default as getAnthropicBatchStatus } from './get-anthropic-batch-status';
 export { default as getLlmBatchStatus } from './get-llm-batch-status';
 export { default as getProbe } from './get-probe';
 export {
@@ -97,6 +99,10 @@ export { getStoredProbe } from './get-stored-probe';
 export { default as indexDocument } from './index-document';
 export { default as isUploadFinalized } from './is-upload-finalized';
 export { default as processImage } from './process-image';
+export {
+  default as processAnthropicAnnotationBatchOutput,
+  type ProcessAnthropicAnnotationBatchOutputResult,
+} from './process-anthropic-annotation-batch-output';
 export {
   default as processLlmBatchOutput,
   type ProcessLlmBatchOutputArgs,
@@ -140,6 +146,11 @@ export {
   type StorageAuditSummary,
   sendStorageAuditEmail,
 } from './storage-audit';
+export {
+  default as submitAnthropicAnnotationBatch,
+  type SubmitAnthropicAnnotationBatchResult,
+  validateAnthropicAnnotationBatchConfig,
+} from './submit-anthropic-annotation-batch';
 export { default as storeTranscriptParagraphs } from './store-transcript-paragraphs';
 export {
   default as submitLlmBatch,

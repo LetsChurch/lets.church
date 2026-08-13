@@ -69,10 +69,9 @@ export const MODEL_PRICING: ModelPricing[] = [
     ],
   },
   {
-    // Annotate fallback model — fires only when OpenAI's content filter
-    // rejects the gpt-5.6-luna response. Listed so the (relatively rare)
-    // fallback calls land with a populated `computed_cost_usd` instead of
-    // null. Cached input pricing isn't exposed via OpenRouter.
+    // Annotation fallback model. Production uses Anthropic Message Batches
+    // after an OpenAI content-filter response; live eval and seed paths route
+    // the same canonical model id through OpenRouter.
     model: 'anthropic/claude-haiku-4-5',
     windows: [
       {

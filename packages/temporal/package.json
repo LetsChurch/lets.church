@@ -35,6 +35,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.116.0",
     "@letschurch/db": "workspace:*",
     "@letschurch/opensearch": "workspace:*",
     "@letschurch/s3": "workspace:*",

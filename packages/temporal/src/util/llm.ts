@@ -19,7 +19,7 @@ const env = z
   .object({
     // Primary production processing goes through OpenAI Batch. OpenRouter is
     // used by the admin LLM-eval page, legacy live workflow replays, and the
-    // live Anthropic fallback after a Batch content-filter response.
+    // live summary fallback.
     OPENAI_API_KEY: z.string().min(1),
     OPENROUTER_API_KEY: z.string().min(1),
     OPENROUTER_SUMMARY_MODEL: openaiBatchModel.default('openai/gpt-5.6-luna'),
@@ -30,16 +30,14 @@ const env = z
     // safety classifier was retired with that rewrite. Sampling parameters
     // stay at the provider default because supported overrides vary by model.
     OPENROUTER_ANNOTATE_MODEL: openaiBatchModel.default('openai/gpt-5.6-luna'),
-    // Fallback for annotate when the primary's response is blocked by the
-    // provider content filter. Live calls switch inside the tracked-completion
-    // wrapper; the OpenAI Batch output handler makes the equivalent live
-    // OpenRouter call after recording the rejected Batch response.
-    OPENROUTER_ANNOTATE_FALLBACK_MODEL: z
-      .string()
-      .default('anthropic/claude-haiku-4-5'),
-    // Same content_filter fallback for the summarize activity. Separate env
-    // so an operator can pick a different fallback per task (e.g. cheaper
-    // for summarize, higher-quality for annotate).
+    // Direct Anthropic Message Batches fallback for OpenAI annotation
+    // content-filter responses. Empty disables the fallback. Keep this as the
+    // bare Anthropic model id; llm_call stores the canonical anthropic/* form.
+    ANTHROPIC_ANNOTATE_BATCH_MODEL: z
+      .union([z.literal(''), z.string().startsWith('claude-')])
+      .default('claude-haiku-4-5'),
+    // The summary fallback remains live through OpenRouter. Separate config
+    // lets operators choose a different model for the shorter summary task.
     OPENROUTER_SUMMARY_FALLBACK_MODEL: z
       .string()
       .default('anthropic/claude-haiku-4-5'),
@@ -55,8 +53,8 @@ export const openaiClient = new OpenAI({
   maxRetries: 5,
 });
 
-// OpenRouter client — used by the admin LLM-eval page and live content-filter
-// fallback. Primary production processing still uses OpenAI Batch.
+// OpenRouter client — used by the admin LLM-eval page, legacy live workflow
+// replays, and the live summary content-filter fallback.
 export const openrouterClient = new OpenAI({
   apiKey: env.OPENROUTER_API_KEY,
   baseURL: 'https://openrouter.ai/api/v1',
@@ -76,10 +74,13 @@ export function stripOpenaiPrefix(model: string): string {
 // new output. Override via `OPENROUTER_SUMMARY_MODEL` when needed.
 export const SUMMARY_MODEL = env.OPENROUTER_SUMMARY_MODEL;
 export const ANNOTATE_MODEL = env.OPENROUTER_ANNOTATE_MODEL;
-export const ANNOTATE_FALLBACK_MODEL =
-  env.OPENROUTER_ANNOTATE_FALLBACK_MODEL.length > 0
-    ? env.OPENROUTER_ANNOTATE_FALLBACK_MODEL
+export const ANTHROPIC_ANNOTATE_BATCH_MODEL =
+  env.ANTHROPIC_ANNOTATE_BATCH_MODEL.length > 0
+    ? env.ANTHROPIC_ANNOTATE_BATCH_MODEL
     : null;
+export const ANNOTATE_FALLBACK_MODEL = ANTHROPIC_ANNOTATE_BATCH_MODEL
+  ? `anthropic/${ANTHROPIC_ANNOTATE_BATCH_MODEL}`
+  : null;
 export const SUMMARY_FALLBACK_MODEL =
   env.OPENROUTER_SUMMARY_FALLBACK_MODEL.length > 0
     ? env.OPENROUTER_SUMMARY_FALLBACK_MODEL
@@ -176,10 +177,10 @@ export type RecordLlmCallArgs = {
    */
   responseText?: string | null;
   /**
-   * Set when the call was processed via OpenAI's Batch API. Halves the
-   * `computedCostUsd` we write (Batch invoices at 50% of live rates)
-   * and tags the row so dashboards can split live vs batch spend.
-   * Defaults to false for the live path.
+   * Set when the call was processed through a provider Batch API. OpenAI Batch
+   * and Anthropic Message Batches both invoice at 50% of live rates, so this
+   * halves `computedCostUsd` and tags the row for cost reporting. Defaults to
+   * false for live calls.
    */
   viaBatch?: boolean;
   /** Override the clock for tests / backfills. Defaults to `new Date()`. */
@@ -461,11 +462,9 @@ export async function createEmbeddingsTracked(
 export async function recordLlmCall(args: RecordLlmCallArgs): Promise<void> {
   const at = args.at ?? new Date();
   const viaBatch = args.viaBatch ?? false;
-  // OpenAI Batch invoices at 50% of the posted rate, so we halve the
-  // computed cost at write time. `computeCost` itself stays a pure
-  // lookup against the pricing table — the multiplier is applied
-  // here so the pricing table remains the single source of truth for
-  // live rates.
+  // OpenAI Batch and Anthropic Message Batches invoice at 50% of the
+  // posted live rate, so halve the computed cost at write time.
+  // `computeCost` remains a pure pricing-table lookup.
   const computedRaw =
     args.promptTokens != null && args.completionTokens != null
       ? computeCost(

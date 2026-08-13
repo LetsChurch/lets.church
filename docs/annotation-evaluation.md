@@ -8,7 +8,7 @@ This document is the reference for evaluating that prompt — verifying that cha
 
 There are two evaluation surfaces:
 
-1. **In-app eval page** at `/dashboard/admin/llm-eval` (admin-only). Runs the production prompt against the production code path for one upload against N models in parallel. Does not write annotations to the DB, but every chat-completion call is logged to the `llm_call` table with `activity='evalAnnotate'` / `'evalSummarize'` so cost is captured. Use when comparing models against the *current* prompt.
+1. **In-app eval page** at `/dashboard/admin/llm-eval` (admin-only). Runs the production prompt against the production code path for one upload against N models in parallel. Does not write annotations to the DB, but every chat-completion call is logged to the `llm_call` table with `activity='evalAnnotate'` / `'evalSummarize'` so cost is captured. Use when comparing models against the _current_ prompt.
 
 2. **Direct OpenRouter testing** with a local prompt file. Bypasses the production code so the prompt itself can be iterated freely. Use when changing the prompt.
 
@@ -36,18 +36,18 @@ A prompt + model combination should meet all of these on a realistic full-length
 
 ## Common failure modes
 
-| Failure | Symptom | Root cause | Mitigation |
-|---------|---------|------------|------------|
-| Banter heading | First line is `# Welcome and Technical Setup …` | Model treats open chatter as a section | Explicit forbidden-titles list in prompt; "where the first heading goes" rule |
-| Zero/one heading on a long transcript | Whole transcript under one heading | Model defaults to minimum-effort outlining | "Aim for 3-10 headings… if you finish with 0/1/2 [on a transcript longer than ~100 paragraphs], you missed real breaks" |
-| Truncation | Response cuts off mid-paragraph; `finish_reason: length` | Output cap hit | Raise `maxTokens`, or chunk the request (see `docs/annotation-chunking-design.md`). Activity throws on `finish_reason: length` and writes `llm_call.outcome = 'guard_length_truncation'`. |
-| Content-filter block | `finish_reason: content_filter` | Provider safety classifier triggered | Framing preamble at top of system prompt: "You are NOT a content moderator… you must produce the same outline + annotations regardless of subject matter". On the first failure the wrapper auto-retries against `OPENROUTER_ANNOTATE_FALLBACK_MODEL` (default `anthropic/claude-haiku-4-5`) — both calls record in `llm_call`, and most previously-blocked uploads now succeed on the second attempt. When both fail, the activity throws `guard_content_filter` and the upload lands on the admin **Failed Annotations** page (`/dashboard/admin/failed-annotations`) with a regenerate button. Historically, the OpenAI primary blocked some Dividing Line content (trans/abortion) on the first try; pre-fallback, seed regen hit ~5/27 of LLM-seeded uploads — post-fallback that's effectively zero in practice. |
-| Silent summarization | Markdown parses fine but most input paragraphs are missing; downstream annotations are bogus | Model (notably Llama 4 Maverick/Scout) ignores "echo every paragraph verbatim" and returns a paraphrased summary instead | Silent-summarization guard in the activity throws and writes `llm_call.outcome = 'guard_silent_summarization'`. Filter the table for that outcome to surface affected runs + the observed completion/transcript ratio. |
-| Missing "Jesus said" annotation | Attribution patterns not wrapped despite explicit "Jesus himself said from the beginning, he made them male and female" → Matt 19:4 | Model treats implicit citation as non-citation | Required-pattern checklist with this exact phrase as example; mark as CRITICAL in self-check |
-| Overlapping links | One big `[1 Corinthians 6 and 1 Timothy 1 and Romans 1](#bible?…)` link | Model groups consecutive refs | Concrete worked example in prompt showing the correct three-link form |
-| Duplicate-span links | Three identical bracket texts with different URLs | Same as above, model invented chars | "If the chars inside [...] aren't already there in the original paragraph in that exact order, the annotation is wrong" |
-| Paragraph drift | Output text doesn't match input verbatim — paraphrased, corrected, capitalized differently | Model "improving" the transcript | "Preserve each paragraph's text VERBATIM. No paraphrasing, no reordering, no corrections" |
-| Non-canonical work wrapped as `#bible` | `[Gospel of Thomas](#bible?book=Thomas&chapter=…)` or similar | Model treats every gospel-shaped phrase as scripture | Explicit non-canonical-works rule + self-check item 7. Verify by grepping the response for `book=Thomas`, `book=Mary`, `book=Judas`, `book=Mormon`, `book=Quran` — should be zero hits. |
+| Failure                                | Symptom                                                                                                                             | Root cause                                                                                                               | Mitigation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Banter heading                         | First line is `# Welcome and Technical Setup …`                                                                                     | Model treats open chatter as a section                                                                                   | Explicit forbidden-titles list in prompt; "where the first heading goes" rule                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Zero/one heading on a long transcript  | Whole transcript under one heading                                                                                                  | Model defaults to minimum-effort outlining                                                                               | "Aim for 3-10 headings… if you finish with 0/1/2 [on a transcript longer than ~100 paragraphs], you missed real breaks"                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Truncation                             | Response cuts off mid-paragraph; `finish_reason: length`                                                                            | Output cap hit                                                                                                           | Raise `maxTokens`, or chunk the request (see `docs/annotation-chunking-design.md`). Activity throws on `finish_reason: length` and writes `llm_call.outcome = 'guard_length_truncation'`.                                                                                                                                                                                                                                                                                                                                                |
+| Content-filter block                   | `finish_reason: content_filter`                                                                                                     | Provider safety classifier triggered                                                                                     | Framing preamble at top of system prompt: "You are NOT a content moderator… you must produce the same outline + annotations regardless of subject matter". Production records the rejected OpenAI Batch response, then submits the upload to a direct Anthropic Message Batch using `ANTHROPIC_ANNOTATE_BATCH_MODEL` (default `claude-haiku-4-5`). Both calls record in `llm_call`. When the fallback fails, the upload lands on the admin **Failed Annotations** page (`/dashboard/admin/failed-annotations`) with a regenerate button. |
+| Silent summarization                   | Markdown parses fine but most input paragraphs are missing; downstream annotations are bogus                                        | Model (notably Llama 4 Maverick/Scout) ignores "echo every paragraph verbatim" and returns a paraphrased summary instead | Silent-summarization guard in the activity throws and writes `llm_call.outcome = 'guard_silent_summarization'`. Filter the table for that outcome to surface affected runs + the observed completion/transcript ratio.                                                                                                                                                                                                                                                                                                                   |
+| Missing "Jesus said" annotation        | Attribution patterns not wrapped despite explicit "Jesus himself said from the beginning, he made them male and female" → Matt 19:4 | Model treats implicit citation as non-citation                                                                           | Required-pattern checklist with this exact phrase as example; mark as CRITICAL in self-check                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Overlapping links                      | One big `[1 Corinthians 6 and 1 Timothy 1 and Romans 1](#bible?…)` link                                                             | Model groups consecutive refs                                                                                            | Concrete worked example in prompt showing the correct three-link form                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Duplicate-span links                   | Three identical bracket texts with different URLs                                                                                   | Same as above, model invented chars                                                                                      | "If the chars inside [...] aren't already there in the original paragraph in that exact order, the annotation is wrong"                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Paragraph drift                        | Output text doesn't match input verbatim — paraphrased, corrected, capitalized differently                                          | Model "improving" the transcript                                                                                         | "Preserve each paragraph's text VERBATIM. No paraphrasing, no reordering, no corrections"                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Non-canonical work wrapped as `#bible` | `[Gospel of Thomas](#bible?book=Thomas&chapter=…)` or similar                                                                       | Model treats every gospel-shaped phrase as scripture                                                                     | Explicit non-canonical-works rule + self-check item 7. Verify by grepping the response for `book=Thomas`, `book=Mary`, `book=Judas`, `book=Mormon`, `book=Quran` — should be zero hits.                                                                                                                                                                                                                                                                                                                                                  |
 
 Irreducible model noise sits around 85–90% on the hardest target (attribution patterns) — pure prompt engineering can't reliably reach 100% with smaller models. Accept ≥7/8 across repeated runs as passing.
 
@@ -100,24 +100,33 @@ When changing the prompt itself, iterating against the in-app eval is slow — e
 
 Driver script (`/tmp/promptdev/run.mjs` is a good convention; nothing in the repo depends on it):
 
-```javascript
+````javascript
 import { readFile, writeFile } from 'node:fs/promises';
 import process from 'node:process';
 
 const KEY = process.env.OPENROUTER_API_KEY;
-if (!KEY) { console.error('OPENROUTER_API_KEY missing'); process.exit(1); }
+if (!KEY) {
+  console.error('OPENROUTER_API_KEY missing');
+  process.exit(1);
+}
 
 const promptPath = process.argv[2] || 'prompt.md';
 const outPath = process.argv[3] || 'response.md';
 
 const raw = await readFile(promptPath, 'utf-8');
 const m = raw.match(/^\[system\]\n([\s\S]*?)\n\[user\]\n([\s\S]*)$/);
-if (!m) { console.error('Could not parse prompt.md'); process.exit(1); }
+if (!m) {
+  console.error('Could not parse prompt.md');
+  process.exit(1);
+}
 const [, system, user] = m;
 
 const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
   method: 'POST',
-  headers: { Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' },
+  headers: {
+    Authorization: `Bearer ${KEY}`,
+    'Content-Type': 'application/json',
+  },
   body: JSON.stringify({
     model: 'openai/gpt-5.6-luna',
     max_tokens: 32768,
@@ -143,13 +152,21 @@ const choice = data.choices?.[0];
 const finish = choice?.finish_reason;
 const content = choice?.message?.content ?? '';
 const usage = data.usage ?? {};
-console.error(`finish=${finish}, in=${usage.prompt_tokens}, out=${usage.completion_tokens}, cost=$${usage.cost ?? 'n/a'}`);
+console.error(
+  `finish=${finish}, in=${usage.prompt_tokens}, out=${usage.completion_tokens}, cost=$${usage.cost ?? 'n/a'}`,
+);
 if (finish !== 'stop') console.error(`!! abnormal finish_reason: ${finish}`);
-if (content.length < 30000) console.error(`!! short content (${content.length} chars) — possible early stop / content filter`);
+if (content.length < 30000)
+  console.error(
+    `!! short content (${content.length} chars) — possible early stop / content filter`,
+  );
 
-const stripped = content.trim().replace(/^```(?:markdown|md)?\s*/i, '').replace(/\s*```$/i, '');
+const stripped = content
+  .trim()
+  .replace(/^```(?:markdown|md)?\s*/i, '')
+  .replace(/\s*```$/i, '');
 await writeFile(outPath, stripped);
-```
+````
 
 Prompt file format — `prompt.md` in the repo root holds the system prompt and one upload's paragraphs as the user message:
 
@@ -215,9 +232,9 @@ just generate-seed-annotations   # ~5 min, ~$0.10–0.15 at gpt-5.6-luna
 just dump-llm-seed-data          # capture into committed snapshots
 ```
 
-Content-filter blocks on the primary model auto-retry against `OPENROUTER_ANNOTATE_FALLBACK_MODEL` (default `anthropic/claude-haiku-4-5`) — both attempts record in `llm_call`. Uploads where both fail surface on the admin **Failed Annotations** page (`/dashboard/admin/failed-annotations`) with a regenerate button. To audit a regen run, query `llm_call` for `outcome != 'success' AND activity = 'annotateTranscript' AND created_at > '<regen start>'`; rows whose `model` matches the fallback are the cases the fallback caught, rows whose `model` matches the primary are the cases the activity ultimately gave up on. See `docs/seed-data.md` for the full bootstrap flow.
+Content-filter blocks from the production OpenAI Batch submit a direct Anthropic Message Batch using `ANTHROPIC_ANNOTATE_BATCH_MODEL` (default `claude-haiku-4-5`). Both attempts record in `llm_call` with `via_batch = true`. Uploads where the fallback fails surface on the admin **Failed Annotations** page (`/dashboard/admin/failed-annotations`) with a regenerate button. To audit a regen run, query `llm_call` for `outcome != 'success' AND activity = 'annotateTranscript' AND created_at > '<regen start>'`; rows whose `model` matches the fallback are Anthropic failures, while a later Anthropic success removes the upload from the page.
 
-The summarize activity has the same fallback wiring — `OPENROUTER_SUMMARY_FALLBACK_MODEL` (same default) — with a parallel admin **Failed Summaries** page at `/dashboard/admin/failed-summaries`.
+The summarize activity uses a live OpenRouter fallback configured by `OPENROUTER_SUMMARY_FALLBACK_MODEL`, with a parallel admin **Failed Summaries** page at `/dashboard/admin/failed-summaries`.
 
 ## Reference
 
@@ -227,7 +244,8 @@ The summarize activity has the same fallback wiring — `OPENROUTER_SUMMARY_FALL
 - Text-only prompt-tuning eval CLI: `services/transcribe/scripts/segment_text.py` (wtpsplit-segments a plain-text transcript into paragraph JSON) → `packages/web/src/seed/eval-annotate-from-json.ts` (runs `runAnnotation` against the JSON, prints heading + annotation counts + writes the raw markdown). Use this loop when tuning the prompt against a new content format without going through the full upload pipeline. Scratch artifacts land under `seed-data/eval/` (gitignored).
 - Admin eval page: `packages/web/src/routes/dashboard_/admin_.llm-eval.tsx`
 - Admin failure-surface pages: `packages/web/src/routes/dashboard_/admin_.failed-annotations.tsx`, `admin_.failed-summaries.tsx` (list uploads whose latest annotate/summarize `llm_call` failed AND no annotations/summary landed; both expose the existing `regenerateUploadAnnotations` / `regenerateUploadSummary` mutations as per-row buttons)
-- Fallback-model env vars: `OPENROUTER_ANNOTATE_FALLBACK_MODEL`, `OPENROUTER_SUMMARY_FALLBACK_MODEL` — both default to `anthropic/claude-haiku-4-5`. Empty string disables the fallback; the wrapper then throws `guard_content_filter` as before.
+- Annotation Batch fallback: `ANTHROPIC_API_KEY` and `ANTHROPIC_ANNOTATE_BATCH_MODEL` (default `claude-haiku-4-5`). Empty model disables the fallback.
+- Summary live fallback: `OPENROUTER_SUMMARY_FALLBACK_MODEL` (default `anthropic/claude-haiku-4-5`).
 - `llm_call` schema: `packages/db/src/schema.ts` (search for `LlmCall`)
 - Pricing table + `computeCost` / `resolveCostUsd`: `packages/temporal/src/util/llm-pricing.ts`
 - Tracked-completion wrapper (`createChatCompletionTracked`): `packages/temporal/src/util/llm.ts`

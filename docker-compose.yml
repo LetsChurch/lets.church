@@ -63,8 +63,8 @@ services:
       MEDIA_URL: ${MEDIA_URL}
       DOWNLOAD_URL: ${HOST_DOWNLOAD_URL}
       TEMPORAL_ADDRESS: temporal:7233
-      HCAPTCHA_SITE_KEY: "10000000-ffff-ffff-ffff-000000000001"
-      HCAPTCHA_SECRET_KEY: "0x0000000000000000000000000000000000000000"
+      HCAPTCHA_SITE_KEY: '10000000-ffff-ffff-ffff-000000000001'
+      HCAPTCHA_SECRET_KEY: '0x0000000000000000000000000000000000000000'
       WEB_URL: ${HOST_WEB_URL}
       # Base URL for linking scripture refs into lets.bible (Vite inlines VITE_*).
       VITE_LETS_BIBLE_URL: ${VITE_LETS_BIBLE_URL:-http://localhost:4001}
@@ -201,7 +201,8 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       OPENROUTER_SUMMARY_MODEL: ${OPENROUTER_SUMMARY_MODEL:-openai/gpt-5.6-luna}
       OPENROUTER_ANNOTATE_MODEL: ${OPENROUTER_ANNOTATE_MODEL:-openai/gpt-5.6-luna}
-      OPENROUTER_ANNOTATE_FALLBACK_MODEL: ${OPENROUTER_ANNOTATE_FALLBACK_MODEL:-anthropic/claude-haiku-4-5}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ANTHROPIC_ANNOTATE_BATCH_MODEL: ${ANTHROPIC_ANNOTATE_BATCH_MODEL-claude-haiku-4-5}
       OPENROUTER_SUMMARY_FALLBACK_MODEL: ${OPENROUTER_SUMMARY_FALLBACK_MODEL:-anthropic/claude-haiku-4-5}
       <<: [*s3-ingest-env, *s3-public-env, *s3-backup-env, *mux-env]
     volumes:
@@ -334,7 +335,7 @@ services:
     depends_on:
       - temporal
     healthcheck:
-      test: ["CMD", "test", "-f", "/tmp/ready"]
+      test: ['CMD', 'test', '-f', '/tmp/ready']
       interval: 30s
       timeout: 5s
       retries: 3
@@ -407,7 +408,7 @@ services:
   # webhook destination is needed locally.
   stripe-webhooks:
     image: stripe/stripe-cli:v1.44.0
-    entrypoint: ["/bin/sh", "-c"]
+    entrypoint: ['/bin/sh', '-c']
     command:
       - |
         if [ -z "$$STRIPE_SECRET_KEY" ]; then
@@ -431,7 +432,7 @@ services:
   #
   listmonk:
     image: listmonk/listmonk:v5.1.0
-    command: [sh, -c, "./listmonk --install --yes && ./listmonk"]
+    command: [sh, -c, './listmonk --install --yes && ./listmonk']
     restart: unless-stopped
     environment:
       LISTMONK_db__host: postgres
@@ -445,7 +446,7 @@ services:
       LISTMONK_ADMIN_PASSWORD: ${LISTMONK_PASSWORD}
       TZ: US/Eastern
     ports:
-      - "127.0.0.1:${HOST_LISTMONK_PORT}:9000"
+      - '127.0.0.1:${HOST_LISTMONK_PORT}:9000'
     depends_on:
       postgres:
         condition: service_healthy
@@ -521,7 +522,7 @@ services:
     image: temporalio/server:1.31.0
     restart: unless-stopped
     environment:
-      BIND_ON_IP: "0.0.0.0"
+      BIND_ON_IP: '0.0.0.0'
       DB: postgres12_pgx
       DB_PORT: 5432
       POSTGRES_SEEDS: postgres
@@ -540,7 +541,7 @@ services:
       temporal-schema-setup:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "7233"]
+      test: ['CMD', 'nc', '-z', 'localhost', '7233']
       interval: 5s
       timeout: 5s
       retries: 20
@@ -608,14 +609,14 @@ services:
       - pg-data:/var/lib/postgresql
     command:
       [
-        "postgres",
-        "-c",
-        "log_statement=all",
-        "-c",
-        "log_min_duration_statement=0",
+        'postgres',
+        '-c',
+        'log_statement=all',
+        '-c',
+        'log_min_duration_statement=0',
       ]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready"]
+      test: ['CMD-SHELL', 'pg_isready']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -644,11 +645,11 @@ services:
   valkey:
     image: valkey/valkey:8-alpine
     restart: unless-stopped
-    command: ["valkey-server", "--save", "", "--appendonly", "no"]
+    command: ['valkey-server', '--save', '', '--appendonly', 'no']
     ports:
       - 127.0.0.1:${HOST_VALKEY_PORT}:6379
     healthcheck:
-      test: ["CMD", "valkey-cli", "ping"]
+      test: ['CMD', 'valkey-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5

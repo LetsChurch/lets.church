@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import {
   assertBatchSourceCurrent,
+  buildAnthropicAnnotationBatchCustomId,
   buildBatchCustomId,
   fingerprintAnnotationSource,
   fingerprintParagraphEmbeddingSource,
   fingerprintSummaryEmbeddingSource,
   fingerprintSummarySource,
   fingerprintTranscriptSource,
+  parseAnthropicAnnotationBatchCustomId,
   parseBatchCustomId,
 } from './llm-batch-source';
 
@@ -117,6 +119,25 @@ describe('batch custom ids', () => {
       sourceFingerprint,
       chunkIdx: 12,
     });
+  });
+  it('round-trips Anthropic-safe annotation ids', () => {
+    const customId = buildAnthropicAnnotationBatchCustomId(
+      uploadId,
+      sourceFingerprint,
+    );
+    expect(customId).toMatch(/^[a-zA-Z0-9_-]{1,64}$/);
+    expect(parseAnthropicAnnotationBatchCustomId(customId)).toEqual({
+      kind: 'annotate',
+      uploadId,
+      sourceFingerprint,
+      chunkIdx: null,
+    });
+    expect(() =>
+      buildAnthropicAnnotationBatchCustomId(
+        '123e4567e89b12d3a456426614174000----',
+        sourceFingerprint,
+      ),
+    ).toThrow('Invalid Anthropic Message Batch annotation custom_id');
   });
 
   it('parses legacy ids only so apply-side validation can reject them safely', () => {

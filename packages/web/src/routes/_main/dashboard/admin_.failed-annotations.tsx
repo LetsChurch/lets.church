@@ -270,9 +270,9 @@ function RouteComponent() {
 
       <div className="flex flex-wrap items-center justify-end gap-4">
         <Text size="xs" c="dimmed">
-          The fallback model is set by{' '}
-          <Code>OPENROUTER_ANNOTATE_FALLBACK_MODEL</Code>. Both attempts are
-          recorded in <Code>llm_call</Code>.
+          OpenAI content-filter responses retry through an Anthropic Message
+          Batch. The model is set by <Code>ANTHROPIC_ANNOTATE_BATCH_MODEL</Code>
+          ; both attempts are recorded in <Code>llm_call</Code>.
         </Text>
       </div>
     </div>
