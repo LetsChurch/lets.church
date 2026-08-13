@@ -5,7 +5,7 @@ import {
   type UploadStateType,
 } from '@letschurch/db';
 import { ingestS3 } from '@letschurch/s3/ingest';
-import { count, eq, sql } from 'drizzle-orm';
+import { count, eq } from 'drizzle-orm';
 
 import type { UploadPostProcessValue } from '../../util/types';
 
@@ -143,26 +143,7 @@ export async function getUploadStatesToBackup(
  * This prevents other workflows from selecting the same uploads.
  * Returns the IDs of the claimed uploads.
  */
-export async function claimUploadStatesForBackup(
-  limit: number,
-): Promise<Array<{ id: string }>> {
-  // Use a raw query to atomically select and update in one operation
-  // This prevents race conditions where multiple batches select the same uploads
-  const claimed = await db.execute<{ id: string }>(sql`
-    UPDATE "upload_state"
-    SET "backup_status" = 'BACKING_UP', "updated_at" = NOW()
-    WHERE id IN (
-      SELECT id FROM "upload_state"
-      WHERE "backup_status" = 'NOT_BACKED_UP'
-      ORDER BY "created_at" ASC
-      LIMIT ${limit}
-      FOR UPDATE SKIP LOCKED
-    )
-    RETURNING id
-  `);
-
-  return claimed.rows;
-}
+export { claimUploadStatesForBackup } from './upload-state-queries';
 
 /**
  * Count upload states by backup status.

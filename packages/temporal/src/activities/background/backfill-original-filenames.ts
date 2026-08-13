@@ -1,18 +1,22 @@
 import { db, UploadRecord } from '@letschurch/db';
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { makeChunkedTokenizerFromS3 } from '@tokenizer/s3';
-import { eq, sql } from 'drizzle-orm';
+import { and, count, eq, isNotNull, isNull } from 'drizzle-orm';
 import { fileTypeFromTokenizer } from 'file-type';
 import sanitizeFilename from 'sanitize-filename';
 
 export async function getBackfillFilenamesCount(): Promise<number> {
-  const rawResult = await db.execute<{ count: string }>(sql`
-    SELECT COUNT(*) as count FROM "upload_record"
-    WHERE "upload_finalized" = true
-      AND "finalized_upload_key" IS NOT NULL
-      AND "original_file_name" IS NULL
-  `);
-  return Number(rawResult.rows[0]?.count ?? 0);
+  const result = await db
+    .select({ count: count() })
+    .from(UploadRecord)
+    .where(
+      and(
+        eq(UploadRecord.uploadFinalized, true),
+        isNotNull(UploadRecord.finalizedUploadKey),
+        isNull(UploadRecord.originalFileName),
+      ),
+    );
+  return result[0]?.count ?? 0;
 }
 
 export type BackfillFilenamesBatchResult = {
@@ -24,29 +28,32 @@ export type BackfillFilenamesBatchResult = {
 export async function backfillFilenamesBatch(
   batchSize: number,
 ): Promise<BackfillFilenamesBatchResult> {
-  const records = await db.execute<{
-    id: string;
-    finalized_upload_key: string | null;
-    title: string | null;
-  }>(sql`
-    SELECT id, finalized_upload_key, title
-    FROM "upload_record"
-    WHERE "upload_finalized" = true
-      AND "finalized_upload_key" IS NOT NULL
-      AND "original_file_name" IS NULL
-    LIMIT ${batchSize}
-  `);
+  const records = await db
+    .select({
+      id: UploadRecord.id,
+      finalizedUploadKey: UploadRecord.finalizedUploadKey,
+      title: UploadRecord.title,
+    })
+    .from(UploadRecord)
+    .where(
+      and(
+        eq(UploadRecord.uploadFinalized, true),
+        isNotNull(UploadRecord.finalizedUploadKey),
+        isNull(UploadRecord.originalFileName),
+      ),
+    )
+    .limit(batchSize);
 
-  if (records.rows.length === 0) {
+  if (records.length === 0) {
     return { processed: 0, updated: 0, remaining: 0 };
   }
 
   let updated = 0;
 
-  for (const record of records.rows) {
+  for (const record of records) {
     try {
       // Skip if somehow finalizedUploadKey is null
-      if (!record.finalized_upload_key) {
+      if (!record.finalizedUploadKey) {
         continue;
       }
 
@@ -55,7 +62,7 @@ export async function backfillFilenamesBatch(
 
       try {
         const headResponse = await ingestS3.headObject(
-          record.finalized_upload_key,
+          record.finalizedUploadKey,
         );
         const ContentType = headResponse?.ContentType;
 
@@ -91,7 +98,7 @@ export async function backfillFilenamesBatch(
             ingestS3.getS3Client(),
             {
               Bucket: ingestS3.getBucket(),
-              Key: record.finalized_upload_key,
+              Key: record.finalizedUploadKey,
             },
           );
 
@@ -121,5 +128,5 @@ export async function backfillFilenamesBatch(
   }
 
   const remaining = await getBackfillFilenamesCount();
-  return { processed: records.rows.length, updated, remaining };
+  return { processed: records.length, updated, remaining };
 }

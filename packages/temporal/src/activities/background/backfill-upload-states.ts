@@ -1,7 +1,19 @@
-import { db, UploadState } from '@letschurch/db';
-import { eq, sql } from 'drizzle-orm';
+import { db, UploadRecord, UploadState } from '@letschurch/db';
+import { and, count, eq, isNotNull, notExists } from 'drizzle-orm';
 
 import logger from '../../util/logger';
+
+const missingMediaUploadState = notExists(
+  db
+    .select({ id: UploadState.id })
+    .from(UploadState)
+    .where(
+      and(
+        eq(UploadState.uploadType, 'MEDIA'),
+        eq(UploadState.uploadRecordId, UploadRecord.id),
+      ),
+    ),
+);
 
 export type BackfillBatchResult = {
   created: number;
@@ -14,25 +26,18 @@ export type BackfillBatchResult = {
  * backfillOriginalImageUploadStatesWorkflow which scans probe files.
  */
 export async function getBackfillCount(): Promise<number> {
-  // Count finalized upload records that don't have an UploadState
-  const _subquery = db
-    .select({ id: UploadState.uploadRecordId })
-    .from(UploadState)
-    .where(eq(UploadState.uploadType, 'MEDIA'));
+  const result = await db
+    .select({ count: count() })
+    .from(UploadRecord)
+    .where(
+      and(
+        eq(UploadRecord.uploadFinalized, true),
+        isNotNull(UploadRecord.finalizedUploadKey),
+        missingMediaUploadState,
+      ),
+    );
 
-  const result = await db.execute<{ count: string }>(sql`
-    SELECT COUNT(*) as count
-    FROM "upload_record"
-    WHERE "upload_finalized" = true
-      AND "finalized_upload_key" IS NOT NULL
-      AND "id" NOT IN (
-        SELECT "upload_record_id" FROM "upload_state"
-        WHERE "upload_type" = 'MEDIA'
-        AND "upload_record_id" IS NOT NULL
-      )
-  `);
-
-  return Number(result.rows[0]?.count ?? 0);
+  return result[0]?.count ?? 0;
 }
 
 /**
@@ -42,28 +47,27 @@ async function backfillMediaBatch(
   batchSize: number,
   ingestBucket: string,
 ): Promise<number> {
-  const uploads = await db.execute<{
-    id: string;
-    finalized_upload_key: string | null;
-    upload_size_bytes: string | null;
-  }>(sql`
-    SELECT id, finalized_upload_key, upload_size_bytes
-    FROM "upload_record"
-    WHERE "upload_finalized" = true
-      AND "finalized_upload_key" IS NOT NULL
-      AND "id" NOT IN (
-        SELECT "upload_record_id" FROM "upload_state"
-        WHERE "upload_type" = 'MEDIA'
-        AND "upload_record_id" IS NOT NULL
-      )
-    LIMIT ${batchSize}
-  `);
+  const uploads = await db
+    .select({
+      id: UploadRecord.id,
+      finalizedUploadKey: UploadRecord.finalizedUploadKey,
+      uploadSizeBytes: UploadRecord.uploadSizeBytes,
+    })
+    .from(UploadRecord)
+    .where(
+      and(
+        eq(UploadRecord.uploadFinalized, true),
+        isNotNull(UploadRecord.finalizedUploadKey),
+        missingMediaUploadState,
+      ),
+    )
+    .limit(batchSize);
 
-  if (uploads.rows.length === 0) return 0;
+  if (uploads.length === 0) return 0;
 
-  const uploadsWithKeys = uploads.rows.filter(
-    (upload): upload is typeof upload & { finalized_upload_key: string } =>
-      upload.finalized_upload_key !== null,
+  const uploadsWithKeys = uploads.filter(
+    (upload): upload is typeof upload & { finalizedUploadKey: string } =>
+      upload.finalizedUploadKey !== null,
   );
 
   if (uploadsWithKeys.length === 0) return 0;
@@ -72,12 +76,10 @@ async function backfillMediaBatch(
     .insert(UploadState)
     .values(
       uploadsWithKeys.map((upload) => ({
-        s3Key: upload.finalized_upload_key,
+        s3Key: upload.finalizedUploadKey,
         s3Bucket: ingestBucket,
         uploadType: 'MEDIA' as const,
-        sizeBytes: upload.upload_size_bytes
-          ? BigInt(upload.upload_size_bytes)
-          : undefined,
+        sizeBytes: upload.uploadSizeBytes ?? undefined,
         uploadRecordId: upload.id,
         backupStatus: 'NOT_BACKED_UP' as const,
         updatedAt: new Date(),

@@ -1,4 +1,15 @@
-import { and, asc, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  lte,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { z } from 'zod';
 
 import {
@@ -562,7 +573,7 @@ export const bibleProcedures = {
         return null;
       }
       const [counts] = await db
-        .select({ count: sql<number>`count(*)::int` })
+        .select({ count: count() })
         .from(bibleToken)
         .where(
           and(
@@ -595,7 +606,7 @@ export const bibleProcedures = {
           verse: bibleToken.verse,
           ref: bibleVerse.ref,
           text: bibleVerse.text,
-          count: sql<number>`count(*)::int`,
+          count: count(),
         })
         .from(bibleToken)
         .innerJoin(
@@ -718,7 +729,7 @@ export const bibleProcedures = {
         year: bibleCommentaryWork.year,
         tradition: bibleCommentaryWork.tradition,
         sourceUrl: bibleCommentaryWork.sourceUrl,
-        entryCount: sql<number>`count(${bibleCommentary.id})::int`,
+        entryCount: count(bibleCommentary.id),
         bytes: sql<number>`coalesce(sum(octet_length(${bibleCommentary.body})), 0)::int`,
       })
       .from(bibleCommentaryWork)
@@ -738,7 +749,7 @@ export const bibleProcedures = {
       return db
         .select({
           book: bibleCommentary.book,
-          entryCount: sql<number>`count(*)::int`,
+          entryCount: count(),
         })
         .from(bibleCommentary)
         .where(eq(bibleCommentary.workId, input.workId))

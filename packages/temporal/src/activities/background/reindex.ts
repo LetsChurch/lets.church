@@ -15,11 +15,12 @@ import {
   and,
   asc,
   type Column,
+  count,
+  countDistinct,
   gt,
   gte,
   isNotNull,
   lt,
-  sql,
 } from 'drizzle-orm';
 import pMap from 'p-map';
 
@@ -65,15 +66,15 @@ const moduleLogger = logger.child({
 });
 
 export async function getReindexCount(kind: ReindexKind): Promise<number> {
-  const countCol = sql<string>`count(*)`;
+  const countCol = count();
   switch (kind) {
     case 'channel': {
       const r = await db.select({ count: countCol }).from(Channel);
-      return Number(r[0]?.count ?? 0);
+      return r[0]?.count ?? 0;
     }
     case 'organization': {
       const r = await db.select({ count: countCol }).from(Organization);
-      return Number(r[0]?.count ?? 0);
+      return r[0]?.count ?? 0;
     }
     case 'media': {
       // Only uploads with a summary embedding produce an lc_media_v1 doc; the
@@ -82,15 +83,15 @@ export async function getReindexCount(kind: ReindexKind): Promise<number> {
         .select({ count: countCol })
         .from(UploadRecord)
         .where(isNotNull(UploadRecord.summaryEmbedding));
-      return Number(r[0]?.count ?? 0);
+      return r[0]?.count ?? 0;
     }
     case 'speaker': {
       const r = await db
         .select({
-          count: sql<string>`count(distinct ${SpeakerAttribution.uploadRecordId})`,
+          count: countDistinct(SpeakerAttribution.uploadRecordId),
         })
         .from(SpeakerAttribution);
-      return Number(r[0]?.count ?? 0);
+      return r[0]?.count ?? 0;
     }
   }
 }

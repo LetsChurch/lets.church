@@ -1,7 +1,7 @@
 import { db, UploadState } from '@letschurch/db';
 import { backupS3 } from '@letschurch/s3/backup';
 import { Context } from '@temporalio/activity';
-import { eq, sql } from 'drizzle-orm';
+import { eq, or, sql } from 'drizzle-orm';
 
 import logger from '../../util/logger';
 
@@ -88,11 +88,14 @@ export async function deleteGlacierBackupsByPrefix(
   const likePattern = `${escapedPrefix}%`;
 
   // Delete UploadState records that match the prefix
-  const _deleteResult = await db.execute(sql`
-    DELETE FROM "upload_state"
-    WHERE "s3_key" LIKE ${likePattern} ESCAPE '\'
-       OR "backup_key" LIKE ${likePattern} ESCAPE '\'
-  `);
+  const _deleteResult = await db
+    .delete(UploadState)
+    .where(
+      or(
+        sql`${UploadState.s3Key} LIKE ${likePattern} ESCAPE '\\'`,
+        sql`${UploadState.backupKey} LIKE ${likePattern} ESCAPE '\\'`,
+      ),
+    );
 
   activityLogger.info(
     `Deleted ${deletedCount} backup objects and ${_deleteResult.rowCount ?? 0} UploadState records with prefix ${prefix}`,

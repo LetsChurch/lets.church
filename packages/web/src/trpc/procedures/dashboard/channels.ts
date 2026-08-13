@@ -575,6 +575,10 @@ export const channelRouter = router({
       }
     }
 
+    const effectiveLabel = sql<
+      string | null
+    >`coalesce(${SpeakerParagraphLabel.label}, ${TranscriptParagraph.speaker})`;
+
     const [
       viewCountResult,
       subscriberCountResult,
@@ -618,7 +622,7 @@ export const channelRouter = router({
       // the dashboard card — no embedding/voice-matching.
       db
         .select({
-          count: sql<number>`count(distinct ((${TranscriptParagraph.uploadRecordId})::text || ':' || coalesce(${SpeakerParagraphLabel.label}, ${TranscriptParagraph.speaker})))`,
+          count: sql<number>`count(distinct ((${TranscriptParagraph.uploadRecordId})::text || ':' || ${effectiveLabel}))`,
         })
         .from(TranscriptParagraph)
         .innerJoin(
@@ -636,10 +640,7 @@ export const channelRouter = router({
               SpeakerAttribution.uploadRecordId,
               TranscriptParagraph.uploadRecordId,
             ),
-            eq(
-              SpeakerAttribution.speakerLabel,
-              sql`coalesce(${SpeakerParagraphLabel.label}, ${TranscriptParagraph.speaker})`,
-            ),
+            eq(SpeakerAttribution.speakerLabel, effectiveLabel),
           ),
         )
         .where(
@@ -648,7 +649,7 @@ export const channelRouter = router({
             isNotNull(UploadRecord.transcribingFinishedAt),
             isNull(UploadRecord.deletedAt),
             isNull(SpeakerAttribution.speakerId),
-            sql`coalesce(${SpeakerParagraphLabel.label}, ${TranscriptParagraph.speaker}) is not null`,
+            isNotNull(effectiveLabel),
           ),
         )
         .then((r) => r[0]),
@@ -2294,7 +2295,9 @@ export const channelRouter = router({
             finalizedUploadKey: UploadRecord.finalizedUploadKey,
             defaultThumbnailPath: UploadRecord.defaultThumbnailPath,
             overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
-            isFeatured: sql<boolean>`${FeaturedUpload.uploadRecordId} is not null`,
+            isFeatured: isNotNull(FeaturedUpload.uploadRecordId).mapWith(
+              Boolean,
+            ),
             viewCount: sql<number>`coalesce(${viewCountSq.cnt}, 0)::int`,
             commentCount: sql<number>`coalesce(${commentCountSq.cnt}, 0)::int`,
           })

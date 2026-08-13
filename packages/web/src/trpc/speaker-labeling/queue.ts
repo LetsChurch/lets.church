@@ -21,6 +21,7 @@ import { TRPCError } from '@trpc/server';
 import {
   and,
   asc,
+  count,
   desc,
   eq,
   inArray,
@@ -201,7 +202,7 @@ function unlabeledSegmentsBase(owningChannelIds: string[]) {
     .select({
       uploadId: TranscriptParagraph.uploadRecordId,
       speakerLabel: effectiveLabelSql,
-      paragraphCount: sql<number>`count(*)::int`,
+      paragraphCount: count(),
     })
     .from(TranscriptParagraph)
     .innerJoin(
@@ -242,13 +243,13 @@ async function unlabeledSegmentKeys(
 ): Promise<UnlabeledKey[]> {
   if (owningChannelIds.length === 0) return [];
   const rows = await unlabeledSegmentsBase(owningChannelIds)
-    .orderBy(desc(sql`count(*)`), asc(TranscriptParagraph.uploadRecordId))
+    .orderBy(desc(count()), asc(TranscriptParagraph.uploadRecordId))
     .limit(limit)
     .offset(offset);
   return rows.map((r) => ({
     uploadId: r.uploadId,
     speakerLabel: r.speakerLabel,
-    paragraphCount: Number(r.paragraphCount),
+    paragraphCount: r.paragraphCount,
   }));
 }
 
@@ -258,8 +259,8 @@ export async function countUnlabeledSegments(
 ): Promise<number> {
   if (owningChannelIds.length === 0) return 0;
   const sub = unlabeledSegmentsBase(owningChannelIds).as('unlabeled');
-  const r = await db.select({ count: sql<string>`count(*)` }).from(sub);
-  return Number(r[0]?.count ?? 0);
+  const r = await db.select({ count: count() }).from(sub);
+  return r[0]?.count ?? 0;
 }
 
 // Build ONE PAGE of unlabeled (upload, effective-label) segments with averaged
@@ -314,10 +315,7 @@ export async function collectUnlabeledSegments(
           SpeakerAttribution.uploadRecordId,
           TranscriptParagraph.uploadRecordId,
         ),
-        eq(
-          SpeakerAttribution.speakerLabel,
-          sql`coalesce(${SpeakerParagraphLabel.label}, ${TranscriptParagraph.speaker})`,
-        ),
+        eq(SpeakerAttribution.speakerLabel, effectiveLabelSql),
       ),
     )
     .where(inArray(TranscriptParagraph.uploadRecordId, uploadIds))

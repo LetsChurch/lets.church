@@ -60,6 +60,7 @@ import {
   sql,
   sum,
 } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { chunk } from 'es-toolkit';
 import { z } from 'zod';
 
@@ -142,10 +143,13 @@ import {
 } from '../../speaker-labeling/queue';
 import { authProcedure, router } from '../../trpc';
 import { newsletterListsRouter } from '../newsletter-lists';
+import { getDuplicateUploads } from './duplicate-uploads';
 
 const moduleLogger = logger.child({
   module: 'trpc/procedures/dashboard/admin',
 });
+
+const laterLlmCall = alias(LlmCall, 'later');
 
 // Mirror of the background-worker boot check, scoped to the web
 // container's evaluateLlmModel surface + seed scripts that the
@@ -203,15 +207,15 @@ async function retryAllFailedLlmWorkflows({
         eq(LlmCall.activity, activity),
         notExists(
           db
-            .select({ one: sql<number>`1` })
-            .from(sql`${LlmCall} AS later`)
+            .select({ id: laterLlmCall.id })
+            .from(laterLlmCall)
             .where(
               and(
-                sql`later.upload_record_id = ${UploadRecord.id}`,
-                sql`later.activity = ${activity}`,
+                eq(laterLlmCall.uploadRecordId, UploadRecord.id),
+                eq(laterLlmCall.activity, activity),
                 // created_at has millisecond precision, so use the UUID as a
                 // stable tie-breaker when calls land in the same millisecond.
-                sql`(later.created_at, later.id) > (${LlmCall.createdAt}, ${LlmCall.id})`,
+                sql`(${laterLlmCall.createdAt}, ${laterLlmCall.id}) > (${LlmCall.createdAt}, ${LlmCall.id})`,
               ),
             ),
         ),
@@ -3714,13 +3718,13 @@ export const adminRouter = router({
             // later row for the same (upload, activity) pair.
             notExists(
               db
-                .select({ one: sql<number>`1` })
-                .from(sql`${LlmCall} AS later`)
+                .select({ id: laterLlmCall.id })
+                .from(laterLlmCall)
                 .where(
                   and(
-                    sql`later.upload_record_id = ${UploadRecord.id}`,
-                    sql`later.activity = 'annotateTranscript'`,
-                    sql`(later.created_at, later.id) > (${LlmCall.createdAt}, ${LlmCall.id})`,
+                    eq(laterLlmCall.uploadRecordId, UploadRecord.id),
+                    eq(laterLlmCall.activity, 'annotateTranscript'),
+                    sql`(${laterLlmCall.createdAt}, ${laterLlmCall.id}) > (${LlmCall.createdAt}, ${LlmCall.id})`,
                   ),
                 ),
             ),
@@ -3738,7 +3742,7 @@ export const adminRouter = router({
             // outlines but whose most recent regenerate failed *should*
             // surface here so the admin knows the regen they kicked off
             // didn't take.
-            sql`${LlmCall.outcome} != 'success'`,
+            ne(LlmCall.outcome, 'success'),
           ),
         )
         .orderBy(desc(LlmCall.createdAt))
@@ -3781,13 +3785,13 @@ export const adminRouter = router({
           eq(LlmCall.activity, 'annotateTranscript'),
           notExists(
             db
-              .select({ one: sql<number>`1` })
-              .from(sql`${LlmCall} AS later`)
+              .select({ id: laterLlmCall.id })
+              .from(laterLlmCall)
               .where(
                 and(
-                  sql`later.upload_record_id = ${UploadRecord.id}`,
-                  sql`later.activity = 'annotateTranscript'`,
-                  sql`(later.created_at, later.id) > (${LlmCall.createdAt}, ${LlmCall.id})`,
+                  eq(laterLlmCall.uploadRecordId, UploadRecord.id),
+                  eq(laterLlmCall.activity, 'annotateTranscript'),
+                  sql`(${laterLlmCall.createdAt}, ${laterLlmCall.id}) > (${LlmCall.createdAt}, ${LlmCall.id})`,
                 ),
               ),
           ),
@@ -3796,7 +3800,7 @@ export const adminRouter = router({
       .where(
         and(
           isNotNull(UploadRecord.transcribingFinishedAt),
-          sql`${LlmCall.outcome} != 'success'`,
+          ne(LlmCall.outcome, 'success'),
         ),
       );
     return rows[0]?.cnt ?? 0;
@@ -3865,13 +3869,13 @@ export const adminRouter = router({
             eq(LlmCall.activity, 'summarizeUpload'),
             notExists(
               db
-                .select({ one: sql<number>`1` })
-                .from(sql`${LlmCall} AS later`)
+                .select({ id: laterLlmCall.id })
+                .from(laterLlmCall)
                 .where(
                   and(
-                    sql`later.upload_record_id = ${UploadRecord.id}`,
-                    sql`later.activity = 'summarizeUpload'`,
-                    sql`(later.created_at, later.id) > (${LlmCall.createdAt}, ${LlmCall.id})`,
+                    eq(laterLlmCall.uploadRecordId, UploadRecord.id),
+                    eq(laterLlmCall.activity, 'summarizeUpload'),
+                    sql`(${laterLlmCall.createdAt}, ${laterLlmCall.id}) > (${LlmCall.createdAt}, ${LlmCall.id})`,
                   ),
                 ),
             ),
@@ -3886,7 +3890,7 @@ export const adminRouter = router({
             // so it's excluded here. Showing uploads with a prior good
             // summary + a failed regen is intentional — the admin
             // wants to know their regen didn't take.
-            sql`${LlmCall.outcome} != 'success'`,
+            ne(LlmCall.outcome, 'success'),
           ),
         )
         .orderBy(desc(LlmCall.createdAt))
@@ -3925,13 +3929,13 @@ export const adminRouter = router({
           eq(LlmCall.activity, 'summarizeUpload'),
           notExists(
             db
-              .select({ one: sql<number>`1` })
-              .from(sql`${LlmCall} AS later`)
+              .select({ id: laterLlmCall.id })
+              .from(laterLlmCall)
               .where(
                 and(
-                  sql`later.upload_record_id = ${UploadRecord.id}`,
-                  sql`later.activity = 'summarizeUpload'`,
-                  sql`(later.created_at, later.id) > (${LlmCall.createdAt}, ${LlmCall.id})`,
+                  eq(laterLlmCall.uploadRecordId, UploadRecord.id),
+                  eq(laterLlmCall.activity, 'summarizeUpload'),
+                  sql`(${laterLlmCall.createdAt}, ${laterLlmCall.id}) > (${LlmCall.createdAt}, ${LlmCall.id})`,
                 ),
               ),
           ),
@@ -3940,7 +3944,7 @@ export const adminRouter = router({
       .where(
         and(
           isNotNull(UploadRecord.transcribingFinishedAt),
-          sql`${LlmCall.outcome} != 'success'`,
+          ne(LlmCall.outcome, 'success'),
         ),
       );
     return rows[0]?.cnt ?? 0;
@@ -5054,124 +5058,7 @@ export const adminRouter = router({
         matchPublishedAt: input.matchPublishedAt,
       });
 
-      // When matchPublishedAt is true, group by (channelId, title, publishedAt)
-      // so that uploads with the same title but different air dates are not
-      // treated as duplicates (e.g. weekly sermons with a generic title).
-      const rows = input.matchPublishedAt
-        ? await db.execute(sql`
-            WITH dup_keys AS (
-              SELECT channel_id, title, published_at
-              FROM upload_record
-              WHERE deleted_at IS NULL
-              GROUP BY channel_id, title, published_at
-              HAVING COUNT(*) > 1
-              ORDER BY COUNT(*) DESC, title
-              LIMIT ${input.limit} OFFSET ${input.offset}
-            ),
-            dup_key_counts AS (
-              SELECT COUNT(*)::int AS total FROM dup_keys
-            )
-            SELECT
-              ur.id,
-              ur.title,
-              ur.created_at,
-              ur.published_at,
-              c.id   AS channel_id,
-              c.name AS channel_name,
-              c.slug AS channel_slug,
-              (SELECT total FROM dup_key_counts) AS group_count
-            FROM upload_record ur
-            JOIN channel c ON c.id = ur.channel_id
-            WHERE ur.deleted_at IS NULL
-              AND (ur.channel_id, ur.title, ur.published_at) IN (
-                SELECT channel_id, title, published_at FROM dup_keys
-              )
-            ORDER BY ur.channel_id, ur.title, ur.published_at, ur.created_at
-          `)
-        : await db.execute(sql`
-            WITH dup_keys AS (
-              SELECT channel_id, title
-              FROM upload_record
-              WHERE deleted_at IS NULL
-              GROUP BY channel_id, title
-              HAVING COUNT(*) > 1
-              ORDER BY COUNT(*) DESC, title
-              LIMIT ${input.limit} OFFSET ${input.offset}
-            ),
-            dup_key_counts AS (
-              SELECT COUNT(*)::int AS total FROM dup_keys
-            )
-            SELECT
-              ur.id,
-              ur.title,
-              ur.created_at,
-              ur.published_at,
-              c.id   AS channel_id,
-              c.name AS channel_name,
-              c.slug AS channel_slug,
-              (SELECT total FROM dup_key_counts) AS group_count
-            FROM upload_record ur
-            JOIN channel c ON c.id = ur.channel_id
-            WHERE ur.deleted_at IS NULL
-              AND (ur.channel_id, ur.title) IN (SELECT channel_id, title FROM dup_keys)
-            ORDER BY ur.channel_id, ur.title, ur.created_at
-          `);
-
-      type Row = {
-        id: string;
-        title: string | null;
-        created_at: Date;
-        published_at: Date | null;
-        channel_id: string;
-        channel_name: string;
-        channel_slug: string;
-        group_count: number;
-      };
-
-      const typedRows = rows.rows as Row[];
-      const groupCount = typedRows[0]?.group_count ?? 0;
-
-      const groupMap = new Map<
-        string,
-        {
-          channelId: string;
-          channelName: string;
-          channelSlug: string;
-          title: string | null;
-          publishedAt: Date | null;
-          uploads: {
-            id: string;
-            createdAt: Date;
-            publishedAt: Date | null;
-          }[];
-        }
-      >();
-
-      for (const row of typedRows) {
-        const key = input.matchPublishedAt
-          ? `${row.channel_id}::${row.title ?? ''}::${String(row.published_at ?? '')}`
-          : `${row.channel_id}::${row.title ?? ''}`;
-        if (!groupMap.has(key)) {
-          groupMap.set(key, {
-            channelId: row.channel_id,
-            channelName: row.channel_name,
-            channelSlug: row.channel_slug,
-            title: row.title,
-            publishedAt: row.published_at,
-            uploads: [],
-          });
-        }
-        groupMap.get(key)?.uploads.push({
-          id: row.id,
-          createdAt: row.created_at,
-          publishedAt: row.published_at,
-        });
-      }
-
-      return {
-        groups: Array.from(groupMap.values()),
-        totalGroups: groupCount,
-      };
+      return getDuplicateUploads(input);
     }),
 
   deleteDuplicateUpload: adminProcedure

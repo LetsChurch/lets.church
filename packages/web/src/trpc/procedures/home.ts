@@ -1,7 +1,16 @@
 import { Channel, ChannelSubscription, db, UploadRecord } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
-import { and, count, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import {
+  and,
+  count,
+  desc,
+  eq,
+  isNotNull,
+  isNull,
+  notInArray,
+  sql,
+} from 'drizzle-orm';
 import { z } from 'zod';
 
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
@@ -352,12 +361,7 @@ export const homeProcedures = {
             isNotNull(Channel.approvedAt),
             isNull(Channel.deletedAt),
             ...(subscribedChannelIds.length > 0
-              ? [
-                  sql`${Channel.id} NOT IN (${sql.join(
-                    subscribedChannelIds.map((id) => sql`${id}`),
-                    sql`, `,
-                  )})`,
-                ]
+              ? [notInArray(Channel.id, subscribedChannelIds)]
               : []),
           ),
         )

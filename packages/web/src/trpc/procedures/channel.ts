@@ -169,7 +169,7 @@ export const channelProcedures = {
           rssUrl: Channel.rssUrl,
           fallbackThumbnailPath: fallbackThumbnailSq.thumbnailPath,
           subscriberCount: sql<number>`coalesce(${subscriberCountSq.cnt}, 0)::int`,
-          isFollowing: sql<boolean>`${isFollowingSq.channelId} is not null`,
+          isFollowing: isNotNull(isFollowingSq.channelId).mapWith(Boolean),
           uploadCount: sql<number>`coalesce(${uploadCountSq.cnt}, 0)::int`,
         })
         .from(Channel)
