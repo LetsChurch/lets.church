@@ -67,7 +67,12 @@ export const Route = createFileRoute('/webhooks_/stripe')({
           }
           moduleLogger.error(
             {
-              err: error instanceof Error ? error : new Error(String(error)),
+              // Stripe signature errors retain the raw payload and header on
+              // enumerable properties. Copy only the diagnostic message so
+              // webhook secrets and donor data cannot enter structured logs.
+              err: new Error(
+                error instanceof Error ? error.message : String(error),
+              ),
             },
             'Stripe webhook failed',
           );
