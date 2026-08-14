@@ -44,20 +44,50 @@ logger = logging.getLogger(__name__)
 async def _blocking_with_heartbeat(fn, *, detail: str, interval_s: float = 30.0):
     """Run a blocking, zero-arg `fn` in a worker thread while heartbeating.
 
-    The heavy stages here (S3 download, ffmpeg decode, GPU inference) don't
-    yield to the event loop, so a single `activity.heartbeat()` before the call
-    doesn't survive a long run — the activity's 600s heartbeat timeout fires
-    mid-stage on large/long media (see the 5h 4K upload that failed here).
-    Running the work off-thread lets the activity coroutine keep emitting a
-    heartbeat every `interval_s` seconds until the work completes. The final
-    heartbeat fires on completion; `fut.result()` re-raises anything `fn` threw.
+    Cancelling this coroutine cannot stop an already-running native thread.
+    Instead, cancellation is recorded and temporarily cleared while the same
+    shielded future is drained. Heartbeats continue during that drain, and the
+    cancellation is re-raised only after the blocking work has quiesced.
     """
     fut = asyncio.create_task(asyncio.to_thread(fn))
+    shielded = asyncio.shield(fut)
+    pending_cancel: asyncio.CancelledError | None = None
+    current_task = asyncio.current_task()
+
     while True:
-        done, _ = await asyncio.wait({fut}, timeout=interval_s)
+        try:
+            done, _ = await asyncio.wait({shielded}, timeout=interval_s)
+        except asyncio.CancelledError as exc:
+            if pending_cancel is None:
+                pending_cancel = exc
+            if current_task is not None:
+                current_task.uncancel()
+            activity.heartbeat(detail)
+            continue
+
         activity.heartbeat(detail)
-        if fut in done:
-            return fut.result()
+        if shielded in done:
+            break
+
+    if pending_cancel is not None:
+        try:
+            shielded.result()
+        except BaseException:
+            pass
+        raise pending_cancel
+
+    return shielded.result()
+
+
+def _attempt_work_dir(work_dir_base: str, upload_record_id: str) -> Path:
+    """Return the upload work directory isolated to this Temporal attempt."""
+    attempt = activity.info().attempt
+    return Path(work_dir_base) / upload_record_id / f"attempt-{attempt}"
+
+
+def _cleanup_attempt_work_dir(work_dir: Path) -> None:
+    """Remove only one attempt's filesystem state."""
+    shutil.rmtree(work_dir, ignore_errors=True)
 
 
 class ThrottledProgressUpdater:
@@ -121,7 +151,7 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
     progress = ThrottledProgressUpdater(upload_record_id)
 
     models = get_model_manager()
-    work_dir = Path(work_dir_base) / upload_record_id
+    work_dir = _attempt_work_dir(work_dir_base, upload_record_id)
     download_path = work_dir / "download"
     wav_path = work_dir / "audio.wav"
 
@@ -303,5 +333,4 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
             activity.logger.exception("failed to reset transcribing timestamps")
         raise
     finally:
-        if work_dir.exists():
-            shutil.rmtree(work_dir, ignore_errors=True)
+        _cleanup_attempt_work_dir(work_dir)
