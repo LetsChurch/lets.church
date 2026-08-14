@@ -3,12 +3,16 @@ variables:
 
 .build-changes:
   changes:
+    - .gitlab-ci.yml
     - Dockerfile
     - docker-bake.hcl
+    - package.json
+    - patches/**/*
     - packages/**/*
     - services/**/*
     - pnpm-lock.yaml
     - pnpm-workspace.yaml
+    - tsconfig.json
 
 stages:
   - setup
@@ -28,9 +32,13 @@ check:
   stage: verify
   only:
     changes:
+      - .gitlab-ci.yml
       - packages/**/*
+      - package.json
+      - patches/**/*
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
+      - tsconfig.json
   before_script:
     - corepack enable
   script:
@@ -83,9 +91,13 @@ test:
   stage: verify
   only:
     changes:
+      - .gitlab-ci.yml
       - packages/**/*
+      - package.json
+      - patches/**/*
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
+      - tsconfig.json
   variables:
     PLAYWRIGHT_BROWSERS_PATH: "$CI_PROJECT_DIR/.cache/ms-playwright"
   before_script:

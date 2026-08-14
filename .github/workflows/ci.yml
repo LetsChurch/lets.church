@@ -5,8 +5,12 @@ on:
     paths:
       - "packages/**"
       - "services/**"
+      - "Dockerfile"
+      - "package.json"
+      - "patches/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "tsconfig.json"
       - ".github/workflows/ci.yml"
 
 jobs:
@@ -190,7 +194,6 @@ jobs:
   build:
     runs-on: depot-ubuntu-24.04
     needs: [check, check-python, test-python, test, test-schema-parity, test-go]
-    if: github.ref == 'refs/heads/kyrios'
 
     steps:
       - uses: actions/checkout@v4
@@ -214,5 +217,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
-        run: echo build
+      - name: Build web
+        run: pnpm --filter @letschurch/web run build
+
+      - name: Build lets.bible
+        run: pnpm --filter @letschurch/lets.bible run build
