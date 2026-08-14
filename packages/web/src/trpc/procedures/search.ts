@@ -1,6 +1,8 @@
 import { db, SearchLogEntry } from '@letschurch/db';
 import {
   type MediaSegment,
+  MEDIA_SEARCH_MAX_CANDIDATES,
+  MediaSearchPaginationSchema,
   MSearchResponseSchema,
   mergeParagraphSnippets,
   msearchChannels,
@@ -59,46 +61,46 @@ const isoDateString = z
     message: 'Must be an ISO-8601 date string (e.g. "2024-01-31")',
   });
 
-const hybridSearchSchema = z.object({
-  // Empty is allowed: a facet-only browse (e.g. a `/search?bibleRefs=[...]`
-  // link with no free text) runs a filter-only query instead of a hybrid one.
-  q: z.string().default(''),
-  channelIds: z.array(IncomingIdSchema).optional().nullable(),
-  channelSlugs: z.array(z.string()).optional().nullable(),
-  // Verbatim phrases (from the parser's `quotes`) to boost as phrase matches.
-  quotes: z.array(z.string()).optional().nullable(),
-  // Inclusive publish-date bounds (date-only, from the parser's `dates`).
-  dateGte: isoDateString.optional().nullable(),
-  dateLte: isoDateString.optional().nullable(),
-  // OSIS verse tokens ("John.3.16") from the Bible-verse facet. OR semantics.
-  bibleRefs: z.array(z.string()).optional().nullable(),
-  // OSIS book ids ("Rom") from the Bible-book facet. OR semantics.
-  bibleBooks: z.array(z.string()).optional().nullable(),
-  // Resolved speaker names from the speaker facet. OR semantics.
-  speakers: z.array(z.string()).optional().nullable(),
-  // Manual date-range filter from the UI (computed to a publishedAt range
-  // server-side by dateRangeToPublishedAt). Explicit dateGte/dateLte win.
-  dateRange: z
-    .enum(['all-time', 'today', 'this-week', 'this-month', 'this-year'])
-    .optional(),
-  // 'relevance' (default) keeps the fused RRF order; 'date-asc'/'date-desc'
-  // order results by publishedAt (applied as a field sort on the hybrid query).
-  sort: z.enum(['relevance', 'date-asc', 'date-desc']).optional(),
-  limit: z.number().min(1).max(50).default(20),
-  cursor: z.number().min(0).default(0),
-  skipLogging: z.boolean().optional().default(false),
-  // Semantic-fallback pass. The instant list is BM25-only (no query embed, no
-  // kNN — see the retriever); a verbose natural-language query whose content
-  // words are a minority of its tokens can't clear the `minimum_should_match`
-  // floor and returns nothing (e.g. "WWUTT Q&A Jehovah's Witness episode
-  // number"). When the lexical pass comes back empty/sparse, the client re-fires
-  // with `deep: true`: we embed the query and run the full hybrid path (whose
-  // doc-summary kNN clause is NOT gated by the term-overlap floor), so
-  // semantically-relevant media surface even with no keyword overlap. Never on
-  // the hot path — only as a client-driven fallback, with a visible "digging
-  // deeper" state. Deep passes don't log (the lexical pass owns the log row).
-  deep: z.boolean().optional().default(false),
-});
+const hybridSearchSchema = z
+  .object({
+    // Empty is allowed: a facet-only browse (e.g. a `/search?bibleRefs=[...]`
+    // link with no free text) runs a filter-only query instead of a hybrid one.
+    q: z.string().default(''),
+    channelIds: z.array(IncomingIdSchema).optional().nullable(),
+    channelSlugs: z.array(z.string()).optional().nullable(),
+    // Verbatim phrases (from the parser's `quotes`) to boost as phrase matches.
+    quotes: z.array(z.string()).optional().nullable(),
+    // Inclusive publish-date bounds (date-only, from the parser's `dates`).
+    dateGte: isoDateString.optional().nullable(),
+    dateLte: isoDateString.optional().nullable(),
+    // OSIS verse tokens ("John.3.16") from the Bible-verse facet. OR semantics.
+    bibleRefs: z.array(z.string()).optional().nullable(),
+    // OSIS book ids ("Rom") from the Bible-book facet. OR semantics.
+    bibleBooks: z.array(z.string()).optional().nullable(),
+    // Resolved speaker names from the speaker facet. OR semantics.
+    speakers: z.array(z.string()).optional().nullable(),
+    // Manual date-range filter from the UI (computed to a publishedAt range
+    // server-side by dateRangeToPublishedAt). Explicit dateGte/dateLte win.
+    dateRange: z
+      .enum(['all-time', 'today', 'this-week', 'this-month', 'this-year'])
+      .optional(),
+    // 'relevance' (default) keeps the fused RRF order; 'date-asc'/'date-desc'
+    // order results by publishedAt (applied as a field sort on the hybrid query).
+    sort: z.enum(['relevance', 'date-asc', 'date-desc']).optional(),
+    skipLogging: z.boolean().optional().default(false),
+    // Semantic-fallback pass. The instant list is BM25-only (no query embed, no
+    // kNN — see the retriever); a verbose natural-language query whose content
+    // words are a minority of its tokens can't clear the `minimum_should_match`
+    // floor and returns nothing (e.g. "WWUTT Q&A Jehovah's Witness episode
+    // number"). When the lexical pass comes back empty/sparse, the client re-fires
+    // with `deep: true`: we embed the query and run the full hybrid path (whose
+    // doc-summary kNN clause is NOT gated by the term-overlap floor), so
+    // semantically-relevant media surface even with no keyword overlap. Never on
+    // the hot path — only as a client-driven fallback, with a visible "digging
+    // deeper" state. Deep passes don't log (the lexical pass owns the log row).
+    deep: z.boolean().optional().default(false),
+  })
+  .and(MediaSearchPaginationSchema);
 
 // Map the UI's coarse date-range bucket to an absolute publishedAt range.
 function dateRangeToPublishedAt(
@@ -443,7 +445,10 @@ export const searchProcedures = {
           hydrateChannelsForDisplay((facets?.channels ?? []).map((b) => b.key)),
         ]);
 
-        const nextCursor = items.length === limit ? cursor + limit : null;
+        const nextCursor =
+          items.length === limit && cursor + limit < MEDIA_SEARCH_MAX_CANDIDATES
+            ? cursor + limit
+            : null;
 
         return {
           items,
@@ -638,7 +643,10 @@ export const searchProcedures = {
         );
       }
 
-      const nextCursor = items.length === limit ? cursor + limit : null;
+      const nextCursor =
+        items.length === limit && cursor + limit < MEDIA_SEARCH_MAX_CANDIDATES
+          ? cursor + limit
+          : null;
 
       return {
         items,

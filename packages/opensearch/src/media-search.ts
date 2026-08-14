@@ -83,7 +83,39 @@ const LEXICAL_QUERY_ANALYZER = 'stop';
 // 1:2. Doc-summary exact-rescore and title embeddings were evaluated and did NOT
 // help (≈ baseline / slightly worse), so neither is used — and titles need no
 // reindex. See docs/search-paragraph-rerank.md.
-const RERANK_POOL = 60;
+// The results UI requests 20 hits at a time. Keep hybrid reranking and every
+// cumulative stage-1 request within three UI pages (60 candidates); smaller
+// callers may address the final candidate with an offset up to 59.
+export const MEDIA_SEARCH_MAX_PAGE_SIZE = 20;
+export const MEDIA_SEARCH_MAX_CANDIDATES = 60;
+export const MEDIA_SEARCH_MAX_OFFSET = MEDIA_SEARCH_MAX_CANDIDATES - 1;
+
+export const MediaSearchPaginationSchema = z
+  .object({
+    limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(MEDIA_SEARCH_MAX_PAGE_SIZE)
+      .default(MEDIA_SEARCH_MAX_PAGE_SIZE),
+    cursor: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(MEDIA_SEARCH_MAX_OFFSET)
+      .default(0),
+  })
+  .superRefine(({ cursor, limit }, ctx) => {
+    if (cursor + limit > MEDIA_SEARCH_MAX_CANDIDATES) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['cursor'],
+        message: `Search candidate window must not exceed ${MEDIA_SEARCH_MAX_CANDIDATES}`,
+      });
+    }
+  });
+
+const RERANK_POOL = MEDIA_SEARCH_MAX_CANDIDATES;
 // Skip paragraphs shorter than this — degenerate one-word turns ("Grace.") score
 // perfect cosine but are useless as ranking evidence / snippets. `start`/`end`
 // are seconds.
@@ -940,30 +972,60 @@ function rerankByCosineSignals(
  *      in a cheap scoped query and attached, so callers / mergeParagraphSnippets
  *      see the usual `inner_hits` shape.
  *
- * Reranking covers the first `RERANK_POOL` results; deeper pages fall back to the
- * stage-1 order (rare, and less relevance-sensitive).
+ * Reranking covers the bounded candidate pool; deeper pages are rejected before
+ * any OpenSearch request so ranking does not change within the supported range.
  */
+export type MediaHybridSearchDependencies = {
+  search: typeof osSearch;
+  msearch: typeof osMsearch;
+};
+
+const defaultMediaHybridSearchDependencies: MediaHybridSearchDependencies = {
+  search: osSearch,
+  msearch: osMsearch,
+};
+
 export async function runMediaHybridSearch(
   args: BuildMediaSearchArgs,
+  dependencies: MediaHybridSearchDependencies = defaultMediaHybridSearchDependencies,
 ): Promise<{
   hits: MediaHit[];
   total: number;
 }> {
   const from = args.from ?? 0;
-  const size = args.size ?? 20;
+  const size = args.size ?? MEDIA_SEARCH_MAX_PAGE_SIZE;
+  if (!Number.isInteger(from) || from < 0 || from > MEDIA_SEARCH_MAX_OFFSET) {
+    throw new RangeError(
+      `Media search offset must be an integer between 0 and ${MEDIA_SEARCH_MAX_OFFSET}`,
+    );
+  }
+  if (
+    !Number.isInteger(size) ||
+    size < 1 ||
+    size > MEDIA_SEARCH_MAX_PAGE_SIZE
+  ) {
+    throw new RangeError(
+      `Media search page size must be an integer between 1 and ${MEDIA_SEARCH_MAX_PAGE_SIZE}`,
+    );
+  }
+  if (from + size > MEDIA_SEARCH_MAX_CANDIDATES) {
+    throw new RangeError(
+      `Media search candidate window must not exceed ${MEDIA_SEARCH_MAX_CANDIDATES}`,
+    );
+  }
   // Lexical path when no query vector: plain BM25, no RRF pipeline, no rerank.
   const qv =
     Array.isArray(args.queryVector) && args.queryVector.length > 0
       ? args.queryVector
       : null;
   // Rerank only on the hybrid (vector) path, in relevance order, within the pool.
-  const rerankable = qv !== null && !args.sort && from + size <= RERANK_POOL;
+  const rerankable = qv !== null && !args.sort;
   const fetchSize = rerankable ? RERANK_POOL : from + size;
 
   // Stage 1: retrieve the candidate pool (no aggregations / inner_hits). The RRF
   // normalization pipeline only applies to the multi-clause `hybrid` query, so
   // it's skipped on the single-clause lexical path.
-  const raw = await osSearch({
+  const raw = await dependencies.search({
     index: MEDIA_INDEX,
     ...(qv ? { search_pipeline: RRF_PIPELINE } : {}),
     ...buildMediaHybridBody({
@@ -985,7 +1047,7 @@ export async function runMediaHybridSearch(
   let pageHits: MediaHit[];
   if (rerankable && qv && candidates.length > 0) {
     const ids = candidates.map((h) => h._id);
-    const msRaw = await osMsearch([
+    const msRaw = await dependencies.msearch([
       { index: MEDIA_INDEX },
       buildParagraphCosineBody(qv, ids),
       { index: MEDIA_INDEX },
@@ -1011,7 +1073,7 @@ export async function runMediaHybridSearch(
 
   // Stage 3: snippets for the page only.
   if (pageHits.length > 0) {
-    const snippetRaw = await osSearch({
+    const snippetRaw = await dependencies.search({
       index: MEDIA_INDEX,
       ...buildMediaSnippetBody(
         args,
