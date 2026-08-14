@@ -24,4 +24,36 @@ describe('redactLogInput', () => {
       },
     });
   });
+
+  it('redacts stream keys regardless of nesting or key casing', () => {
+    expect(
+      redactLogInput({
+        streamKey: 'dummy-top-level-stream-key',
+        label: 'Primary destination',
+        targets: [
+          {
+            streamKey: 'dummy-nested-stream-key',
+            url: 'rtmps://example.test/live',
+          },
+          {
+            StReAmKeY: 'dummy-mixed-case-stream-key',
+            label: 'Backup destination',
+          },
+        ],
+      }),
+    ).toEqual({
+      streamKey: '[REDACTED]',
+      label: 'Primary destination',
+      targets: [
+        {
+          streamKey: '[REDACTED]',
+          url: 'rtmps://example.test/live',
+        },
+        {
+          StReAmKeY: '[REDACTED]',
+          label: 'Backup destination',
+        },
+      ],
+    });
+  });
 });

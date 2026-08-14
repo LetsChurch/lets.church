@@ -17,6 +17,7 @@ const REDACTED_KEYS = new Set([
   'linkscsv',
   'refreshtoken',
   'secret',
+  'streamkey',
   'token',
 ]);
 
