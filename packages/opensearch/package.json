@@ -15,7 +15,8 @@
     "check:ts": "tsc --noEmit",
     "fix": "oxfmt && oxlint --fix",
     "fix!": "oxfmt && oxlint --fix-dangerously",
-    "push-mappings": "tsx src/mappings.ts"
+    "push-mappings": "tsx src/mappings.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@letschurch/util": "workspace:*",
@@ -33,6 +34,7 @@
     "@types/wait-on": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

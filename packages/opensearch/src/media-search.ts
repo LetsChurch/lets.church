@@ -1343,11 +1343,24 @@ export function buildMediaFacetBody(
  *
  * A facet whose own selection is inactive reuses the fully-filtered body (dropping
  * an absent filter changes nothing), so a search with 0–1 active filters issues
- * only 1–2 aggregation queries, growing to one per active filter (+1) at most;
- * they run in parallel. Each is a cheap lexical aggregation body
- * (`buildMediaFacetBody`) — NOT the hybrid query — so it returns in ~tens of ms.
+ * only 1–2 aggregation queries, growing to one per active filter (+1) at most.
+ * The aggregation bodies are batched into one `_msearch` request. Each is a cheap
+ * lexical aggregation body (`buildMediaFacetBody`) — NOT the hybrid query.
  */
-export async function runMediaFacets(args: BuildMediaSearchArgs): Promise<{
+export type MediaFacetSearchDependencies = {
+  search: typeof osSearch;
+  msearch: typeof osMsearch;
+};
+
+const defaultMediaFacetSearchDependencies: MediaFacetSearchDependencies = {
+  search: osSearch,
+  msearch: osMsearch,
+};
+
+export async function runMediaFacets(
+  args: BuildMediaSearchArgs,
+  dependencies: MediaFacetSearchDependencies = defaultMediaFacetSearchDependencies,
+): Promise<{
   channels: Array<{ key: string; doc_count: number }>;
   speakers: Array<{ key: string; doc_count: number }>;
   verses: Array<{ key: string; doc_count: number }>;
@@ -1364,7 +1377,7 @@ export async function runMediaFacets(args: BuildMediaSearchArgs): Promise<{
   // filter-only facet body applies no score floor anyway).
   let minScore: number | undefined;
   if (hasQuery) {
-    const probeRaw = await osSearch({
+    const probeRaw = await dependencies.search({
       index: MEDIA_INDEX,
       ...buildMediaFacetBody({ ...base, facets: [] }),
     });
@@ -1425,15 +1438,18 @@ export async function runMediaFacets(args: BuildMediaSearchArgs): Promise<{
     ? pushBody({ publishedAt: null }, ['years'])
     : fullIndex;
 
-  // Plain `_search` per body, in parallel (no RRF pipeline — these are simple
-  // lexical aggregation queries, not hybrid). The count is 1 + (active filters),
-  // usually 1–2, and each returns in ~tens of ms.
-  const responses = await Promise.all(
-    bodies.map((body) => osSearch({ index: MEDIA_INDEX, ...body })),
+  // `_msearch` requires alternating metadata/body entries and preserves response
+  // order, which is the body-index mapping used below. These remain plain lexical
+  // aggregation queries: no RRF pipeline or other per-item URL parameters.
+  const searches: OsMsearchItem[] = [];
+  for (const body of bodies) {
+    searches.push({ index: MEDIA_INDEX }, body);
+  }
+  const responses = parseMediaFacetMsearchResponses(
+    await dependencies.msearch(searches),
+    bodies.length,
   );
-  const aggs = responses.map(
-    (raw) => MediaSearchResponseSchema.parse(raw).aggregations,
-  );
+  const aggs = responses.map((response) => response.aggregations);
 
   // Facet buckets live under the `sample` sampler agg (see buildMediaFacetBody).
   return {
@@ -2005,6 +2021,65 @@ export const MediaSearchResponseSchema = z.object({
     })
     .optional(),
 });
+
+const MediaFacetMsearchErrorSchema = z.object({
+  status: z.number(),
+  error: z.union([
+    z.string(),
+    z.object({
+      type: z.string().optional(),
+      reason: z.string(),
+    }),
+  ]),
+});
+
+const MediaFacetMsearchSuccessSchema = MediaSearchResponseSchema.extend({
+  timed_out: z.boolean().optional(),
+});
+
+const MediaFacetMsearchResponseSchema = z.object({
+  responses: z.array(
+    z.union([MediaFacetMsearchSuccessSchema, MediaFacetMsearchErrorSchema]),
+  ),
+});
+
+function parseMediaFacetMsearchResponses(
+  raw: unknown,
+  expectedCount: number,
+): Array<z.infer<typeof MediaFacetMsearchSuccessSchema>> {
+  const parsed = MediaFacetMsearchResponseSchema.safeParse(raw);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const location =
+      issue && issue.path.length > 0 ? issue.path.join('.') : 'response';
+    throw new Error(
+      `Invalid media facet msearch response at ${location}: ${
+        issue?.message ?? 'unknown response shape'
+      }`,
+    );
+  }
+  if (parsed.data.responses.length !== expectedCount) {
+    throw new Error(
+      `Media facet msearch returned ${parsed.data.responses.length} responses for ${expectedCount} bodies`,
+    );
+  }
+
+  return parsed.data.responses.map((response, index) => {
+    if ('error' in response) {
+      const reason =
+        typeof response.error === 'string'
+          ? response.error
+          : response.error.reason;
+      throw new Error(
+        `Media facet msearch item ${index} failed with status ${response.status}: ${reason}`,
+      );
+    }
+    if (response.timed_out === true) {
+      throw new Error(`Media facet msearch item ${index} timed out`);
+    }
+    return response;
+  });
+}
 
 export type MediaHit = z.infer<typeof MediaHitSchema>;
 
