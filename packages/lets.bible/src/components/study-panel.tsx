@@ -162,6 +162,9 @@ export function StudyPanel(
   const { belowControls, ...inner } = props;
   const { selection, onClose } = inner;
   const isDesktop = useIsDesktop();
+  const [snapPoint, setSnapPoint] = useState<number | string | null>(
+    MOBILE_DEFAULT_SNAP_POINT,
+  );
   const ariaLabel = selection?.kind === 'word' ? 'Word study' : 'Verse actions';
   const body = selection ? (
     <StudyPanelInner {...inner} selection={selection} />
@@ -171,6 +174,7 @@ export function StudyPanel(
     return (
       <Drawer.Root
         open={selection != null}
+        snapPoint={null}
         onOpenChange={(open) => {
           if (!open) {
             onClose();
@@ -211,7 +215,8 @@ export function StudyPanel(
       modal={false}
       disablePointerDismissal
       snapPoints={MOBILE_SNAP_POINTS}
-      defaultSnapPoint={MOBILE_DEFAULT_SNAP_POINT}
+      snapPoint={snapPoint}
+      onSnapPointChange={setSnapPoint}
     >
       <Drawer.Portal>
         {/* No backdrop: the bottom sheet floats over the reading without dimming
