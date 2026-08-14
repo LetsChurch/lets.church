@@ -7,6 +7,23 @@ import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 import { formatDate, formatTime } from '@/util/format';
 
+export const PROCESSING_UPLOADS_REFETCH_INTERVAL_MS = 7_500;
+
+export function processingUploadsRefetchInterval(query: {
+  state: { data: unknown };
+}) {
+  return Array.isArray(query.state.data) && query.state.data.length > 0
+    ? PROCESSING_UPLOADS_REFETCH_INTERVAL_MS
+    : false;
+}
+
+export const PROCESSING_UPLOADS_POLLING_OPTIONS = {
+  refetchInterval: processingUploadsRefetchInterval,
+  refetchIntervalInBackground: false,
+  refetchOnWindowFocus: true,
+  refetchOnReconnect: true,
+} as const;
+
 function ProgressBar({
   value,
   color,
@@ -60,7 +77,7 @@ function RouteComponent() {
 
   const { data: uploads } = useSuspenseQuery({
     ...trpc.dashboard.admin.getProcessingUploads.queryOptions(),
-    refetchInterval: 2000,
+    ...PROCESSING_UPLOADS_POLLING_OPTIONS,
   });
 
   const transcodingCount = uploads.filter(
