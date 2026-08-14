@@ -1,14 +1,17 @@
 import {
   db,
   Organization,
-  OrganizationInvitation,
-  OrganizationMembership,
   OrganizationOrganizationAssociation,
 } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
-import { and, count, eq, sql } from 'drizzle-orm';
+import { and, count, eq } from 'drizzle-orm';
 
+import {
+  OrganizationMembershipError,
+  organizationMembership,
+  type ResendInvitationOutcome,
+} from '@/organizations/membership';
 import {
   cancelOrganizationInvitationSchema,
   getAllOrganizationsSchema,
@@ -22,11 +25,9 @@ import {
   updateOrganizationSchema,
   upstreamAssociationActionSchema,
 } from '@/schemas/dashboard';
-import { sendInvitationEmail } from '@/temporal';
 import { mantineAvatarSm2x, mantineAvatarXl2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { getPublicImageUrl } from '@/util/server-env';
-import { uuidTranslator } from '@/util/uuid';
 
 import { authProcedure, router } from '../../trpc';
 
@@ -452,152 +453,75 @@ export const organizationRouter = router({
         'Inviting user to organization',
       );
 
-      // Check if email already belongs to a member
-      const userEmail = await db.query.AppUserEmail.findFirst({
-        where: (t, { eq }) => eq(t.email, input.email),
-        columns: { appUserId: true },
+      const outcome = await organizationMembership.inviteMember({
+        organizationId: input.orgId,
+        actorId: ctx.session.appUserId,
+        email: input.email,
+        isAdmin: input.isAdmin,
+        canEdit: input.canEdit,
       });
 
-      if (userEmail) {
-        const existingMember = await db.query.OrganizationMembership.findFirst({
-          where: (t, { and, eq }) =>
-            and(
-              eq(t.organizationId, input.orgId),
-              eq(t.appUserId, userEmail.appUserId),
-            ),
-        });
-
-        // Return success without revealing membership state to prevent user enumeration
-        if (existingMember) {
-          return { success: true, message: 'Invitation sent successfully' };
-        }
-      }
-
-      // Check for existing pending invitation
-      const existingInvitation =
-        await db.query.OrganizationInvitation.findFirst({
-          where: (t, { and, eq }) =>
-            and(eq(t.organizationId, input.orgId), eq(t.email, input.email)),
-        });
-
-      // Return success without revealing invitation state to prevent user enumeration
-      if (
-        existingInvitation &&
-        existingInvitation.status === 'PENDING' &&
-        existingInvitation.expiresAt > new Date()
-      ) {
-        return { success: true, message: 'Invitation sent successfully' };
-      }
-
-      // Create or update invitation
-      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-
-      const [invitation] = await db
-        .insert(OrganizationInvitation)
-        .values({
-          organizationId: input.orgId,
-          email: input.email,
-          isAdmin: input.isAdmin,
-          canEdit: input.canEdit,
-          invitedById: ctx.session.appUserId,
-          expiresAt,
-        })
-        .onConflictDoUpdate({
-          target: [
-            OrganizationInvitation.organizationId,
-            OrganizationInvitation.email,
-          ],
-          set: {
-            status: 'PENDING',
-            isAdmin: input.isAdmin,
-            canEdit: input.canEdit,
-            expiresAt,
-            respondedAt: null,
-          },
-        })
-        .returning();
-
-      if (!invitation) {
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
-      }
-
-      // Send invitation email
-      await sendInvitationEmail({
-        invitationId: invitation.id,
-        type: 'organization',
-      });
-
-      moduleLogger.info(
-        {
+      if (outcome.kind === 'INVITATION_ISSUED') {
+        const logContext = {
           organizationId: input.orgId,
           appUserId: ctx.session.appUserId,
           context: {
-            invitationId: invitation.id,
+            invitationId: outcome.invitationId,
           },
-        },
-        'Organization invitation created and email sent',
-      );
+        };
 
-      // Return identical success message for security (no user enumeration)
+        if (outcome.emailDispatch.status === 'FAILED') {
+          moduleLogger.error(
+            {
+              ...logContext,
+              context: {
+                ...logContext.context,
+                error:
+                  outcome.emailDispatch.error instanceof Error
+                    ? outcome.emailDispatch.error.message
+                    : String(outcome.emailDispatch.error),
+              },
+            },
+            'Organization invitation created but email start failed',
+          );
+        } else {
+          moduleLogger.info(
+            logContext,
+            'Organization invitation created and email sent',
+          );
+        }
+      }
+
       return { success: true, message: 'Invitation sent successfully' };
     }),
 
   getOrganizationInvitations: organizationAdminProcedure
     .input(organizationQuerySchema)
-    .query(async ({ input }) => {
-      const invitations = await db.query.OrganizationInvitation.findMany({
-        where: (t, { and, eq, gt }) =>
-          and(
-            eq(t.organizationId, input.orgId),
-            eq(t.status, 'PENDING'),
-            gt(t.expiresAt, new Date()),
-          ),
-        columns: {
-          id: true,
-          email: true,
-          isAdmin: true,
-          canEdit: true,
-          createdAt: true,
-          expiresAt: true,
-          token: true,
-        },
-        with: {
-          invitedBy: {
-            columns: {
-              username: true,
-              fullName: true,
-            },
-          },
-        },
-        orderBy: (t, { desc }) => [desc(t.createdAt)],
-      });
-
-      return invitations.map(({ token, ...inv }) => ({
-        ...inv,
-        token: uuidTranslator.fromUUID(token),
-      }));
-    }),
+    .query(({ input }) =>
+      organizationMembership.listInvitations({
+        organizationId: input.orgId,
+      }),
+    ),
 
   cancelInvitation: organizationAdminProcedure
     .input(cancelOrganizationInvitationSchema)
     .mutation(async ({ input }) => {
-      // Use update with both id and orgId to ensure the invitation belongs to the organization
-      const result = await db
-        .update(OrganizationInvitation)
-        .set({ status: 'CANCELLED' })
-        .where(
-          and(
-            eq(OrganizationInvitation.id, input.invitationId),
-            eq(OrganizationInvitation.organizationId, input.orgId),
-          ),
-        )
-        .returning({ id: OrganizationInvitation.id });
-
-      if (result.length === 0) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Invitation not found',
+      try {
+        await organizationMembership.cancelInvitation({
+          organizationId: input.orgId,
+          invitationId: input.invitationId,
         });
+      } catch (error) {
+        if (
+          error instanceof OrganizationMembershipError &&
+          error.code === 'INVITATION_NOT_FOUND'
+        ) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Invitation not found',
+          });
+        }
+        throw error;
       }
 
       return { success: true };
@@ -606,59 +530,54 @@ export const organizationRouter = router({
   resendInvitation: organizationAdminProcedure
     .input(resendOrganizationInvitationSchema)
     .mutation(async ({ ctx, input }) => {
-      // First fetch and validate the invitation
-      const existingInvitation =
-        await db.query.OrganizationInvitation.findFirst({
-          where: (t, { and, eq }) =>
-            and(
-              eq(t.id, input.invitationId),
-              eq(t.organizationId, input.orgId),
-            ),
-        });
-
-      if (!existingInvitation) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Invitation not found',
-        });
-      }
-
-      if (existingInvitation.status !== 'PENDING') {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Can only resend pending invitations',
-        });
-      }
-
-      // Update the expiration
-      const [invitation] = await db
-        .update(OrganizationInvitation)
-        .set({
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        })
-        .where(eq(OrganizationInvitation.id, input.invitationId))
-        .returning();
-
-      if (!invitation) {
-        throw new TRPCError({ code: 'NOT_FOUND' });
-      }
-
-      // Send invitation email
-      await sendInvitationEmail({
-        invitationId: invitation.id,
-        type: 'organization',
-      });
-
-      moduleLogger.info(
-        {
+      let outcome: ResendInvitationOutcome;
+      try {
+        outcome = await organizationMembership.resendInvitation({
           organizationId: input.orgId,
-          appUserId: ctx.session.appUserId,
-          context: {
-            invitationId: invitation.id,
-          },
+          invitationId: input.invitationId,
+        });
+      } catch (error) {
+        if (error instanceof OrganizationMembershipError) {
+          if (error.code === 'INVITATION_NOT_FOUND') {
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'Invitation not found',
+            });
+          }
+          if (error.code === 'INVITATION_NOT_PENDING') {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Can only resend pending invitations',
+            });
+          }
+        }
+        throw error;
+      }
+
+      const logContext = {
+        organizationId: input.orgId,
+        appUserId: ctx.session.appUserId,
+        context: {
+          invitationId: outcome.invitationId,
         },
-        'Organization invitation resent',
-      );
+      };
+      if (outcome.emailDispatch.status === 'FAILED') {
+        moduleLogger.error(
+          {
+            ...logContext,
+            context: {
+              ...logContext.context,
+              error:
+                outcome.emailDispatch.error instanceof Error
+                  ? outcome.emailDispatch.error.message
+                  : String(outcome.emailDispatch.error),
+            },
+          },
+          'Organization invitation expiration updated but email start failed',
+        );
+      } else {
+        moduleLogger.info(logContext, 'Organization invitation resent');
+      }
 
       return { success: true };
     }),
@@ -666,89 +585,19 @@ export const organizationRouter = router({
   removeOrganizationMember: organizationAdminProcedure
     .input(removeOrganizationMemberSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info(
-        {
-          organizationId: input.orgId,
-          context: {
-            memberToRemove: input.appUserId,
-            removedBy: ctx.session.appUserId,
-          },
+      const logContext = {
+        organizationId: input.orgId,
+        context: {
+          memberToRemove: input.appUserId,
+          removedBy: ctx.session.appUserId,
         },
-        'Removing organization member',
-      );
+      };
+      moduleLogger.info(logContext, 'Removing organization member');
 
       try {
-        let wasAdmin = false;
-        await db.transaction(async (tx) => {
-          await tx.execute(sql`
-            select ${Organization.id}
-            from ${Organization}
-            where ${Organization.id} = ${input.orgId}
-            for update
-          `);
-
-          // Don't allow removing the last admin
-          const adminMembers = await tx.query.OrganizationMembership.findMany({
-            where: (t, { and, eq }) =>
-              and(eq(t.organizationId, input.orgId), eq(t.isAdmin, true)),
-            columns: { appUserId: true },
-          });
-          const adminCount = adminMembers.length;
-
-          const membershipToDelete =
-            await tx.query.OrganizationMembership.findFirst({
-              where: (t, { and, eq }) =>
-                and(
-                  eq(t.organizationId, input.orgId),
-                  eq(t.appUserId, input.appUserId),
-                ),
-              columns: { isAdmin: true, appUserId: true },
-            });
-
-          if (!membershipToDelete) {
-            moduleLogger.warn(
-              {
-                organizationId: input.orgId,
-                context: {
-                  memberToRemove: input.appUserId,
-                  removedBy: ctx.session.appUserId,
-                },
-              },
-              'Membership not found',
-            );
-            throw new TRPCError({
-              code: 'NOT_FOUND',
-              message: 'Membership not found',
-            });
-          }
-
-          wasAdmin = membershipToDelete.isAdmin;
-
-          if (membershipToDelete.isAdmin && adminCount <= 1) {
-            moduleLogger.warn(
-              {
-                organizationId: input.orgId,
-                context: {
-                  memberToRemove: input.appUserId,
-                  removedBy: ctx.session.appUserId,
-                },
-              },
-              'Cannot remove last admin from organization',
-            );
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: 'Cannot remove the last admin from the organization',
-            });
-          }
-
-          await tx
-            .delete(OrganizationMembership)
-            .where(
-              and(
-                eq(OrganizationMembership.organizationId, input.orgId),
-                eq(OrganizationMembership.appUserId, input.appUserId),
-              ),
-            );
+        const outcome = await organizationMembership.removeMember({
+          organizationId: input.orgId,
+          appUserId: input.appUserId,
         });
 
         moduleLogger.info(
@@ -757,7 +606,7 @@ export const organizationRouter = router({
             context: {
               memberRemoved: input.appUserId,
               removedBy: ctx.session.appUserId,
-              wasAdmin,
+              wasAdmin: outcome.wasAdmin,
             },
           },
           'Organization member removed successfully',
@@ -765,14 +614,31 @@ export const organizationRouter = router({
 
         return { success: true };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof OrganizationMembershipError) {
+          if (error.code === 'MEMBERSHIP_NOT_FOUND') {
+            moduleLogger.warn(logContext, 'Membership not found');
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'Membership not found',
+            });
+          }
+          if (error.code === 'LAST_ADMIN') {
+            moduleLogger.warn(
+              logContext,
+              'Cannot remove last admin from organization',
+            );
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Cannot remove the last admin from the organization',
+            });
+          }
+        }
 
         moduleLogger.error(
           {
             organizationId: input.orgId,
             context: {
-              memberToRemove: input.appUserId,
-              removedBy: ctx.session.appUserId,
+              ...logContext.context,
               error: error instanceof Error ? error.message : String(error),
             },
           },
