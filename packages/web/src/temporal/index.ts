@@ -974,47 +974,58 @@ export async function startImportSourceScheduler(importSourceId: string) {
 
   const scheduleId = `import:${importSource.channel.slug}:${importSourceId}`;
 
-  // Create a Temporal Schedule
-  const schedule = await (
-    await client
-  ).schedule.create({
-    scheduleId,
-    spec: {
-      cronExpressions: [
-        `CRON_TZ=${importSource.timezone} ${importSource.cronSchedule}`,
-      ],
-    },
-    action: {
-      type: 'startWorkflow',
-      workflowType: 'scrapeAndImportWorkflow' satisfies BackgroundWorkflowName,
-      // 2nd arg (importHistory) omitted for a live scrape; 3rd is WEB_URL so
-      // imported uploads' processing children get dashboard deep-links.
-      args: [importSourceId, undefined, process.env.WEB_URL],
-      taskQueue: BACKGROUND_QUEUE,
-      workflowId: makeScrapeAndImportWorkflowId(
-        importSource.channel.slug,
-        importSourceId,
-        'scheduled',
-      ),
-      typedSearchAttributes: [
-        { key: IMPORT_SOURCE_ID_KEY, value: importSourceId },
-        { key: CHANNEL_ID_KEY, value: importSource.channel.id },
-        { key: CHANNEL_SLUG_KEY, value: importSource.channel.slug },
-        ...(importSource.createdBy
-          ? [
-              { key: USER_ID_KEY, value: importSource.createdBy.id },
-              { key: USERNAME_KEY, value: importSource.createdBy.username },
-            ]
-          : []),
-      ],
-    },
-    memo: {
-      channelName: importSource.channel.name,
-      channelSlug: importSource.channel.slug,
-      sourceUrl: importSource.url,
-      description: `Import schedule for ${importSource.channel.name} from ${new URL(importSource.url).hostname}`,
-    },
-  });
+  const temporalClient = await client;
+  const schedule = await (async () => {
+    const existing = temporalClient.schedule.getHandle(scheduleId);
+    try {
+      const description = await existing.describe();
+      if (description.state.paused) {
+        await existing.unpause('Import source enabled by an administrator');
+      }
+      return existing;
+    } catch {
+      return temporalClient.schedule.create({
+        scheduleId,
+        spec: {
+          cronExpressions: [
+            `CRON_TZ=${importSource.timezone} ${importSource.cronSchedule}`,
+          ],
+        },
+        action: {
+          type: 'startWorkflow',
+          workflowType:
+            'scrapeAndImportWorkflow' satisfies BackgroundWorkflowName,
+          args: [importSourceId, undefined, process.env.WEB_URL],
+          taskQueue: BACKGROUND_QUEUE,
+          workflowId: makeScrapeAndImportWorkflowId(
+            importSource.channel.slug,
+            importSourceId,
+            'scheduled',
+          ),
+          typedSearchAttributes: [
+            { key: IMPORT_SOURCE_ID_KEY, value: importSourceId },
+            { key: CHANNEL_ID_KEY, value: importSource.channel.id },
+            { key: CHANNEL_SLUG_KEY, value: importSource.channel.slug },
+            ...(importSource.createdBy
+              ? [
+                  { key: USER_ID_KEY, value: importSource.createdBy.id },
+                  {
+                    key: USERNAME_KEY,
+                    value: importSource.createdBy.username,
+                  },
+                ]
+              : []),
+          ],
+        },
+        memo: {
+          channelName: importSource.channel.name,
+          channelSlug: importSource.channel.slug,
+          sourceUrl: importSource.url,
+          description: `Import schedule for ${importSource.channel.name} from ${new URL(importSource.url).hostname}`,
+        },
+      });
+    }
+  })();
 
   // Update database status to RUNNING
   await db
@@ -1022,6 +1033,8 @@ export async function startImportSourceScheduler(importSourceId: string) {
     .set({
       workflowStatus: 'RUNNING',
       workflowId: scheduleId,
+      lastErrorAt: null,
+      lastErrorMessage: null,
       updatedAt: new Date(),
     })
     .where(eq(ChannelImportSource.id, importSourceId));
@@ -1264,20 +1277,13 @@ export async function triggerBulkMediaImport(
 }
 
 /**
- * Trigger a historical import for an import source using provided data.
- * This imports historical media items without scraping.
+ * Trigger a historical import from a durable staged batch. Workflow history
+ * receives identifiers only; item payloads stay in PostgreSQL.
  */
 export async function triggerHistoricalImport(
   importSourceId: string,
-  importHistory: Array<{
-    publishedAt: string;
-    source?: string;
-    title: string;
-    description?: string;
-    url?: string | null;
-  }>,
+  batchId: string,
 ) {
-  // Fetch channel info for friendly workflow ID and search attributes
   const importSource = await db.query.ChannelImportSource.findFirst({
     where: (t, { eq }) => eq(t.id, importSourceId),
     columns: {},
@@ -1303,10 +1309,11 @@ export async function triggerHistoricalImport(
       importSource.channel.slug,
       importSourceId,
       'historical',
+      batchId,
     ),
-    // 3rd arg (WEB_URL) is unused on the history-only path but kept uniform
-    // with the live-scrape starters.
-    args: [importSourceId, importHistory, process.env.WEB_URL],
+    workflowIdReusePolicy: 'ALLOW_DUPLICATE_FAILED_ONLY',
+    workflowIdConflictPolicy: 'USE_EXISTING',
+    args: [importSourceId, batchId, process.env.WEB_URL],
     typedSearchAttributes: [
       { key: IMPORT_SOURCE_ID_KEY, value: importSourceId },
       { key: CHANNEL_ID_KEY, value: importSource.channel.id },

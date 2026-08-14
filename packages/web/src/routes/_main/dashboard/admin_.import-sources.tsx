@@ -3,6 +3,7 @@ import {
   IconPlayerPause,
   IconPlayerPlay,
   IconPlus,
+  IconRefresh,
   IconTrash,
   IconUpload,
 } from '@tabler/icons-react';
@@ -194,11 +195,13 @@ function ImportSourcesPage() {
 
   const createMutation = useMutation(
     trpc.dashboard.importSources.create.mutationOptions({
-      onSuccess: () => {
+      onSuccess: (created) => {
         notifications.show({
-          title: 'Success',
-          message: 'Import source created successfully',
-          color: 'green',
+          title: created.startup.ok ? 'Success' : 'Startup failed',
+          message: created.startup.ok
+            ? 'Import source created successfully'
+            : created.startup.errors.join('. '),
+          color: created.startup.ok ? 'green' : 'red',
         });
         queryClient.invalidateQueries({
           queryKey: trpc.dashboard.importSources.listAll.queryKey(),
@@ -218,11 +221,13 @@ function ImportSourcesPage() {
 
   const updateMutation = useMutation(
     trpc.dashboard.importSources.update.mutationOptions({
-      onSuccess: () => {
+      onSuccess: (updated) => {
         notifications.show({
-          title: 'Success',
-          message: 'Import source updated successfully',
-          color: 'green',
+          title: updated.startup.ok ? 'Success' : 'Workflow update failed',
+          message: updated.startup.ok
+            ? 'Import source updated successfully'
+            : updated.startup.errors.join('. '),
+          color: updated.startup.ok ? 'green' : 'red',
         });
         queryClient.invalidateQueries({
           queryKey: trpc.dashboard.importSources.listAll.queryKey(),
@@ -234,6 +239,30 @@ function ImportSourcesPage() {
         notifications.show({
           title: 'Error',
           message: 'Failed to update import source',
+          color: 'red',
+        });
+      },
+    }),
+  );
+
+  const retryMutation = useMutation(
+    trpc.dashboard.importSources.retryWorkflows.mutationOptions({
+      onSuccess: ({ success, startup }) => {
+        notifications.show({
+          title: success ? 'Success' : 'Retry failed',
+          message: success
+            ? 'Import workflows started'
+            : startup.errors.join('. '),
+          color: success ? 'green' : 'red',
+        });
+        queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.importSources.listAll.queryKey(),
+        });
+      },
+      onError: () => {
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to retry import workflows',
           color: 'red',
         });
       },
@@ -353,6 +382,35 @@ function ImportSourcesPage() {
     }
   };
 
+  const getHistoryStatusBadge = (
+    batch: (typeof importSources)[number]['historicalImportBatch'],
+  ) => {
+    if (!batch) {
+      return <Text c="dimmed">None</Text>;
+    }
+
+    const color =
+      batch.status === 'DONE'
+        ? 'green'
+        : batch.status === 'FAILED'
+          ? 'red'
+          : batch.status === 'RUNNING'
+            ? 'blue'
+            : 'yellow';
+    return (
+      <div>
+        <Badge color={color}>
+          {batch.status} ({batch.processedItems}/{batch.totalItems})
+        </Badge>
+        {batch.lastError ? (
+          <Text size="xs" c="red">
+            {batch.lastError}
+          </Text>
+        ) : null}
+      </div>
+    );
+  };
+
   return (
     <div className="w-full">
       <div className="flex flex-col gap-4">
@@ -382,6 +440,7 @@ function ImportSourcesPage() {
                 <Table.Th>Channel</Table.Th>
                 <Table.Th>URL</Table.Th>
                 <Table.Th>Status</Table.Th>
+                <Table.Th>History</Table.Th>
                 <Table.Th>Last Import</Table.Th>
                 <Table.Th>Runs</Table.Th>
                 <Table.Th />
@@ -413,6 +472,9 @@ function ImportSourcesPage() {
                     {getStatusBadge(source.workflowStatus, source.enabled)}
                   </Table.Td>
                   <Table.Td>
+                    {getHistoryStatusBadge(source.historicalImportBatch)}
+                  </Table.Td>
+                  <Table.Td>
                     {source.lastImportedAt
                       ? formatDate(source.lastImportedAt)
                       : 'Never'}
@@ -430,6 +492,17 @@ function ImportSourcesPage() {
                       >
                         Trigger Manual Import
                       </MenuItemButton>
+                      {source.workflowStatus === 'FAILED' ||
+                      source.historicalImportBatch?.status === 'FAILED' ? (
+                        <MenuItemButton
+                          icon={<IconRefresh size={16} />}
+                          onClick={() =>
+                            retryMutation.mutate({ id: source.id })
+                          }
+                        >
+                          Retry Failed Workflows
+                        </MenuItemButton>
+                      ) : null}
                       {source.enabled ? (
                         <MenuItemButton
                           icon={<IconPlayerPause size={16} />}

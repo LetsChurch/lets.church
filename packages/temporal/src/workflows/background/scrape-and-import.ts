@@ -45,17 +45,12 @@ const { triggerPagerDutyAlert } = proxyActivities<typeof backgroundActivities>({
 
 /**
  * Scrapes an import source and kicks off importMedia workflows for each found item.
- * Optionally accepts historical import data to mark as already imported (backfill).
+ * A historical batch ID selects the staged backfill path without placing item
+ * payloads in workflow history.
  */
 export async function scrapeAndImportWorkflow(
   importSourceId: string,
-  importHistory?: Array<{
-    publishedAt: string;
-    source?: string;
-    title: string;
-    description?: string;
-    url?: string | null;
-  }>,
+  historicalImportBatchId?: string,
   // Web origin captured by the starter (where WEB_URL is readable), threaded
   // down to each importMediaWorkflow so its processing children can carry
   // dashboard deep-links. Absent → children carry no links.
@@ -64,27 +59,19 @@ export async function scrapeAndImportWorkflow(
   const runId = await createImportRun(importSourceId);
 
   try {
-    // If import history provided, this is a backfill operation
-    // We just update the timestamps and exit without actually importing
-    if (importHistory) {
-      const { latestDate } = await processImportHistory(
+    if (historicalImportBatchId) {
+      const { itemsProcessed } = await processImportHistory(
         importSourceId,
-        importHistory,
+        historicalImportBatchId,
       );
 
       await updateImportRun(runId, {
         status: 'COMPLETED',
-        itemsFound: importHistory.length,
+        itemsFound: itemsProcessed,
         itemsImported: 0,
-        itemsSkipped: importHistory.length,
+        itemsSkipped: itemsProcessed,
         itemsFailed: 0,
       });
-
-      // Update source timestamps
-      await updateImportSourceTimestamps(
-        importSourceId,
-        latestDate ?? undefined,
-      );
 
       return;
     }

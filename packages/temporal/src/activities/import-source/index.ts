@@ -6,7 +6,8 @@ export {
 export { createImportRun } from './create-import-run';
 export { getImportSource } from './get-import-source';
 export {
-  type HistoricalImportItem,
+  HISTORICAL_IMPORT_PROCESS_CHUNK_SIZE,
+  type ProcessImportHistoryResult,
   processImportHistory,
 } from './process-import-history';
 export {

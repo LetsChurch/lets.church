@@ -8,7 +8,8 @@ export {
 export { createImportRun } from '../import-source/create-import-run';
 export { getImportSource } from '../import-source/get-import-source';
 export {
-  type HistoricalImportItem,
+  HISTORICAL_IMPORT_PROCESS_CHUNK_SIZE,
+  type ProcessImportHistoryResult,
   processImportHistory,
 } from '../import-source/process-import-history';
 export { sendImportErrorNotification } from '../import-source/send-import-error-notification';

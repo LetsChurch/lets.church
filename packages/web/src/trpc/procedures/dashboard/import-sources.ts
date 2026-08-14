@@ -1,9 +1,19 @@
-import { ChannelImportRun, ChannelImportSource, db } from '@letschurch/db';
+import { randomUUID } from 'node:crypto';
+
+import {
+  ChannelImportHistoryBatch,
+  ChannelImportHistoryItem,
+  ChannelImportRun,
+  ChannelImportSource,
+  db,
+  type TransactionClient,
+} from '@letschurch/db';
 import { TRPCError } from '@trpc/server';
 import { count, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import {
+  type historicalImportItemSchema,
   importRunsQuerySchema,
   importSourceFilterSchema,
   importSourceIdSchema,
@@ -24,6 +34,158 @@ import { authProcedure, router } from '../../trpc';
 const moduleLogger = logger.child({
   module: 'trpc/procedures/dashboard/import-sources',
 });
+
+// Nine bound values per row yields 4,500 parameters per insert, comfortably
+// below PostgreSQL's 65,535 parameter ceiling.
+export const HISTORICAL_IMPORT_STAGE_CHUNK_SIZE = 500;
+
+type HistoricalImportItem = z.infer<typeof historicalImportItemSchema>;
+
+type StartupResult = {
+  ok: boolean;
+  historicalBatchStarted: boolean;
+  schedulerStarted: boolean;
+  errors: string[];
+};
+
+async function stageHistoricalImport(
+  tx: TransactionClient,
+  importSourceId: string,
+  items: HistoricalImportItem[] | undefined,
+) {
+  if (!items?.length) {
+    return null;
+  }
+
+  const batchId = randomUUID();
+  const [batch] = await tx
+    .insert(ChannelImportHistoryBatch)
+    .values({
+      id: batchId,
+      importSourceId,
+      totalItems: items.length,
+      updatedAt: new Date(),
+    })
+    .returning();
+
+  if (!batch) {
+    throw new Error('Failed to create historical import batch');
+  }
+
+  for (
+    let offset = 0;
+    offset < items.length;
+    offset += HISTORICAL_IMPORT_STAGE_CHUNK_SIZE
+  ) {
+    await tx.insert(ChannelImportHistoryItem).values(
+      items
+        .slice(offset, offset + HISTORICAL_IMPORT_STAGE_CHUNK_SIZE)
+        .map((item, chunkIndex) => ({
+          id: randomUUID(),
+          batchId,
+          importSourceId,
+          ordinal: offset + chunkIndex,
+          publishedAt: item.publishedAt,
+          source: item.source ?? null,
+          title: item.title,
+          description: item.description ?? null,
+          url: item.url ?? null,
+        })),
+    );
+  }
+
+  return batch;
+}
+
+export async function startImportSourceWorkflows(
+  importSourceId: string,
+  historicalBatchId?: string,
+): Promise<StartupResult> {
+  const source = await db.query.ChannelImportSource.findFirst({
+    where: (t, { eq }) => eq(t.id, importSourceId),
+  });
+  if (!source) {
+    throw new TRPCError({ code: 'NOT_FOUND' });
+  }
+
+  const retryBatch = historicalBatchId
+    ? await db.query.ChannelImportHistoryBatch.findFirst({
+        where: (t, { and, eq }) =>
+          and(
+            eq(t.id, historicalBatchId),
+            eq(t.importSourceId, importSourceId),
+          ),
+      })
+    : await db.query.ChannelImportHistoryBatch.findFirst({
+        where: (t, { and, eq }) =>
+          and(eq(t.importSourceId, importSourceId), eq(t.status, 'FAILED')),
+        orderBy: (t, { desc }) => [desc(t.createdAt)],
+      });
+
+  const result: StartupResult = {
+    ok: true,
+    historicalBatchStarted: false,
+    schedulerStarted: false,
+    errors: [],
+  };
+
+  if (retryBatch && retryBatch.status !== 'DONE') {
+    try {
+      await triggerHistoricalImport(importSourceId, retryBatch.id);
+      await db
+        .update(ChannelImportHistoryBatch)
+        .set({
+          status: 'PENDING',
+          lastError: null,
+          failedAt: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(ChannelImportHistoryBatch.id, retryBatch.id));
+      result.historicalBatchStarted = true;
+    } catch (error) {
+      const message = 'Failed to start historical import workflow';
+      await db
+        .update(ChannelImportHistoryBatch)
+        .set({
+          status: 'FAILED',
+          lastError: message,
+          failedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(ChannelImportHistoryBatch.id, retryBatch.id));
+      moduleLogger.error(message, {
+        importSourceId,
+        batchId: retryBatch.id,
+        error,
+      });
+      result.ok = false;
+      result.errors.push(message);
+    }
+  }
+
+  if (source.enabled && source.workflowStatus !== 'RUNNING') {
+    try {
+      await startImportSourceScheduler(importSourceId);
+      result.schedulerStarted = true;
+    } catch (error) {
+      const message = 'Failed to start scheduler workflow';
+      await db
+        .update(ChannelImportSource)
+        .set({
+          workflowStatus: 'FAILED',
+          lastErrorAt: new Date(),
+          lastErrorMessage: message,
+          updatedAt: new Date(),
+        })
+        .where(eq(ChannelImportSource.id, importSourceId));
+      moduleLogger.error(message, { importSourceId, error });
+      result.ok = false;
+      result.errors.push(message);
+    }
+  }
+
+  return result;
+}
 
 // Admin-only procedure for managing import sources
 const adminProcedure = authProcedure.use(async ({ ctx, next }) => {
@@ -77,6 +239,10 @@ export const importSourcesRouter = router({
           channel: {
             columns: { id: true, name: true, slug: true },
           },
+          historicalImportBatches: {
+            orderBy: (t, { desc }) => [desc(t.createdAt)],
+            limit: 1,
+          },
         },
         orderBy: (t, { desc }) => [desc(t.createdAt)],
       });
@@ -101,8 +267,9 @@ export const importSourcesRouter = router({
         importRunCountRows.map((r) => [r.importSourceId, Number(r.cnt)]),
       );
 
-      return sources.map((source) => ({
+      return sources.map(({ historicalImportBatches, ...source }) => ({
         ...source,
+        historicalImportBatch: historicalImportBatches[0] ?? null,
         _count: { importRuns: importRunCountMap.get(source.id) ?? 0 },
       }));
     }),
@@ -120,6 +287,10 @@ export const importSourcesRouter = router({
           createdBy: {
             columns: { id: true, username: true },
           },
+          historicalImportBatches: {
+            orderBy: (t, { desc }) => [desc(t.createdAt)],
+            limit: 1,
+          },
         },
       });
 
@@ -127,58 +298,47 @@ export const importSourcesRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND' });
       }
 
-      return source;
+      const { historicalImportBatches, ...sourceData } = source;
+      return {
+        ...sourceData,
+        historicalImportBatch: historicalImportBatches[0] ?? null,
+      };
     }),
 
-  // Admin: Create import source
+  // Admin: Create import source and durable historical staging atomically.
   create: adminProcedure
     .input(importSourceSchema)
     .mutation(async ({ ctx, input }) => {
       const { importHistory, ...sourceData } = input;
+      const { source, batch } = await db.transaction(async (tx) => {
+        const [source] = await tx
+          .insert(ChannelImportSource)
+          .values({
+            ...sourceData,
+            createdById: ctx.session.appUserId,
+            deduplicationFields: input.deduplicationFields || [],
+            updatedAt: new Date(),
+          })
+          .returning();
 
-      const [source] = await db
-        .insert(ChannelImportSource)
-        .values({
-          ...sourceData,
-          createdById: ctx.session.appUserId,
-          deduplicationFields: input.deduplicationFields || [],
-          updatedAt: new Date(),
-        })
-        .returning();
-
-      moduleLogger.info('Created import source');
-
-      // If import history provided, trigger historical import first
-      if (importHistory && importHistory.length > 0) {
-        try {
-          await triggerHistoricalImport(source?.id, importHistory);
-          moduleLogger.info('Triggered historical import', {
-            itemCount: importHistory.length,
-          });
-        } catch (_error) {
-          moduleLogger.error('Failed to trigger historical import');
+        if (!source) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
         }
-      }
 
-      // Start workflow if enabled
-      if (source?.enabled) {
-        try {
-          await startImportSourceScheduler(source?.id);
-          moduleLogger.info('Started import source scheduler workflow');
-        } catch (_error) {
-          moduleLogger.error(
-            'Failed to start import source scheduler workflow',
-          );
-        }
-      }
+        const batch = await stageHistoricalImport(tx, source.id, importHistory);
+        return { source, batch };
+      });
 
-      if (!source) {
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
-      }
-      return source;
+      moduleLogger.info('Created import source', {
+        importSourceId: source.id,
+        historicalItemCount: batch?.totalItems ?? 0,
+      });
+
+      const startup = await startImportSourceWorkflows(source.id, batch?.id);
+      return { ...source, historicalImportBatch: batch, startup };
     }),
 
-  // Admin: Update import source
+  // Admin: Update import source and stage any new history atomically.
   update: adminProcedure
     .input(updateImportSourceSchema)
     .mutation(async ({ ctx, input }) => {
@@ -191,57 +351,78 @@ export const importSourcesRouter = router({
       }
 
       const { importHistory, ...updateData } = input.data;
+      const { updated, batch } = await db.transaction(async (tx) => {
+        const [updated] = await tx
+          .update(ChannelImportSource)
+          .set({
+            ...updateData,
+            updatedById: ctx.session.appUserId,
+            updatedAt: new Date(),
+          })
+          .where(eq(ChannelImportSource.id, input.id))
+          .returning();
 
-      const [updated] = await db
-        .update(ChannelImportSource)
-        .set({
-          ...updateData,
-          updatedById: ctx.session.appUserId,
-          updatedAt: new Date(),
-        })
-        .where(eq(ChannelImportSource.id, input.id))
-        .returning();
+        if (!updated) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+        }
 
-      moduleLogger.info('Updated import source');
+        const batch = await stageHistoricalImport(
+          tx,
+          updated.id,
+          importHistory,
+        );
+        return { updated, batch };
+      });
 
-      // If import history provided, trigger historical import
-      if (importHistory && importHistory.length > 0) {
+      let startup: StartupResult = {
+        ok: true,
+        historicalBatchStarted: false,
+        schedulerStarted: false,
+        errors: [],
+      };
+
+      if (batch || (updated.enabled && !existing.enabled)) {
+        startup = await startImportSourceWorkflows(updated.id, batch?.id);
+      } else if (!updated.enabled && existing.enabled) {
         try {
-          await triggerHistoricalImport(updated?.id, importHistory);
-          moduleLogger.info('Triggered historical import after update', {
-            itemCount: importHistory.length,
+          await cancelImportSourceScheduler(updated.id);
+        } catch (error) {
+          const message = 'Failed to stop scheduler workflow';
+          await db
+            .update(ChannelImportSource)
+            .set({
+              workflowStatus: 'FAILED',
+              lastErrorAt: new Date(),
+              lastErrorMessage: message,
+              updatedAt: new Date(),
+            })
+            .where(eq(ChannelImportSource.id, updated.id));
+          moduleLogger.error(message, {
+            importSourceId: updated.id,
+            error,
           });
-        } catch (_error) {
-          moduleLogger.error(
-            'Failed to trigger historical import after update',
-          );
+          startup = {
+            ok: false,
+            historicalBatchStarted: false,
+            schedulerStarted: false,
+            errors: [message],
+          };
         }
       }
 
-      // Restart workflow if enabled status changed
-      if (
-        input.data.enabled !== undefined &&
-        input.data.enabled !== existing.enabled
-      ) {
-        try {
-          if (updated?.enabled) {
-            await startImportSourceScheduler(updated?.id);
-            moduleLogger.info('Started import source scheduler workflow');
-          } else {
-            await cancelImportSourceScheduler(updated?.id);
-            moduleLogger.info('Cancelled import source scheduler workflow');
-          }
-        } catch (_error) {
-          moduleLogger.error(
-            'Failed to update import source scheduler workflow',
-          );
-        }
-      }
+      moduleLogger.info('Updated import source', {
+        importSourceId: updated.id,
+        historicalItemCount: batch?.totalItems ?? 0,
+      });
+      return { ...updated, historicalImportBatch: batch, startup };
+    }),
 
-      if (!updated) {
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
-      }
-      return updated;
+  // Admin: Retry only workflows whose durable state says startup failed.
+  retryWorkflows: adminProcedure
+    .input(z.object({ id: importSourceIdSchema }))
+    .mutation(async ({ input }) => {
+      const startup = await startImportSourceWorkflows(input.id);
+      return { success: startup.ok, startup };
     }),
 
   // Admin: Delete import source

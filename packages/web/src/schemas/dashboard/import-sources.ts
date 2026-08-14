@@ -4,8 +4,12 @@ export const importSourceIdSchema = z.string().uuid();
 
 export const deduplicationFieldSchema = z.enum(['title', 'publishedAt', 'url']);
 
+// Each staged row binds nine values. A 5,000-item request stays well below
+// PostgreSQL's 65,535-parameter limit even before insert chunking.
+export const HISTORICAL_IMPORT_ITEM_MAX = 5_000;
+
 export const historicalImportItemSchema = z.object({
-  publishedAt: z.string(),
+  publishedAt: z.coerce.date(),
   source: z.string().optional(),
   title: z.string(),
   description: z.string().optional(),
@@ -21,7 +25,10 @@ export const importSourceSchema = z.object({
   earliestImportDate: z.coerce.date().optional(),
   deduplicationEnabled: z.boolean().optional().default(false),
   deduplicationFields: z.array(deduplicationFieldSchema).optional().default([]),
-  importHistory: z.array(historicalImportItemSchema).optional(),
+  importHistory: z
+    .array(historicalImportItemSchema)
+    .max(HISTORICAL_IMPORT_ITEM_MAX)
+    .optional(),
 });
 
 export const updateImportSourceSchema = z.object({

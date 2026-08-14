@@ -1,5 +1,11 @@
-import { ChannelImportSource, db, ImportHistory } from '@letschurch/db';
-import { eq } from 'drizzle-orm';
+import {
+  ChannelImportHistoryBatch,
+  ChannelImportHistoryItem,
+  ChannelImportSource,
+  db,
+  ImportHistory,
+} from '@letschurch/db';
+import { and, asc, eq, gte, sql } from 'drizzle-orm';
 
 import logger from '../../util/logger';
 
@@ -7,95 +13,197 @@ const moduleLogger = logger.child({
   module: 'activity/process-import-history',
 });
 
-export type HistoricalImportItem = {
-  publishedAt: string;
-  source?: string;
-  title: string;
-  description?: string;
-  url?: string | null;
+// Seven ImportHistory values per row leaves ample room beneath PostgreSQL's
+// 65,535 bind-parameter ceiling and bounds each activity transaction.
+export const HISTORICAL_IMPORT_PROCESS_CHUNK_SIZE = 500;
+
+export type ProcessImportHistoryResult = {
+  itemsProcessed: number;
 };
 
 /**
- * Process historical import data to mark items as already imported (backfill).
- * Creates ImportHistory records and updates lastImportedUploadDate and earliestImportDate.
- * Returns the latest and earliest dates from the history.
+ * Copies a staged historical batch into ImportHistory in committed pages.
+ * Progress and the source date bounds advance in the same transaction as each
+ * page, so an activity retry resumes at the first uncommitted ordinal.
  */
 export async function processImportHistory(
   importSourceId: string,
-  importHistory: HistoricalImportItem[],
-): Promise<{
-  latestDate: Date | null;
-  earliestDate: Date | null;
-}> {
-  moduleLogger.info('Processing import history backfill', {
+  batchId: string,
+): Promise<ProcessImportHistoryResult> {
+  return processImportHistoryWithDatabase(importSourceId, batchId, db);
+}
+
+export async function processImportHistoryWithDatabase(
+  importSourceId: string,
+  batchId: string,
+  database: typeof db,
+): Promise<ProcessImportHistoryResult> {
+  const batch = await database.query.ChannelImportHistoryBatch.findFirst({
+    where: (t, { and, eq }) =>
+      and(eq(t.id, batchId), eq(t.importSourceId, importSourceId)),
+  });
+
+  if (!batch) {
+    throw new Error(`Historical import batch ${batchId} not found`);
+  }
+
+  if (batch.status === 'DONE') {
+    return { itemsProcessed: batch.totalItems };
+  }
+
+  await database
+    .update(ChannelImportHistoryBatch)
+    .set({
+      status: 'RUNNING',
+      startedAt: batch.startedAt ?? new Date(),
+      failedAt: null,
+      lastError: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(ChannelImportHistoryBatch.id, batchId));
+
+  moduleLogger.info('Processing staged import history', {
     importSourceId,
-    itemCount: importHistory.length,
+    batchId,
+    itemCount: batch.totalItems,
   });
 
-  let latestDate: Date | null = null;
-  let earliestDate: Date | null = null;
+  try {
+    while (true) {
+      const pageResult = await database.transaction(async (tx) => {
+        const currentBatch = await tx.query.ChannelImportHistoryBatch.findFirst(
+          {
+            where: (t, { and, eq }) =>
+              and(eq(t.id, batchId), eq(t.importSourceId, importSourceId)),
+          },
+        );
 
-  // Create ImportHistory records for each item
-  const historyRecords = importHistory.map((item) => {
-    const publishedAt = new Date(item.publishedAt);
+        if (!currentBatch) {
+          throw new Error(`Historical import batch ${batchId} not found`);
+        }
 
-    // Track latest date
-    if (!latestDate || publishedAt > latestDate) {
-      latestDate = publishedAt;
+        if (currentBatch.status === 'DONE') {
+          return { done: true, itemsProcessed: currentBatch.totalItems };
+        }
+
+        const items = await tx
+          .select()
+          .from(ChannelImportHistoryItem)
+          .where(
+            and(
+              eq(ChannelImportHistoryItem.batchId, batchId),
+              gte(
+                ChannelImportHistoryItem.ordinal,
+                currentBatch.processedItems,
+              ),
+            ),
+          )
+          .orderBy(asc(ChannelImportHistoryItem.ordinal))
+          .limit(HISTORICAL_IMPORT_PROCESS_CHUNK_SIZE);
+
+        if (items.length === 0) {
+          if (currentBatch.processedItems !== currentBatch.totalItems) {
+            throw new Error(
+              `Historical import batch ${batchId} is missing staged items`,
+            );
+          }
+
+          await tx
+            .delete(ChannelImportHistoryItem)
+            .where(eq(ChannelImportHistoryItem.batchId, batchId));
+          await tx
+            .update(ChannelImportHistoryBatch)
+            .set({
+              status: 'DONE',
+              processedItems: currentBatch.totalItems,
+              completedAt: new Date(),
+              failedAt: null,
+              lastError: null,
+              updatedAt: new Date(),
+            })
+            .where(eq(ChannelImportHistoryBatch.id, batchId));
+
+          return { done: true, itemsProcessed: currentBatch.totalItems };
+        }
+
+        const earliestDate = items.reduce(
+          (earliest, item) =>
+            item.publishedAt < earliest ? item.publishedAt : earliest,
+          items[0]!.publishedAt,
+        );
+        const latestDate = items.reduce(
+          (latest, item) =>
+            item.publishedAt > latest ? item.publishedAt : latest,
+          items[0]!.publishedAt,
+        );
+
+        await tx
+          .insert(ImportHistory)
+          .values(
+            items.map((item) => ({
+              importSourceId,
+              stagedItemId: item.id,
+              title: item.title,
+              description: item.description,
+              url: item.url,
+              publishedAt: item.publishedAt,
+              source: item.source,
+            })),
+          )
+          .onConflictDoNothing({ target: ImportHistory.stagedItemId });
+
+        await tx
+          .update(ChannelImportSource)
+          .set({
+            earliestImportDate: sql<Date>`least(coalesce(${ChannelImportSource.earliestImportDate}, ${earliestDate}), ${earliestDate})`,
+            lastImportedUploadDate: sql<Date>`greatest(coalesce(${ChannelImportSource.lastImportedUploadDate}, ${latestDate}), ${latestDate})`,
+            updatedAt: new Date(),
+          })
+          .where(eq(ChannelImportSource.id, importSourceId));
+
+        const processedItems = items.at(-1)!.ordinal + 1;
+        await tx
+          .update(ChannelImportHistoryBatch)
+          .set({
+            status: 'RUNNING',
+            processedItems,
+            failedAt: null,
+            lastError: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(ChannelImportHistoryBatch.id, batchId));
+
+        return { done: false, itemsProcessed: processedItems };
+      });
+
+      if (pageResult.done) {
+        moduleLogger.info('Completed staged import history', {
+          importSourceId,
+          batchId,
+          itemCount: pageResult.itemsProcessed,
+        });
+        return { itemsProcessed: pageResult.itemsProcessed };
+      }
     }
-
-    // Track earliest date
-    if (!earliestDate || publishedAt < earliestDate) {
-      earliestDate = publishedAt;
-    }
-
-    return {
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Unknown historical import error';
+    await database
+      .update(ChannelImportHistoryBatch)
+      .set({
+        status: 'FAILED',
+        lastError: message,
+        failedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(ChannelImportHistoryBatch.id, batchId));
+    moduleLogger.error('Failed staged import history', {
       importSourceId,
-      title: item.title,
-      description: item.description || null,
-      url: item.url || null,
-      publishedAt,
-      source: item.source || null,
-    };
-  });
-
-  // Bulk create import history records
-  if (historyRecords.length > 0) {
-    await db.insert(ImportHistory).values(historyRecords).onConflictDoNothing();
-  }
-
-  moduleLogger.info('Created import history records', {
-    importSourceId,
-    count: historyRecords.length,
-  });
-
-  // Update the import source timestamps to prevent re-importing these items
-  const updates: {
-    earliestImportDate?: Date;
-    lastImportedUploadDate?: Date;
-    updatedAt?: Date;
-  } = {};
-
-  if (earliestDate) {
-    updates.earliestImportDate = earliestDate;
-  }
-
-  if (latestDate) {
-    updates.lastImportedUploadDate = latestDate;
-  }
-
-  if (Object.keys(updates).length > 0) {
-    await db
-      .update(ChannelImportSource)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(ChannelImportSource.id, importSourceId));
-
-    moduleLogger.info('Updated import source with backfill dates', {
-      importSourceId,
-      earliestDate,
-      latestDate,
+      batchId,
+      error,
     });
+    throw error;
   }
-
-  return { latestDate, earliestDate };
 }

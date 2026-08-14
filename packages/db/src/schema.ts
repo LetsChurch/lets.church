@@ -254,6 +254,11 @@ export const ChannelImportRunStatus = pgEnum('channel_import_run_status', [
   'PARTIAL',
 ]);
 
+export const ChannelImportHistoryBatchStatus = pgEnum(
+  'channel_import_history_batch_status',
+  ['PENDING', 'RUNNING', 'DONE', 'FAILED'],
+);
+
 export const TrackingSalt = pgTable('tracking_salt', {
   id: serial('id').notNull().primaryKey(),
   salt: integer('salt').notNull(),
@@ -2340,6 +2345,88 @@ export const ChannelImportSource = pgTable(
   }),
 );
 
+export const ChannelImportHistoryBatch = pgTable(
+  'channel_import_history_batch',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    importSourceId: uuid('import_source_id').notNull(),
+    status: ChannelImportHistoryBatchStatus('status')
+      .notNull()
+      .default('PENDING'),
+    totalItems: integer('total_items').notNull(),
+    processedItems: integer('processed_items').notNull().default(0),
+    lastError: text('last_error'),
+    startedAt: timestamp('started_at', { precision: 3 }),
+    completedAt: timestamp('completed_at', { precision: 3 }),
+    failedAt: timestamp('failed_at', { precision: 3 }),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { precision: 3 })
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (ChannelImportHistoryBatch) => ({
+    channel_import_history_batch_import_source_fkey: foreignKey({
+      name: 'channel_import_history_batch_import_source_fkey',
+      columns: [ChannelImportHistoryBatch.importSourceId],
+      foreignColumns: [ChannelImportSource.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    channel_import_history_batch_source_created_idx: index(
+      'channel_import_history_batch_source_created_idx',
+    ).on(
+      ChannelImportHistoryBatch.importSourceId,
+      ChannelImportHistoryBatch.createdAt,
+    ),
+    channel_import_history_batch_status_idx: index(
+      'channel_import_history_batch_status_idx',
+    ).on(ChannelImportHistoryBatch.status),
+    channel_import_history_batch_progress_check: check(
+      'channel_import_history_batch_progress_check',
+      sql`${ChannelImportHistoryBatch.processedItems} >= 0 and ${ChannelImportHistoryBatch.processedItems} <= ${ChannelImportHistoryBatch.totalItems}`,
+    ),
+  }),
+);
+
+export const ChannelImportHistoryItem = pgTable(
+  'channel_import_history_item',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    batchId: uuid('batch_id').notNull(),
+    importSourceId: uuid('import_source_id').notNull(),
+    ordinal: integer('ordinal').notNull(),
+    publishedAt: timestamp('published_at', { precision: 3 }).notNull(),
+    source: text('source'),
+    title: text('title').notNull(),
+    description: text('description'),
+    url: text('url'),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+  },
+  (ChannelImportHistoryItem) => ({
+    channel_import_history_item_batch_fkey: foreignKey({
+      name: 'channel_import_history_item_batch_fkey',
+      columns: [ChannelImportHistoryItem.batchId],
+      foreignColumns: [ChannelImportHistoryBatch.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    channel_import_history_item_import_source_fkey: foreignKey({
+      name: 'channel_import_history_item_import_source_fkey',
+      columns: [ChannelImportHistoryItem.importSourceId],
+      foreignColumns: [ChannelImportSource.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    channel_import_history_item_batch_ordinal_uidx: uniqueIndex(
+      'channel_import_history_item_batch_ordinal_uidx',
+    ).on(ChannelImportHistoryItem.batchId, ChannelImportHistoryItem.ordinal),
+    channel_import_history_item_ordinal_check: check(
+      'channel_import_history_item_ordinal_check',
+      sql`${ChannelImportHistoryItem.ordinal} >= 0`,
+    ),
+  }),
+);
+
 export const ChannelImportRun = pgTable(
   'channel_import_run',
   {
@@ -2383,6 +2470,7 @@ export const ImportHistory = pgTable(
     url: text('url'),
     publishedAt: timestamp('published_at', { precision: 3 }).notNull(),
     source: text('source'),
+    stagedItemId: uuid('staged_item_id'),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
   },
   (ImportHistory) => ({
@@ -2409,6 +2497,9 @@ export const ImportHistory = pgTable(
     import_history_import_source_id_url_idx: index(
       'import_history_import_source_id_url_idx',
     ).on(ImportHistory.importSourceId, ImportHistory.url),
+    import_history_staged_item_id_uidx: uniqueIndex(
+      'import_history_staged_item_id_uidx',
+    ).on(ImportHistory.stagedItemId),
   }),
 );
 
@@ -3175,6 +3266,42 @@ export const ChannelImportSourceRelations = relations(
     }),
     importHistory: many(ImportHistory, {
       relationName: 'ChannelImportSourceToImportHistory',
+    }),
+    historicalImportBatches: many(ChannelImportHistoryBatch, {
+      relationName: 'ChannelImportSourceToChannelImportHistoryBatch',
+    }),
+    stagedHistoricalImportItems: many(ChannelImportHistoryItem, {
+      relationName: 'ChannelImportSourceToChannelImportHistoryItem',
+    }),
+  }),
+);
+
+export const ChannelImportHistoryBatchRelations = relations(
+  ChannelImportHistoryBatch,
+  ({ one, many }) => ({
+    importSource: one(ChannelImportSource, {
+      relationName: 'ChannelImportSourceToChannelImportHistoryBatch',
+      fields: [ChannelImportHistoryBatch.importSourceId],
+      references: [ChannelImportSource.id],
+    }),
+    items: many(ChannelImportHistoryItem, {
+      relationName: 'ChannelImportHistoryBatchToChannelImportHistoryItem',
+    }),
+  }),
+);
+
+export const ChannelImportHistoryItemRelations = relations(
+  ChannelImportHistoryItem,
+  ({ one }) => ({
+    batch: one(ChannelImportHistoryBatch, {
+      relationName: 'ChannelImportHistoryBatchToChannelImportHistoryItem',
+      fields: [ChannelImportHistoryItem.batchId],
+      references: [ChannelImportHistoryBatch.id],
+    }),
+    importSource: one(ChannelImportSource, {
+      relationName: 'ChannelImportSourceToChannelImportHistoryItem',
+      fields: [ChannelImportHistoryItem.importSourceId],
+      references: [ChannelImportSource.id],
     }),
   }),
 );

@@ -166,8 +166,18 @@ export function makeScrapeAndImportWorkflowId(
   channelSlug: string,
   importSourceId: string,
   type: 'scheduled' | 'manual' | 'historical',
+  historicalBatchId?: string,
 ) {
-  const suffix = type === 'scheduled' ? type : `${type}:${Date.now()}`;
+  if (type === 'historical' && !historicalBatchId) {
+    throw new Error('Historical imports require a stable batch ID');
+  }
+
+  const suffix =
+    type === 'scheduled'
+      ? type
+      : type === 'historical'
+        ? `${type}:${historicalBatchId}`
+        : `${type}:${Date.now()}`;
   return `scrapeAndImport:${channelSlug}:${importSourceId}:${suffix}`;
 }
 
