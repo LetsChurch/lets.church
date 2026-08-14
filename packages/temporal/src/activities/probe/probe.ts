@@ -65,9 +65,14 @@ export default async function probe(
       'Fetching file metadata from S3',
     );
 
-    const uploadSizeBytes = (await ingestS3.headObject(s3UploadKey))
-      ?.ContentLength;
-    invariant(uploadSizeBytes, 'Invalid uploadSizeBytes');
+    const { ContentLength: uploadSizeBytes } =
+      await ingestS3.headObject(s3UploadKey);
+    invariant(
+      typeof uploadSizeBytes === 'number' &&
+        Number.isFinite(uploadSizeBytes) &&
+        uploadSizeBytes > 0,
+      'Invalid uploadSizeBytes',
+    );
 
     activityLogger.info(
       {

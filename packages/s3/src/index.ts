@@ -27,6 +27,31 @@ import type { MergeExclusive } from 'type-fest';
 import { v4 as uuid } from 'uuid';
 
 export const PART_SIZE = 10_000_000;
+const NOT_FOUND_ERROR_CODES: Record<string, true> = {
+  '404': true,
+  NotFound: true,
+  NoSuchKey: true,
+  NoSuchObject: true,
+};
+
+function isNotFoundError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) {
+    return false;
+  }
+
+  const metadata = Reflect.get(error, '$metadata');
+  if (
+    typeof metadata === 'object' &&
+    metadata !== null &&
+    Reflect.get(metadata, 'httpStatusCode') === 404
+  ) {
+    return true;
+  }
+  return ['name', 'code', 'Code'].some((property) => {
+    const value = Reflect.get(error, property);
+    return typeof value === 'string' && NOT_FOUND_ERROR_CODES[value] === true;
+  });
+}
 
 export type S3ClientId = 'INGEST' | 'PUBLIC' | 'BACKUP';
 
@@ -178,16 +203,20 @@ export class LcS3Client {
   }
 
   async headObject(key: string) {
+    return this.client.headObject({
+      Bucket: this.bucket,
+      Key: key,
+    });
+  }
+
+  async headObjectIfExists(key: string) {
     try {
-      return await this.client.headObject({
-        Bucket: this.bucket,
-        Key: key,
-      });
-    } catch (e) {
-      this.logger?.error({
-        err: e instanceof Error ? e : new Error(String(e)),
-      });
-      return null;
+      return await this.headObject(key);
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        return null;
+      }
+      throw error;
     }
   }
 

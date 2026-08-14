@@ -5,6 +5,19 @@ import { and, count, eq, isNotNull, isNull } from 'drizzle-orm';
 import { fileTypeFromTokenizer } from 'file-type';
 import sanitizeFilename from 'sanitize-filename';
 
+const EXTENSION_BY_CONTENT_TYPE: Record<string, string> = {
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+  'video/quicktime': 'mov',
+  'video/x-msvideo': 'avi',
+  'video/x-matroska': 'mkv',
+  'audio/mpeg': 'mp3',
+  'audio/mp4': 'm4a',
+  'audio/wav': 'wav',
+  'audio/flac': 'flac',
+  'audio/ogg': 'ogg',
+};
+
 export async function getBackfillFilenamesCount(): Promise<number> {
   const result = await db
     .select({ count: count() })
@@ -51,79 +64,54 @@ export async function backfillFilenamesBatch(
   let updated = 0;
 
   for (const record of records) {
-    try {
-      // Skip if somehow finalizedUploadKey is null
-      if (!record.finalizedUploadKey) {
-        continue;
-      }
+    // Skip if somehow finalizedUploadKey is null
+    if (!record.finalizedUploadKey) {
+      continue;
+    }
 
-      // Try to get ContentType from S3 metadata first
-      let extension: string | null = null;
+    // A finalized upload is expected to exist. Let S3 lookup failures fail
+    // the batch so Temporal can retry instead of treating an outage as
+    // missing metadata.
+    const { ContentType } = await ingestS3.headObject(
+      record.finalizedUploadKey,
+    );
+    let extension: string | null = null;
 
+    if (
+      ContentType &&
+      !ContentType.startsWith('application/octet-stream') &&
+      !ContentType.endsWith('/*')
+    ) {
+      extension = EXTENSION_BY_CONTENT_TYPE[ContentType] ?? null;
+    }
+
+    // Fallback to file-type detection if ContentType didn't work
+    if (!extension) {
       try {
-        const headResponse = await ingestS3.headObject(
-          record.finalizedUploadKey,
+        const s3Tokenizer = await makeChunkedTokenizerFromS3(
+          ingestS3.getS3Client(),
+          {
+            Bucket: ingestS3.getBucket(),
+            Key: record.finalizedUploadKey,
+          },
         );
-        const ContentType = headResponse?.ContentType;
 
-        // If ContentType is specific (not generic), extract extension
-        if (
-          ContentType &&
-          !ContentType.startsWith('application/octet-stream') &&
-          !ContentType.endsWith('/*')
-        ) {
-          // Map MIME type to extension
-          const mimeToExt: Record<string, string> = {
-            'video/mp4': 'mp4',
-            'video/webm': 'webm',
-            'video/quicktime': 'mov',
-            'video/x-msvideo': 'avi',
-            'video/x-matroska': 'mkv',
-            'audio/mpeg': 'mp3',
-            'audio/mp4': 'm4a',
-            'audio/wav': 'wav',
-            'audio/flac': 'flac',
-            'audio/ogg': 'ogg',
-          };
-          extension = mimeToExt[ContentType] || null;
-        }
+        const fileType = await fileTypeFromTokenizer(s3Tokenizer);
+        extension = fileType?.ext || null;
       } catch (error) {
-        console.warn(`Failed to get ContentType for ${record.id}:`, error);
+        console.error(`Failed to detect file type for ${record.id}:`, error);
       }
+    }
 
-      // Fallback to file-type detection if ContentType didn't work
-      if (!extension) {
-        try {
-          const s3Tokenizer = await makeChunkedTokenizerFromS3(
-            ingestS3.getS3Client(),
-            {
-              Bucket: ingestS3.getBucket(),
-              Key: record.finalizedUploadKey,
-            },
-          );
+    if (extension) {
+      const title = sanitizeFilename(record.title || 'media');
+      const filename = `${title}.${extension}`;
 
-          const fileType = await fileTypeFromTokenizer(s3Tokenizer);
-          extension = fileType?.ext || null;
-        } catch (error) {
-          console.error(`Failed to detect file type for ${record.id}:`, error);
-        }
-      }
-
-      // Update record if we found an extension
-      // Create filename as title + extension
-      if (extension) {
-        const title = sanitizeFilename(record.title || 'media');
-        const filename = `${title}.${extension}`;
-
-        await db
-          .update(UploadRecord)
-          .set({ originalFileName: filename, updatedAt: new Date() })
-          .where(eq(UploadRecord.id, record.id));
-        updated++;
-      }
-    } catch (error) {
-      console.error(`Failed to process ${record.id}:`, error);
-      // Continue with next record
+      await db
+        .update(UploadRecord)
+        .set({ originalFileName: filename, updatedAt: new Date() })
+        .where(eq(UploadRecord.id, record.id));
+      updated++;
     }
   }
 

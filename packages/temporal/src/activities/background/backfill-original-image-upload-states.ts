@@ -53,10 +53,10 @@ export async function backfillOriginalImageUploadStatesBatch(
     // Get the original file key by removing .imagemagick.json suffix
     const originalKey = probeKey.replace('.imagemagick.json', '');
 
-    // Check if original file exists
-    try {
-      await ingestS3.headObject(originalKey);
-    } catch (_error) {
+    // Missing originals are expected for stale probe files. Other S3 failures
+    // must fail the activity so Temporal can retry them.
+    const headResult = await ingestS3.headObjectIfExists(originalKey);
+    if (!headResult) {
       logger.warn(`Original file not found for probe: ${probeKey}, skipping`);
       continue;
     }
@@ -82,18 +82,11 @@ export async function backfillOriginalImageUploadStatesBatch(
       continue;
     }
 
-    // Get file size
-    let sizeBytes: bigint | undefined;
-    try {
-      const headResult = await ingestS3.headObject(originalKey);
-      if (headResult) {
-        sizeBytes = headResult.ContentLength
-          ? BigInt(headResult.ContentLength)
-          : undefined;
-      }
-    } catch (_error) {
-      logger.warn(`Could not get size for: ${originalKey}`);
-    }
+    // Reuse the existence lookup so each original requires only one HEAD.
+    const sizeBytes =
+      headResult.ContentLength === undefined
+        ? undefined
+        : BigInt(headResult.ContentLength);
 
     // Create UploadState
     await db.insert(UploadState).values({

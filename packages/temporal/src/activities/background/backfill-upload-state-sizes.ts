@@ -113,40 +113,40 @@ export async function backfillUploadStateSizesBatch(
 
   // Process each upload state
   for (const uploadState of uploadStates) {
-    try {
-      // Only query if the bucket matches the ingest bucket
-      if (uploadState.s3Bucket !== ingestBucket) {
-        logger.warn(
-          `Skipping UploadState ${uploadState.id} - bucket mismatch: ${uploadState.s3Bucket} !== ${ingestBucket}`,
-        );
-        skipped++;
-        continue;
-      }
+    // Only query if the bucket matches the ingest bucket
+    if (uploadState.s3Bucket !== ingestBucket) {
+      logger.warn(
+        `Skipping UploadState ${uploadState.id} - bucket mismatch: ${uploadState.s3Bucket} !== ${ingestBucket}`,
+      );
+      skipped++;
+      continue;
+    }
 
-      const head = await s3Client.headObject(uploadState.s3Key);
+    // Missing objects are an expected legacy-data case. Operational S3
+    // failures must escape so Temporal retries the batch.
+    const head = await s3Client.headObjectIfExists(uploadState.s3Key);
+    if (!head) {
+      logger.warn(
+        `Object not found for UploadState ${uploadState.id}, key: ${uploadState.s3Key}`,
+      );
+      skipped++;
+      continue;
+    }
 
-      if (head?.ContentLength) {
-        await db
-          .update(UploadState)
-          .set({ sizeBytes: BigInt(head.ContentLength), updatedAt: new Date() })
-          .where(eq(UploadState.id, uploadState.id));
-        updated++;
-      } else {
-        logger.warn(
-          `Could not get size for UploadState ${uploadState.id}, key: ${uploadState.s3Key}`,
-        );
-        skipped++;
-      }
-    } catch (error) {
-      logger.error(
-        {
-          context: {
-            uploadStateId: uploadState.id,
-            error: error instanceof Error ? error.message : String(error),
-            s3Key: uploadState.s3Key,
-          },
-        },
-        `Error getting size for UploadState ${uploadState.id}`,
+    const { ContentLength } = head;
+    if (
+      typeof ContentLength === 'number' &&
+      Number.isFinite(ContentLength) &&
+      ContentLength >= 0
+    ) {
+      await db
+        .update(UploadState)
+        .set({ sizeBytes: BigInt(ContentLength), updatedAt: new Date() })
+        .where(eq(UploadState.id, uploadState.id));
+      updated++;
+    } else {
+      logger.warn(
+        `Could not get size for UploadState ${uploadState.id}, key: ${uploadState.s3Key}`,
       );
       skipped++;
     }

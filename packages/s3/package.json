@@ -17,7 +17,8 @@
     "check:lint": "oxlint",
     "check:ts": "tsc --noEmit",
     "fix": "oxfmt && oxlint --fix",
-    "fix!": "oxfmt && oxlint --fix-dangerously"
+    "fix!": "oxfmt && oxlint --fix-dangerously",
+    "test": "vitest run"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "catalog:",
@@ -36,6 +37,7 @@
     "@types/node": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }
