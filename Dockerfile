@@ -257,10 +257,10 @@ RUN groupadd -r worker && useradd -r -g worker -m -d /home/worker worker && \
         /home/worker/.cache/huggingface /data/transcribe && \
     chown -R worker:worker /app /models /home/worker /data/transcribe
 WORKDIR /app
-COPY --chown=worker:worker services/transcribe/pyproject.toml services/transcribe/.python-version ./
+COPY --chown=worker:worker services/transcribe/pyproject.toml services/transcribe/uv.lock services/transcribe/.python-version ./
 USER worker
-# uv generates uv.lock on first sync; rebuilds reuse it.
-RUN uv sync && rm -rf /home/worker/.cache/uv
+# Install the committed runtime dependency graph without dev tools.
+RUN uv sync --frozen --no-dev && rm -rf /home/worker/.cache/uv
 COPY --chown=worker:worker services/transcribe/download_models.py ./
 # Pre-warm model weights straight into the HF cache via huggingface_hub.
 # We never import NeMo/torch at build time — that would trigger CUDA probing
@@ -269,7 +269,7 @@ COPY --chown=worker:worker services/transcribe/download_models.py ./
 RUN WHISPER_MODEL=${WHISPER_MODEL} \
     WTPSPLIT_MODEL=${WTPSPLIT_MODEL} \
     TITANET_MODEL=${TITANET_MODEL} \
-    uv run python download_models.py && \
+    uv run --no-sync python download_models.py && \
     if [ -d /home/worker/.cache/huggingface ] && [ -n "$(ls -A /home/worker/.cache/huggingface 2>/dev/null)" ]; then \
         cp -r /home/worker/.cache/huggingface/* /models/huggingface/; \
     fi && \
@@ -287,4 +287,4 @@ ENV HF_HOME=/models/huggingface \
 COPY --chown=worker:worker services/transcribe/src/ ./src/
 # Tooling for dev — used by `just regenerate-seed-transcript`.
 COPY --chown=worker:worker services/transcribe/scripts/ ./scripts/
-CMD ["uv", "run", "python", "-m", "src.worker"]
+CMD ["uv", "run", "--no-sync", "python", "-m", "src.worker"]
