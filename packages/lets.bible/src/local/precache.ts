@@ -64,7 +64,6 @@ export function precacheTranslation(translationId: string): void {
   running = true;
 
   const run = async () => {
-    await warm(`/search/${translationId}.index.json`);
     await warm(`/search/${translationId}.verses.json`);
     await warm('/search/structure.json');
     for (const b of CANON) {
