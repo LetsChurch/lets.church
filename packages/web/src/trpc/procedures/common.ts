@@ -6,7 +6,7 @@ import {
   OrganizationMembership,
 } from '@letschurch/db';
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, gte, lt } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
@@ -25,6 +25,27 @@ import { authProcedure, publicProcedure } from '../trpc';
 const moduleLogger = logger.child({
   module: 'trpc/procedures/common',
 });
+type InvitationResponseError = 'ALREADY_PROCESSED' | 'EXPIRED' | 'NOT_FOUND';
+
+function throwInvitationResponseError(error: InvitationResponseError): never {
+  switch (error) {
+    case 'NOT_FOUND':
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Invitation not found',
+      });
+    case 'EXPIRED':
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Invitation has expired',
+      });
+    case 'ALREADY_PROCESSED':
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Invitation already processed',
+      });
+  }
+}
 
 const clientEnv = z
   .object({
@@ -498,58 +519,117 @@ export const commonProcedures = {
         'Processing invitation response',
       );
 
-      const invitation = await db.query.OrganizationInvitation.findFirst({
-        where: (t, { eq }) => eq(t.token, token),
-        with: {
-          organization: {
-            columns: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      });
-
-      if (!invitation) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Invitation not found',
-        });
-      }
-
-      if (invitation.status !== 'PENDING') {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Invitation already processed',
-        });
-      }
-
-      if (invitation.expiresAt < new Date()) {
-        await db
-          .update(OrganizationInvitation)
-          .set({ status: 'EXPIRED' })
-          .where(eq(OrganizationInvitation.id, invitation.id));
-
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Invitation has expired',
-        });
-      }
-
-      if (!accept) {
-        await db
+      const now = new Date();
+      const result = await db.transaction(async (tx) => {
+        const [invitation] = await tx
           .update(OrganizationInvitation)
           .set({
-            status: 'DECLINED',
-            respondedAt: new Date(),
+            status: accept ? 'ACCEPTED' : 'DECLINED',
+            respondedAt: now,
           })
-          .where(eq(OrganizationInvitation.id, invitation.id));
+          .where(
+            and(
+              eq(OrganizationInvitation.token, token),
+              eq(OrganizationInvitation.status, 'PENDING'),
+              gte(OrganizationInvitation.expiresAt, now),
+            ),
+          )
+          .returning();
 
+        if (!invitation) {
+          const [expiredInvitation] = await tx
+            .update(OrganizationInvitation)
+            .set({ status: 'EXPIRED' })
+            .where(
+              and(
+                eq(OrganizationInvitation.token, token),
+                eq(OrganizationInvitation.status, 'PENDING'),
+                lt(OrganizationInvitation.expiresAt, now),
+              ),
+            )
+            .returning({ id: OrganizationInvitation.id });
+
+          if (expiredInvitation) {
+            return { error: 'EXPIRED' as const, outcome: 'ERROR' as const };
+          }
+
+          const [currentInvitation] = await tx
+            .select({ status: OrganizationInvitation.status })
+            .from(OrganizationInvitation)
+            .where(eq(OrganizationInvitation.token, token))
+            .limit(1);
+
+          return {
+            error: currentInvitation
+              ? ('ALREADY_PROCESSED' as const)
+              : ('NOT_FOUND' as const),
+            outcome: 'ERROR' as const,
+          };
+        }
+
+        if (!accept) {
+          return { invitation, outcome: 'DECLINED' as const };
+        }
+
+        if (!ctx.session) {
+          throw new TRPCError({
+            code: 'UNAUTHORIZED',
+            message: 'You must be logged in to accept invitations',
+          });
+        }
+
+        const appUserId = ctx.session.appUserId;
+        const userEmail = await tx.query.AppUserEmail.findFirst({
+          where: (table, { eq, and, isNotNull }) =>
+            and(
+              eq(table.appUserId, appUserId),
+              eq(table.email, invitation.email),
+              isNotNull(table.verifiedAt),
+            ),
+        });
+
+        if (!userEmail) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'You must verify the invited email address first',
+          });
+        }
+
+        const existingMember = await tx.query.OrganizationMembership.findFirst({
+          where: (table, { eq, and }) =>
+            and(
+              eq(table.organizationId, invitation.organizationId),
+              eq(table.appUserId, appUserId),
+            ),
+        });
+
+        if (!existingMember) {
+          await tx.insert(OrganizationMembership).values({
+            organizationId: invitation.organizationId,
+            appUserId,
+            isAdmin: invitation.isAdmin,
+            canEdit: invitation.canEdit,
+            updatedAt: now,
+          });
+        }
+
+        return {
+          alreadyMember: Boolean(existingMember),
+          invitation,
+          outcome: 'ACCEPTED' as const,
+        };
+      });
+
+      if (result.outcome === 'ERROR') {
+        throwInvitationResponseError(result.error);
+      }
+
+      if (result.outcome === 'DECLINED') {
         moduleLogger.info(
           {
-            organizationId: invitation.organization.id,
+            organizationId: result.invitation.organizationId,
             context: {
-              invitationId: invitation.id,
+              invitationId: result.invitation.id,
             },
           },
           'Invitation declined',
@@ -558,102 +638,23 @@ export const commonProcedures = {
         return { success: true, declined: true };
       }
 
-      // User must be authenticated to accept
-      if (!ctx.session) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'You must be logged in to accept invitations',
-        });
-      }
-
-      const appUserId = ctx.session.appUserId;
-
-      // Verify user's email matches invitation
-      const userEmail = await db.query.AppUserEmail.findFirst({
-        where: (t, { eq, and, isNotNull }) =>
-          and(
-            eq(t.appUserId, appUserId),
-            eq(t.email, invitation.email),
-            isNotNull(t.verifiedAt),
-          ),
-      });
-
-      if (!userEmail) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'You must verify the invited email address first',
-        });
-      }
-
-      // Check if user is already a member
-      const existingMember = await db.query.OrganizationMembership.findFirst({
-        where: (t, { eq, and }) =>
-          and(
-            eq(t.organizationId, invitation.organization.id),
-            eq(t.appUserId, appUserId),
-          ),
-      });
-
-      if (existingMember) {
-        // User is already a member, just mark invitation as accepted
-        await db
-          .update(OrganizationInvitation)
-          .set({
-            status: 'ACCEPTED',
-            respondedAt: new Date(),
-          })
-          .where(eq(OrganizationInvitation.id, invitation.id));
-
-        moduleLogger.info(
-          {
-            organizationId: invitation.organization.id,
-            appUserId: ctx.session.appUserId,
-            context: {
-              invitationId: invitation.id,
-            },
-          },
-          'User already member, invitation marked as accepted',
-        );
-
-        return {
-          success: true,
-          organizationId: invitation.organization.id,
-          alreadyMember: true,
-        };
-      }
-
-      // Create membership and mark invitation accepted
-      await db.transaction(async (tx) => {
-        await tx.insert(OrganizationMembership).values({
-          organizationId: invitation.organization.id,
-          appUserId,
-          isAdmin: invitation.isAdmin,
-          canEdit: invitation.canEdit,
-          updatedAt: new Date(),
-        });
-        await tx
-          .update(OrganizationInvitation)
-          .set({
-            status: 'ACCEPTED',
-            respondedAt: new Date(),
-          })
-          .where(eq(OrganizationInvitation.id, invitation.id));
-      });
-
       moduleLogger.info(
         {
-          organizationId: invitation.organization.id,
-          appUserId: ctx.session.appUserId,
+          organizationId: result.invitation.organizationId,
+          appUserId: ctx.session!.appUserId,
           context: {
-            invitationId: invitation.id,
+            invitationId: result.invitation.id,
           },
         },
-        'Invitation accepted and membership created',
+        result.alreadyMember
+          ? 'User already member, invitation marked as accepted'
+          : 'Invitation accepted and membership created',
       );
 
       return {
         success: true,
-        organizationId: invitation.organization.id,
+        organizationId: result.invitation.organizationId,
+        ...(result.alreadyMember ? { alreadyMember: true } : {}),
       };
     }),
 
@@ -673,58 +674,119 @@ export const commonProcedures = {
         'Processing channel invitation response',
       );
 
-      const invitation = await db.query.ChannelInvitation.findFirst({
-        where: (t, { eq }) => eq(t.token, token),
-        with: {
-          channel: {
-            columns: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      });
-
-      if (!invitation) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Invitation not found',
-        });
-      }
-
-      if (invitation.status !== 'PENDING') {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Invitation already processed',
-        });
-      }
-
-      if (invitation.expiresAt < new Date()) {
-        await db
-          .update(ChannelInvitation)
-          .set({ status: 'EXPIRED' })
-          .where(eq(ChannelInvitation.id, invitation.id));
-
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Invitation has expired',
-        });
-      }
-
-      if (!accept) {
-        await db
+      const now = new Date();
+      const result = await db.transaction(async (tx) => {
+        const [invitation] = await tx
           .update(ChannelInvitation)
           .set({
-            status: 'DECLINED',
-            respondedAt: new Date(),
+            status: accept ? 'ACCEPTED' : 'DECLINED',
+            respondedAt: now,
           })
-          .where(eq(ChannelInvitation.id, invitation.id));
+          .where(
+            and(
+              eq(ChannelInvitation.token, token),
+              eq(ChannelInvitation.status, 'PENDING'),
+              gte(ChannelInvitation.expiresAt, now),
+            ),
+          )
+          .returning();
 
+        if (!invitation) {
+          const [expiredInvitation] = await tx
+            .update(ChannelInvitation)
+            .set({ status: 'EXPIRED' })
+            .where(
+              and(
+                eq(ChannelInvitation.token, token),
+                eq(ChannelInvitation.status, 'PENDING'),
+                lt(ChannelInvitation.expiresAt, now),
+              ),
+            )
+            .returning({ id: ChannelInvitation.id });
+
+          if (expiredInvitation) {
+            return { error: 'EXPIRED' as const, outcome: 'ERROR' as const };
+          }
+
+          const [currentInvitation] = await tx
+            .select({ status: ChannelInvitation.status })
+            .from(ChannelInvitation)
+            .where(eq(ChannelInvitation.token, token))
+            .limit(1);
+
+          return {
+            error: currentInvitation
+              ? ('ALREADY_PROCESSED' as const)
+              : ('NOT_FOUND' as const),
+            outcome: 'ERROR' as const,
+          };
+        }
+
+        if (!accept) {
+          return { invitation, outcome: 'DECLINED' as const };
+        }
+
+        if (!ctx.session) {
+          throw new TRPCError({
+            code: 'UNAUTHORIZED',
+            message: 'You must be logged in to accept invitations',
+          });
+        }
+
+        const appUserId = ctx.session.appUserId;
+        const userEmail = await tx.query.AppUserEmail.findFirst({
+          where: (table, { eq, and, isNotNull }) =>
+            and(
+              eq(table.appUserId, appUserId),
+              eq(table.email, invitation.email),
+              isNotNull(table.verifiedAt),
+            ),
+        });
+
+        if (!userEmail) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'You must verify the invited email address first',
+          });
+        }
+
+        const existingMember = await tx.query.ChannelMembership.findFirst({
+          where: (table, { eq, and }) =>
+            and(
+              eq(table.channelId, invitation.channelId),
+              eq(table.appUserId, appUserId),
+            ),
+        });
+
+        if (!existingMember) {
+          await tx.insert(ChannelMembership).values({
+            channelId: invitation.channelId,
+            appUserId,
+            isAdmin: invitation.isAdmin,
+            canEdit: invitation.canEdit,
+            canUpload: invitation.canUpload,
+            canDownload: invitation.canDownload,
+            updatedAt: now,
+          });
+        }
+
+        return {
+          alreadyMember: Boolean(existingMember),
+          invitation,
+          outcome: 'ACCEPTED' as const,
+        };
+      });
+
+      if (result.outcome === 'ERROR') {
+        throwInvitationResponseError(result.error);
+      }
+
+      if (result.outcome === 'DECLINED') {
         moduleLogger.info(
           {
-            channelId: invitation.channel.id,
+            channelId: result.invitation.channelId,
             context: {
-              invitationId: invitation.id,
+              invitationId: result.invitation.id,
             },
           },
           'Channel invitation declined',
@@ -733,104 +795,23 @@ export const commonProcedures = {
         return { success: true, declined: true };
       }
 
-      // User must be authenticated to accept
-      if (!ctx.session) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'You must be logged in to accept invitations',
-        });
-      }
-
-      const appUserId = ctx.session.appUserId;
-
-      // Verify user's email matches invitation
-      const userEmail = await db.query.AppUserEmail.findFirst({
-        where: (t, { eq, and, isNotNull }) =>
-          and(
-            eq(t.appUserId, appUserId),
-            eq(t.email, invitation.email),
-            isNotNull(t.verifiedAt),
-          ),
-      });
-
-      if (!userEmail) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'You must verify the invited email address first',
-        });
-      }
-
-      // Check if user is already a member
-      const existingMember = await db.query.ChannelMembership.findFirst({
-        where: (t, { eq, and }) =>
-          and(
-            eq(t.channelId, invitation.channel.id),
-            eq(t.appUserId, appUserId),
-          ),
-      });
-
-      if (existingMember) {
-        // User is already a member, just mark invitation as accepted
-        await db
-          .update(ChannelInvitation)
-          .set({
-            status: 'ACCEPTED',
-            respondedAt: new Date(),
-          })
-          .where(eq(ChannelInvitation.id, invitation.id));
-
-        moduleLogger.info(
-          {
-            channelId: invitation.channel.id,
-            appUserId: ctx.session.appUserId,
-            context: {
-              invitationId: invitation.id,
-            },
-          },
-          'User already member, channel invitation marked as accepted',
-        );
-
-        return {
-          success: true,
-          channelId: invitation.channel.id,
-          alreadyMember: true,
-        };
-      }
-
-      // Create membership and mark invitation accepted
-      await db.transaction(async (tx) => {
-        await tx.insert(ChannelMembership).values({
-          channelId: invitation.channel.id,
-          appUserId,
-          isAdmin: invitation.isAdmin,
-          canEdit: invitation.canEdit,
-          canUpload: invitation.canUpload,
-          canDownload: invitation.canDownload,
-          updatedAt: new Date(),
-        });
-        await tx
-          .update(ChannelInvitation)
-          .set({
-            status: 'ACCEPTED',
-            respondedAt: new Date(),
-          })
-          .where(eq(ChannelInvitation.id, invitation.id));
-      });
-
       moduleLogger.info(
         {
-          channelId: invitation.channel.id,
-          appUserId: ctx.session.appUserId,
+          channelId: result.invitation.channelId,
+          appUserId: ctx.session!.appUserId,
           context: {
-            invitationId: invitation.id,
+            invitationId: result.invitation.id,
           },
         },
-        'Channel invitation accepted and membership created',
+        result.alreadyMember
+          ? 'User already member, channel invitation marked as accepted'
+          : 'Channel invitation accepted and membership created',
       );
 
       return {
         success: true,
-        channelId: invitation.channel.id,
+        channelId: result.invitation.channelId,
+        ...(result.alreadyMember ? { alreadyMember: true } : {}),
       };
     }),
 };
