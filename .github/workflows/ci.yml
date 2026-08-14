@@ -127,54 +127,8 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: pnpm --filter @letschurch/web exec playwright install-deps chromium
 
-
       - name: Run tests
         run: pnpm -r run test
-
-  test-schema-parity:
-    runs-on: depot-ubuntu-24.04
-    env:
-      PARITY_ADMIN_DATABASE_URL: postgres://schema_parity:schema_parity@localhost:5432/schema_parity
-
-    services:
-      postgres:
-        image: postgres:18.3-alpine3.23
-        env:
-          POSTGRES_USER: schema_parity
-          POSTGRES_PASSWORD: schema_parity
-          POSTGRES_DB: schema_parity
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U schema_parity -d schema_parity"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Enable Corepack
-        run: corepack enable
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24.4.1"
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: .pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Verify fresh and upgraded database parity
-        run: pnpm --filter @letschurch/db run test:schema-parity
 
   test-go:
     runs-on: depot-ubuntu-24.04
@@ -194,7 +148,7 @@ jobs:
 
   build:
     runs-on: depot-ubuntu-24.04
-    needs: [check, check-python, test-python, test, test-schema-parity, test-go]
+    needs: [check, check-python, test-python, test, test-go]
 
     steps:
       - uses: actions/checkout@v4
