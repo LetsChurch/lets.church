@@ -17,7 +17,9 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { enforceAiRateLimit, type AiRequestKind } from '@/ai/abuse-control';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
+import type { Context } from '@/trpc/context';
 import { appAvatarSm2x, appAvatarXs2x } from '@/util/avatar-sizes';
 import { bibleBookName, formatVerseRef } from '@/util/bible-url';
 import { facetMatchScore } from '@/util/facet-score';
@@ -43,9 +45,83 @@ const moduleLogger = logger.child({
   module: 'trpc/procedures/search',
 });
 
-// Cap on how many faceted channels are handed to the parser as grounding
-// candidates for its channel suggestion (facets are doc_count-ordered).
+export const SEARCH_QUERY_MAX_LENGTH = 1_000;
+// Search answer accepts at most 32 active channel/speaker filters, while the
+// facet aggregations returned to searchMeta contain at most 100/200 entries.
+export const SEARCH_FILTER_MAX_ITEMS = 32;
+export const SEARCH_FACET_CHANNEL_MAX_ITEMS = 100;
+export const SEARCH_FACET_SPEAKER_MAX_ITEMS = 200;
+export const SEARCH_FACET_CHANNEL_NAME_MAX_LENGTH = 256;
+export const SEARCH_FACET_CHANNEL_SLUG_MAX_LENGTH = 128;
+export const SEARCH_FACET_SPEAKER_MAX_LENGTH = 256;
+export const SEARCH_SUGGEST_CONTEXT_MAX_ITEMS = 5;
+export const SEARCH_SUGGEST_CONTEXT_ITEM_MAX_LENGTH = 256;
+
+// The parser only needs the highest-count channels. The transport cap above
+// matches the OpenSearch facet response; this lower cap bounds paid grounding.
 const MAX_CANDIDATE_CHANNELS = 12;
+
+const boundedSearchQuerySchema = z.string().max(SEARCH_QUERY_MAX_LENGTH);
+const boundedChannelSlugSchema = z
+  .string()
+  .max(SEARCH_FACET_CHANNEL_SLUG_MAX_LENGTH);
+const boundedSpeakerSchema = z.string().max(SEARCH_FACET_SPEAKER_MAX_LENGTH);
+const suggestionContextItemSchema = z
+  .string()
+  .max(SEARCH_SUGGEST_CONTEXT_ITEM_MAX_LENGTH);
+const suggestionContextArraySchema = z
+  .array(suggestionContextItemSchema)
+  .max(SEARCH_SUGGEST_CONTEXT_MAX_ITEMS);
+
+type SearchModelRequestKind = Extract<
+  AiRequestKind,
+  'search-embed' | 'search-meta' | 'search-suggest' | 'search-warm-embed'
+>;
+
+type SearchModelContext = Pick<Context, 'req' | 'resHeaders' | 'session'>;
+
+function normalizeSearchModelText(value: string): string {
+  return value.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function searchModelResourceId(
+  kind: SearchModelRequestKind,
+  query: string,
+  grounding: Record<string, string[]> = {},
+): string {
+  return JSON.stringify([
+    kind,
+    normalizeSearchModelText(query),
+    Object.entries(grounding).map(([name, values]) => [
+      name,
+      values.map(normalizeSearchModelText),
+    ]),
+  ]);
+}
+
+async function enforceSearchModelAdmission(
+  ctx: SearchModelContext,
+  kind: SearchModelRequestKind,
+  resourceId: string,
+): Promise<void> {
+  // Search model helpers are public, but authenticated sessions follow the
+  // existing search policy and are not charged against anonymous buckets.
+  if (ctx.session) return;
+
+  const decision = await enforceAiRateLimit({
+    headers: ctx.req.headers,
+    resourceId,
+    kind,
+  });
+  if (decision.allowed) return;
+
+  ctx.resHeaders.set('Cache-Control', 'no-store');
+  ctx.resHeaders.set('Retry-After', String(decision.retryAfterSeconds));
+  throw new TRPCError({
+    code: 'TOO_MANY_REQUESTS',
+    message: SEARCH_RATE_LIMIT_MESSAGE,
+  });
+}
 
 const uploadThumbnailSchema = z.object({
   uploadId: IncomingIdSchema,
@@ -61,13 +137,21 @@ const isoDateString = z
     message: 'Must be an ISO-8601 date string (e.g. "2024-01-31")',
   });
 
-const hybridSearchSchema = z
+export const hybridSearchSchema = z
   .object({
     // Empty is allowed: a facet-only browse (e.g. a `/search?bibleRefs=[...]`
     // link with no free text) runs a filter-only query instead of a hybrid one.
-    q: z.string().default(''),
-    channelIds: z.array(IncomingIdSchema).optional().nullable(),
-    channelSlugs: z.array(z.string()).optional().nullable(),
+    q: boundedSearchQuerySchema.default(''),
+    channelIds: z
+      .array(IncomingIdSchema)
+      .max(SEARCH_FILTER_MAX_ITEMS)
+      .optional()
+      .nullable(),
+    channelSlugs: z
+      .array(boundedChannelSlugSchema)
+      .max(SEARCH_FILTER_MAX_ITEMS)
+      .optional()
+      .nullable(),
     // Verbatim phrases (from the parser's `quotes`) to boost as phrase matches.
     quotes: z.array(z.string()).optional().nullable(),
     // Inclusive publish-date bounds (date-only, from the parser's `dates`).
@@ -78,7 +162,11 @@ const hybridSearchSchema = z
     // OSIS book ids ("Rom") from the Bible-book facet. OR semantics.
     bibleBooks: z.array(z.string()).optional().nullable(),
     // Resolved speaker names from the speaker facet. OR semantics.
-    speakers: z.array(z.string()).optional().nullable(),
+    speakers: z
+      .array(boundedSpeakerSchema)
+      .max(SEARCH_FILTER_MAX_ITEMS)
+      .optional()
+      .nullable(),
     // Manual date-range filter from the UI (computed to a publishedAt range
     // server-side by dateRangeToPublishedAt). Explicit dateGte/dateLte win.
     dateRange: z
@@ -101,6 +189,40 @@ const hybridSearchSchema = z
     deep: z.boolean().optional().default(false),
   })
   .and(MediaSearchPaginationSchema);
+
+export const searchMetaSchema = z.object({
+  q: boundedSearchQuerySchema.min(1),
+  searchLogId: z.string().max(128).nullish(),
+  facetChannels: z
+    .array(
+      z.object({
+        slug: boundedChannelSlugSchema,
+        name: z.string().max(SEARCH_FACET_CHANNEL_NAME_MAX_LENGTH),
+      }),
+    )
+    .max(SEARCH_FACET_CHANNEL_MAX_ITEMS)
+    .optional(),
+  facetSpeakers: z
+    .array(boundedSpeakerSchema)
+    .max(SEARCH_FACET_SPEAKER_MAX_ITEMS)
+    .optional(),
+});
+
+export const warmEmbedSchema = z.object({
+  q: boundedSearchQuerySchema,
+});
+
+export const suggestQueriesSchema = z.object({
+  q: boundedSearchQuerySchema,
+  context: z
+    .object({
+      titles: suggestionContextArraySchema.optional(),
+      channels: suggestionContextArraySchema.optional(),
+      speakers: suggestionContextArraySchema.optional(),
+      books: suggestionContextArraySchema.optional(),
+    })
+    .optional(),
+});
 
 // Map the UI's coarse date-range bucket to an absolute publishedAt range.
 function dateRangeToPublishedAt(
@@ -344,6 +466,15 @@ export const searchProcedures = {
             code: 'TOO_MANY_REQUESTS',
             message: SEARCH_RATE_LIMIT_MESSAGE,
           });
+        }
+        // A deep fallback can reach the embedding provider, so it also consumes
+        // the canonical AI budget before any DB, OpenSearch, or cache-miss work.
+        if (deep && q.trim().length > 0) {
+          await enforceSearchModelAdmission(
+            ctx,
+            'search-embed',
+            searchModelResourceId('search-embed', q),
+          );
         }
       }
 
@@ -668,33 +799,21 @@ export const searchProcedures = {
   // client fetches this in parallel and the results render the moment retrieval
   // returns. Both LLM calls are Valkey-cached, so this is cheap on repeats.
   searchMeta: publicProcedure
-    .input(
-      z.object({
-        q: z.string().min(1),
-        // The search_log_entry row hybridSearch created for this query. When
-        // present, the structured parse is merged into its params (so a search's
-        // parse, answer, and sources all land in one row for the admin log).
-        searchLogId: z.string().nullish(),
-        // Channels that actually have results for this query (from
-        // hybridSearch's facet aggregation). Passed so the parser grounds its
-        // channel suggestion in real candidates instead of guessing from the
-        // query text — so we can only ever suggest a real, non-empty filter.
-        facetChannels: z
-          .array(z.object({ slug: z.string(), name: z.string() }))
-          .optional(),
-        // Speaker names that actually have results for this query (from
-        // hybridSearch's speaker facet). Used to ground the parser's extracted
-        // speaker names against real, filterable identities.
-        facetSpeakers: z.array(z.string()).optional(),
-      }),
-    )
-    .query(async ({ input }) => {
+    .input(searchMetaSchema)
+    .query(async ({ input, ctx }) => {
       const { q, searchLogId, facetChannels, facetSpeakers } = input;
 
       // Facets are doc_count-ordered; only the top few dominant channels are
       // plausible "you're looking for this channel" suggestions, and capping
       // keeps the parser prompt + its cache key bounded.
       const candidates = (facetChannels ?? []).slice(0, MAX_CANDIDATE_CHANNELS);
+      await enforceSearchModelAdmission(
+        ctx,
+        'search-meta',
+        searchModelResourceId('search-meta', q, {
+          channels: candidates.map((candidate) => candidate.name),
+        }),
+      );
 
       const [parsed, relatedSearches] = await Promise.all([
         parseSearchQuery(q, {
@@ -789,10 +908,15 @@ export const searchProcedures = {
   // navigational search. Never throws — an embed/cache hiccup just means the
   // vector is cold on submit (today's behavior). See docs/agentic-search-overview.md.
   warmEmbed: publicProcedure
-    .input(z.object({ q: z.string() }))
-    .mutation(async ({ input }) => {
+    .input(warmEmbedSchema)
+    .mutation(async ({ input, ctx }) => {
       const q = input.q.trim();
       if (!shouldWarmEmbed(q)) return { warmed: false };
+      await enforceSearchModelAdmission(
+        ctx,
+        'search-warm-embed',
+        searchModelResourceId('search-warm-embed', q),
+      );
       try {
         await getQueryEmbeddingCached(q, 'searchEmbedQueryWarm');
         return { warmed: true };
@@ -954,25 +1078,24 @@ export const searchProcedures = {
   // procedure: the OS palette renders instantly and these fill in when nano
   // responds. Best-effort, cached — failure / empty `q` → no suggestions.
   suggestQueries: publicProcedure
-    .input(
-      z.object({
-        q: z.string(),
-        context: z
-          .object({
-            titles: z.array(z.string()).optional(),
-            channels: z.array(z.string()).optional(),
-            speakers: z.array(z.string()).optional(),
-            books: z.array(z.string()).optional(),
-          })
-          .optional(),
-      }),
-    )
-    .query(async ({ input }): Promise<{ suggestions: string[] }> => {
+    .input(suggestQueriesSchema)
+    .query(async ({ input, ctx }): Promise<{ suggestions: string[] }> => {
       const trimmed = input.q.trim();
       if (!trimmed) return { suggestions: [] };
+      const context = input.context ?? {};
+      await enforceSearchModelAdmission(
+        ctx,
+        'search-suggest',
+        searchModelResourceId('search-suggest', trimmed, {
+          titles: context.titles ?? [],
+          channels: context.channels ?? [],
+          speakers: context.speakers ?? [],
+          books: context.books ?? [],
+        }),
+      );
       const suggestions = await generateQuerySuggestions(
         trimmed,
-        (input.context ?? {}) satisfies SuggestContext,
+        context satisfies SuggestContext,
       );
       return { suggestions };
     }),

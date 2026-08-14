@@ -57,6 +57,12 @@ Cap array lengths, numeric sizes, and any value that drives allocation or
 iteration — _before_ allocating or looping — so a single request can't exhaust
 memory, CPU, or downstream quotas.
 
+Every anonymous paid-model entry point must call `enforceAiRateLimit` before
+provider work or a cache lookup that can miss into provider work. This includes
+deep `search.hybridSearch` calls plus `search.searchMeta`, `search.warmEmbed`,
+and `search.suggestQueries`; their bounded tRPC schemas are the allocation and
+downstream-quota boundary.
+
 ## 7. Validate redirects against your own origin
 
 Only allow same-origin internal navigation targets. Resolve the candidate
@@ -80,6 +86,7 @@ slightly-different copy is how a fix silently regresses at one call site.
 | 3 — URL scheme allow-list    | `isSafeUrl`, `safeHttpHref`                                                    | `packages/web/src/util/safe-url.ts`                                                 |
 | 4 — read/write authorization | `isChannelRoutable`, `canViewMedia`, `canViewMediaById`, `getMemberChannelIds` | `packages/web/src/util/media-visibility.ts`                                         |
 | 5 — log redaction            | `redactLogInput`, `redactSensitive`                                            | `packages/web/src/util/redact-log-input.ts`, `packages/web/src/util/trpc-logger.ts` |
+| 6 — AI quota admission      | `enforceAiRateLimit`                                                           | `packages/web/src/ai/abuse-control.ts`                                              |
 | 7 — open-redirect            | `safeRedirect`                                                                 | `packages/web/src/util/safe-redirect.ts`                                            |
 
 The pure helpers above are covered by unit tests in the matching `*.test.ts`

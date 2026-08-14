@@ -7,7 +7,14 @@ import { getClientIpAddress } from '@/util/request-ip';
 
 export { createMemoryTokenBucketStore } from '@/util/rate-limit';
 
-export type AiRequestKind = 'dig-deeper' | 'search' | 'search-deep';
+export type AiRequestKind =
+  | 'dig-deeper'
+  | 'search'
+  | 'search-deep'
+  | 'search-embed'
+  | 'search-meta'
+  | 'search-suggest'
+  | 'search-warm-embed';
 
 type BucketScope = 'ip' | 'resource';
 type BucketConsumer = (
@@ -22,12 +29,17 @@ export type AiRateLimitDecision =
       retryAfterSeconds: number;
     };
 
-// Credits let both endpoints share one budget while charging the multi-tool
-// detective paths more heavily than a normal Search Overview generation.
+// Credits let all public model entry points share one budget. A single chat
+// completion costs two credits, a query embedding costs one, and procedures
+// that issue two completions are charged for both.
 const REQUEST_COST: Record<AiRequestKind, number> = {
   search: 2,
   'search-deep': 4,
   'dig-deeper': 4,
+  'search-embed': 1,
+  'search-meta': 4,
+  'search-suggest': 2,
+  'search-warm-embed': 1,
 };
 
 const IP_BUCKET = {
