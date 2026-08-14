@@ -2246,7 +2246,7 @@ export const FeaturedUpload = pgTable(
       name: 'FeaturedUpload_cpk',
       columns: [FeaturedUpload.uploadRecordId],
     }),
-    featured_upload_rank_idx: index('featured_upload_rank_idx').on(
+    featured_upload_rank_idx: uniqueIndex('featured_upload_rank_idx').on(
       FeaturedUpload.rank,
     ),
   }),

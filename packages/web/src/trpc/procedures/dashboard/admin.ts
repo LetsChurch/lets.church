@@ -5,7 +5,6 @@ import {
   Channel,
   ChannelSubscription,
   db,
-  FeaturedUpload,
   LlmCall,
   Organization,
   OrganizationAddress,
@@ -49,7 +48,6 @@ import {
   countDistinct,
   desc,
   eq,
-  gt,
   ilike,
   inArray,
   isNotNull,
@@ -144,21 +142,78 @@ import {
 import { authProcedure, router } from '../../trpc';
 import { newsletterListsRouter } from '../newsletter-lists';
 import { getDuplicateUploads } from './duplicate-uploads';
+import {
+  addFeaturedUploadAtomically,
+  FeaturedUploadOrderingError,
+  removeFeaturedUploadAtomically,
+  reorderFeaturedUploadsAtomically,
+  toggleFeaturedUploadAtomically,
+} from './featured-upload-ordering';
 
 const moduleLogger = logger.child({
   module: 'trpc/procedures/dashboard/admin',
 });
 
 const laterLlmCall = alias(LlmCall, 'later');
+function featuredUploadOrderingTrpcError(
+  error: FeaturedUploadOrderingError,
+): TRPCError {
+  switch (error.code) {
+    case 'ALREADY_FEATURED':
+      return new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Upload is already featured',
+      });
+    case 'FEATURED_UPLOAD_NOT_FOUND':
+      return new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Featured upload not found',
+      });
+    case 'STALE_ORDER':
+      return new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Featured upload list does not match the current list',
+      });
+    case 'STALE_WRITE':
+      return new TRPCError({
+        code: 'CONFLICT',
+        message: 'Featured upload list changed; refresh and try again',
+      });
+    case 'UPLOAD_NOT_FOUND':
+      return new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Upload not found',
+      });
+    case 'UPLOAD_NOT_FULLY_PROCESSED':
+      return new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Upload must be fully processed before featuring',
+      });
+    case 'UPLOAD_NOT_PUBLIC':
+      return new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Only public uploads can be featured',
+      });
+    case 'UPLOAD_NOT_TRANSCODED':
+      return new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Upload must finish transcoding before featuring',
+      });
+    case 'INVARIANT_VIOLATION':
+      return new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Featured upload ordering invariant is invalid',
+      });
+  }
+}
 
 // Mirror of the background-worker boot check, scoped to the web
 // container's evaluateLlmModel surface + seed scripts that the
 // background-worker assert doesn't reach. Fires once at server boot:
-// `routeTree.gen.ts` does a synchronous static import of
-// `routes/trpc.$.ts` → `appRouter` → `dashboardRouter` → `adminRouter`
-// (this module), so the assertion runs when the route tree loads, well
-// before any request hits `/trpc`. ESM caches the module so the warn
-// fires exactly once per process.
+// The server route tree synchronously imports `routes/trpc.$.ts` →
+// `trpc/handler.server.ts` → `appRouter` → `dashboardRouter` → `adminRouter`
+// (this module). The handler's server-only boundary keeps this chain out of
+// client builds while preserving the once-per-process server boot check.
 assertProductionPricingCoverage({
   summary: SUMMARY_MODEL,
   annotate: ANNOTATE_MODEL,
@@ -2324,86 +2379,26 @@ export const adminRouter = router({
       );
 
       try {
-        // Check if upload exists and is public
-        const upload = await db.query.UploadRecord.findFirst({
-          where: (t, { eq }) => eq(t.id, input.uploadId),
-          columns: {
-            id: true,
-            visibility: true,
-            transcodingFinishedAt: true,
-            transcribingFinishedAt: true,
-          },
-        });
-
-        if (!upload) {
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: 'Upload not found',
-          });
-        }
-
-        if (upload.visibility !== 'PUBLIC') {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Only public uploads can be featured',
-          });
-        }
-
-        if (!upload.transcodingFinishedAt || !upload.transcribingFinishedAt) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Upload must be fully processed before featuring',
-          });
-        }
-
-        // Check if already featured
-        const existing = await db.query.FeaturedUpload.findFirst({
-          where: (t, { eq }) => eq(t.uploadRecordId, input.uploadId),
-        });
-
-        if (existing) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Upload is already featured',
-          });
-        }
-
-        // Get max rank and insert atomically to avoid rank collisions
-        const [featuredUpload, newRank] = await db.transaction(async (tx) => {
-          const maxRankRow = await tx.query.FeaturedUpload.findFirst({
-            columns: { rank: true },
-            orderBy: (t, { desc }) => [desc(t.rank)],
-          });
-          const rank = (maxRankRow?.rank ?? -1) + 1;
-          const [row] = await tx
-            .insert(FeaturedUpload)
-            .values({
-              uploadRecordId: input.uploadId,
-              rank,
-              updatedAt: new Date(),
-            })
-            .returning();
-          return [row, rank] as const;
-        });
+        const { featuredUpload, rank } = await addFeaturedUploadAtomically(
+          input.uploadId,
+        );
 
         moduleLogger.info(
           {
             uploadId: input.uploadId,
             appUserId: ctx.session.appUserId,
-            context: {
-              rank: newRank,
-            },
+            context: { rank },
           },
           'Featured upload added successfully',
         );
 
-        if (!featuredUpload) {
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
-        }
         return featuredUpload;
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;
+        }
+        if (error instanceof FeaturedUploadOrderingError) {
+          throw featuredUploadOrderingTrpcError(error);
         }
 
         moduleLogger.error(
@@ -2436,30 +2431,7 @@ export const adminRouter = router({
       );
 
       try {
-        // Get the rank of the upload being removed
-        const featuredUpload = await db.query.FeaturedUpload.findFirst({
-          where: (t, { eq }) => eq(t.uploadRecordId, input.uploadId),
-          columns: { rank: true },
-        });
-
-        if (!featuredUpload) {
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: 'Featured upload not found',
-          });
-        }
-
-        // Delete the featured upload and rebalance ranks atomically
-        await db.transaction(async (tx) => {
-          await tx
-            .delete(FeaturedUpload)
-            .where(eq(FeaturedUpload.uploadRecordId, input.uploadId));
-
-          await tx
-            .update(FeaturedUpload)
-            .set({ rank: sql`${FeaturedUpload.rank} - 1` })
-            .where(gt(FeaturedUpload.rank, featuredUpload.rank));
-        });
+        await removeFeaturedUploadAtomically(input.uploadId);
 
         moduleLogger.info(
           {
@@ -2473,6 +2445,9 @@ export const adminRouter = router({
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;
+        }
+        if (error instanceof FeaturedUploadOrderingError) {
+          throw featuredUploadOrderingTrpcError(error);
         }
 
         moduleLogger.error(
@@ -2507,41 +2482,7 @@ export const adminRouter = router({
       );
 
       try {
-        // Verify all uploads are currently featured
-        const existingFeatured = await db.query.FeaturedUpload.findMany({
-          columns: { uploadRecordId: true },
-        });
-
-        const existingIds = new Set(
-          existingFeatured.map((f) => f.uploadRecordId),
-        );
-        const inputIds = new Set(input.uploadIds);
-
-        if (existingIds.size !== inputIds.size) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Upload count mismatch',
-          });
-        }
-
-        for (const id of input.uploadIds) {
-          if (!existingIds.has(id)) {
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: `Upload ${id} is not featured`,
-            });
-          }
-        }
-
-        // Update ranks based on array order
-        await Promise.all(
-          input.uploadIds.map((uploadId, index) =>
-            db
-              .update(FeaturedUpload)
-              .set({ rank: index, updatedAt: new Date() })
-              .where(eq(FeaturedUpload.uploadRecordId, uploadId)),
-          ),
-        );
+        await reorderFeaturedUploadsAtomically(input.uploadIds);
 
         moduleLogger.info(
           {
@@ -2557,6 +2498,9 @@ export const adminRouter = router({
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;
+        }
+        if (error instanceof FeaturedUploadOrderingError) {
+          throw featuredUploadOrderingTrpcError(error);
         }
 
         moduleLogger.error(
@@ -2589,95 +2533,26 @@ export const adminRouter = router({
       );
 
       try {
-        // Check if upload is currently featured
-        const existing = await db.query.FeaturedUpload.findFirst({
-          where: (t, { eq }) => eq(t.uploadRecordId, input.uploadId),
-        });
-
-        if (existing) {
-          // Remove from featured and rebalance ranks atomically
-          await db.transaction(async (tx) => {
-            await tx
-              .delete(FeaturedUpload)
-              .where(eq(FeaturedUpload.uploadRecordId, input.uploadId));
-
-            await tx
-              .update(FeaturedUpload)
-              .set({ rank: sql`${FeaturedUpload.rank} - 1` })
-              .where(gt(FeaturedUpload.rank, existing.rank));
-          });
-
-          moduleLogger.info(
-            {
-              uploadId: input.uploadId,
-              appUserId: ctx.session.appUserId,
-            },
-            'Upload removed from featured',
-          );
-
-          return { isFeatured: false };
-        }
-
-        // Add to featured
-        const upload = await db.query.UploadRecord.findFirst({
-          where: (t, { eq }) => eq(t.id, input.uploadId),
-          columns: {
-            id: true,
-            visibility: true,
-            transcodingFinishedAt: true,
-            transcribingFinishedAt: true,
-          },
-        });
-
-        if (!upload) {
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: 'Upload not found',
-          });
-        }
-
-        if (upload.visibility !== 'PUBLIC') {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Only public uploads can be featured',
-          });
-        }
-
-        if (!upload.transcodingFinishedAt) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Upload must finish transcoding before featuring',
-          });
-        }
-
-        // Shift all existing ranks up and insert at rank 0 (top of list)
-        const newRank = await db.transaction(async (tx) => {
-          await tx
-            .update(FeaturedUpload)
-            .set({ rank: sql`${FeaturedUpload.rank} + 1` });
-          await tx.insert(FeaturedUpload).values({
-            uploadRecordId: input.uploadId,
-            rank: 0,
-            updatedAt: new Date(),
-          });
-          return 0;
-        });
+        const result = await toggleFeaturedUploadAtomically(input.uploadId);
 
         moduleLogger.info(
           {
             uploadId: input.uploadId,
             appUserId: ctx.session.appUserId,
-            context: {
-              rank: newRank,
-            },
+            context: result,
           },
-          'Upload added to featured',
+          result.isFeatured
+            ? 'Upload added to featured'
+            : 'Upload removed from featured',
         );
 
-        return { isFeatured: true };
+        return result;
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;
+        }
+        if (error instanceof FeaturedUploadOrderingError) {
+          throw featuredUploadOrderingTrpcError(error);
         }
 
         moduleLogger.error(

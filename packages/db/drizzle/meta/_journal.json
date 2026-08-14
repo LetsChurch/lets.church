@@ -211,6 +211,13 @@
       "when": 1786735992579,
       "tag": "0029_preserve_score_invalidations",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1786737488782,
+      "tag": "0030_featured-upload-rank-unique",
+      "breakpoints": true
     }
   ]
 }

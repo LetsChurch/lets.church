@@ -12,7 +12,13 @@ export const removeFeaturedUploadSchema = z.object({
 });
 
 export const reorderFeaturedUploadsSchema = z.object({
-  uploadIds: z.array(IncomingIdSchema).min(1),
+  uploadIds: z
+    .array(IncomingIdSchema)
+    .min(1)
+    .refine(
+      (uploadIds) => new Set(uploadIds).size === uploadIds.length,
+      'Upload IDs must be unique',
+    ),
 });
 
 // Maintenance mode
