@@ -301,7 +301,7 @@ function Compare() {
               {row.texts.map((_text, i) => (
                 <p
                   key={data.translations[i].id}
-                  className="border-line/55 text-ink border-l px-4 py-4 font-serif text-[15px] leading-[1.62] sm:px-6 sm:py-5 sm:text-[16.5px] sm:leading-[1.7]"
+                  className="border-line/55 text-ink min-w-0 border-l px-4 py-4 font-serif text-[15px] leading-[1.62] [overflow-wrap:anywhere] sm:px-6 sm:py-5 sm:text-[16.5px] sm:leading-[1.7]"
                 >
                   <VerseText segments={segments[i]} />
                 </p>
