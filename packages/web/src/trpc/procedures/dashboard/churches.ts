@@ -14,7 +14,7 @@ import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
 import { and, eq, inArray, sql } from 'drizzle-orm';
-import { invariant, isEqual, pick } from 'es-toolkit';
+import { invariant } from 'es-toolkit';
 
 import {
   finalizeMultipartUploadSchema,
@@ -159,13 +159,14 @@ export const churchRouter = router({
         'Creating church',
       );
 
+      const slug = input.slug || slugify(input.name);
+
+      // Get the tag slugs from the single tags array
+      const allTagSlugs = input.tags || [];
+
+      let church: { id: string };
       try {
-        const slug = input.slug || slugify(input.name);
-
-        // Get the tag slugs from the single tags array
-        const allTagSlugs = input.tags || [];
-
-        const church = await db.transaction(async (tx) => {
+        church = await db.transaction(async (tx) => {
           const [newChurch] = await tx
             .insert(Organization)
             .values({
@@ -218,37 +219,56 @@ export const churchRouter = router({
             );
           }
 
+          if (
+            input.associatedOrganizations &&
+            input.associatedOrganizations.length > 0
+          ) {
+            await tx.insert(OrganizationOrganizationAssociation).values(
+              input.associatedOrganizations.map((upstreamOrgId) => ({
+                upstreamOrganizationId: upstreamOrgId,
+                downstreamOrganizationId: newChurch.id,
+                downstreamApproved: true,
+                upstreamApproved: false,
+                updatedAt: new Date(),
+              })),
+            );
+          }
+
           return newChurch;
         });
-
-        // Handle organization associations if provided
-        if (
-          input.associatedOrganizations &&
-          input.associatedOrganizations.length > 0
-        ) {
-          await db.insert(OrganizationOrganizationAssociation).values(
-            input.associatedOrganizations.map((upstreamOrgId) => ({
-              upstreamOrganizationId: upstreamOrgId,
-              downstreamOrganizationId: church.id,
-              downstreamApproved: true, // Church automatically approves being downstream
-              upstreamApproved: false, // Upstream organization needs to approve
-              updatedAt: new Date(),
-            })),
-          );
-        }
-
-        moduleLogger.info(
+      } catch (error) {
+        moduleLogger.error(
           {
             appUserId: ctx.session.appUserId,
             context: {
-              churchId: church.id,
+              error: error instanceof Error ? error.message : String(error),
             },
           },
-          'Church created successfully',
+          'Church database mutation failed',
         );
 
-        // Trigger geocoding if addresses were provided
-        if (input.addresses && input.addresses.length > 0) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to create church',
+        });
+      }
+
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            churchId: church.id,
+          },
+        },
+        'Church created successfully',
+      );
+
+      if (input.addresses && input.addresses.length > 0) {
+        try {
           await geocodeOrganization(church.id);
           moduleLogger.info(
             {
@@ -259,25 +279,21 @@ export const churchRouter = router({
             },
             'Geocoding workflow triggered for new church addresses',
           );
-        }
-
-        return church;
-      } catch (error) {
-        moduleLogger.error(
-          {
-            appUserId: ctx.session.appUserId,
-            context: {
-              error: error instanceof Error ? error.message : String(error),
+        } catch (error) {
+          moduleLogger.error(
+            {
+              appUserId: ctx.session.appUserId,
+              context: {
+                churchId: church.id,
+                error: error instanceof Error ? error.message : String(error),
+              },
             },
-          },
-          'Failed to create church',
-        );
-
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to create church',
-        });
+            'Geocoding start failed after church creation commit',
+          );
+        }
       }
+
+      return church;
     }),
 
   getChurches: authProcedure.query(async ({ ctx }) => {
@@ -1375,10 +1391,10 @@ export const churchRouter = router({
         'Updating church',
       );
 
+      let hasNewAddresses: boolean;
       try {
-        let hasNewAddresses = false;
-
-        await db.transaction(async (tx) => {
+        hasNewAddresses = await db.transaction(async (tx) => {
+          let createdNewAddress = false;
           // Handle tag updates if provided
           if (input.tags !== undefined) {
             // First, delete all existing tags
@@ -1433,23 +1449,26 @@ export const churchRouter = router({
                 where: (t, { eq }) => eq(t.organizationId, input.churchId),
               });
 
-            // Helper to check if two addresses are the same (comparing only user-editable fields)
+            // Input omits blank optional fields while Postgres returns them as
+            // null. Compare their persisted representation so an unchanged
+            // address retains its geocoding data.
+            const nullableAddressFields = [
+              'name',
+              'streetAddress',
+              'locality',
+              'region',
+              'postalCode',
+              'country',
+              'postOfficeBoxNumber',
+            ] as const;
             const addressesMatch = (
               a: Record<string, unknown>,
               b: Record<string, unknown>,
-            ): boolean => {
-              const editableFields = [
-                'type',
-                'name',
-                'streetAddress',
-                'locality',
-                'region',
-                'postalCode',
-                'country',
-                'postOfficeBoxNumber',
-              ] as const;
-              return isEqual(pick(a, editableFields), pick(b, editableFields));
-            };
+            ): boolean =>
+              a.type === b.type &&
+              nullableAddressFields.every(
+                (field) => (a[field] || null) === (b[field] || null),
+              );
 
             // Track which existing addresses we're keeping
             const existingAddressIdsToKeep = new Set<string>();
@@ -1479,7 +1498,7 @@ export const churchRouter = router({
                   country: inputAddress.country || null,
                   postOfficeBoxNumber: inputAddress.postOfficeBoxNumber || null,
                 });
-                hasNewAddresses = true;
+                createdNewAddress = true;
               }
             }
 
@@ -1516,20 +1535,39 @@ export const churchRouter = router({
               updatedAt: new Date(),
             })
             .where(eq(Organization.id, input.churchId));
+          return createdNewAddress;
         });
-
-        moduleLogger.info(
+      } catch (error) {
+        moduleLogger.error(
           {
             appUserId: ctx.session.appUserId,
             context: {
               churchId: input.churchId,
+              error: error instanceof Error ? error.message : String(error),
             },
           },
-          'Church updated successfully',
+          'Church database mutation failed',
         );
 
-        // Trigger geocoding only if new addresses were created
-        if (hasNewAddresses) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        return { error: 'Error updating church, please try again!' };
+      }
+
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            churchId: input.churchId,
+          },
+        },
+        'Church updated successfully',
+      );
+
+      if (hasNewAddresses) {
+        try {
           await geocodeOrganization(input.churchId);
           moduleLogger.info(
             {
@@ -1540,22 +1578,21 @@ export const churchRouter = router({
             },
             'Geocoding workflow triggered for new church addresses',
           );
-        }
-
-        return { error: false };
-      } catch (e) {
-        moduleLogger.error(
-          {
-            appUserId: ctx.session.appUserId,
-            context: {
-              churchId: input.churchId,
-              error: e instanceof Error ? e.message : String(e),
+        } catch (error) {
+          moduleLogger.error(
+            {
+              appUserId: ctx.session.appUserId,
+              context: {
+                churchId: input.churchId,
+                error: error instanceof Error ? error.message : String(error),
+              },
             },
-          },
-          'Church update failed',
-        );
-        return { error: 'Error updating church, please try again!' };
+            'Geocoding start failed after church update commit',
+          );
+        }
       }
+
+      return { error: false };
     }),
 
   createMultipartUpload: churchAdminProcedure
