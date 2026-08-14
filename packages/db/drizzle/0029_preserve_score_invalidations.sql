@@ -1,0 +1,2 @@
+ALTER TABLE "upload_record" ADD COLUMN "score_invalidation_version" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "upload_user_comment" ADD COLUMN "score_invalidation_version" integer DEFAULT 0 NOT NULL;

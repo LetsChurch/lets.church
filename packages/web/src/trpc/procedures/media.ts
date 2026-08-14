@@ -1258,79 +1258,94 @@ export const mediaProcedures = {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Media not found' });
       }
 
-      // Check if user already rated this media
-      const existingRating = await db.query.UploadUserRating.findFirst({
-        where: (t, { and, eq }) =>
-          and(eq(t.appUserId, userId), eq(t.uploadRecordId, mediaId)),
-      });
-
       type RatingValue = 'LIKE' | 'DISLIKE' | null;
-      let result: { userRating: RatingValue; previousRating: RatingValue };
 
-      if (existingRating) {
-        if (existingRating.rating === rating) {
-          // User is clicking the same rating - remove it (toggle off)
-          await db
-            .delete(UploadUserRating)
-            .where(
-              and(
-                eq(UploadUserRating.appUserId, userId),
-                eq(UploadUserRating.uploadRecordId, mediaId),
-              ),
-            );
+      return db.transaction(async (tx) => {
+        // Serialize rating changes for this upload. The row lock also makes the
+        // rating mutation and invalidation version advance one atomic state
+        // transition relative to the score worker's compare-and-clear update.
+        const [upload] = await tx
+          .select({ id: UploadRecord.id })
+          .from(UploadRecord)
+          .where(eq(UploadRecord.id, mediaId))
+          .for('update');
 
-          moduleLogger.info('Rating removed');
-
-          result = { userRating: null, previousRating: rating };
-        } else {
-          // User is changing their rating
-          await db
-            .update(UploadUserRating)
-            .set({ rating })
-            .where(
-              and(
-                eq(UploadUserRating.appUserId, userId),
-                eq(UploadUserRating.uploadRecordId, mediaId),
-              ),
-            );
-
-          moduleLogger.info(
-            {
-              context: {
-                previousRating: existingRating.rating,
-              },
-            },
-            'Rating updated',
-          );
-
-          result = {
-            userRating: rating,
-            previousRating: existingRating.rating,
-          };
+        if (!upload) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Media not found',
+          });
         }
-      } else {
-        // User is rating for the first time
-        await db.insert(UploadUserRating).values({
-          appUserId: userId,
-          uploadRecordId: mediaId,
-          rating,
+
+        const existingRating = await tx.query.UploadUserRating.findFirst({
+          where: (t, { and, eq }) =>
+            and(eq(t.appUserId, userId), eq(t.uploadRecordId, mediaId)),
         });
 
-        moduleLogger.info('New rating created');
+        let result: {
+          userRating: RatingValue;
+          previousRating: RatingValue;
+        };
 
-        result = { userRating: rating, previousRating: null };
-      }
+        if (existingRating) {
+          if (existingRating.rating === rating) {
+            await tx
+              .delete(UploadUserRating)
+              .where(
+                and(
+                  eq(UploadUserRating.appUserId, userId),
+                  eq(UploadUserRating.uploadRecordId, mediaId),
+                ),
+              );
 
-      // Any rating change affects the upload's score. Re-mark it stale so the
-      // background score worker recomputes it — the worker clears scoreStaleAt
-      // after each pass, so without re-staling here, ratings made after the
-      // first pass would never be reflected in the trending score.
-      await db
-        .update(UploadRecord)
-        .set({ scoreStaleAt: new Date() })
-        .where(eq(UploadRecord.id, mediaId));
+            moduleLogger.info('Rating removed');
+            result = { userRating: null, previousRating: rating };
+          } else {
+            await tx
+              .update(UploadUserRating)
+              .set({ rating })
+              .where(
+                and(
+                  eq(UploadUserRating.appUserId, userId),
+                  eq(UploadUserRating.uploadRecordId, mediaId),
+                ),
+              );
 
-      return result;
+            moduleLogger.info(
+              {
+                context: {
+                  previousRating: existingRating.rating,
+                },
+              },
+              'Rating updated',
+            );
+
+            result = {
+              userRating: rating,
+              previousRating: existingRating.rating,
+            };
+          }
+        } else {
+          await tx.insert(UploadUserRating).values({
+            appUserId: userId,
+            uploadRecordId: mediaId,
+            rating,
+          });
+
+          moduleLogger.info('New rating created');
+          result = { userRating: rating, previousRating: null };
+        }
+
+        await tx
+          .update(UploadRecord)
+          .set({
+            scoreStaleAt: new Date(),
+            scoreInvalidationVersion: sql`${UploadRecord.scoreInvalidationVersion} + 1`,
+          })
+          .where(eq(UploadRecord.id, mediaId));
+
+        return result;
+      });
     }),
 
   getMediaRating: publicProcedure
@@ -1782,78 +1797,98 @@ export const mediaProcedures = {
         });
       }
 
-      // Check if user already rated this comment
-      const existingRating = await db.query.UploadUserCommentRating.findFirst({
-        where: (t, { and, eq }) =>
-          and(eq(t.appUserId, userId), eq(t.uploadUserCommentId, commentId)),
-      });
-
       type RatingValue = 'LIKE' | 'DISLIKE' | null;
-      let result: { userRating: RatingValue; previousRating: RatingValue };
 
-      if (existingRating) {
-        if (existingRating.rating === rating) {
-          // User is clicking the same rating - remove it (toggle off)
-          await db
-            .delete(UploadUserCommentRating)
-            .where(
-              and(
-                eq(UploadUserCommentRating.appUserId, userId),
-                eq(UploadUserCommentRating.uploadUserCommentId, commentId),
-              ),
-            );
+      return db.transaction(async (tx) => {
+        // Serialize rating changes for this comment so the rating row and
+        // invalidation version always commit as one ordered transition.
+        const [lockedComment] = await tx
+          .select({ id: UploadUserComment.id })
+          .from(UploadUserComment)
+          .where(eq(UploadUserComment.id, commentId))
+          .for('update');
 
-          moduleLogger.info('Comment rating removed');
-
-          result = { userRating: null, previousRating: rating };
-        } else {
-          // User is changing their rating
-          await db
-            .update(UploadUserCommentRating)
-            .set({ rating })
-            .where(
-              and(
-                eq(UploadUserCommentRating.appUserId, userId),
-                eq(UploadUserCommentRating.uploadUserCommentId, commentId),
-              ),
-            );
-
-          moduleLogger.info(
-            {
-              context: {
-                previousRating: existingRating.rating,
-              },
-            },
-            'Comment rating updated',
-          );
-
-          result = {
-            userRating: rating,
-            previousRating: existingRating.rating,
-          };
+        if (!lockedComment) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Comment not found',
+          });
         }
-      } else {
-        // User is rating for the first time
-        await db.insert(UploadUserCommentRating).values({
-          appUserId: userId,
-          uploadUserCommentId: commentId,
-          rating,
-        });
 
-        moduleLogger.info('New comment rating created');
+        const existingRating = await tx.query.UploadUserCommentRating.findFirst(
+          {
+            where: (t, { and, eq }) =>
+              and(
+                eq(t.appUserId, userId),
+                eq(t.uploadUserCommentId, commentId),
+              ),
+          },
+        );
 
-        result = { userRating: rating, previousRating: null };
-      }
+        let result: {
+          userRating: RatingValue;
+          previousRating: RatingValue;
+        };
 
-      // Re-mark the comment's score stale so the background score worker
-      // recomputes it; it clears scoreStaleAt after each pass, so later rating
-      // changes would otherwise never affect comment ordering.
-      await db
-        .update(UploadUserComment)
-        .set({ scoreStaleAt: new Date() })
-        .where(eq(UploadUserComment.id, commentId));
+        if (existingRating) {
+          if (existingRating.rating === rating) {
+            await tx
+              .delete(UploadUserCommentRating)
+              .where(
+                and(
+                  eq(UploadUserCommentRating.appUserId, userId),
+                  eq(UploadUserCommentRating.uploadUserCommentId, commentId),
+                ),
+              );
 
-      return result;
+            moduleLogger.info('Comment rating removed');
+            result = { userRating: null, previousRating: rating };
+          } else {
+            await tx
+              .update(UploadUserCommentRating)
+              .set({ rating })
+              .where(
+                and(
+                  eq(UploadUserCommentRating.appUserId, userId),
+                  eq(UploadUserCommentRating.uploadUserCommentId, commentId),
+                ),
+              );
+
+            moduleLogger.info(
+              {
+                context: {
+                  previousRating: existingRating.rating,
+                },
+              },
+              'Comment rating updated',
+            );
+
+            result = {
+              userRating: rating,
+              previousRating: existingRating.rating,
+            };
+          }
+        } else {
+          await tx.insert(UploadUserCommentRating).values({
+            appUserId: userId,
+            uploadUserCommentId: commentId,
+            rating,
+          });
+
+          moduleLogger.info('New comment rating created');
+          result = { userRating: rating, previousRating: null };
+        }
+
+        await tx
+          .update(UploadUserComment)
+          .set({
+            scoreStaleAt: new Date(),
+            scoreInvalidationVersion: sql`${UploadUserComment.scoreInvalidationVersion} + 1`,
+          })
+          .where(eq(UploadUserComment.id, commentId));
+
+        return result;
+      });
     }),
 
   getRelatedMedia: publicProcedure

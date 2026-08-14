@@ -1,5 +1,5 @@
 import { db, UploadUserComment, UploadUserCommentRating } from '@letschurch/db';
-import { and, count, eq, isNotNull } from 'drizzle-orm';
+import { and, count, eq, inArray, isNotNull } from 'drizzle-orm';
 import pAll from 'p-all';
 
 import logger from '../../util/logger';
@@ -25,7 +25,19 @@ function confidence(likes: number, dislikes: number): number {
   return (left - right) / under;
 }
 
-export default async function updateCommentScores() {
+export type CommentScoreUpdateHooks = {
+  afterCountsRead?: (candidate: {
+    id: string;
+    likes: number;
+    dislikes: number;
+    scoreInvalidationVersion: number;
+  }) => Promise<void> | void;
+};
+
+export async function updateCommentScoresForCandidates(
+  candidateIds?: readonly string[],
+  hooks: CommentScoreUpdateHooks = {},
+) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'updateCommentScores',
   });
@@ -34,51 +46,92 @@ export default async function updateCommentScores() {
     .select({
       id: UploadUserComment.id,
       score: UploadUserComment.score,
+      scoreInvalidationVersion: UploadUserComment.scoreInvalidationVersion,
     })
     .from(UploadUserComment)
-    .where(isNotNull(UploadUserComment.scoreStaleAt));
+    .where(
+      candidateIds
+        ? and(
+            isNotNull(UploadUserComment.scoreStaleAt),
+            inArray(UploadUserComment.id, candidateIds),
+          )
+        : isNotNull(UploadUserComment.scoreStaleAt),
+    );
 
   activityLogger.info(`Updating scores for ${comments.length} comments...`);
 
   await pAll(
-    comments.map(({ id, score: oldScore }) => async () => {
-      const [likesResult, dislikesResult] = await Promise.all([
-        db
-          .select({ count: count(UploadUserCommentRating.uploadUserCommentId) })
-          .from(UploadUserCommentRating)
-          .where(
-            and(
-              eq(UploadUserCommentRating.uploadUserCommentId, id),
-              eq(UploadUserCommentRating.rating, 'LIKE'),
-            ),
-          )
-          .then((r) => Number(r[0]?.count ?? 0)),
-        db
-          .select({ count: count(UploadUserCommentRating.uploadUserCommentId) })
-          .from(UploadUserCommentRating)
-          .where(
-            and(
-              eq(UploadUserCommentRating.uploadUserCommentId, id),
-              eq(UploadUserCommentRating.rating, 'DISLIKE'),
-            ),
-          )
-          .then((r) => Number(r[0]?.count ?? 0)),
-      ]);
+    comments.map(
+      ({ id, score: oldScore, scoreInvalidationVersion }) =>
+        async () => {
+          const [likesResult, dislikesResult] = await Promise.all([
+            db
+              .select({
+                count: count(UploadUserCommentRating.uploadUserCommentId),
+              })
+              .from(UploadUserCommentRating)
+              .where(
+                and(
+                  eq(UploadUserCommentRating.uploadUserCommentId, id),
+                  eq(UploadUserCommentRating.rating, 'LIKE'),
+                ),
+              )
+              .then((r) => Number(r[0]?.count ?? 0)),
+            db
+              .select({
+                count: count(UploadUserCommentRating.uploadUserCommentId),
+              })
+              .from(UploadUserCommentRating)
+              .where(
+                and(
+                  eq(UploadUserCommentRating.uploadUserCommentId, id),
+                  eq(UploadUserCommentRating.rating, 'DISLIKE'),
+                ),
+              )
+              .then((r) => Number(r[0]?.count ?? 0)),
+          ]);
 
-      const likes = likesResult;
-      const dislikes = dislikesResult;
+          const likes = likesResult;
+          const dislikes = dislikesResult;
 
-      const score = confidence(likes, dislikes);
+          await hooks.afterCountsRead?.({
+            id,
+            likes,
+            dislikes,
+            scoreInvalidationVersion,
+          });
 
-      activityLogger.info(
-        `Comment ${id} has score ${score} (old score: ${oldScore}) (likes: ${likes}, dislikes: ${dislikes})`,
-      );
+          const score = confidence(likes, dislikes);
 
-      await db
-        .update(UploadUserComment)
-        .set({ score, scoreStaleAt: null, updatedAt: new Date() })
-        .where(eq(UploadUserComment.id, id));
-    }),
+          activityLogger.info(
+            `Comment ${id} has score ${score} (old score: ${oldScore}) (likes: ${likes}, dislikes: ${dislikes})`,
+          );
+
+          const updated = await db
+            .update(UploadUserComment)
+            .set({ score, scoreStaleAt: null, updatedAt: new Date() })
+            .where(
+              and(
+                eq(UploadUserComment.id, id),
+                eq(
+                  UploadUserComment.scoreInvalidationVersion,
+                  scoreInvalidationVersion,
+                ),
+              ),
+            )
+            .returning({ id: UploadUserComment.id });
+
+          if (updated.length === 0) {
+            activityLogger.info(
+              `Comment ${id} invalidation version changed from ${scoreInvalidationVersion} during recomputation`,
+            );
+          }
+        },
+    ),
     { concurrency: 100 },
   );
+}
+
+export default async function updateCommentScores() {
+  await updateCommentScoresForCandidates();
 }

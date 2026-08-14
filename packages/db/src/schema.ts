@@ -1415,6 +1415,9 @@ export const UploadRecord = pgTable(
     variants: UploadVariant('variants').array().notNull(),
     score: doublePrecision('score').notNull().default(0),
     scoreStaleAt: timestamp('score_stale_at', { precision: 3 }).defaultNow(),
+    scoreInvalidationVersion: integer('score_invalidation_version')
+      .notNull()
+      .default(0),
     userCommentsEnabled: boolean('user_comments_enabled')
       .notNull()
       .default(true),
@@ -1936,6 +1939,9 @@ export const UploadUserComment = pgTable(
     text: text('text').notNull(),
     score: doublePrecision('score').notNull().default(0),
     scoreStaleAt: timestamp('score_stale_at', { precision: 3 }).defaultNow(),
+    scoreInvalidationVersion: integer('score_invalidation_version')
+      .notNull()
+      .default(0),
   },
   (UploadUserComment) => ({
     upload_user_comment_author_fkey: foreignKey({
