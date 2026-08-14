@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import {
@@ -97,20 +97,25 @@ export const libraryProcedures = {
         verse: z.number().int().positive().optional(),
       }),
     )
-    .mutation(async ({ ctx, input }): Promise<{ ok: boolean }> => {
+    .mutation(async ({ ctx, input }) => {
       const sub = subOf(ctx);
       if (!sub) {
-        return { ok: false };
+        return { ok: false, updatedAt: null };
       }
       const book = usfmOf(input.book);
-      await db
+      const insertedAt = sql<Date>`clock_timestamp()`;
+      const nextUpdatedAt = sql<Date>`greatest(
+        clock_timestamp(),
+        ${readingProgress.updatedAt} + interval '1 millisecond'
+      )`;
+      const [saved] = await db
         .insert(readingProgress)
         .values({
           sub,
           book,
           chapter: input.chapter,
           verse: input.verse ?? null,
-          updatedAt: new Date(),
+          updatedAt: insertedAt,
         })
         .onConflictDoUpdate({
           target: [
@@ -118,9 +123,10 @@ export const libraryProcedures = {
             readingProgress.book,
             readingProgress.chapter,
           ],
-          set: { verse: input.verse ?? null, updatedAt: new Date() },
-        });
-      return { ok: true };
+          set: { verse: input.verse ?? null, updatedAt: nextUpdatedAt },
+        })
+        .returning({ updatedAt: readingProgress.updatedAt });
+      return { ok: true, updatedAt: saved.updatedAt };
     }),
 
   // The most recently read chapter (for "Continue reading"). Null if none.
@@ -179,7 +185,12 @@ export const libraryProcedures = {
       const sub = requireSub(ctx);
       const book = usfmOf(input.book);
       const ref = `${book}.${input.chapter}.${input.verse}`;
-      await db
+      const insertedAt = sql<Date>`clock_timestamp()`;
+      const nextUpdatedAt = sql<Date>`greatest(
+        clock_timestamp(),
+        ${userHighlight.updatedAt} + interval '1 millisecond'
+      )`;
+      const [saved] = await db
         .insert(userHighlight)
         .values({
           sub,
@@ -188,23 +199,50 @@ export const libraryProcedures = {
           verse: input.verse,
           ref,
           color: input.color,
+          updatedAt: insertedAt,
+          deletedAt: null,
         })
         .onConflictDoUpdate({
           target: [userHighlight.sub, userHighlight.ref],
-          set: { color: input.color, updatedAt: new Date() },
-        });
-      return { ok: true };
+          set: {
+            color: input.color,
+            updatedAt: nextUpdatedAt,
+            deletedAt: null,
+          },
+        })
+        .returning({ updatedAt: userHighlight.updatedAt });
+      return { ok: true, updatedAt: saved.updatedAt };
     }),
 
   removeHighlight: publicProcedure
     .input(verseInput)
     .mutation(async ({ ctx, input }) => {
       const sub = requireSub(ctx);
-      const ref = `${usfmOf(input.book)}.${input.chapter}.${input.verse}`;
-      await db
-        .delete(userHighlight)
-        .where(and(eq(userHighlight.sub, sub), eq(userHighlight.ref, ref)));
-      return { ok: true };
+      const book = usfmOf(input.book);
+      const ref = `${book}.${input.chapter}.${input.verse}`;
+      const insertedAt = sql<Date>`clock_timestamp()`;
+      const nextUpdatedAt = sql<Date>`greatest(
+        clock_timestamp(),
+        ${userHighlight.updatedAt} + interval '1 millisecond'
+      )`;
+      const [saved] = await db
+        .insert(userHighlight)
+        .values({
+          sub,
+          book,
+          chapter: input.chapter,
+          verse: input.verse,
+          ref,
+          color: HIGHLIGHT_COLORS[0],
+          updatedAt: insertedAt,
+          deletedAt: insertedAt,
+        })
+        .onConflictDoUpdate({
+          target: [userHighlight.sub, userHighlight.ref],
+          set: { updatedAt: nextUpdatedAt, deletedAt: nextUpdatedAt },
+        })
+        .returning({ updatedAt: userHighlight.updatedAt });
+      return { ok: true, updatedAt: saved.updatedAt };
     }),
 
   setNote: publicProcedure
@@ -213,7 +251,12 @@ export const libraryProcedures = {
       const sub = requireSub(ctx);
       const book = usfmOf(input.book);
       const ref = `${book}.${input.chapter}.${input.verse}`;
-      await db
+      const insertedAt = sql<Date>`clock_timestamp()`;
+      const nextUpdatedAt = sql<Date>`greatest(
+        clock_timestamp(),
+        ${userNote.updatedAt} + interval '1 millisecond'
+      )`;
+      const [saved] = await db
         .insert(userNote)
         .values({
           sub,
@@ -222,23 +265,50 @@ export const libraryProcedures = {
           verse: input.verse,
           ref,
           body: input.body,
+          updatedAt: insertedAt,
+          deletedAt: null,
         })
         .onConflictDoUpdate({
           target: [userNote.sub, userNote.ref],
-          set: { body: input.body, updatedAt: new Date() },
-        });
-      return { ok: true };
+          set: {
+            body: input.body,
+            updatedAt: nextUpdatedAt,
+            deletedAt: null,
+          },
+        })
+        .returning({ updatedAt: userNote.updatedAt });
+      return { ok: true, updatedAt: saved.updatedAt };
     }),
 
   removeNote: publicProcedure
     .input(verseInput)
     .mutation(async ({ ctx, input }) => {
       const sub = requireSub(ctx);
-      const ref = `${usfmOf(input.book)}.${input.chapter}.${input.verse}`;
-      await db
-        .delete(userNote)
-        .where(and(eq(userNote.sub, sub), eq(userNote.ref, ref)));
-      return { ok: true };
+      const book = usfmOf(input.book);
+      const ref = `${book}.${input.chapter}.${input.verse}`;
+      const insertedAt = sql<Date>`clock_timestamp()`;
+      const nextUpdatedAt = sql<Date>`greatest(
+        clock_timestamp(),
+        ${userNote.updatedAt} + interval '1 millisecond'
+      )`;
+      const [saved] = await db
+        .insert(userNote)
+        .values({
+          sub,
+          book,
+          chapter: input.chapter,
+          verse: input.verse,
+          ref,
+          body: '',
+          updatedAt: insertedAt,
+          deletedAt: insertedAt,
+        })
+        .onConflictDoUpdate({
+          target: [userNote.sub, userNote.ref],
+          set: { updatedAt: nextUpdatedAt, deletedAt: nextUpdatedAt },
+        })
+        .returning({ updatedAt: userNote.updatedAt });
+      return { ok: true, updatedAt: saved.updatedAt };
     }),
 
   // All highlights (newest first) with verse text — for the Library page.
@@ -257,7 +327,7 @@ export const libraryProcedures = {
         createdAt: userHighlight.createdAt,
       })
       .from(userHighlight)
-      .where(eq(userHighlight.sub, sub))
+      .where(and(eq(userHighlight.sub, sub), isNull(userHighlight.deletedAt)))
       .orderBy(desc(userHighlight.createdAt));
     return withVerseText(sub, ctx.req, rows);
   }),
@@ -290,6 +360,7 @@ export const libraryProcedures = {
               eq(userHighlight.sub, sub),
               eq(userHighlight.book, book),
               eq(userHighlight.chapter, input.chapter),
+              isNull(userHighlight.deletedAt),
             ),
           ),
         db
@@ -300,6 +371,7 @@ export const libraryProcedures = {
               eq(userNote.sub, sub),
               eq(userNote.book, book),
               eq(userNote.chapter, input.chapter),
+              isNull(userNote.deletedAt),
             ),
           ),
       ]);
@@ -330,8 +402,44 @@ export const libraryProcedures = {
         updatedAt: userNote.updatedAt,
       })
       .from(userNote)
-      .where(eq(userNote.sub, sub))
+      .where(and(eq(userNote.sub, sub), isNull(userNote.deletedAt)))
       .orderBy(desc(userNote.updatedAt));
     return withVerseText(sub, ctx.req, rows);
+  }),
+
+  // Compact mark state for local-first synchronization. Unlike Library reads,
+  // this intentionally includes tombstones and omits verse display data.
+  sync: publicProcedure.query(async ({ ctx }) => {
+    const sub = subOf(ctx);
+    if (!sub) {
+      return { highlights: [], notes: [] };
+    }
+    const [highlights, notes] = await Promise.all([
+      db
+        .select({
+          book: userHighlight.book,
+          chapter: userHighlight.chapter,
+          verse: userHighlight.verse,
+          ref: userHighlight.ref,
+          color: userHighlight.color,
+          updatedAt: userHighlight.updatedAt,
+          deletedAt: userHighlight.deletedAt,
+        })
+        .from(userHighlight)
+        .where(eq(userHighlight.sub, sub)),
+      db
+        .select({
+          book: userNote.book,
+          chapter: userNote.chapter,
+          verse: userNote.verse,
+          ref: userNote.ref,
+          body: userNote.body,
+          updatedAt: userNote.updatedAt,
+          deletedAt: userNote.deletedAt,
+        })
+        .from(userNote)
+        .where(eq(userNote.sub, sub)),
+    ]);
+    return { highlights, notes };
   }),
 };

@@ -83,6 +83,7 @@ jobs:
 
   test:
     runs-on: depot-ubuntu-24.04
+
     steps:
       - uses: actions/checkout@v4
 
@@ -125,6 +126,7 @@ jobs:
       - name: Install Playwright system dependencies only
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: pnpm --filter @letschurch/web exec playwright install-deps chromium
+
 
       - name: Run tests
         run: pnpm -r run test

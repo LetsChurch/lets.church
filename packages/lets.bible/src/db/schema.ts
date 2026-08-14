@@ -60,6 +60,7 @@ export const userHighlight = pgTable(
     color: text('color').notNull(), // 'gold' | 'sage' | 'slate'
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { precision: 3 }).notNull().defaultNow(),
+    deletedAt: timestamp('deleted_at', { precision: 3 }),
   },
   (t) => [
     // One highlight per verse per user (re-highlighting changes the color).
@@ -80,6 +81,7 @@ export const userNote = pgTable(
     body: text('body').notNull(),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { precision: 3 }).notNull().defaultNow(),
+    deletedAt: timestamp('deleted_at', { precision: 3 }),
   },
   (t) => [
     uniqueIndex('user_note_sub_ref_idx').on(t.sub, t.ref), // one note per verse

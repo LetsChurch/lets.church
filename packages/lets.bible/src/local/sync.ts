@@ -27,7 +27,8 @@ function canSync(): boolean {
 }
 
 let timer: ReturnType<typeof setTimeout> | null = null;
-let syncing = false;
+let activePush: Promise<void> | null = null;
+let rerunRequested = false;
 
 // Debounced push (called after every local write).
 export function scheduleSync(): void {
@@ -42,173 +43,253 @@ export function scheduleSync(): void {
   }, 400);
 }
 
-// Push every dirty row to the server, then clear the flag / prune tombstones.
-export async function pushDirty(): Promise<void> {
-  if (!canSync() || syncing) {
-    return;
+function sameHighlight(
+  current: LocalHighlight | undefined,
+  sent: LocalHighlight,
+): boolean {
+  return (
+    current?.dirty === true &&
+    current.ref === sent.ref &&
+    current.book === sent.book &&
+    current.chapter === sent.chapter &&
+    current.verse === sent.verse &&
+    current.color === sent.color &&
+    current.updatedAt === sent.updatedAt &&
+    current.deleted === sent.deleted
+  );
+}
+
+function sameNote(current: LocalNote | undefined, sent: LocalNote): boolean {
+  return (
+    current?.dirty === true &&
+    current.ref === sent.ref &&
+    current.book === sent.book &&
+    current.chapter === sent.chapter &&
+    current.verse === sent.verse &&
+    current.body === sent.body &&
+    current.updatedAt === sent.updatedAt &&
+    current.deleted === sent.deleted
+  );
+}
+
+function sameProgress(
+  current: LocalProgress | undefined,
+  sent: LocalProgress,
+): boolean {
+  return (
+    current?.dirty === true &&
+    current.key === sent.key &&
+    current.book === sent.book &&
+    current.chapter === sent.chapter &&
+    current.verse === sent.verse &&
+    current.updatedAt === sent.updatedAt
+  );
+}
+
+async function pushPass(): Promise<void> {
+  const hl = collections().highlights;
+  // Snapshot before iterating — the loop deletes/updates rows, and mutating a
+  // live collection iterator can skip entries (matches clearLocalData/merge).
+  for (const row of [...hl.values()]) {
+    if (!row.dirty) {
+      continue;
+    }
+    const sent = { ...row };
+    try {
+      const result = sent.deleted
+        ? await trpcClient.library.removeHighlight.mutate({
+            book: sent.book,
+            chapter: sent.chapter,
+            verse: sent.verse,
+          })
+        : await trpcClient.library.setHighlight.mutate({
+            book: sent.book,
+            chapter: sent.chapter,
+            verse: sent.verse,
+            color: sent.color,
+          });
+      const current = hl.get(sent.ref);
+      if (!sameHighlight(current, sent)) {
+        if (current?.dirty) rerunRequested = true;
+        continue;
+      }
+      hl.update(sent.ref, (draft) => {
+        draft.updatedAt = result.updatedAt.getTime();
+        draft.dirty = false;
+      });
+    } catch {
+      // Leave dirty; a later requested sync retries network failures.
+    }
   }
-  syncing = true;
-  try {
-    const hl = collections().highlights;
-    // Snapshot before iterating — the loop deletes/updates rows, and mutating a
-    // live collection iterator can skip entries (matches clearLocalData/merge).
-    for (const h of [...hl.values()]) {
-      if (!h.dirty) {
-        continue;
-      }
-      try {
-        if (h.deleted) {
-          await trpcClient.library.removeHighlight.mutate({
-            book: h.book,
-            chapter: h.chapter,
-            verse: h.verse,
-          });
-          hl.delete(h.ref);
-        } else {
-          await trpcClient.library.setHighlight.mutate({
-            book: h.book,
-            chapter: h.chapter,
-            verse: h.verse,
-            color: h.color,
-          });
-          hl.update(h.ref, (d) => {
-            d.dirty = false;
-          });
-        }
-      } catch {
-        // leave dirty; retried on next sync
-      }
-    }
 
-    const nt = collections().notes;
-    for (const n of [...nt.values()]) {
-      if (!n.dirty) {
+  const nt = collections().notes;
+  for (const row of [...nt.values()]) {
+    if (!row.dirty) {
+      continue;
+    }
+    const sent = { ...row };
+    try {
+      const result = sent.deleted
+        ? await trpcClient.library.removeNote.mutate({
+            book: sent.book,
+            chapter: sent.chapter,
+            verse: sent.verse,
+          })
+        : await trpcClient.library.setNote.mutate({
+            book: sent.book,
+            chapter: sent.chapter,
+            verse: sent.verse,
+            body: sent.body,
+          });
+      const current = nt.get(sent.ref);
+      if (!sameNote(current, sent)) {
+        if (current?.dirty) rerunRequested = true;
         continue;
       }
-      try {
-        if (n.deleted) {
-          await trpcClient.library.removeNote.mutate({
-            book: n.book,
-            chapter: n.chapter,
-            verse: n.verse,
-          });
-          nt.delete(n.ref);
-        } else {
-          await trpcClient.library.setNote.mutate({
-            book: n.book,
-            chapter: n.chapter,
-            verse: n.verse,
-            body: n.body,
-          });
-          nt.update(n.ref, (d) => {
-            d.dirty = false;
-          });
-        }
-      } catch {
-        // retry next sync
-      }
+      nt.update(sent.ref, (draft) => {
+        draft.updatedAt = result.updatedAt.getTime();
+        draft.dirty = false;
+      });
+    } catch {
+      // Leave dirty; a later requested sync retries network failures.
     }
+  }
 
-    const pr = collections().progress;
-    for (const p of [...pr.values()]) {
-      if (!p.dirty) {
+  const pr = collections().progress;
+  for (const row of [...pr.values()]) {
+    if (!row.dirty) {
+      continue;
+    }
+    const sent = { ...row };
+    try {
+      const result = await trpcClient.library.recordReading.mutate({
+        book: sent.book,
+        chapter: sent.chapter,
+        verse: sent.verse ?? undefined,
+      });
+      const current = pr.get(sent.key);
+      if (!sameProgress(current, sent)) {
+        if (current?.dirty) rerunRequested = true;
         continue;
       }
-      try {
-        await trpcClient.library.recordReading.mutate({
-          book: p.book,
-          chapter: p.chapter,
-          verse: p.verse ?? undefined,
+      if (result.ok && result.updatedAt) {
+        pr.update(sent.key, (draft) => {
+          draft.updatedAt = result.updatedAt.getTime();
+          draft.dirty = false;
         });
-        pr.update(p.key, (d) => {
-          d.dirty = false;
-        });
-      } catch {
-        // retry next sync
       }
+    } catch {
+      // Leave dirty; a later requested sync retries network failures.
     }
-  } finally {
-    syncing = false;
   }
 }
 
-// Pull server rows into local, keeping the newer copy and never clobbering a
-// dirty (unpushed) local edit.
+async function drainDirty(): Promise<void> {
+  do {
+    rerunRequested = false;
+    await pushPass();
+  } while (canSync() && rerunRequested);
+}
+
+// Push every dirty row. Re-entry joins the active run and requests one more
+// pass, so writes made while a mutation is in flight cannot be stranded.
+export function pushDirty(): Promise<void> {
+  if (!canSync()) {
+    return Promise.resolve();
+  }
+  if (activePush) {
+    rerunRequested = true;
+    return activePush;
+  }
+  const running = drainDirty();
+  activePush = running;
+  return running.finally(() => {
+    if (activePush === running) activePush = null;
+  });
+}
+
+// Pull compact server mark state into local, keeping newer clean copies and
+// never clobbering a dirty (unpushed) local edit.
 export async function pullServer(): Promise<void> {
   if (!canSync()) {
     return;
   }
-  const [serverHl, serverNotes, serverRecent] = await Promise.all([
-    trpcClient.library.highlights.query(),
-    trpcClient.library.notes.query(),
+  const [serverMarks, serverRecent] = await Promise.all([
+    trpcClient.library.sync.query(),
     trpcClient.library.recent.query({ limit: 50 }),
   ]);
 
   const hl = collections().highlights;
-  for (const s of serverHl) {
-    const ref = `${s.book}.${s.chapter}.${s.verse}`;
-    const local = hl.get(ref);
+  for (const server of serverMarks.highlights) {
+    const local = hl.get(server.ref);
     if (local?.dirty) {
       continue;
     }
+    const updatedAt = server.updatedAt.getTime();
+    if (local && local.updatedAt > updatedAt) {
+      continue;
+    }
     const row: LocalHighlight = {
-      ref,
-      book: s.book,
-      chapter: s.chapter,
-      verse: s.verse,
-      color: s.color as HighlightColor,
-      updatedAt: new Date(s.createdAt).getTime(),
+      ref: server.ref,
+      book: server.book,
+      chapter: server.chapter,
+      verse: server.verse,
+      color: server.color as HighlightColor,
+      updatedAt,
       dirty: false,
-      deleted: false,
+      deleted: server.deletedAt !== null,
     };
     if (local) {
-      hl.update(ref, (d) => Object.assign(d, row));
+      hl.update(server.ref, (draft) => Object.assign(draft, row));
     } else {
       hl.insert(row);
     }
   }
 
   const nt = collections().notes;
-  for (const s of serverNotes) {
-    const ref = `${s.book}.${s.chapter}.${s.verse}`;
-    const local = nt.get(ref);
+  for (const server of serverMarks.notes) {
+    const local = nt.get(server.ref);
     if (local?.dirty) {
       continue;
     }
+    const updatedAt = server.updatedAt.getTime();
+    if (local && local.updatedAt > updatedAt) {
+      continue;
+    }
     const row: LocalNote = {
-      ref,
-      book: s.book,
-      chapter: s.chapter,
-      verse: s.verse,
-      body: s.body,
-      updatedAt: new Date(s.updatedAt).getTime(),
+      ref: server.ref,
+      book: server.book,
+      chapter: server.chapter,
+      verse: server.verse,
+      body: server.body,
+      updatedAt,
       dirty: false,
-      deleted: false,
+      deleted: server.deletedAt !== null,
     };
     if (local) {
-      nt.update(ref, (d) => Object.assign(d, row));
+      nt.update(server.ref, (draft) => Object.assign(draft, row));
     } else {
       nt.insert(row);
     }
   }
 
   const pr = collections().progress;
-  for (const s of serverRecent) {
-    const book = bookBySlug(s.slug)?.code ?? s.slug.toUpperCase();
-    const key = `${book}.${s.chapter}`;
+  for (const server of serverRecent) {
+    const book = bookBySlug(server.slug)?.code ?? server.slug.toUpperCase();
+    const key = `${book}.${server.chapter}`;
     if (pr.get(key)?.dirty) {
       continue;
     }
     const row: LocalProgress = {
       key,
       book,
-      chapter: s.chapter,
-      verse: s.verse,
-      updatedAt: new Date(s.updatedAt).getTime(),
+      chapter: server.chapter,
+      verse: server.verse,
+      updatedAt: server.updatedAt.getTime(),
       dirty: false,
     };
     if (pr.has(key)) {
-      pr.update(key, (d) => Object.assign(d, row));
+      pr.update(key, (draft) => Object.assign(draft, row));
     } else {
       pr.insert(row);
     }
