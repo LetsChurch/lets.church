@@ -1,3 +1,5 @@
+import { encryptPayload } from '@letschurch/util/server/encrypted-payload';
+
 import { sendEmail } from '@/temporal';
 
 import { EMAIL_SIGN_IN_TTL_MINUTES, issueAuthToken } from './auth-token';
@@ -18,13 +20,15 @@ export async function sendEmailSignInLink(input: {
     // recipient already requested. The first completed link consumes its peers.
     replaceExisting: false,
   });
-  const { text, html } = generateEmailSignInEmail(issued.token);
-
-  await sendEmail(`email-sign-in:${issued.id}`, {
+  const email = {
     from: 'hello@lets.church',
     to: input.email,
     subject: "Your secure sign-in link for Let's Church",
-    text,
-    html,
+    ...generateEmailSignInEmail(issued.token),
+  };
+
+  await sendEmail(`email-sign-in:${issued.id}`, {
+    kind: 'encrypted',
+    payload: encryptPayload(JSON.stringify(email)),
   });
 }

@@ -1,5 +1,9 @@
 export ZXCVBN_MINIMUM_SCORE=0
 
+# Shared by the web process and background worker. Required format:
+# <key-id>:<32-byte key encoded as unpadded base64url>
+export PASSWORDLESS_EMAIL_ENCRYPTION_KEY=
+
 # Embedded OIDC provider. The `.envrc` ships a dev signing key and defaults the
 # issuer to the web URL. Clients are public (PKCE-only) and declared entirely in
 # code in packages/web/src/util/oidc/clients.ts — no per-client secrets or env

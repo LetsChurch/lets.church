@@ -6,10 +6,11 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-1:     ".": "./src/index.ts",
+    ".": "./src/index.ts",
     "./rate-limit": "./src/rate-limit.ts",
-    "./request-ip": "./src/request-ip.ts"
-2: export { readRequestBody, RequestBodyTooLargeError } from './read-request-body';
+    "./request-ip": "./src/request-ip.ts",
+    "./server/encrypted-payload": "./src/server/encrypted-payload.ts",
+    "./server/encrypted-payload-types": "./src/server/encrypted-payload-types.ts"
   },
   "scripts": {
     "check": "pnpm run /^check:/",
@@ -17,7 +18,8 @@
     "check:lint": "oxlint",
     "check:ts": "tsc --noEmit",
     "fix": "oxfmt && oxlint --fix",
-    "fix!": "oxfmt && oxlint --fix-dangerously"
+    "fix!": "oxfmt && oxlint --fix-dangerously",
+    "test": "vitest run"
   },
   "dependencies": {
     "pino": "catalog:",
@@ -28,6 +30,7 @@
     "@types/node": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }
