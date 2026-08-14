@@ -22,7 +22,7 @@ export const MUX_WEBHOOK_MAX_BODY_BYTES = 1024 * 1024;
 // Create the UploadRecord for a broadcast that just went live, applying the
 // channel's pre-set "next broadcast" metadata. Idempotent on muxAssetId so a
 // duplicate `active` delivery (or a reconnect) doesn't create a second record.
-async function handleLiveStreamActive(data: {
+export async function handleLiveStreamActive(data: {
   id: string;
   active_asset_id?: string | null;
 }) {
@@ -101,11 +101,24 @@ async function handleLiveStreamActive(data: {
       score: 0,
       updatedAt: new Date(),
     })
+    .onConflictDoNothing({ target: UploadRecord.muxAssetId })
     .returning({ id: UploadRecord.id });
+
+  if (!created) {
+    const concurrentExisting = await db.query.UploadRecord.findFirst({
+      where: (t, { eq }) => eq(t.muxAssetId, assetId),
+    });
+    if (concurrentExisting) {
+      return;
+    }
+    throw new Error(
+      'Mux asset insert conflicted without an existing upload record',
+    );
+  }
 
   // Add the broadcast to the configured series, if it still belongs to this
   // channel (nextSeriesId has no FK, so verify before inserting).
-  if (created && liveStream.nextSeriesId) {
+  if (liveStream.nextSeriesId) {
     const series = await db.query.UploadList.findFirst({
       columns: { id: true },
       where: (t, { and, eq }) =>

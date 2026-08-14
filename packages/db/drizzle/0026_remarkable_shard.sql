@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "upload_record_mux_asset_id_unique_idx" ON "upload_record" USING btree ("mux_asset_id");

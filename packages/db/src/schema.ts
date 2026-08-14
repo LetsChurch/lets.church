@@ -1478,6 +1478,9 @@ export const UploadRecord = pgTable(
     upload_record_created_at_id_idx: index(
       'upload_record_created_at_id_idx',
     ).on(UploadRecord.createdAt, UploadRecord.id),
+    upload_record_mux_asset_id_unique_idx: uniqueIndex(
+      'upload_record_mux_asset_id_unique_idx',
+    ).on(UploadRecord.muxAssetId),
     upload_record_score_idx: index('upload_record_score_idx').on(
       UploadRecord.score,
     ),
