@@ -9,7 +9,10 @@ import {
 } from '@tabler/icons-react';
 import { useMemo } from 'react';
 
-import { PlaylistSidebar } from '@/components/playlist-sidebar';
+import {
+  type PlaylistPage,
+  PlaylistSidebar,
+} from '@/components/playlist-sidebar';
 import { Transcript } from '@/components/transcript';
 import {
   type TranscriptParagraph,
@@ -26,20 +29,6 @@ import {
 } from '@/stores/transcript-search';
 import { askVideoQuestion } from '@/stores/video-ask';
 
-type PlaylistItem = {
-  id: string;
-  title: string | null;
-  thumbnailUrl: string | null;
-  lengthSeconds: number | null;
-  publishedAt: Date | null;
-  channel: {
-    id: string;
-    name: string;
-    slug: string;
-    avatarUrl: string | null;
-  };
-};
-
 type MediaSidebarTabsProps = {
   transcript: Array<{ start: number; text: string }>;
   // When present, render the newer word-level paragraph transcript instead of
@@ -50,8 +39,10 @@ type MediaSidebarTabsProps = {
     listId: string;
     listType: 'playlist' | 'series';
     listTitle?: string;
-    items: PlaylistItem[];
+    initialPage: PlaylistPage;
     currentMediaId: string;
+    currentPosition: number | null;
+    total: number;
   };
 };
 
@@ -259,8 +250,10 @@ export function MediaSidebarTabs({
               listId={playlistContext.listId}
               listType={playlistContext.listType}
               listTitle={playlistContext.listTitle}
-              items={playlistContext.items}
+              initialPage={playlistContext.initialPage}
               currentMediaId={playlistContext.currentMediaId}
+              currentPosition={playlistContext.currentPosition}
+              total={playlistContext.total}
             />
           </Tabs.Panel>
         ) : null}

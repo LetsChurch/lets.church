@@ -36,7 +36,10 @@ import { MediaInfoTabs } from '@/components/media-info-tabs';
 import { MediaSidebarTabs } from '@/components/media-sidebar-tabs';
 import { MobileDrawer } from '@/components/mobile-drawer';
 import { Player } from '@/components/player';
-import { PlaylistSidebar } from '@/components/playlist-sidebar';
+import {
+  type PlaylistPage,
+  PlaylistSidebar,
+} from '@/components/playlist-sidebar';
 import { Transcript } from '@/components/transcript';
 import {
   type TranscriptParagraph,
@@ -174,7 +177,10 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
 
     if (media.series?.id) {
       await queryClient.prefetchQuery(
-        trpc.list.getAllListItems.queryOptions({ listId: media.series.id }),
+        trpc.list.getListContext.queryOptions({
+          listId: media.series.id,
+          currentMediaId: params.mediaId,
+        }),
       );
     }
 
@@ -454,35 +460,23 @@ function MobileTranscriptDrawerContent({
   );
 }
 
-type PlaylistItem = {
-  id: string;
-  title: string | null;
-  thumbnailUrl: string | null;
-  lengthSeconds: number | null;
-  publishedAt: Date | null;
-  channel: {
-    id: string;
-    name: string;
-    slug: string;
-    avatarUrl: string | null;
-  };
-};
-
 function MobilePlaylistDrawerContent({
   listId,
   listType,
   listTitle,
-  items,
+  initialPage,
   currentMediaId,
+  currentPosition,
+  total,
 }: {
   listId: string;
   listType: 'playlist' | 'series';
   listTitle?: string;
-  items: PlaylistItem[];
+  initialPage: PlaylistPage;
   currentMediaId: string;
+  currentPosition: number | null;
+  total: number;
 }) {
-  const currentIndex = items.findIndex((item) => item.id === currentMediaId);
-
   return (
     <>
       <div className="flex h-10 items-center gap-2 border-b border-solid border-zinc-200 px-5 dark:border-zinc-800">
@@ -491,7 +485,7 @@ function MobilePlaylistDrawerContent({
             {listTitle ?? (listType === 'playlist' ? 'Playlist' : 'Series')}
           </MobileDrawer.Title>
           <span className="text-secondary text-xs">
-            {currentIndex >= 0 ? currentIndex + 1 : '?'} / {items.length}
+            {currentPosition ?? '?'} / {total}
           </span>
         </div>
         <MobileDrawer.Close className="flex size-7 items-center justify-center rounded-lg hover:bg-white/10">
@@ -499,16 +493,17 @@ function MobilePlaylistDrawerContent({
         </MobileDrawer.Close>
       </div>
 
-      <div className="fade-bottom flex-1 overflow-hidden">
-        <div className="h-full overflow-y-auto">
-          <PlaylistSidebar
-            listId={listId}
-            listType={listType}
-            listTitle={listTitle}
-            items={items}
-            currentMediaId={currentMediaId}
-          />
-        </div>
+      <div className="fade-bottom flex min-h-0 flex-1 flex-col overflow-hidden">
+        <PlaylistSidebar
+          key={`${listId}-${currentMediaId}`}
+          listId={listId}
+          listType={listType}
+          listTitle={listTitle}
+          initialPage={initialPage}
+          currentMediaId={currentMediaId}
+          currentPosition={currentPosition}
+          total={total}
+        />
       </div>
     </>
   );
@@ -611,8 +606,9 @@ function RouteComponent() {
 
   const { data: playlistData } = useSuspenseQuery(
     activeListId
-      ? trpc.list.getAllListItems.queryOptions({
+      ? trpc.list.getListContext.queryOptions({
           listId: activeListId,
+          currentMediaId: params.mediaId,
         })
       : {
           queryKey: [['no-list']],
@@ -621,6 +617,11 @@ function RouteComponent() {
               title: '',
               type: 'PLAYLIST' as const,
               items: [],
+              currentPosition: null,
+              total: 0,
+              nextItem: null,
+              previousCursor: null,
+              nextCursor: null,
             }),
         },
   );
@@ -641,24 +642,16 @@ function RouteComponent() {
     [relatedMedia],
   );
 
-  // Find current and next items. getAllListItems returns null when the list is
-  // missing or its channel isn't viewable (e.g. an UNLISTED series reached by
-  // direct link), so derive playlist context from the resolved items rather
-  // than the bare id — otherwise we'd show an empty playlist tab/sidebar.
-  const playlistItems = playlistData?.items ?? [];
-  const hasPlaylistContext = Boolean(activeListId) && playlistItems.length > 0;
+  // The bounded context returns null for missing/inaccessible lists and
+  // provides the exact next visible item independently of the loaded window.
+  const hasPlaylistContext =
+    Boolean(activeListId) && playlistData !== null && playlistData.total > 0;
   // No transcript exists while we're still playing from Mux (live or the
   // not-yet-imported recording), so hide the transcript UI; the sidebar still
   // shows when there's a series/playlist to navigate.
   const hideTranscript = media.servingMux;
   const mediaIdShort = idTranslator.fromUUID(params.mediaId);
-  const currentIndex = playlistItems.findIndex(
-    (item) => item.id === mediaIdShort,
-  );
-  const nextItem =
-    currentIndex >= 0 && currentIndex < playlistItems.length - 1
-      ? playlistItems[currentIndex + 1]
-      : undefined;
+  const nextItem = playlistData?.nextItem ?? undefined;
 
   // Autoplay
   const autoplay = useAutoplay({
@@ -1177,16 +1170,18 @@ function RouteComponent() {
                 paragraphs={paragraphs}
                 isTranscriptProcessing={!media.transcribingFinishedAt}
                 playlistContext={
-                  hasPlaylistContext && activeListId && playlistItems.length > 0
+                  hasPlaylistContext && activeListId && playlistData
                     ? {
                         listId: activeListId,
                         listType:
-                          playlistData?.type === 'SERIES'
+                          playlistData.type === 'SERIES'
                             ? 'series'
                             : 'playlist',
-                        listTitle: playlistData?.title,
-                        items: playlistItems,
+                        listTitle: playlistData.title,
+                        initialPage: playlistData,
                         currentMediaId: mediaIdShort,
+                        currentPosition: playlistData.currentPosition,
+                        total: playlistData.total,
                       }
                     : undefined
                 }
@@ -1213,7 +1208,7 @@ function RouteComponent() {
       </MobileDrawer.Root>
 
       {/* Mobile Playlist Dialog */}
-      {hasPlaylistContext && activeListId && playlistItems.length > 0 ? (
+      {hasPlaylistContext && activeListId && playlistData ? (
         <MobileDrawer.Root
           open={playlistDialogOpen}
           onOpenChange={setPlaylistDialogOpen}
@@ -1223,11 +1218,13 @@ function RouteComponent() {
               <MobilePlaylistDrawerContent
                 listId={activeListId}
                 listType={
-                  playlistData?.type === 'SERIES' ? 'series' : 'playlist'
+                  playlistData.type === 'SERIES' ? 'series' : 'playlist'
                 }
-                listTitle={playlistData?.title}
-                items={playlistItems}
+                listTitle={playlistData.title}
+                initialPage={playlistData}
                 currentMediaId={mediaIdShort}
+                currentPosition={playlistData.currentPosition}
+                total={playlistData.total}
               />
             </MobileDrawer.Content>
           </MobileDrawer.Portal>

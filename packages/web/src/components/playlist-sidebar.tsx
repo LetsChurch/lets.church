@@ -1,10 +1,17 @@
 import { Link } from '@tanstack/react-router';
-import { useEffect, useRef } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import { Avatar } from '@/components/avatar';
+import { trpcClient } from '@/trpc/react';
 import { formatTime } from '@/util/format';
 
-type PlaylistItem = {
+export type PlaylistItem = {
   id: string;
   title: string | null;
   thumbnailUrl: string | null;
@@ -18,58 +25,180 @@ type PlaylistItem = {
   };
 };
 
+export type PlaylistPage = {
+  items: PlaylistItem[];
+  previousCursor: string | null;
+  nextCursor: string | null;
+};
+
+export type PlaylistPageState = PlaylistPage;
+
+type BoundaryDirection = 'before' | 'after';
+
+export function mergePlaylistItems(
+  current: PlaylistItem[],
+  incoming: PlaylistItem[],
+  direction: BoundaryDirection,
+) {
+  const ordered =
+    direction === 'before'
+      ? [...incoming, ...current]
+      : [...current, ...incoming];
+  const seen = new Set<string>();
+  return ordered.filter((item) => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+}
+
+export async function loadPlaylistBoundary(
+  state: PlaylistPageState,
+  direction: BoundaryDirection,
+  loadPage: (cursor: string) => Promise<PlaylistPage | null>,
+): Promise<PlaylistPageState> {
+  const cursor =
+    direction === 'before' ? state.previousCursor : state.nextCursor;
+  if (!cursor) return state;
+
+  const page = await loadPage(cursor);
+  if (!page) {
+    return {
+      ...state,
+      [direction === 'before' ? 'previousCursor' : 'nextCursor']: null,
+    };
+  }
+
+  return {
+    items: mergePlaylistItems(state.items, page.items, direction),
+    previousCursor:
+      direction === 'before' ? page.previousCursor : state.previousCursor,
+    nextCursor: direction === 'after' ? page.nextCursor : state.nextCursor,
+  };
+}
+
+export function boundaryScrollTop(
+  direction: BoundaryDirection,
+  previous: {
+    scrollHeight: number;
+    scrollTop: number;
+  },
+  nextScrollHeight: number,
+) {
+  return direction === 'before'
+    ? previous.scrollTop + nextScrollHeight - previous.scrollHeight
+    : previous.scrollTop;
+}
+
 type PlaylistSidebarProps = {
   listId: string;
   listType: 'playlist' | 'series';
   listTitle?: string;
-  items: PlaylistItem[];
+  initialPage: PlaylistPage;
   currentMediaId: string;
+  currentPosition: number | null;
+  total: number;
+  loadPage?: (cursor: string) => Promise<PlaylistPage | null>;
 };
 
 export function PlaylistSidebar({
   listId,
   listType,
   listTitle,
-  items,
+  initialPage,
   currentMediaId,
+  currentPosition,
+  total,
+  loadPage = (cursor) =>
+    trpcClient.list.getListContext.query({ listId, cursor }),
 }: PlaylistSidebarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const currentIndex = items.findIndex((item) => item.id === currentMediaId);
+  const prependScrollRef = useRef<{
+    scrollHeight: number;
+    scrollTop: number;
+  } | null>(null);
+  const [pageState, setPageState] = useState(initialPage);
+  const [loadingDirection, setLoadingDirection] =
+    useState<BoundaryDirection | null>(null);
 
-  // Auto-scroll to current item on mount and when currentMediaId changes
+  useLayoutEffect(() => {
+    const previous = prependScrollRef.current;
+    const container = containerRef.current;
+    if (!previous || !container) return;
+    container.scrollTop = boundaryScrollTop(
+      'before',
+      previous,
+      container.scrollHeight,
+    );
+    prependScrollRef.current = null;
+  }, [pageState.items]);
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // Use setTimeout to ensure DOM has updated
     const timeoutId = setTimeout(() => {
       const currentElement = container.querySelector('[data-current="true"]');
-      if (currentElement) {
-        currentElement.scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest',
-        });
-      }
+      currentElement?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
     }, 0);
 
     return () => clearTimeout(timeoutId);
   }, [currentMediaId]);
 
+  const loadBoundary = useCallback(
+    async (direction: BoundaryDirection) => {
+      if (loadingDirection) return;
+      const container = containerRef.current;
+      if (direction === 'before' && container) {
+        prependScrollRef.current = {
+          scrollHeight: container.scrollHeight,
+          scrollTop: container.scrollTop,
+        };
+      }
+
+      setLoadingDirection(direction);
+      try {
+        setPageState(
+          await loadPlaylistBoundary(pageState, direction, loadPage),
+        );
+      } finally {
+        setLoadingDirection(null);
+      }
+    },
+    [loadPage, loadingDirection, pageState],
+  );
+
   return (
     <>
-      {/* Sidebar Header */}
       <div className="flex flex-col gap-1 border-b border-zinc-200 px-5 py-2.5 dark:border-zinc-800">
         <h3 className="text-primary text-sm font-medium">
           {listTitle ?? (listType === 'playlist' ? 'Playlist' : 'Series')}
         </h3>
         <p className="text-secondary text-xs">
-          {currentIndex >= 0 ? currentIndex + 1 : '?'} / {items.length}
+          {currentPosition ?? '?'} / {total}
         </p>
       </div>
 
-      {/* Playlist Items */}
-      <div className="flex-1 overflow-y-auto" ref={containerRef}>
-        {items.map((item) => {
+      <div
+        className="flex-1 overflow-y-auto"
+        data-testid="playlist-scroll-container"
+        ref={containerRef}
+      >
+        {pageState.previousCursor ? (
+          <button
+            type="button"
+            className="text-secondary hover:text-primary w-full border-b border-zinc-200 px-3 py-2 text-xs dark:border-zinc-800"
+            disabled={loadingDirection !== null}
+            onClick={() => void loadBoundary('before')}
+          >
+            {loadingDirection === 'before' ? 'Loading…' : 'Load earlier items'}
+          </button>
+        ) : null}
+
+        {pageState.items.map((item) => {
           const isCurrent = item.id === currentMediaId;
           return (
             <Link
@@ -82,7 +211,6 @@ export function PlaylistSidebar({
               <div
                 className={`flex cursor-pointer gap-2 border-b border-zinc-200 px-3 py-2 hover:bg-white/5 dark:border-zinc-800 ${isCurrent ? 'bg-brand/10' : ''}`}
               >
-                {/* Thumbnail */}
                 <div className="relative h-16 w-28 shrink-0">
                   <div className="size-full overflow-hidden rounded-lg border border-zinc-300 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900">
                     {item.thumbnailUrl ? (
@@ -111,7 +239,6 @@ export function PlaylistSidebar({
                   ) : null}
                 </div>
 
-                {/* Item Info */}
                 <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
                   <h4 className="text-primary line-clamp-2 text-sm leading-snug font-medium">
                     {item.title ?? 'Untitled'}
@@ -132,6 +259,17 @@ export function PlaylistSidebar({
             </Link>
           );
         })}
+
+        {pageState.nextCursor ? (
+          <button
+            type="button"
+            className="text-secondary hover:text-primary w-full px-3 py-2 text-xs"
+            disabled={loadingDirection !== null}
+            onClick={() => void loadBoundary('after')}
+          >
+            {loadingDirection === 'after' ? 'Loading…' : 'Load later items'}
+          </button>
+        ) : null}
       </div>
     </>
   );
