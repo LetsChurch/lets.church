@@ -1,3 +1,4 @@
+import { readRequestBody, RequestBodyTooLargeError } from '@letschurch/util';
 import { createFileRoute } from '@tanstack/react-router';
 
 import logger from '@/util/logger';
@@ -14,6 +15,10 @@ import {
 } from '@/util/oidc/tokens';
 
 const moduleLogger = logger.child({ module: 'routes/oidc/token' });
+
+// Token requests contain only short OAuth identifiers, tokens, and one
+// registered redirect URI. 8 KiB provides ample protocol headroom.
+export const OIDC_TOKEN_MAX_BODY_BYTES = 8 * 1024;
 
 const JSON_HEADERS = {
   'content-type': 'application/json',
@@ -60,8 +65,16 @@ export const Route = createFileRoute('/oidc/token')({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const form = new URLSearchParams(await request.text());
-
+        let rawBody: string;
+        try {
+          rawBody = await readRequestBody(request, OIDC_TOKEN_MAX_BODY_BYTES);
+        } catch (error) {
+          if (error instanceof RequestBodyTooLargeError) {
+            return tokenError(413, 'invalid_request', 'Request body too large');
+          }
+          throw error;
+        }
+        const form = new URLSearchParams(rawBody);
         const resolved = resolveClient(form);
         if ('error' in resolved) {
           return resolved.error;

@@ -1,3 +1,4 @@
+import { readRequestBody, RequestBodyTooLargeError } from '@letschurch/util';
 import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 
@@ -7,6 +8,10 @@ import logger from '@/util/logger';
 const moduleLogger = logger.child({
   module: 'routes/api/internal/media-for-verse',
 });
+
+// The complete schema serializes to well under 100 bytes. Keep enough room for
+// ordinary JSON whitespace while rejecting payloads unrelated to this route.
+export const MEDIA_FOR_VERSE_MAX_BODY_BYTES = 1024;
 
 // Media that teaches a specific Bible verse, for the lets.bible study panel's
 // "Media" tab. lets.bible calls this server-to-server (in-cluster). It owns the
@@ -64,15 +69,24 @@ export const Route = createFileRoute('/api/internal/media-for-verse')({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const { WEB_URL } = envSchema.parse(process.env);
-
         let input: z.infer<typeof bodySchema>;
         try {
-          input = bodySchema.parse(await request.json());
-        } catch {
+          const body = await readRequestBody(
+            request,
+            MEDIA_FOR_VERSE_MAX_BODY_BYTES,
+          );
+          input = bodySchema.parse(JSON.parse(body));
+        } catch (error) {
+          if (error instanceof RequestBodyTooLargeError) {
+            return new Response('Request body too large', {
+              status: 413,
+              headers: { 'cache-control': 'no-store' },
+            });
+          }
           return new Response('Invalid request body', { status: 400 });
         }
 
+        const { WEB_URL } = envSchema.parse(process.env);
         const { book, chapter, verse, limit } = input;
         const token = `${book}.${chapter}.${verse}`;
         // web's /search validates `bibleRefs` as an ARRAY and parses search

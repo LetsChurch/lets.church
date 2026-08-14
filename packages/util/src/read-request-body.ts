@@ -33,3 +33,27 @@ export async function readRequestBody(request: Request, maxBytes: number) {
 
   return body + decoder.decode();
 }
+
+/**
+ * Read a bounded request body and rebuild the request for a downstream adapter.
+ *
+ * The returned request preserves the transport details adapters inspect while
+ * replacing the consumed stream with the already-bounded UTF-8 bytes.
+ */
+export async function readBoundedRequest(
+  request: Request,
+  maxBytes: number,
+): Promise<Request> {
+  const body = new TextEncoder().encode(
+    await readRequestBody(request, maxBytes),
+  );
+  const headers = new Headers(request.headers);
+  headers.set('content-length', String(body.byteLength));
+
+  return new Request(request.url, {
+    method: request.method,
+    headers,
+    body,
+    signal: request.signal,
+  });
+}
