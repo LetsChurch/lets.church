@@ -1,3 +1,13 @@
+import type {
+  TokenBucketOptions,
+  TokenBucketResult,
+} from '@letschurch/util/rate-limit';
+
+export type {
+  TokenBucketOptions,
+  TokenBucketResult,
+} from '@letschurch/util/rate-limit';
+
 import Redis from 'ioredis';
 import { z } from 'zod';
 
@@ -13,19 +23,6 @@ const { VALKEY_URL } = z
 
 // `undefined` = not yet initialized, `null` = disabled / failed to construct.
 let client: Redis | null | undefined;
-
-export type TokenBucketOptions = {
-  key: string;
-  capacity: number;
-  refillTokensPerSecond: number;
-  cost: number;
-};
-
-export type TokenBucketResult = {
-  allowed: boolean;
-  remainingTokens: number;
-  retryAfterSeconds: number;
-};
 
 // Atomic token bucket: refill from Valkey's clock, spend only when enough
 // tokens remain, and expire idle buckets once they would be full again.

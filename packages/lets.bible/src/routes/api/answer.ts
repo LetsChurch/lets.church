@@ -1,14 +1,23 @@
+import { readRequestBody, RequestBodyTooLargeError } from '@letschurch/util';
 import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 
+import {
+  answerRateLimitResponse,
+  enforceAnswerRateLimit,
+} from '@/util/rate-limit';
+
 const bodySchema = z.object({
   q: z.string().trim().min(1).max(500),
-  translation: z.string().default('BSB'),
+  translation: z.string().trim().min(1).max(32).default('BSB'),
   // Manual "find the verse / search by meaning" override from the answer card:
   // forces the verse-finder detective loop even when the recollection gate
   // wouldn't have auto-triggered it.
   deepen: z.boolean().optional(),
 });
+
+// Worst-case UTF-8 for the 500-character query, translation, and JSON framing.
+export const ANSWER_MAX_BODY_BYTES = 2_304;
 
 const STREAM_HEADERS = {
   'Content-Type': 'text/plain; charset=utf-8',
@@ -118,16 +127,25 @@ export const Route = createFileRoute('/api/answer')({
   component: () => null,
   server: {
     handlers: {
-      // TODO(abuse): unauthenticated + expensive per call (retrieval + LLM gen,
-      // and the dig loop runs several tool calls). Add a rate limit / spend cap
-      // before ungating widely (mirror docs/search-answer-abuse-mitigation.md).
       POST: async ({ request }) => {
         let parsed: z.infer<typeof bodySchema>;
         try {
-          parsed = bodySchema.parse(await request.json());
-        } catch {
+          const body = await readRequestBody(request, ANSWER_MAX_BODY_BYTES);
+          parsed = bodySchema.parse(JSON.parse(body));
+        } catch (error) {
+          if (error instanceof RequestBodyTooLargeError) {
+            return new Response('Request body too large', { status: 413 });
+          }
           return new Response('Invalid request body', { status: 400 });
         }
+
+        const rateLimit = await enforceAnswerRateLimit({
+          headers: request.headers,
+          query: parsed.q,
+          translation: parsed.translation,
+          deepen: parsed.deepen === true,
+        });
+        if (!rateLimit.allowed) return answerRateLimitResponse(rateLimit);
 
         // Lazy server-only imports (keep the LLM/search/db deps out of the
         // client bundle; this route file is part of the shared route tree).

@@ -1,3 +1,4 @@
+import { readRequestBody, RequestBodyTooLargeError } from '@letschurch/util';
 import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 
@@ -26,6 +27,10 @@ const CHAT_STEP_BUDGET = 12;
 
 // Hard wall-clock cap on a single turn's generation (ms), mirroring the dig path.
 const TURN_DEADLINE_MS = 120_000;
+
+// Forty 8,000-character messages at worst-case UTF-8 plus identifiers and
+// JSON framing. This preserves the documented conversation limits.
+export const DIG_DEEPER_MAX_BODY_BYTES = 1_310_720;
 
 const messageSchema = z.object({
   role: z.enum(['user', 'assistant']),
@@ -63,8 +68,15 @@ export const Route = createFileRoute('/api/dig-deeper')({
       POST: async ({ request }) => {
         let parsed: z.infer<typeof bodySchema>;
         try {
-          parsed = bodySchema.parse(await request.json());
-        } catch {
+          const body = await readRequestBody(
+            request,
+            DIG_DEEPER_MAX_BODY_BYTES,
+          );
+          parsed = bodySchema.parse(JSON.parse(body));
+        } catch (error) {
+          if (error instanceof RequestBodyTooLargeError) {
+            return new Response('Request body too large', { status: 413 });
+          }
           return new Response('Invalid request body', { status: 400 });
         }
 

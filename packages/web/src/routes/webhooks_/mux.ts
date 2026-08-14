@@ -5,6 +5,7 @@ import {
   UploadListEntry,
   UploadRecord,
 } from '@letschurch/db';
+import { readRequestBody, RequestBodyTooLargeError } from '@letschurch/util';
 import { createFileRoute } from '@tanstack/react-router';
 import { eq } from 'drizzle-orm';
 
@@ -13,6 +14,10 @@ import logger from '@/util/logger';
 import { getMux, getMuxWebhookSecret } from '@/util/mux';
 
 const moduleLogger = logger.child({ module: 'routes/webhooks/mux' });
+
+// Mux event envelopes contain asset/live-stream metadata rather than media.
+// One MiB leaves generous room for event arrays while bounding verification.
+export const MUX_WEBHOOK_MAX_BODY_BYTES = 1024 * 1024;
 
 // Create the UploadRecord for a broadcast that just went live, applying the
 // channel's pre-set "next broadcast" metadata. Idempotent on muxAssetId so a
@@ -236,8 +241,15 @@ export const Route = createFileRoute('/webhooks_/mux')({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const body = await request.text();
-
+        let body: string;
+        try {
+          body = await readRequestBody(request, MUX_WEBHOOK_MAX_BODY_BYTES);
+        } catch (error) {
+          if (error instanceof RequestBodyTooLargeError) {
+            return new Response('webhook rejected', { status: 413 });
+          }
+          return new Response('invalid body', { status: 400 });
+        }
         const mux = getMux();
         const secret = getMuxWebhookSecret();
         let event: Awaited<ReturnType<typeof mux.webhooks.unwrap>>;

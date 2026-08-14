@@ -6,7 +6,10 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+1:     ".": "./src/index.ts",
+    "./rate-limit": "./src/rate-limit.ts",
+    "./request-ip": "./src/request-ip.ts"
+2: export { readRequestBody, RequestBodyTooLargeError } from './read-request-body';
   },
   "scripts": {
     "check": "pnpm run /^check:/",

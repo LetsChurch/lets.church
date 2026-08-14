@@ -1,3 +1,4 @@
+import { readRequestBody, RequestBodyTooLargeError } from '@letschurch/util';
 import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 
@@ -31,6 +32,9 @@ const ANSWER_CACHE_TTL_SECONDS = 60 * 60 * 24;
 // reconciles them, and re-queries after a pivot. Still bounded (a cost control).
 const DIG_STEP_BUDGET = 12;
 
+// Worst-case UTF-8 for bounded query/filter fields plus JSON punctuation.
+export const SEARCH_ANSWER_MAX_BODY_BYTES = 96 * 1024;
+
 const bodySchema = z.object({
   query: z.string().min(1).max(1_000),
   // The parser's reformulated question (e.g. "Bible examples of grace-based
@@ -46,11 +50,11 @@ const bodySchema = z.object({
   // The search_log_entry row created by hybridSearch for this query; the final
   // answer (or decline) is appended to its params. Null when logging was
   // skipped (e.g. admin inspecting logs).
-  searchLogId: z.string().nullish(),
+  searchLogId: z.string().max(128).nullish(),
   // Outgoing (base58) upload id when the question is about ONE specific video
   // (the media-page "ask about this video" entry point). Scopes retrieval +
   // the relevance probe to that upload's paragraphs. Omitted for library search.
-  uploadId: z.string().nullish(),
+  uploadId: z.string().max(128).nullish(),
   // Facet-only browse: `query` is a synthesized description of the active facet
   // (e.g. a verse label), not a user question. The facet already establishes
   // topical relevance, so skip the relevance-floor decline and always give an
@@ -68,15 +72,15 @@ const bodySchema = z.object({
   // changing a filter never regenerates the answer.
   filters: z
     .object({
-      channelSlugs: z.array(z.string()).nullish(),
-      speakers: z.array(z.string()).nullish(),
-      bibleRefs: z.array(z.string()).nullish(),
-      bibleBooks: z.array(z.string()).nullish(),
+      channelSlugs: z.array(z.string().max(128)).max(32).nullish(),
+      speakers: z.array(z.string().max(256)).max(32).nullish(),
+      bibleRefs: z.array(z.string().max(32)).max(64).nullish(),
+      bibleBooks: z.array(z.string().max(16)).max(66).nullish(),
       dateRange: z
         .enum(['all-time', 'today', 'this-week', 'this-month', 'this-year'])
         .nullish(),
-      dateStart: z.string().nullish(),
-      dateEnd: z.string().nullish(),
+      dateStart: z.string().max(32).nullish(),
+      dateEnd: z.string().max(32).nullish(),
     })
     .nullish(),
 });
@@ -207,8 +211,15 @@ export const Route = createFileRoute('/api/search-answer')({
       POST: async ({ request }) => {
         let parsed: z.infer<typeof bodySchema>;
         try {
-          parsed = bodySchema.parse(await request.json());
-        } catch {
+          const body = await readRequestBody(
+            request,
+            SEARCH_ANSWER_MAX_BODY_BYTES,
+          );
+          parsed = bodySchema.parse(JSON.parse(body));
+        } catch (error) {
+          if (error instanceof RequestBodyTooLargeError) {
+            return new Response('Request body too large', { status: 413 });
+          }
           return new Response('Invalid request body', { status: 400 });
         }
 

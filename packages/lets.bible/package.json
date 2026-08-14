@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "tsx src/search/build-flex-index.ts && vite build",
+    "test": "vitest --exclude 'e2e/**'",
     "start": "node .output/server/index.mjs",
     "check": "pnpm run /^check:/",
     "check:fmt": "oxfmt --check",
@@ -40,6 +41,7 @@
     "@fontsource-variable/frank-ruhl-libre": "^5.2.8",
     "@fontsource-variable/hanken-grotesk": "^5.2.8",
     "@fontsource-variable/noto-serif": "^5.2.9",
+    "@letschurch/util": "workspace:*",
     "@opensearch-project/opensearch": "^3.6.0",
     "@tailwindcss/vite": "catalog:",
     "@tanstack/db": "^0.6.9",
@@ -88,6 +90,7 @@
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
-    "vite-tsconfig-paths": "catalog:"
+    "vite-tsconfig-paths": "catalog:",
+    "vitest": "catalog:"
   }
 }

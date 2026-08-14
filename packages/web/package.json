@@ -83,7 +83,6 @@
     "flexsearch": "^0.8.212",
     "hls-video-element": "^1.5.11",
     "ioredis": "^5.11.1",
-    "is-ip": "^5.0.1",
     "jose": "catalog:",
     "js-cookie": "^3.0.5",
     "libphonenumber-js": "^1.12.26",

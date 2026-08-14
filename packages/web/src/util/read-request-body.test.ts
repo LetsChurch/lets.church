@@ -12,6 +12,16 @@ describe('readRequestBody', () => {
     await expect(readRequestBody(request, 100)).resolves.toBe('{"amount":25}');
   });
 
+  it('accepts a body at the exact byte limit', async () => {
+    const body = '€'.repeat(10);
+    const request = new Request('https://example.com', {
+      method: 'POST',
+      body,
+    });
+
+    await expect(readRequestBody(request, 30)).resolves.toBe(body);
+  });
+
   it('rejects a declared body over the byte limit', async () => {
     const request = new Request('https://example.com', {
       method: 'POST',
