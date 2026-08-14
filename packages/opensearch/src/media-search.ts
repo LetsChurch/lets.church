@@ -371,8 +371,12 @@ function buildFilter(
   if (Array.isArray(uploadIds) && uploadIds.length > 0) {
     filter.push({ ids: { values: uploadIds } });
   }
-  if (Array.isArray(channelIds) && channelIds.length > 0) {
-    filter.push({ terms: { channelId: channelIds } });
+  if (Array.isArray(channelIds)) {
+    filter.push(
+      channelIds.length > 0
+        ? { terms: { channelId: channelIds } }
+        : { match_none: {} },
+    );
   }
   if (publishedAt && (publishedAt.gte || publishedAt.lte)) {
     filter.push({ range: { publishedAt } });
@@ -399,7 +403,7 @@ export type BuildMediaSearchArgs = {
   lexicalText: string;
   /** Exact phrases to match verbatim (from quoted text in the query). */
   quotes?: string[];
-  /** Channel UUIDs to restrict to (already resolved from slugs/names). */
+  /** Channel UUIDs to restrict to; an empty array explicitly matches no media. */
   channelIds?: string[] | null;
   /** Published-at range derived from parsed dates. */
   publishedAt?: PublishedAtRange | null;
