@@ -1,5 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { Suspense } from 'react';
+import { expect, within } from 'storybook/test';
 
+import { StoryTRPCProvider } from '../../.storybook/trpc-fixture';
 import Sidebar from './sidebar';
 
 const meta = {
@@ -13,17 +16,25 @@ const meta = {
   },
   tags: ['autodocs'],
   decorators: [
-    (Story) => {
-      return (
-        <div className="h-screen">
-          <Story />
-        </div>
-      );
-    },
+    (Story) => (
+      <StoryTRPCProvider responses={{ 'common.hasValidSession': false }}>
+        <Suspense fallback={null}>
+          <div className="h-screen">
+            <Story />
+          </div>
+        </Suspense>
+      </StoryTRPCProvider>
+    ),
   ],
 } satisfies Meta<typeof Sidebar>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).findByRole('navigation'),
+    ).resolves.toBeInTheDocument();
+  },
+};

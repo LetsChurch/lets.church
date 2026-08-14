@@ -16,6 +16,61 @@ import { createContext, useContext, type ReactNode } from 'react';
 
 import '../src/app.css';
 
+type ConsoleErrorCapture = {
+  calls: unknown[][];
+  original: typeof console.error;
+  replacement: typeof console.error;
+};
+
+let consoleErrorCapture: ConsoleErrorCapture | undefined;
+
+function formatConsoleValue(value: unknown) {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (value instanceof Error) {
+    return value.stack ?? `${value.name}: ${value.message}`;
+  }
+
+  try {
+    return JSON.stringify(value) ?? String(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function captureConsoleErrors() {
+  const calls: unknown[][] = [];
+  const original = console.error;
+  const replacement: typeof console.error = (...args) => {
+    calls.push(args);
+    original(...args);
+  };
+
+  consoleErrorCapture = { calls, original, replacement };
+  console.error = replacement;
+
+  return () => {
+    if (console.error === replacement) {
+      console.error = original;
+    }
+    if (consoleErrorCapture?.replacement === replacement) {
+      consoleErrorCapture = undefined;
+    }
+  };
+}
+
+function failOnConsoleErrors() {
+  const calls = consoleErrorCapture?.calls ?? [];
+  if (calls.length === 0) {
+    return;
+  }
+
+  const messages = calls.map((args) => args.map(formatConsoleValue).join(' '));
+  throw new Error(`Unexpected console.error:\n${messages.join('\n')}`);
+}
+
 //#region Dummy story router
 function RenderStory() {
   const storyFn = useContext(CurrentStoryContext);
@@ -72,6 +127,8 @@ export function storyRouterDecorator(storyFn: () => ReactNode) {
 }
 
 const preview: Preview = {
+  beforeEach: captureConsoleErrors,
+  afterEach: failOnConsoleErrors,
   parameters: {
     controls: {
       matchers: {
