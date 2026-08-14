@@ -197,6 +197,13 @@
       "when": 1786684471695,
       "tag": "0027_romantic_nitro",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1786735509560,
+      "tag": "0028_bouncy_wildside",
+      "breakpoints": true
     }
   ]
 }

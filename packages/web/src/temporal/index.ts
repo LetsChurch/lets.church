@@ -335,7 +335,7 @@ export async function completeMultipartMediaUpload(
 
 export async function createUploadRecord(
   data: UploadRecordCreateData,
-  importId?: string,
+  creationOperationId: string,
 ) {
   const res = await startBackground('createUploadRecordWorkflow', {
     ...retryOps,
@@ -343,11 +343,7 @@ export async function createUploadRecord(
     ...staticMeta({
       summary: `Create upload record${data.title ? `: ${data.title}` : ''}`,
     }),
-    workflowId: makeCreateUploadRecordWorkflowId(
-      importId,
-      data.publishedAt as Date,
-      data.title as string,
-    ),
+    workflowId: makeCreateUploadRecordWorkflowId(creationOperationId),
     args: [data],
   });
 

@@ -1367,6 +1367,8 @@ export const UploadRecord = pgTable(
   'upload_record',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    creationOperationId: text('creation_operation_id'),
+    creationRequestFingerprint: text('creation_request_fingerprint'),
     title: text('title'),
     description: text('description'),
     appUserId: uuid('app_user_id').notNull(),
@@ -1486,6 +1488,9 @@ export const UploadRecord = pgTable(
     upload_record_mux_asset_id_unique_idx: uniqueIndex(
       'upload_record_mux_asset_id_unique_idx',
     ).on(UploadRecord.muxAssetId),
+    upload_record_creation_operation_id_unique_idx: uniqueIndex(
+      'upload_record_creation_operation_id_unique_idx',
+    ).on(UploadRecord.creationOperationId),
     upload_record_score_idx: index('upload_record_score_idx').on(
       UploadRecord.score,
     ),

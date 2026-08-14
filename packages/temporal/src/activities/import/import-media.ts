@@ -41,6 +41,13 @@ export default async function importMedia(
   });
 
   const heartbeat = (arg?: string) => Context.current().heartbeat(arg);
+  const creationOperationId =
+    Context.current().info.workflowExecution?.workflowId;
+  if (!creationOperationId) {
+    throw new Error(
+      'Import workflow ID is required to create an upload record',
+    );
+  }
 
   let uploadRecordId: string;
   const dir = join(WORK_DIR, uuid());
@@ -56,10 +63,7 @@ export default async function importMedia(
       heartbeat,
     });
 
-    uploadRecordId = await createUploadRecord(
-      data,
-      Context.current().info.workflowExecution?.workflowId,
-    );
+    uploadRecordId = await createUploadRecord(data, creationOperationId);
     mediaUploadKey = `${uploadRecordId}/${uuid()}`;
 
     await ingestS3.putFileMultipart({

@@ -19,6 +19,9 @@ import {
   updateUploadRecordSignal,
   updateUploadRecordWorkflow,
 } from '../workflows/background';
+import type { UploadRecordCreateData } from './create-upload-record';
+
+export type { UploadRecordCreateData } from './create-upload-record';
 
 const moduleLogger = logger.child({ module: 'temporal' });
 
@@ -45,20 +48,6 @@ const BACKGROUND_QUEUE = 'background';
 
 const retryOps: Pick<WorkflowOptions, 'retry'> = {
   retry: { maximumAttempts: 5 },
-};
-
-export type UploadRecordCreateData = {
-  title?: string | null;
-  description?: string | null;
-  license?: string;
-  visibility?: string;
-  publishedAt?: Date | string;
-  userCommentsEnabled?: boolean;
-  uploadFinalized?: boolean;
-  uploadFinalizedById?: string;
-  appUserId?: string;
-  channelId?: string;
-  [key: string]: unknown;
 };
 
 export type UploadRecordUpdateData = {
@@ -89,7 +78,7 @@ export type UploadRecordUpdateData = {
 
 export async function createUploadRecord(
   data: UploadRecordCreateData,
-  importId?: string,
+  creationOperationId: string,
 ) {
   const res = await (
     await client
@@ -99,11 +88,7 @@ export async function createUploadRecord(
     ...staticMeta({
       summary: `Create upload record${data.title ? `: ${data.title}` : ''}`,
     }),
-    workflowId: makeCreateUploadRecordWorkflowId(
-      importId,
-      data.publishedAt as Date,
-      data.title as string,
-    ),
+    workflowId: makeCreateUploadRecordWorkflowId(creationOperationId),
     args: [data],
   });
 

@@ -32,12 +32,8 @@ export function makeDeleteUploadWorkflowId(uploadRecordId: string) {
   return `deleteUpload:${uploadRecordId}:${Date.now()}`;
 }
 
-export function makeCreateUploadRecordWorkflowId(
-  importId: string | undefined,
-  publishedAt: Date,
-  title: string,
-) {
-  return `createUploadRecord:${importId ? `${importId}` : `${publishedAt}:${title}`}`;
+export function makeCreateUploadRecordWorkflowId(creationOperationId: string) {
+  return `createUploadRecord:${creationOperationId}`;
 }
 
 export function makeUpdateUploadRecordWorkflowId(uploadRecordId: string) {

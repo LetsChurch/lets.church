@@ -1,7 +1,8 @@
-import { proxyActivities } from '@temporalio/workflow';
+import { proxyActivities, workflowInfo } from '@temporalio/workflow';
 
 import type * as activities from '../../activities/background';
 import type { UploadRecordCreateData } from '../../client';
+import { fingerprintUploadRecordCreateData } from '../../client/create-upload-record';
 import { BACKGROUND_QUEUE } from '../../queues';
 
 const { createUploadRecord: createUploadRecordActivity } = proxyActivities<
@@ -13,7 +14,12 @@ const { createUploadRecord: createUploadRecordActivity } = proxyActivities<
 });
 
 export async function createUploadRecordWorkflow(data: UploadRecordCreateData) {
-  const rec = await createUploadRecordActivity(data);
+  const creationOperationId = workflowInfo().workflowId;
+  const rec = await createUploadRecordActivity({
+    data,
+    creationOperationId,
+    creationRequestFingerprint: fingerprintUploadRecordCreateData(data),
+  });
 
   // Nothing to index at creation: the searchable media doc (lc_media_v1) is
   // written after transcription + summarization, once the upload has a summary

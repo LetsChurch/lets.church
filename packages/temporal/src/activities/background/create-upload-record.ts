@@ -6,11 +6,19 @@ import {
   UploadRecord,
   type UploadVisibility,
 } from '@letschurch/db';
+import { ApplicationFailure } from '@temporalio/activity';
 import { eq } from 'drizzle-orm';
 
-import type { UploadRecordCreateData } from '../../client';
+import type { CreateUploadRecordActivityInput } from '../../client/create-upload-record';
 
-export default async function createUploadRecord(data: UploadRecordCreateData) {
+export const UPLOAD_CREATION_DATA_INTEGRITY_ERROR =
+  'UploadCreationDataIntegrityError';
+
+export default async function createUploadRecord({
+  data,
+  creationOperationId,
+  creationRequestFingerprint,
+}: CreateUploadRecordActivityInput) {
   // Resolve username -> appUserId if needed
   let appUserId = data.appUserId as string | undefined;
   if (!appUserId && data.createdByUsername) {
@@ -55,38 +63,63 @@ export default async function createUploadRecord(data: UploadRecordCreateData) {
   if (!channelId)
     throw new Error('channelId is required to create upload record');
 
-  const [record] = await db
-    .insert(UploadRecord)
-    .values({
-      title: data.title as string | undefined,
-      description: (data.description as string | undefined) ?? null,
-      appUserId,
-      channelId,
-      license: ((data.license as string | undefined) ??
-        'STANDARD') as (typeof UploadLicense.enumValues)[number],
-      visibility: ((data.visibility as string | undefined) ??
-        'PUBLIC') as (typeof UploadVisibility.enumValues)[number],
-      uploadFinalized: (data.uploadFinalized as boolean | undefined) ?? false,
-      uploadFinalizedAt: (() => {
-        if (!data.uploadFinalizedAt) return undefined;
-        const d = new Date(data.uploadFinalizedAt as string | Date);
-        return Number.isNaN(d.getTime()) ? undefined : d;
-      })(),
-      uploadFinalizedById,
-      finalizedUploadKey: data.finalizedUploadKey as string | undefined,
-      publishedAt: (() => {
-        if (!data.publishedAt) return new Date();
-        const d = new Date(data.publishedAt as string | Date);
-        return Number.isNaN(d.getTime()) ? new Date() : d;
-      })(),
-      userCommentsEnabled:
-        (data.userCommentsEnabled as boolean | undefined) ?? true,
-      transcodingProgress: 0,
-      variants: [] as (typeof UploadRecord.$inferInsert)['variants'],
-      score: 0,
-      updatedAt: new Date(),
-    })
-    .returning();
+  return db.transaction(async (tx) => {
+    const [record] = await tx
+      .insert(UploadRecord)
+      .values({
+        creationOperationId,
+        creationRequestFingerprint,
+        title: data.title as string | undefined,
+        description: (data.description as string | undefined) ?? null,
+        appUserId,
+        channelId,
+        license: ((data.license as string | undefined) ??
+          'STANDARD') as (typeof UploadLicense.enumValues)[number],
+        visibility: ((data.visibility as string | undefined) ??
+          'PUBLIC') as (typeof UploadVisibility.enumValues)[number],
+        uploadFinalized: (data.uploadFinalized as boolean | undefined) ?? false,
+        uploadFinalizedAt: (() => {
+          if (!data.uploadFinalizedAt) return undefined;
+          const d = new Date(data.uploadFinalizedAt as string | Date);
+          return Number.isNaN(d.getTime()) ? undefined : d;
+        })(),
+        uploadFinalizedById,
+        finalizedUploadKey: data.finalizedUploadKey as string | undefined,
+        publishedAt: (() => {
+          if (!data.publishedAt) return new Date();
+          const d = new Date(data.publishedAt as string | Date);
+          return Number.isNaN(d.getTime()) ? new Date() : d;
+        })(),
+        userCommentsEnabled:
+          (data.userCommentsEnabled as boolean | undefined) ?? true,
+        transcodingProgress: 0,
+        variants: [] as (typeof UploadRecord.$inferInsert)['variants'],
+        score: 0,
+        updatedAt: new Date(),
+      })
+      .onConflictDoNothing({ target: UploadRecord.creationOperationId })
+      .returning();
 
-  return record;
+    if (record) return record;
+
+    const [existing] = await tx
+      .select()
+      .from(UploadRecord)
+      .where(eq(UploadRecord.creationOperationId, creationOperationId))
+      .limit(1);
+
+    if (!existing) {
+      throw new Error(
+        `Upload creation conflict did not resolve for operation '${creationOperationId}'`,
+      );
+    }
+    if (existing.creationRequestFingerprint !== creationRequestFingerprint) {
+      throw ApplicationFailure.nonRetryable(
+        `Upload creation operation '${creationOperationId}' was retried with different data`,
+        UPLOAD_CREATION_DATA_INTEGRITY_ERROR,
+      );
+    }
+
+    return existing;
+  });
 }
