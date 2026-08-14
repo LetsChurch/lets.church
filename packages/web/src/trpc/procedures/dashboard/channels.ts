@@ -2107,6 +2107,13 @@ export const channelRouter = router({
       try {
         let wasAdmin = false;
         await db.transaction(async (tx) => {
+          await tx.execute(sql`
+            select ${Channel.id}
+            from ${Channel}
+            where ${Channel.id} = ${input.channelId}
+            for update
+          `);
+
           // Don't allow removing the last admin
           const [adminCountResult] = await tx
             .select({ count: count() })

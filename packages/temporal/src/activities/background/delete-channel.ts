@@ -1,6 +1,5 @@
 import {
   Channel,
-  ChannelMembership,
   ChannelSubscription,
   db,
   OrganizationChannelAssociation,
@@ -180,13 +179,6 @@ export async function deleteChannelAssociations(
   activityLogger.info(`Deleting associations for channel ${channelId}`);
 
   try {
-    // Delete memberships (cascade delete is configured in schema)
-    const memberships = await db
-      .delete(ChannelMembership)
-      .where(eq(ChannelMembership.channelId, channelId))
-      .returning();
-    activityLogger.info(`Deleted ${memberships.length} channel memberships`);
-
     // Delete subscriptions (cascade delete is configured in schema)
     const subscriptions = await db
       .delete(ChannelSubscription)

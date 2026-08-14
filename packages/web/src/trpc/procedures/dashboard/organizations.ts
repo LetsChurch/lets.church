@@ -7,7 +7,7 @@ import {
 } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
-import { and, count, eq } from 'drizzle-orm';
+import { and, count, eq, sql } from 'drizzle-orm';
 
 import {
   cancelOrganizationInvitationSchema,
@@ -680,6 +680,13 @@ export const organizationRouter = router({
       try {
         let wasAdmin = false;
         await db.transaction(async (tx) => {
+          await tx.execute(sql`
+            select ${Organization.id}
+            from ${Organization}
+            where ${Organization.id} = ${input.orgId}
+            for update
+          `);
+
           // Don't allow removing the last admin
           const adminMembers = await tx.query.OrganizationMembership.findMany({
             where: (t, { and, eq }) =>

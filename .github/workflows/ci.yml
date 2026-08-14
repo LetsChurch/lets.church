@@ -83,7 +83,6 @@ jobs:
 
   test:
     runs-on: depot-ubuntu-24.04
-
     steps:
       - uses: actions/checkout@v4
 

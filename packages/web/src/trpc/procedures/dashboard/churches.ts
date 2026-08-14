@@ -13,7 +13,7 @@ import { PART_SIZE } from '@letschurch/s3';
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { invariant, isEqual, pick } from 'es-toolkit';
 
 import {
@@ -752,6 +752,13 @@ export const churchRouter = router({
       try {
         let wasAdmin = false;
         await db.transaction(async (tx) => {
+          await tx.execute(sql`
+            select ${Organization.id}
+            from ${Organization}
+            where ${Organization.id} = ${input.churchId}
+            for update
+          `);
+
           // Don't allow removing the last admin
           const adminMembers = await tx.query.OrganizationMembership.findMany({
             where: (t, { and, eq }) =>
