@@ -1,11 +1,12 @@
 import { z } from 'zod';
 
-// Base URL for lets.bible (our own scripture reader). Env-driven (Vite inlines
-// VITE_* in both the client and SSR bundles); dev falls back to the lets.bible
-// dev port. Prod sets VITE_LETS_BIBLE_URL=https://lets.bible.
+// Base URL for lets.bible (our own scripture reader). Vite inlines VITE_* in
+// both the client and SSR bundles. Development explicitly sets the local URL
+// through .envrc/docker-compose; the safe default must be the public origin so
+// a production build with no build-time override cannot emit localhost links.
 const LETS_BIBLE_URL =
   (import.meta.env as Record<string, string | undefined>).VITE_LETS_BIBLE_URL ??
-  'http://localhost:4001';
+  'https://lets.bible';
 
 // OSIS book id → display name. The lets.bible slug is derived from the name
 // (lowercased, spaces → hyphens): "1 Corinthians" → "1-corinthians", "Psalm" →

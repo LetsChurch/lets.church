@@ -61,6 +61,7 @@ COPY --chown=nodeapp:nodeapp --from=deps /usr/src/app/node_modules ./node_module
 COPY --chown=nodeapp:nodeapp --from=deps /usr/src/app/packages/ ./packages/
 COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml tsconfig.json package.json ./
 COPY --chown=nodeapp:nodeapp packages/ ./packages/
+ARG VITE_LETS_BIBLE_URL=https://lets.bible
 ENV NODE_ENV=production
 ENV VITE_SENTRY_DSN=https://d641f53f296e7abff3b6b269a4decfc4@o387306.ingest.sentry.io/4506108399190016
 RUN pnpm run -r build
