@@ -1,4 +1,4 @@
-import { EMBED_MODEL, embedQuery } from '../ai/embed';
+import { EMBED_DIMS, EMBED_MODEL, embedQuery } from '../ai/embed';
 import { cacheGet, cacheSet } from '../util/cache';
 import {
   HYBRID_PIPELINE,
@@ -636,16 +636,26 @@ async function getVerseVector(
   translationId: string,
   ref: string,
 ): Promise<number[] | null> {
-  const res = await osSearch<{ embedding?: number[] }>({
+  const res = await osSearch<never, { embedding?: number[][] }>({
     index: VERSE_INDEX,
     size: 1,
-    _source: ['embedding'],
+    _source: false,
+    docvalue_fields: [{ field: 'embedding', format: 'array' }],
     query: {
       bool: { filter: [{ term: { translationId } }, { term: { ref } }] },
     },
   });
-  const e = res.hits.hits[0]?._source?.embedding;
-  return e && e.length > 0 ? e : null;
+  const embedding = res.hits.hits[0]?.fields?.embedding?.[0];
+  if (!embedding) return null;
+  if (
+    embedding.length !== EMBED_DIMS ||
+    embedding.some((value) => !Number.isFinite(value))
+  ) {
+    throw new Error(
+      `Stored verse embedding must contain ${EMBED_DIMS} finite values`,
+    );
+  }
+  return embedding;
 }
 
 // "Related passages" — SEMANTIC similarity via dense-vector kNN over the verse

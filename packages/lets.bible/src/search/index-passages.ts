@@ -23,14 +23,14 @@ console.log(
     : `Indexing ${passages.length} passages into ${PASSAGE_INDEX} WITHOUT embeddings — no seed/passage-embeddings artifact (run \`just lb-embed-passages\`, or \`git lfs pull\`); passage recall will be lexical-only...`,
 );
 
-// A doc with a 3072-float embedding is ~60KB of JSON; flush in ~300-doc chunks to
-// stay under OpenSearch's coordinating indexing-pressure limit (~51MB).
+// Base64 float32 encoding keeps each 3072-d vector at 16KiB. Retain conservative
+// 300-document bulks until production measurements justify a larger batch.
 const BULK_BATCH = 300;
 let indexed = 0;
 for (let b = 0; b < passages.length; b += BULK_BATCH) {
   const chunk = passages.slice(b, b + BULK_BATCH);
   const operations = chunk.flatMap((p) => {
-    const vec = committed?.get(`${p.translationId}:${p.ref}`);
+    const vec = committed?.getBase64(`${p.translationId}:${p.ref}`);
     return [
       { index: { _index: PASSAGE_INDEX, _id: `${p.translationId}:${p.ref}` } },
       {

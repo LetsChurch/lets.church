@@ -7,9 +7,11 @@ import {
   UploadRecord,
 } from '@letschurch/db';
 import { client, SPEAKER_VECTOR_INDEX } from '@letschurch/opensearch';
+import { encodeKnnFloatVector } from '@letschurch/util/server/knn-vector';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 
 import logger from '../../util/logger';
+import { SPEAKER_EMBED_DIMS } from '../../util/speaker-embedding';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/sync-speaker-vectors',
@@ -23,8 +25,14 @@ const moduleLogger = logger.child({
 // the media doc — used by the `speaker` reindex kind and reusable after a
 // labeling change. The mean-vector logic mirrors index-document.ts's media case;
 // keep them in step if either changes.
+export type SyncSpeakerVectorsOptions = {
+  /** Bulk reindexes disable per-upload refreshes and refresh once at completion. */
+  refresh?: boolean;
+};
+
 export async function syncSpeakerVectors(
   uploadRecordId: string,
+  { refresh = true }: SyncSpeakerVectorsOptions = {},
 ): Promise<void> {
   const log = moduleLogger.child({
     temporalActivity: 'syncSpeakerVectors',
@@ -119,7 +127,10 @@ export async function syncSpeakerVectors(
         speakerId,
         channelId: upRec.channelId,
         uploadRecordId,
-        embedding: sum.map((v) => v / n),
+        embedding: encodeKnnFloatVector(
+          sum.map((v) => v / n),
+          SPEAKER_EMBED_DIMS,
+        ),
       },
     }),
   );
@@ -127,12 +138,12 @@ export async function syncSpeakerVectors(
   // Wipe this upload's existing vectors, then re-add the current set.
   await client.deleteByQuery({
     index: SPEAKER_VECTOR_INDEX,
-    refresh: true,
+    refresh,
     body: { query: { term: { uploadRecordId } } },
   });
   if (speakerVectors.length > 0) {
     await client.bulk({
-      refresh: true,
+      refresh,
       body: speakerVectors.flatMap((sv) => [
         { index: { _index: SPEAKER_VECTOR_INDEX, _id: sv.id } },
         sv.document,

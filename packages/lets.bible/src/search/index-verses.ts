@@ -47,16 +47,16 @@ console.log(
     : `Indexing ${rows.length} verses into ${VERSE_INDEX} WITHOUT embeddings — no seed/embeddings artifact (run \`git lfs pull\`?); search will be lexical-only...`,
 );
 
-// A doc with a 3072-float embedding is ~60KB of JSON, so a large bulk body trips
-// OpenSearch's coordinating indexing-pressure limit (~51MB). Flush in ~300-doc
-// chunks (~18MB) that stay comfortably under it.
+// Base64 float32 encoding keeps each 3072-d vector at 16KiB rather than ~60KiB
+// of decimal JSON. Retain conservative 300-document bulks until production
+// measurements justify a larger batch.
 const BULK_BATCH = 300;
 let indexed = 0;
 for (let b = 0; b < rows.length; b += BULK_BATCH) {
   const chunk = rows.slice(b, b + BULK_BATCH);
   const operations = chunk.flatMap((r) => {
     const canon = findBook(r.book);
-    const vec = committed?.get(`${r.translationId}:${r.ref}`);
+    const vec = committed?.getBase64(`${r.translationId}:${r.ref}`);
     return [
       { index: { _index: VERSE_INDEX, _id: `${r.translationId}:${r.ref}` } },
       {

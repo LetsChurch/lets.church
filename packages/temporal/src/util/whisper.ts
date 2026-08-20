@@ -7,6 +7,7 @@ import { stringifySync } from 'subtitle';
 import { z } from 'zod';
 
 import logger from './logger';
+import { speakerEmbeddingSchema } from './speaker-embedding';
 import { isAdjective, isConjunction, isPreposition } from './words';
 
 const moduleLogger = logger.child({ module: 'util/whisper' });
@@ -87,7 +88,7 @@ export const transcriptJsonSchema = z.object({
   language: z.string(),
   duration: z.number().nullable().optional(),
   text: z.string().optional(),
-  speakerEmbeddings: z.record(z.string(), z.array(z.number())).optional(),
+  speakerEmbeddings: z.record(z.string(), speakerEmbeddingSchema).optional(),
   segments: z.array(
     z.object({
       start: z.number(),

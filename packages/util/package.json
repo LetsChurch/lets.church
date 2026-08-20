@@ -10,7 +10,8 @@
     "./rate-limit": "./src/rate-limit.ts",
     "./request-ip": "./src/request-ip.ts",
     "./server/encrypted-payload": "./src/server/encrypted-payload.ts",
-    "./server/encrypted-payload-types": "./src/server/encrypted-payload-types.ts"
+    "./server/encrypted-payload-types": "./src/server/encrypted-payload-types.ts",
+    "./server/knn-vector": "./src/server/knn-vector.ts"
   },
   "scripts": {
     "check": "pnpm run /^check:/",

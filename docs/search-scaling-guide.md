@@ -140,9 +140,9 @@ migration doc, repeated here because they interact with tuning):
   so absolute score thresholds don't transfer across queries. The cosine *gate*
   uses the raw kNN probe (`runMediaKnnProbe`), not the normalized pipeline score —
   keep it that way; don't gate on post-normalization scores.
-- The leave-one-out facet aggregations issue **parallel `osSearch` calls** (the
-  `_msearch` metadata header can't carry `search_pipeline` on 3.6.0). At 55k that's
-  N extra full hybrid queries per search — watch the facet fan-out cost and
+- The leave-one-out facet aggregations issue **parallel `osSearch` calls**
+  because the `_msearch` metadata header can't carry `search_pipeline`. At 55k
+  that's N extra full hybrid queries per search — watch the facet fan-out cost and
   consider caching facet counts or narrowing which facets recompute per keystroke.
 
 ## Rollout / validation discipline

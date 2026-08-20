@@ -176,7 +176,7 @@ export async function reindexBatch(
     async ({ id }) => {
       try {
         if (kind === 'speaker') {
-          await syncSpeakerVectors(id);
+          await syncSpeakerVectors(id, { refresh: false });
         } else {
           // `kind` is narrowed to a DocumentKind here ('speaker' handled above).
           await indexDocument(kind, id, { refresh: false });

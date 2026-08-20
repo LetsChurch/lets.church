@@ -2,16 +2,18 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { encodeKnnFloatVector } from '@letschurch/util/server/knn-vector';
+
 import { EMBED_DIMS } from '../ai/embed';
 
-// Reads the committed PER-TRANSLATION verse-embedding artifacts (seed/embeddings/
-// <TID>.f16.bin + <TID>.manifest.json, produced by embed-verses.ts) so the
-// indexer can rebuild the search index without re-embedding via OpenAI. Vectors
-// are stored float16, decoded to number[] on demand from per-translation buffers
-// (kept in memory; ~730 MB total across translations) rather than a giant map,
-// keeping memory bounded. Discovering files by directory listing means adding a
-// translation is just adding its two files. Returns null when no artifact exists
-// (the indexer then live-embeds, given a key).
+// Reads committed per-translation embedding artifacts
+// (`seed/embeddings/<TID>.f16.bin` + manifest, produced by embed-verses.ts) so
+// the indexer can rebuild search without re-embedding via OpenAI. Vectors are
+// stored as float16 and converted directly to OpenSearch 3.8's little-endian
+// float32 Base64 transport on demand from per-translation buffers (~730 MB
+// total), without allocating an intermediate number[]. Directory discovery
+// makes a new translation just two more files. Returns null when no artifact
+// exists, in which case the indexer builds a lexical-only index.
 
 const SEED_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../seed');
 // Verse vectors live under seed/embeddings; the parallel thought-unit (passage)
@@ -38,8 +40,8 @@ type Loaded = {
 export type CommittedEmbeddings = {
   model: string;
   count: number;
-  /** Decoded vector for a `${translationId}:${ref}` id, or undefined if absent. */
-  get(id: string): number[] | undefined;
+  /** OpenSearch 3.8 Base64 vector for a `${translationId}:${ref}` id. */
+  getBase64(id: string): string | undefined;
 };
 
 function loadFrom(dir: string, regenHint: string): CommittedEmbeddings | null {
@@ -58,6 +60,16 @@ function loadFrom(dir: string, regenHint: string): CommittedEmbeddings | null {
     const m = JSON.parse(
       readFileSync(join(dir, file), 'utf8'),
     ) as TranslationManifest;
+    if (m.dtype !== 'float16') {
+      throw new Error(
+        `Committed embeddings for ${m.translationId} use ${m.dtype}, expected float16 — regenerate (\`${regenHint}\`).`,
+      );
+    }
+    if (model && m.model !== model) {
+      throw new Error(
+        `Committed embeddings mix models ${model} and ${m.model} — regenerate (\`${regenHint}\`).`,
+      );
+    }
     if (m.dims !== EMBED_DIMS) {
       throw new Error(
         `Committed embeddings for ${m.translationId} are ${m.dims}-d but EMBED_DIMS is ${EMBED_DIMS} — regenerate (\`${regenHint}\`).`,
@@ -82,14 +94,14 @@ function loadFrom(dir: string, regenHint: string): CommittedEmbeddings | null {
       f16,
       refIndex: new Map(m.refs.map((ref, i) => [ref, i])),
     });
-    model = m.model;
+    model ||= m.model;
     count += m.count;
   }
 
   return {
     model,
     count,
-    get(id: string) {
+    getBase64(id: string) {
       const sep = id.indexOf(':');
       const tid = id.slice(0, sep);
       const ref = id.slice(sep + 1);
@@ -102,7 +114,10 @@ function loadFrom(dir: string, regenHint: string): CommittedEmbeddings | null {
         return undefined;
       }
       const start = row * EMBED_DIMS;
-      return Array.from(t.f16.subarray(start, start + EMBED_DIMS));
+      return encodeKnnFloatVector(
+        t.f16.subarray(start, start + EMBED_DIMS),
+        EMBED_DIMS,
+      );
     },
   };
 }

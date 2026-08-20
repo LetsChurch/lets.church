@@ -60,18 +60,22 @@ export const client = new Client({
 // `{ body, statusCode, ... }` response envelope, returning the response body in
 // the flattened shape our callers expect (matching the previous Elasticsearch 8
 // client). `index`/`scroll` are URL params; everything else is the search body.
-export type OsHits<T> = {
+export type OsHits<TSource, TFields = Record<string, unknown>> = {
   hits: {
     total?: { value: number } | number;
     hits: Array<{
-      _source?: T;
+      _source?: TSource;
+      fields?: TFields;
       _score?: number;
       highlight?: Record<string, string[]>;
     }>;
   };
 };
 
-export async function osSearch<T = unknown>(
+export async function osSearch<
+  TSource = unknown,
+  TFields = Record<string, unknown>,
+>(
   params: Record<string, unknown> & {
     index: string;
     scroll?: string;
@@ -79,10 +83,10 @@ export async function osSearch<T = unknown>(
     // search pipeline (HYBRID_PIPELINE); pass it here as a URL param.
     search_pipeline?: string;
   },
-): Promise<OsHits<T>> {
+): Promise<OsHits<TSource, TFields>> {
   const { index, scroll, search_pipeline, ...body } = params;
   const res = await client.search({ index, scroll, search_pipeline, body });
-  return res.body as OsHits<T>;
+  return res.body as OsHits<TSource, TFields>;
 }
 
 export async function osMsearch(

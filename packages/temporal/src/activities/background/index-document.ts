@@ -17,6 +17,7 @@ import {
   escapeDocument,
   SPEAKER_VECTOR_INDEX,
 } from '@letschurch/opensearch';
+import { encodeKnnFloatVector } from '@letschurch/util/server/knn-vector';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 
@@ -24,7 +25,9 @@ import {
   bibleBookFromMetadata,
   bibleRefsFromMetadata,
 } from '../../util/bible-refs';
+import { EMBED_DIMS } from '../../util/llm';
 import logger from '../../util/logger';
+import { SPEAKER_EMBED_DIMS } from '../../util/speaker-embedding';
 import { buildWindows, embedWindowsCached } from '../../util/windows';
 
 const moduleLogger = logger.child({
@@ -291,7 +294,10 @@ async function getDocument(
             speakerId,
             channelId: upRecRow.channelId,
             uploadRecordId: documentId,
-            embedding: sum.map((v) => v / n),
+            embedding: encodeKnnFloatVector(
+              sum.map((v) => v / n),
+              SPEAKER_EMBED_DIMS,
+            ),
           },
         }),
       );
@@ -391,8 +397,14 @@ async function getDocument(
           bibleRefs,
           // Distinct OSIS books cited — the book facet + filter source.
           bibleBooks,
-          summaryEmbedding: upRecRow.summaryEmbedding,
-          searchSummaryEmbedding: upRecRow.searchSummaryEmbedding,
+          summaryEmbedding: encodeKnnFloatVector(
+            upRecRow.summaryEmbedding,
+            EMBED_DIMS,
+          ),
+          searchSummaryEmbedding: encodeKnnFloatVector(
+            upRecRow.searchSummaryEmbedding,
+            EMBED_DIMS,
+          ),
           paragraphs: paragraphs.map((p) => {
             const resolved = speakerByLabel.get(effectiveLabel(p) ?? '');
             return {
@@ -406,7 +418,9 @@ async function getDocument(
               // `lc_speaker_vectors` index instead, so storing 192-dim vectors
               // per paragraph would be pure bloat.
               text: p.text,
-              embedding: p.embedding,
+              embedding: p.embedding
+                ? encodeKnnFloatVector(p.embedding, EMBED_DIMS)
+                : null,
             };
           }),
           // Story-run spans (see above). `paras` are stored inline (mapping
@@ -417,7 +431,7 @@ async function getDocument(
             endOrder: w.endOrder,
             start: w.start,
             end: w.end,
-            embedding: w.embedding,
+            embedding: encodeKnnFloatVector(w.embedding, EMBED_DIMS),
             // Fresh object literals (not the named InParagraph type) so the
             // structure satisfies escapeDocument's JsonValue constraint.
             paras: w.paras.map((p) => ({

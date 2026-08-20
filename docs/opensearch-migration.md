@@ -6,8 +6,8 @@ Reciprocal Rank Fusion (RRF) is required for the new hybrid media search, but on
 Elasticsearch it's a **license-gated (Platinum) feature** — Basic returns
 `security_exception: current license is non-compliant for [Reciprocal Rank
 Fusion (RRF)]`, and that gating is unchanged through ES 8.18 / 9.0. OpenSearch
-ships RRF for free (the `score-ranker-processor`, OpenSearch ≥ 2.19). We run
-**OpenSearch 3.6.0**.
+ships RRF for free (the `score-ranker-processor`, OpenSearch ≥ 2.19). The server
+runs **OpenSearch 3.8.0**; the JavaScript client remains at its latest 3.6.0.
 
 ## What changed (code)
 
@@ -35,7 +35,7 @@ ships RRF for free (the `score-ranker-processor`, OpenSearch ≥ 2.19). We run
   (`normalization-processor`, min_max + weighted mean) — see
   [`search-ranking-tuning.md`](./search-ranking-tuning.md). The `lc-media-rrf`
   id is kept as-is.
-- **Infra**: `docker-compose.yml` runs `opensearchproject/opensearch:3.6.0`
+- **Infra**: `docker-compose.yml` runs `opensearchproject/opensearch:3.8.0`
   (service `opensearch`). The security plugin is **disabled in dev**
   (`DISABLE_SECURITY_PLUGIN=true`), so the cluster serves plain HTTP with no
   auth — matching the prior ES setup and the `http://opensearch:9200` URL. The
@@ -97,11 +97,11 @@ version, adjust:
   `media-search.ts`.
 - `knn` query `filter` / `expand_nested_docs` placement for nested vectors.
 - faiss `cosinesimil` availability (vs `lucene` engine) for 1536-dim vectors.
-- **`search_pipeline` is NOT honored in the `_msearch` metadata header** on
-  3.6.0 — it 400s with `key [search_pipeline] is not supported in the metadata
-  section`. So any query that needs the RRF pipeline (i.e. every `hybrid` query)
-  must run as its own `_search` with `?search_pipeline=…`, not batched into an
-  `osMsearch`. The leave-one-out facet aggregations in `runMediaFacets` issue
+- **`search_pipeline` is not honored in the `_msearch` metadata header**; it
+  400s because the key belongs to an individual search body, not the metadata
+  line. Queries needing the fusion pipeline currently run as their own `_search`
+  with `?search_pipeline=…`, not batched through `osMsearch`.
+  The leave-one-out facet aggregations in `runMediaFacets` issue
   parallel `osSearch` calls for this reason (see the comment there). (An unpiped
   `hybrid` query in `_msearch` does run and yields correct aggregations — they're
   score-independent — but returns unnormalized `_score`s, so don't rely on it.)
