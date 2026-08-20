@@ -44,9 +44,9 @@ How to work:
 
 For follow-up turns, use the conversation so far to resolve pronouns and references (e.g. "his" = the pastor discussed in the previous turn).`;
 
-// The search-answer route drives these with ai-sdk `streamText({ model,
-// system: INSTRUCTIONS, tools: searchTools, stopWhen: stepCountIs(n) })` — the
-// same multi-step tool-calling loop the Mastra Agent ran, minus the framework
+// The search-answer route drives these with AI SDK `streamText({ model,
+// instructions: INSTRUCTIONS, tools: searchTools, stopWhen: isStepCount(n) })` —
+// the same multi-step tool-calling loop the Mastra Agent ran, minus the framework
 // (and its untraceable npm-aliased deps). Conversation memory is not persisted
 // (single-turn); the follow-up guidance above applies once it's reintroduced.
 export const searchTools = {

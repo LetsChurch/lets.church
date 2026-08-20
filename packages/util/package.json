@@ -11,7 +11,8 @@
     "./request-ip": "./src/request-ip.ts",
     "./server/encrypted-payload": "./src/server/encrypted-payload.ts",
     "./server/encrypted-payload-types": "./src/server/encrypted-payload-types.ts",
-    "./server/knn-vector": "./src/server/knn-vector.ts"
+    "./server/knn-vector": "./src/server/knn-vector.ts",
+    "./server/ai-telemetry": "./src/server/ai-telemetry.ts"
   },
   "scripts": {
     "check": "pnpm run /^check:/",
@@ -23,6 +24,14 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@ai-sdk/otel": "^1.0.66",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.221.0",
+    "@opentelemetry/resources": "^2.10.0",
+    "@opentelemetry/sdk-node": "^0.221.0",
+    "@opentelemetry/sdk-trace-base": "^2.10.0",
+    "@posthog/ai": "^8.8.0",
+    "ai": "^7.0.66",
     "pino": "catalog:",
     "pino-pretty": "^13.1.2",
     "type-fest": "catalog:"

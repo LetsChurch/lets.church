@@ -84,6 +84,10 @@ services:
       # Production LLM calls (search parse/suggest/related, the Q&A agent,
       # query-time embeddings) go direct to OpenAI from this container.
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      # Optional PostHog AI Observability. Content capture defaults off.
+      POSTHOG_PROJECT_TOKEN: ${POSTHOG_PROJECT_TOKEN:-}
+      POSTHOG_HOST: ${POSTHOG_HOST:-https://us.i.posthog.com}
+      POSTHOG_AI_CAPTURE_CONTENT: ${POSTHOG_AI_CAPTURE_CONTENT:-false}
       # OpenRouter access for the admin LLM-eval surface
       # (`evaluateLlmModel` tRPC mutation), the content-filter fallback, and
       # dev-only seed bootstrap scripts (`just generate-seed-annotations`) —
@@ -146,6 +150,9 @@ services:
       PORT: 3000
       LETS_BIBLE_DATABASE_URL: postgres://letsbible:password@postgres:5432/letsbible
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      POSTHOG_PROJECT_TOKEN: ${POSTHOG_PROJECT_TOKEN:-}
+      POSTHOG_HOST: ${POSTHOG_HOST:-https://us.i.posthog.com}
+      POSTHOG_AI_CAPTURE_CONTENT: ${POSTHOG_AI_CAPTURE_CONTENT:-false}
       OPENSEARCH_URL: http://opensearch:9200
       OIDC_ISSUER: ${OIDC_ISSUER:-${HOST_WEB_URL}}
       OIDC_INTERNAL_URL: http://web:3000

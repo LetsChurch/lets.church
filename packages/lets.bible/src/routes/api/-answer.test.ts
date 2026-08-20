@@ -36,7 +36,7 @@ vi.mock('@/ai/model', () => {
   return { ANSWER_MODEL: 'test', answerModel: {} };
 });
 vi.mock('@/search/search', () => ({ hybridSearchVerses }));
-vi.mock('ai', () => ({ stepCountIs: vi.fn(), streamText }));
+vi.mock('ai', () => ({ isStepCount: vi.fn(), streamText }));
 vi.mock('@/util/cache', () => ({ cacheGet, cacheSet }));
 vi.mock('@/ai/gate', () => ({
   classifyScriptureAnswerable,

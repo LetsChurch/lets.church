@@ -1,5 +1,9 @@
 import { readRequestBody, RequestBodyTooLargeError } from '@letschurch/util';
 import { createFileRoute } from '@tanstack/react-router';
+import type {
+  isStepCount as isStepCountType,
+  streamText as streamTextType,
+} from 'ai';
 import { z } from 'zod';
 
 import {
@@ -156,8 +160,8 @@ export const Route = createFileRoute('/api/answer')({
           answerModel: typeof import('@/ai/model').answerModel;
           ANSWER_MODEL: string;
           hybridSearchVerses: typeof import('@/search/search').hybridSearchVerses;
-          streamText: typeof import('ai').streamText;
-          stepCountIs: typeof import('ai').stepCountIs;
+          streamText: typeof streamTextType;
+          isStepCount: typeof isStepCountType;
           cacheGet: typeof import('@/util/cache').cacheGet;
           cacheSet: typeof import('@/util/cache').cacheSet;
           recollectionGate: typeof import('@/ai/gate').recollectionGate;
@@ -184,7 +188,7 @@ export const Route = createFileRoute('/api/answer')({
             ANSWER_MODEL: model.ANSWER_MODEL,
             hybridSearchVerses: search.hybridSearchVerses,
             streamText: ai.streamText,
-            stepCountIs: ai.stepCountIs,
+            isStepCount: ai.isStepCount,
             cacheGet: cache.cacheGet,
             cacheSet: cache.cacheSet,
             recollectionGate: gate.recollectionGate,
@@ -210,7 +214,7 @@ export const Route = createFileRoute('/api/answer')({
           ANSWER_MODEL,
           hybridSearchVerses,
           streamText,
-          stepCountIs,
+          isStepCount,
           cacheGet,
           cacheSet,
           recollectionGate,
@@ -221,6 +225,17 @@ export const Route = createFileRoute('/api/answer')({
           VERSE_DETECTIVE_INSTRUCTIONS,
           channelChunk,
         } = mods;
+        // Dynamic by design: this route module is shared with the browser, while
+        // the OpenTelemetry implementation is Node-only.
+        const { aiTelemetry } =
+          await import('@letschurch/util/server/ai-telemetry');
+        const telemetryContext = {
+          distinctId: request.headers.get('x-posthog-distinct-id') ?? undefined,
+          aiSessionId: crypto.randomUUID(),
+          posthogSessionId:
+            request.headers.get('x-posthog-session-id') ?? undefined,
+          feature: 'letsbible-answer',
+        };
 
         const encoder = new TextEncoder();
         const day = new Date().toISOString().slice(0, 10);
@@ -267,7 +282,7 @@ export const Route = createFileRoute('/api/answer')({
         if (decision === 'dig' || parsed.deepen === true) {
           wantDig = true;
         } else if (decision === 'ambiguous') {
-          wantDig = await classifyVerseRecollection(parsed.q);
+          wantDig = await classifyVerseRecollection(parsed.q, telemetryContext);
         }
 
         // ================= DIG PATH (verse-finder) =================
@@ -280,10 +295,11 @@ They are currently reading the ${parsed.translation} translation. Find the actua
 
           const digResult = streamText({
             model: answerModel,
-            system: VERSE_DETECTIVE_INSTRUCTIONS,
+            instructions: VERSE_DETECTIVE_INSTRUCTIONS,
             prompt: digPrompt,
             tools: detectiveTools,
-            stopWhen: stepCountIs(DIG_STEP_BUDGET),
+            stopWhen: isStepCount(DIG_STEP_BUDGET),
+            ...aiTelemetry('letsbible.answer.deep', telemetryContext),
             onError: ({ error }) => {
               console.error(
                 'lets.bible verse-finder streamText error:',
@@ -409,7 +425,10 @@ They are currently reading the ${parsed.translation} translation. Find the actua
         // ================= CHEAP PATH (topical) =================
         // Off-topic (not about Scripture/faith) → one-line decline, no
         // generation. Fail-soft to answerable inside the gate.
-        const answerable = await classifyScriptureAnswerable(parsed.q);
+        const answerable = await classifyScriptureAnswerable(
+          parsed.q,
+          telemetryContext,
+        );
         if (!answerable) {
           const message = "That's outside what I can help with here.";
           await cacheSet(
@@ -426,6 +445,7 @@ They are currently reading the ${parsed.translation} translation. Find the actua
           q: parsed.q,
           translationId: parsed.translation,
           size: 12,
+          telemetryContext,
         });
 
         if (hits.length === 0) {
@@ -445,8 +465,9 @@ They are currently reading the ${parsed.translation} translation. Find the actua
 
         const result = streamText({
           model: answerModel,
-          system: INSTRUCTIONS,
+          instructions: INSTRUCTIONS,
           prompt: `Question: ${parsed.q}\n\nRelevant passages (${parsed.translation}):\n${passages}\n\nAnswer the question, citing verses inline as [Book Chapter:Verse].`,
+          ...aiTelemetry('letsbible.answer', telemetryContext),
           onError: ({ error }) => {
             console.error(
               'lets.bible answer streamText error:',

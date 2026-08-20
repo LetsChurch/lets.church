@@ -117,27 +117,38 @@ export const Route = createFileRoute('/api/dig-deeper')({
           { SEARCH_AGENT_MODEL, agentModel },
           { recordLlmCall },
           { hydrateUploads },
-          { streamText, stepCountIs },
+          { streamText, isStepCount },
+          { aiTelemetry },
         ] = await Promise.all([
           import('@/ai/agent'),
           import('@/ai/model'),
           import('@letschurch/temporal/util/llm'),
           import('@/trpc/search/hydrate'),
           import('ai'),
+          import('@letschurch/util/server/ai-telemetry'),
         ]);
 
+        const telemetryContext = {
+          distinctId:
+            request.headers.get('x-posthog-distinct-id') ?? parsed.resourceId,
+          aiSessionId: parsed.threadId,
+          posthogSessionId:
+            request.headers.get('x-posthog-session-id') ?? undefined,
+          feature: 'dig-deeper',
+        };
         const encoder = new TextEncoder();
 
         try {
           const genStart = Date.now();
           const result = streamText({
             model: agentModel,
-            system: CHAT_INSTRUCTIONS,
+            instructions: CHAT_INSTRUCTIONS,
             messages: parsed.messages,
             tools: detectiveTools,
-            stopWhen: stepCountIs(CHAT_STEP_BUDGET),
+            stopWhen: isStepCount(CHAT_STEP_BUDGET),
             abortSignal: request.signal,
             timeout: TURN_DEADLINE_MS,
+            ...aiTelemetry('web.dig-deeper', telemetryContext),
             onError: ({ error }) => {
               moduleLogger.error(
                 {

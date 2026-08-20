@@ -1,4 +1,5 @@
 import { createOpenAI } from '@ai-sdk/openai';
+import { initAiTelemetry } from '@letschurch/util/server/ai-telemetry';
 import { z } from 'zod';
 
 // LLM config for the search-answer feature. Calls OpenAI directly with the Vercel
@@ -14,6 +15,7 @@ const { OPENAI_API_KEY, LETS_BIBLE_ANSWER_MODEL, LETS_BIBLE_PARSE_MODEL } = z
     LETS_BIBLE_PARSE_MODEL: z.string().default('openai/gpt-5.6-luna'),
   })
   .parse(process.env);
+initAiTelemetry({ serviceName: 'lets.bible' });
 
 const openai = createOpenAI({ apiKey: OPENAI_API_KEY });
 

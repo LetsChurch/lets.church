@@ -1,4 +1,5 @@
 import { createOpenAI } from '@ai-sdk/openai';
+import { initAiTelemetry } from '@letschurch/util/server/ai-telemetry';
 import { z } from 'zod';
 
 const { OPENAI_API_KEY, OPENROUTER_SEARCH_AGENT_MODEL } = z
@@ -10,6 +11,7 @@ const { OPENAI_API_KEY, OPENROUTER_SEARCH_AGENT_MODEL } = z
     OPENROUTER_SEARCH_AGENT_MODEL: z.string().default('openai/gpt-5.6-luna'),
   })
   .parse(process.env);
+initAiTelemetry({ serviceName: 'lets.church-web' });
 
 // Calls OpenAI directly, in step with the rest of the production pipeline.
 // OpenRouter is reserved for the admin LLM-eval page.

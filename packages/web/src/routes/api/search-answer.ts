@@ -296,7 +296,8 @@ export const Route = createFileRoute('/api/search-answer')({
           { cacheGetJson, cacheSetJson },
           { parseSearchQuery },
           { resolveChannelSlugs },
-          { streamText, stepCountIs },
+          { streamText, isStepCount },
+          { aiTelemetry },
           { channelChunk },
         ] = await Promise.all([
           import('@/ai/agent'),
@@ -312,8 +313,17 @@ export const Route = createFileRoute('/api/search-answer')({
           import('@/trpc/search/parse-query'),
           import('@/trpc/search/channels'),
           import('ai'),
+          import('@letschurch/util/server/ai-telemetry'),
           import('@/ai/answer-stream'),
         ]);
+        const telemetryContext = {
+          distinctId:
+            request.headers.get('x-posthog-distinct-id') ?? parsed.resourceId,
+          aiSessionId: parsed.threadId,
+          posthogSessionId:
+            request.headers.get('x-posthog-session-id') ?? undefined,
+          feature: 'search-answer',
+        };
 
         // Parse the query for intent + a reformulated question, concurrently with
         // the retrieval below (cached by query+day, so usually free). We use it to
@@ -684,10 +694,11 @@ Cite every claim with the tool-provided [upload:...] tokens. If the library genu
             const digGenStart = Date.now();
             const digResult = streamText({
               model: agentModel,
-              system: DETECTIVE_INSTRUCTIONS,
+              instructions: DETECTIVE_INSTRUCTIONS,
               prompt: digPrompt,
               tools: detectiveTools,
-              stopWhen: stepCountIs(DIG_STEP_BUDGET),
+              stopWhen: isStepCount(DIG_STEP_BUDGET),
+              ...aiTelemetry('web.search-answer.deep', telemetryContext),
               onError: ({ error }) => {
                 moduleLogger.error(
                   {
@@ -1065,11 +1076,12 @@ ${sourcesBlock}`;
           const genStart = Date.now();
           const result = streamText({
             model: agentModel,
-            system: INSTRUCTIONS,
+            instructions: INSTRUCTIONS,
             prompt,
             tools: searchTools,
             // Allow several tool calls per answer (multi-source synthesis).
-            stopWhen: stepCountIs(8),
+            stopWhen: isStepCount(8),
+            ...aiTelemetry('web.search-answer', telemetryContext),
             // Surface a generation error instead of silently ending the stream;
             // the catch below records the decline and the card shows the error.
             onError: ({ error }) => {

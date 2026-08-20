@@ -1,3 +1,5 @@
+import type { AiTelemetryContext } from '@letschurch/util/server/ai-telemetry';
+
 import { EMBED_DIMS, EMBED_MODEL, embedQuery } from '../ai/embed';
 import { cacheGet, cacheSet } from '../util/cache';
 import {
@@ -187,14 +189,17 @@ function mapVerseHits(res: OsHits<VerseSource>): VerseHit[] {
 // query text + model), so repeat searches skip the OpenAI round-trip. Returns
 // null when embeddings are disabled or the call fails, so callers fall back to
 // pure lexical search rather than erroring.
-async function getQueryVector(trimmed: string): Promise<number[] | null> {
+async function getQueryVector(
+  trimmed: string,
+  telemetryContext?: AiTelemetryContext,
+): Promise<number[] | null> {
   const key = `letsbible-qvec:v1:${EMBED_MODEL}:${trimmed}`;
   try {
     const cached = await cacheGet(key);
     if (cached) {
       return JSON.parse(cached) as number[];
     }
-    const vector = await embedQuery(trimmed);
+    const vector = await embedQuery(trimmed, telemetryContext);
     if (vector) {
       // 7-day TTL: bounded growth, but hot queries stay warm across visitors.
       await cacheSet(key, JSON.stringify(vector), 60 * 60 * 24 * 7);
@@ -219,6 +224,7 @@ export async function hybridSearchVerses(params: {
   q: string;
   translationId: string;
   size?: number;
+  telemetryContext?: AiTelemetryContext;
 }): Promise<VerseHit[]> {
   const trimmed = params.q.trim();
   if (!trimmed) {
@@ -226,7 +232,7 @@ export async function hybridSearchVerses(params: {
   }
   const size = params.size ?? 20;
 
-  const vector = await getQueryVector(trimmed);
+  const vector = await getQueryVector(trimmed, params.telemetryContext);
   if (!vector) {
     return searchVerses({
       q: trimmed,

@@ -1,4 +1,8 @@
-import { generateObject } from 'ai';
+import {
+  aiTelemetry,
+  type AiTelemetryContext,
+} from '@letschurch/util/server/ai-telemetry';
+import { generateText, Output } from 'ai';
 import { z } from 'zod';
 
 import { parseModel } from './model';
@@ -117,15 +121,17 @@ const recollectionSchema = z.object({ isRecollection: z.boolean() });
  */
 export async function classifyVerseRecollection(
   query: string,
+  telemetryContext?: AiTelemetryContext,
 ): Promise<boolean> {
   try {
-    const { object } = await generateObject({
+    const { output } = await generateText({
       model: parseModel,
-      schema: recollectionSchema,
-      system: RECOLLECTION_SYSTEM,
+      output: Output.object({ schema: recollectionSchema }),
+      instructions: RECOLLECTION_SYSTEM,
       prompt: `Query: ${query}`,
+      ...aiTelemetry('letsbible.classify-recollection', telemetryContext),
     });
-    return object.isRecollection;
+    return output.isRecollection;
   } catch (err) {
     console.warn(
       'lets.bible recollection gate failed (not digging):',
@@ -153,15 +159,17 @@ const answerableSchema = z.object({ answerable: z.boolean() });
  */
 export async function classifyScriptureAnswerable(
   query: string,
+  telemetryContext?: AiTelemetryContext,
 ): Promise<boolean> {
   try {
-    const { object } = await generateObject({
+    const { output } = await generateText({
       model: parseModel,
-      schema: answerableSchema,
-      system: ANSWERABLE_SYSTEM,
+      output: Output.object({ schema: answerableSchema }),
+      instructions: ANSWERABLE_SYSTEM,
       prompt: `Query: ${query}`,
+      ...aiTelemetry('letsbible.classify-answerable', telemetryContext),
     });
-    return object.answerable;
+    return output.answerable;
   } catch (err) {
     console.warn(
       'lets.bible answerable gate failed (allowing answer):',

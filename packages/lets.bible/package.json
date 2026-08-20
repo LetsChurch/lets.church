@@ -36,7 +36,7 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^3.0.71",
+    "@ai-sdk/openai": "^4.0.42",
     "@base-ui/react": "catalog:",
     "@fontsource-variable/frank-ruhl-libre": "^5.2.8",
     "@fontsource-variable/hanken-grotesk": "^5.2.8",
@@ -56,7 +56,7 @@
     "@trpc/client": "catalog:",
     "@trpc/server": "catalog:",
     "@trpc/tanstack-react-query": "catalog:",
-    "ai": "^6.0.197",
+    "ai": "^7.0.66",
     "drizzle-orm": "catalog:",
     "flexsearch": "^0.8.212",
     "ioredis": "^5.11.1",

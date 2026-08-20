@@ -1,4 +1,9 @@
 import { createOpenAI } from '@ai-sdk/openai';
+import {
+  aiTelemetry,
+  type AiTelemetryContext,
+  initAiTelemetry,
+} from '@letschurch/util/server/ai-telemetry';
 import { embed, embedMany } from 'ai';
 
 // Text embeddings for hybrid (lexical + semantic) verse search. Model and
@@ -26,17 +31,26 @@ const model = apiKey
   ? createOpenAI({ apiKey }).textEmbeddingModel(EMBED_MODEL)
   : null;
 
+initAiTelemetry({ serviceName: 'lets.bible' });
+
 export function embeddingsEnabled(): boolean {
   return model !== null;
 }
 
 // Embed a single query string. Returns null when embeddings are disabled (no
 // API key), so the hybrid search can fall back to its lexical query.
-export async function embedQuery(text: string): Promise<number[] | null> {
+export async function embedQuery(
+  text: string,
+  telemetryContext?: AiTelemetryContext,
+): Promise<number[] | null> {
   if (!model) {
     return null;
   }
-  const { embedding } = await embed({ model, value: text });
+  const { embedding } = await embed({
+    model,
+    value: text,
+    ...aiTelemetry('letsbible.embed-query', telemetryContext),
+  });
   return embedding;
 }
 
@@ -58,6 +72,7 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
       values: texts
         .slice(i, i + EMBED_MAX_INPUTS)
         .map((t) => (t.trim().length > 0 ? t : '(no text)')),
+      ...aiTelemetry('letsbible.embed-texts'),
     });
     out.push(...embeddings);
   }

@@ -172,6 +172,7 @@ function RootComponent() {
       api_host: 'https://z.lets.church',
       persistence: 'memory',
       person_profiles: 'identified_only',
+      tracing_headers: [window.location.hostname],
     });
 
     const canPlay = (type: string) =>
