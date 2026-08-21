@@ -39,10 +39,26 @@ Primary sources:
 - [OpenAI wrapper integration](https://posthog.com/docs/ai-observability/installation/openai)
 - [Manual `$ai_generation` capture](https://posthog.com/docs/ai-observability/installation/manual-capture)
 - [Generic OpenTelemetry integration](https://posthog.com/docs/ai-observability/installation/opentelemetry)
+- [PostHog's public AI SDK v7 example pins `ai` and `@ai-sdk/otel` 7.0.41/1.0.41](https://github.com/PostHog/posthog-js/blob/3508c05bf4c70e99c4029c0638e00dd0d7949ec0/examples/example-ai-vercel-ai-v7/package.json#L10-L20)
+- [Vercel's `@ai-sdk/otel` 1.0.66 manifest pairs it with `ai` 7.0.66](https://github.com/vercel/ai/blob/9ce09dfef0cb98e5866580757ff59b0afad663d7/packages/otel/package.json#L28-L31)
+- [Vercel's hosted-MCP telemetry issue for 7.0.66/1.0.66](https://github.com/vercel/ai/issues/19007)
 
-### Current documentation discrepancy
+### Public compatibility status
 
-PostHog's Vercel installation page currently documents the OTEL path for AI SDK v5/v6 and says AI SDK v7 is unsupported because v7 removed the old built-in instrumentation. The released `@posthog/ai` 8.8.0 source is newer and more precise: its legacy `withTracing` wrapper supports v5/v6, while v7 should use `@ai-sdk/otel` with `@posthog/ai/otel`. Treat the published package source as the current API contract, but prove either path with one real trace before broad rollout.
+As of 2026-08-19, PostHog's official guide explicitly calls
+`@ai-sdk/otel` plus `@posthog/ai/otel` the supported path for Vercel AI SDK
+v7; the legacy `withTracing` wrapper remains limited to v5/v6.
+`@posthog/ai` 8.7.0 introduced provider-v4 support, and this repository uses
+8.8.0.
+
+PostHog does not publish a patch-level compatibility matrix for this
+repository's exact `ai@7.0.66` and `@ai-sdk/otel@1.0.66` pair. Its public
+integration example tests 7.0.41/1.0.41. Vercel publishes 1.0.66 with an exact
+dependency on `ai@7.0.66`, so the pair is internally matched even though
+PostHog's support promise is major-level. Version 1.0.66 has a separate,
+Vercel-confirmed omission for provider-executed hosted MCP tool spans; this
+repository's application-executed tools do not use that path. Vercel fixed it
+in 7.0.70/1.0.70.
 
 ## What “adding OTEL” would mean
 
@@ -66,7 +82,7 @@ Sources:
 - `packages/util/src/server/ai-telemetry.ts` owns one process-wide `NodeSDK`, `PostHogSpanProcessor`, and AI SDK `OpenTelemetry` integration. A missing `POSTHOG_PROJECT_TOKEN` disables export without affecting requests.
 - `packages/web` and `packages/lets.bible` use AI SDK `^7.0.66`, `@ai-sdk/openai ^4.0.42`, and current v7 APIs. Every user-facing `streamText`, structured `generateText`, `embed`, and `embedMany` call supplies telemetry options.
 - Requests attach the browser distinct/session headers when available. Web search uses its bounded `resourceId` as the anonymous fallback and its `threadId` as the AI session. lets.bible creates one AI session ID per answer request.
-- Content capture is off by default. `POSTHOG_AI_CAPTURE_CONTENT=true` is the explicit opt-in for prompts, tool/embedding values, and outputs.
+- Content capture is off by default. `POSTHOG_AI_CAPTURE_CONTENT=true` is the explicit opt-in for prompts, tool values, and model outputs. Embedding inputs and vectors are never exported.
 - `packages/temporal` remains on its purpose-built `llm_call` audit path and is not exported to PostHog.
 - Production runs Node 24.4.1, which satisfies `@posthog/ai` 8.8.0's Node requirement (`^20.20.0 || >=22.22.0`).
 
@@ -89,7 +105,7 @@ Source: [Linking backend LLM events to session replay](https://posthog.com/docs/
 
 Set `POSTHOG_PROJECT_TOKEN` on the `web` and `letsbible` processes. It is a PostHog project token (`phc_…`), not a personal API key. `POSTHOG_HOST` defaults to `https://us.i.posthog.com`; use the project's regional ingestion host when different. The repository deliberately does not send server OTLP traffic through `https://z.lets.church` because that proxy's AI OTLP route is not defined here.
 
-`POSTHOG_AI_CAPTURE_CONTENT` defaults to `false`. In that mode, model/provider, token usage, latency, finish/error state, function/feature names, trace topology, and correlation metadata remain available while prompts, tool values, embedding values, and model outputs are excluded.
+`POSTHOG_AI_CAPTURE_CONTENT` defaults to `false`. In that mode, model/provider, token usage, latency, finish/error state, function/feature names, trace topology, and correlation metadata remain available while prompts, tool values, and model outputs are excluded. Setting it to `true` records those fields through AI SDK's standard per-call `recordInputs` and `recordOutputs` controls. Embedding inputs and vectors remain excluded.
 
 ### Correlation
 
@@ -98,6 +114,15 @@ Set `POSTHOG_PROJECT_TOKEN` on the `web` and `letsbible` processes. It is a Post
 ### Lifecycle
 
 The telemetry provider is initialized once when each server-side AI model module loads. The PostHog processor batches only AI spans. `flushAiTelemetry()` is available for request-scoped runtimes, and the long-lived Node process shuts down the SDK during normal process drain.
+
+The integration uses PostHog's documented AI SDK v7 setup without patching
+either library: standard `OpenTelemetry`, `registerTelemetry`, and
+`PostHogSpanProcessor`. AI SDK-specific supplemental attributes remain at
+their upstream defaults, which are disabled. Custom attributes use the
+application namespace (`letschurch.ai.feature`) rather than the reserved
+legacy `ai.*` namespace. Standard `gen_ai.*` operation, model, usage, timing,
+and content attributes remain intact and PostHog classifies model calls as
+`$ai_generation`.
 
 ### Deliberate exclusions
 

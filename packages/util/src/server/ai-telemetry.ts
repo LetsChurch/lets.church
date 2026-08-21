@@ -59,8 +59,10 @@ function runtimeAttributes(runtimeContext: unknown): Attributes | undefined {
   const context = runtimeContext as AiTelemetryRuntimeContext | undefined;
   if (!context) return undefined;
 
+  // PostHog treats any ai.* key as legacy Vercel telemetry and then requires
+  // ai.operationId to classify model calls. Keep custom attributes namespaced.
   const attributes: Attributes = {
-    'ai.feature': context.aiFeature,
+    'letschurch.ai.feature': context.aiFeature,
   };
   if (context.posthogDistinctId) {
     attributes['posthog.distinct_id'] = context.posthogDistinctId;
@@ -78,8 +80,9 @@ function runtimeAttributes(runtimeContext: unknown): Attributes | undefined {
  * Registers AI SDK 7's OpenTelemetry integration once per Node process.
  *
  * Missing `POSTHOG_PROJECT_TOKEN` intentionally makes this a no-op. Prompt,
- * tool, embedding, and response content are excluded unless
- * `POSTHOG_AI_CAPTURE_CONTENT=true` is explicitly configured.
+ * tool, and response content are excluded unless
+ * `POSTHOG_AI_CAPTURE_CONTENT=true` is explicitly configured. Embedding values
+ * are never exported.
  */
 export function initAiTelemetry({
   serviceName,
@@ -106,14 +109,7 @@ export function initAiTelemetry({
 
     registerTelemetry(
       new OpenTelemetry({
-        embedding: captureContent,
         enrichSpan: ({ runtimeContext }) => runtimeAttributes(runtimeContext),
-        headers: false,
-        providerMetadata: true,
-        runtimeContext: false,
-        schema: false,
-        toolChoice: true,
-        usage: true,
       }),
     );
 
