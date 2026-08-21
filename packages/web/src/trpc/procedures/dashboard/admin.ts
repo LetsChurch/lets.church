@@ -2110,7 +2110,9 @@ export const adminRouter = router({
           });
         }
 
-        const unverifiedEmails = user.emails.filter((e) => !e.verifiedAt);
+        const unverifiedEmails = user.emails.filter(
+          ({ email, verifiedAt }) => !verifiedAt && email.trim().length > 0,
+        );
 
         if (unverifiedEmails.length === 0) {
           throw new TRPCError({

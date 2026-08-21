@@ -418,8 +418,8 @@ export const commonProcedures = {
   }),
 
   getUnverifiedEmail: authProcedure.query(async ({ ctx }) => {
-    // Get the user's primary email (first email)
-    const userEmail = await db.query.AppUserEmail.findFirst({
+    // Ignore invalid legacy placeholders when determining the primary email.
+    const userEmails = await db.query.AppUserEmail.findMany({
       where: (t, { eq }) => eq(t.appUserId, ctx.session.appUserId),
       columns: {
         email: true,
@@ -427,19 +427,17 @@ export const commonProcedures = {
       },
       orderBy: (t, { asc }) => asc(t.id),
     });
+    const userEmail = userEmails.find(({ email }) => email.trim().length > 0);
 
-    if (!userEmail) {
-      return null;
+    if (!userEmail?.verifiedAt) {
+      return userEmail
+        ? {
+            email: userEmail.email,
+          }
+        : null;
     }
 
-    // Return null if email is verified
-    if (userEmail.verifiedAt) {
-      return null;
-    }
-
-    return {
-      email: userEmail.email,
-    };
+    return null;
   }),
 
   resendVerificationEmail: authProcedure.mutation(async ({ ctx }) => {
@@ -450,8 +448,9 @@ export const commonProcedures = {
       'Resend verification email requested',
     );
 
-    // Get the user's primary unverified email
-    const userEmail = await db.query.AppUserEmail.findFirst({
+    // Ignore invalid legacy placeholders rather than dispatching an email with
+    // no recipient.
+    const userEmails = await db.query.AppUserEmail.findMany({
       where: (t, { eq, and, isNull }) =>
         and(eq(t.appUserId, ctx.session.appUserId), isNull(t.verifiedAt)),
       columns: {
@@ -459,6 +458,7 @@ export const commonProcedures = {
       },
       orderBy: (t, { asc }) => asc(t.id),
     });
+    const userEmail = userEmails.find(({ email }) => email.trim().length > 0);
 
     if (!userEmail) {
       moduleLogger.info(

@@ -91,6 +91,12 @@ function preferredEmail(user: User) {
   );
 }
 
+function hasUnverifiedEmail(user: User) {
+  return user.emails.some(
+    ({ email, verifiedAt }) => !verifiedAt && email.trim().length > 0,
+  );
+}
+
 const USER_COLUMNS: ColumnDef<User>[] = [
   {
     accessorKey: 'username',
@@ -115,9 +121,7 @@ const USER_COLUMNS: ColumnDef<User>[] = [
     header: 'Email',
     cell: ({ row }) => {
       const displayEmail = preferredEmail(row.original);
-      const hasUnverified = row.original.emails.some(
-        (email) => !email.verifiedAt,
-      );
+      const hasUnverified = hasUnverifiedEmail(row.original);
       return (
         <div className="flex flex-wrap items-center gap-2">
           <Text size="sm" c="dimmed">
@@ -165,7 +169,7 @@ const USER_COLUMNS: ColumnDef<User>[] = [
     cell: ({ row, table }) => {
       const meta = table.options.meta as UserTableMeta;
       const user = row.original;
-      const hasUnverified = user.emails.some((email) => !email.verifiedAt);
+      const hasUnverified = hasUnverifiedEmail(user);
       return (
         <OverflowMenu
           label={`Actions for ${user.fullName?.trim() || user.username}`}
