@@ -37,11 +37,6 @@ export const DEFAULT_INTERLINEAR_OPTIONS: InterlinearOptions = {
   showParsing: false,
 };
 
-// Function words (articles) render faded, like the design's τῇ / τὸν / τὰ.
-function isFunctionWord(w: InterlinearRow): boolean {
-  return w.strong === 'G3588' || /^(the|a|an)$/i.test(w.surface.trim());
-}
-
 const segBase = 'rounded-[7px] px-3.5 py-1.5 text-[13px] outline-none';
 // Layout + focus only; each chip state sets its own token-based colors so it
 // adapts to dark mode (the old hardcoded cream bg / gray text washed out).
@@ -193,7 +188,6 @@ function Token({
 }) {
   const { englishFirst, showTranslit, showGloss, showStrong } = options;
   const isHebrew = w.language === 'hebrew';
-  const faded = isFunctionWord(w);
   const showRed = w.wordsOfJesus && redLetter;
 
   const lemma = w.lemma ? (
@@ -205,7 +199,7 @@ function Token({
       // weight change — bolding here would widen the glyph and shift the layout.
       className={`text-[22px] leading-[1.25] ${
         isHebrew ? 'font-hebrew' : 'font-greek'
-      } ${faded ? 'text-faint' : 'text-ink-strong'}`}
+      } text-ink-strong`}
     >
       {w.lemma}
     </span>
@@ -223,11 +217,9 @@ function Token({
         } ${
           showRed
             ? 'text-redletter'
-            : faded
-              ? 'text-faint'
-              : englishFirst || selected
-                ? 'text-ink'
-                : 'text-muted'
+            : englishFirst || selected
+              ? 'text-ink'
+              : 'text-muted'
         }`}
       >
         {w.surface}
@@ -238,9 +230,7 @@ function Token({
     showTranslit && w.transliteration ? (
       <span
         key="translit"
-        className={`font-serif text-[12px] leading-tight italic ${
-          faded ? 'text-faint-2' : 'text-muted-2'
-        }`}
+        className="text-muted-2 font-serif text-[12px] leading-tight italic"
       >
         {w.transliteration}
       </span>
@@ -251,7 +241,7 @@ function Token({
       <span
         key="strong"
         className={`font-mono text-[9.5px] leading-tight ${
-          faded ? 'text-faint-2' : selected ? 'text-gold' : 'text-gold-soft'
+          selected ? 'text-gold' : 'text-gold-soft'
         }`}
       >
         {w.strong}
@@ -385,7 +375,6 @@ function SourceToken({
 }) {
   const { showTranslit, showGloss, showStrong, showParsing } = options;
   const isHebrew = w.language === 'hebrew';
-  const faded = w.strong === 'G3588' || w.morph === 'Td'; // article, rendered quietly
   const parsed = showParsing ? decodeMorph(w.morph, w.language) : null;
 
   return (
@@ -404,23 +393,19 @@ function SourceToken({
         lang={isHebrew ? 'he' : 'el'}
         className={`text-[22px] leading-[1.25] ${
           isHebrew ? 'font-hebrew' : 'font-greek'
-        } ${faded ? 'text-faint' : 'text-ink-strong'}`}
+        } text-ink-strong`}
       >
         {w.surface}
       </span>
       {showTranslit && w.transliteration ? (
-        <span
-          className={`font-serif text-[12px] leading-tight italic ${
-            faded ? 'text-faint-2' : 'text-muted-2'
-          }`}
-        >
+        <span className="text-muted-2 font-serif text-[12px] leading-tight italic">
           {w.transliteration}
         </span>
       ) : null}
       {showGloss && w.english ? (
         <span
           className={`text-[13px] leading-tight whitespace-nowrap ${
-            faded ? 'text-faint' : selected ? 'text-ink' : 'text-muted'
+            selected ? 'text-ink' : 'text-muted'
           }`}
         >
           {w.english}
@@ -429,7 +414,7 @@ function SourceToken({
       {showStrong && w.strong ? (
         <span
           className={`font-mono text-[9.5px] leading-tight ${
-            faded ? 'text-faint-2' : selected ? 'text-gold' : 'text-gold-soft'
+            selected ? 'text-gold' : 'text-gold-soft'
           }`}
         >
           {w.strong}

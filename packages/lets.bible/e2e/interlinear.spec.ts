@@ -23,6 +23,25 @@ test('LB-IL-01 Greek interlinear renders stacked word cells', async ({
   ).toBeVisible();
 });
 
+test('articles retain normal contrast in both word orders', async ({
+  page,
+}) => {
+  await page.goto('/bible/john/1?view=interlinear');
+
+  const originalArticle = page
+    .locator('button[data-strong="G3588"] [lang="el"]')
+    .first();
+  await expect(originalArticle).toBeVisible();
+  await expect(originalArticle).toHaveClass(/text-ink-strong/);
+
+  await page.getByRole('button', { name: 'English (reverse)' }).click();
+  const reverseArticle = page
+    .locator('button[data-strong="G3588"] [lang="el"]')
+    .first();
+  await expect(reverseArticle).toBeVisible();
+  await expect(reverseArticle).toHaveClass(/text-ink-strong/);
+});
+
 test('LB-IL-02 tapping an interlinear word opens the study panel', async ({
   page,
 }) => {
