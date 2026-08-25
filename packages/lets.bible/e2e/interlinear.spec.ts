@@ -54,6 +54,44 @@ test('LB-IL-02 tapping an interlinear word opens the study panel', async ({
   await expect(panel).toContainText('John 1:1'); // verse context
 });
 
+test('selecting a word highlights its other occurrences', async ({ page }) => {
+  await page.goto('/bible/john/1?view=interlinear');
+
+  const originalOccurrences = page.locator('button[data-strong="G3056"]');
+  expect(await originalOccurrences.count()).toBeGreaterThan(1);
+  await expect(async () => {
+    await originalOccurrences.first().click();
+    await expect(originalOccurrences.first()).toHaveAttribute(
+      'data-highlight',
+      'selected',
+      { timeout: 1000 },
+    );
+  }).toPass();
+  const originalRelated = page
+    .locator('button[data-strong="G3056"][data-highlight="related"]')
+    .first();
+  await expect(originalRelated).toBeVisible();
+  await expect(originalRelated).toHaveClass(/0\.055/);
+
+  await page.getByRole('button', { name: 'English (reverse)' }).click();
+  const reverseRelated = page
+    .locator('button[data-strong="G3056"][data-highlight="related"]')
+    .first();
+  await expect(reverseRelated).toBeVisible();
+
+  const reverseOccurrences = page.locator('button[data-strong="G3056"]');
+  await reverseOccurrences.first().click();
+  await expect(reverseOccurrences.first()).toHaveAttribute(
+    'data-highlight',
+    'selected',
+  );
+  await expect(
+    page
+      .locator('button[data-strong="G3056"][data-highlight="related"]')
+      .first(),
+  ).toBeVisible();
+});
+
 test('LB-IL-10 selecting a word does not shift the layout', async ({
   page,
 }) => {
@@ -61,10 +99,11 @@ test('LB-IL-10 selecting a word does not shift the layout', async ({
   const word = page.locator('button[data-strong="G3056"]').first(); // "Word"
   await expect(word).toBeVisible();
   const before = await word.boundingBox();
-  await word.click();
-  // selected styling applied (bg tint) but the token must not change size —
-  // selection uses background + inset ring + color only, never a weight change.
-  await expect(page.getByLabel('Word study')).toBeVisible();
+  await expect(async () => {
+    await word.click();
+    await expect(page.getByLabel('Word study')).toBeVisible({ timeout: 1000 });
+  }).toPass();
+  // Selected styling uses color only, so it must not change the token's size.
   const after = await word.boundingBox();
   expect(Math.round(after?.width ?? 0)).toBe(Math.round(before?.width ?? -1));
   expect(Math.round(after?.height ?? 0)).toBe(Math.round(before?.height ?? -1));

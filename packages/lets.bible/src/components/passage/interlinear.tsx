@@ -43,6 +43,37 @@ const segBase = 'rounded-[7px] px-3.5 py-1.5 text-[13px] outline-none';
 const chipBase =
   'rounded-full border px-[11px] py-[5px] font-semibold text-[12px] outline-none transition focus-visible:ring-2 focus-visible:ring-gold/40';
 
+type TokenHighlight = 'selected' | 'related' | null;
+type SelectedInterlinearWord = Pick<WordRef, 'verse' | 'position' | 'strong'>;
+
+function highlightForWord(
+  word: { verse: number; position: number; strong: string | null },
+  selectedWord: SelectedInterlinearWord | null,
+): TokenHighlight {
+  if (!selectedWord) {
+    return null;
+  }
+  const sameStrong =
+    selectedWord.strong !== '' && selectedWord.strong === word.strong;
+  const samePosition =
+    selectedWord.verse === word.verse &&
+    selectedWord.position === word.position;
+  if (samePosition && (selectedWord.strong === '' || sameStrong)) {
+    return 'selected';
+  }
+  return sameStrong ? 'related' : null;
+}
+
+function tokenHighlightClass(highlight: TokenHighlight): string {
+  if (highlight === 'selected') {
+    return 'bg-[rgba(154,123,63,0.14)] shadow-[inset_0_0_0_1px_rgba(154,123,63,0.42)]';
+  }
+  if (highlight === 'related') {
+    return 'bg-[rgba(154,123,63,0.055)] shadow-[inset_0_0_0_1px_rgba(154,123,63,0.18)] hover:bg-[rgba(154,123,63,0.09)]';
+  }
+  return 'hover:bg-[rgba(154,123,63,0.07)]';
+}
+
 // The full-width controls bar — a second sticky header under the reader chrome.
 // Word-order segmented toggle on the left; line toggles on the right (the
 // original-language line itself is always shown, so it isn't a toggle).
@@ -175,19 +206,20 @@ function LineChip({
 // stack so the English gloss leads. Tapping opens the word study panel.
 function Token({
   w,
-  selected,
+  highlight,
   onSelect,
   options,
   redLetter,
 }: {
   w: InterlinearRow;
-  selected: boolean;
+  highlight: TokenHighlight;
   onSelect: () => void;
   options: InterlinearOptions;
   redLetter: boolean;
 }) {
   const { englishFirst, showTranslit, showGloss, showStrong } = options;
   const isHebrew = w.language === 'hebrew';
+  const selected = highlight === 'selected';
   const showRed = w.wordsOfJesus && redLetter;
 
   const lemma = w.lemma ? (
@@ -257,11 +289,8 @@ function Token({
       type="button"
       onClick={onSelect}
       data-strong={w.strong ?? undefined}
-      className={`focus-visible:ring-gold/40 flex flex-col items-center gap-[3px] rounded-[10px] px-2 py-1.5 text-center transition-colors outline-none focus-visible:ring-2 ${
-        selected
-          ? 'bg-[rgba(154,123,63,0.14)] shadow-[inset_0_0_0_1px_rgba(154,123,63,0.42)]'
-          : 'hover:bg-[rgba(154,123,63,0.07)]'
-      }`}
+      data-highlight={highlight ?? undefined}
+      className={`focus-visible:ring-gold/40 flex flex-col items-center gap-[3px] rounded-[10px] px-2 py-1.5 text-center transition-colors outline-none focus-visible:ring-2 ${tokenHighlightClass(highlight)}`}
     >
       {lines.filter(Boolean)}
     </button>
@@ -284,7 +313,7 @@ export function Interlinear({
 }: {
   rows: InterlinearRow[];
   options: InterlinearOptions;
-  selectedWord: { verse: number; position: number } | null;
+  selectedWord: SelectedInterlinearWord | null;
   onSelectWord: (word: WordRef) => void;
   verseNumbers?: boolean;
   redLetter?: boolean;
@@ -319,10 +348,7 @@ export function Interlinear({
               <Token
                 key={w.position}
                 w={w}
-                selected={
-                  selectedWord?.verse === verse &&
-                  selectedWord?.position === w.position
-                }
+                highlight={highlightForWord(w, selectedWord)}
                 onSelect={() =>
                   onSelectWord({
                     verse,
@@ -364,17 +390,18 @@ export type SourceInterlinearRow = {
 // (hover for the decoded grammar). Tapping opens the word study panel.
 function SourceToken({
   w,
-  selected,
+  highlight,
   onSelect,
   options,
 }: {
   w: SourceInterlinearRow;
-  selected: boolean;
+  highlight: TokenHighlight;
   onSelect: () => void;
   options: InterlinearOptions;
 }) {
   const { showTranslit, showGloss, showStrong, showParsing } = options;
   const isHebrew = w.language === 'hebrew';
+  const selected = highlight === 'selected';
   const parsed = showParsing ? decodeMorph(w.morph, w.language) : null;
 
   return (
@@ -382,11 +409,8 @@ function SourceToken({
       type="button"
       onClick={onSelect}
       data-strong={w.strong ?? undefined}
-      className={`focus-visible:ring-gold/40 flex flex-col items-center gap-[3px] rounded-[10px] px-2 py-1.5 text-center transition-colors outline-none focus-visible:ring-2 ${
-        selected
-          ? 'bg-[rgba(154,123,63,0.14)] shadow-[inset_0_0_0_1px_rgba(154,123,63,0.42)]'
-          : 'hover:bg-[rgba(154,123,63,0.07)]'
-      }`}
+      data-highlight={highlight ?? undefined}
+      className={`focus-visible:ring-gold/40 flex flex-col items-center gap-[3px] rounded-[10px] px-2 py-1.5 text-center transition-colors outline-none focus-visible:ring-2 ${tokenHighlightClass(highlight)}`}
     >
       <span
         dir={isHebrew ? 'rtl' : 'ltr'}
@@ -446,7 +470,7 @@ export function SourceInterlinear({
 }: {
   rows: SourceInterlinearRow[];
   options: InterlinearOptions;
-  selectedWord: { verse: number; position: number } | null;
+  selectedWord: SelectedInterlinearWord | null;
   onSelectWord: (word: WordRef) => void;
   verseNumbers?: boolean;
 }) {
@@ -483,10 +507,7 @@ export function SourceInterlinear({
                 <SourceToken
                   key={w.position}
                   w={w}
-                  selected={
-                    selectedWord?.verse === verse &&
-                    selectedWord?.position === w.position
-                  }
+                  highlight={highlightForWord(w, selectedWord)}
                   onSelect={() =>
                     onSelectWord({
                       verse,

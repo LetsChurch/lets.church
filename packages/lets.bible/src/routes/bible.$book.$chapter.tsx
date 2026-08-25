@@ -593,14 +593,7 @@ function Reader() {
               showSource && sourceRows ? (
                 <SourceInterlinear
                   rows={sourceRows}
-                  selectedWord={
-                    selectedWord
-                      ? {
-                          verse: selectedWord.verse,
-                          position: selectedWord.position,
-                        }
-                      : null
-                  }
+                  selectedWord={selectedWord}
                   onSelectWord={(word) => setSelection({ kind: 'word', word })}
                   options={interlinearOptions}
                   verseNumbers={prefs.verseNumbers}
@@ -608,14 +601,7 @@ function Reader() {
               ) : interlinearRows ? (
                 <Interlinear
                   rows={interlinearRows}
-                  selectedWord={
-                    selectedWord
-                      ? {
-                          verse: selectedWord.verse,
-                          position: selectedWord.position,
-                        }
-                      : null
-                  }
+                  selectedWord={selectedWord}
                   onSelectWord={(word) => setSelection({ kind: 'word', word })}
                   options={interlinearOptions}
                   verseNumbers={prefs.verseNumbers}
