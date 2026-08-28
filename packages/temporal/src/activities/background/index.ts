@@ -37,12 +37,6 @@ export {
   getBackfillCount,
 } from './backfill-upload-states';
 export { default as backupToGlacier, retryBackup } from './backup-to-glacier';
-export { default as cancelAnthropicBatch } from './cancel-anthropic-batch';
-export { default as cancelLlmBatch } from './cancel-llm-batch';
-export {
-  type CleanupBatchFilesArgs,
-  default as cleanupBatchFiles,
-} from './cleanup-batch-files';
 export {
   type CleanupStaleUploadStatesResult,
   cleanupStaleUploadStatesBatch,
@@ -75,21 +69,12 @@ export { default as deleteOldThumbnails } from './delete-old-thumbnails';
 export * from './delete-upload-record';
 export { default as embedTranscriptParagraphs } from './embed-transcript-paragraphs';
 export { default as embedUpload } from './embed-upload';
-// Kept for replay compatibility with in-flight reprocessGroupWorkflow
-// executions. New workflows do not schedule this live embedding activity.
-export {
-  default as embedUploadSummariesBulk,
-  type EmbedUploadSummariesBulkArgs,
-  type EmbedUploadSummariesBulkResult,
-} from './embed-upload-summaries-bulk';
 export { default as finalizeUploadRecord } from './finalize-upload-record';
 export {
   default as geocodeOrganization,
   validateGeocodeConfig,
 } from './geocode-organization';
 export { default as getFinalizedUploadKey } from './get-finalized-upload-key';
-export { default as getAnthropicBatchStatus } from './get-anthropic-batch-status';
-export { default as getLlmBatchStatus } from './get-llm-batch-status';
 export { default as getProbe } from './get-probe';
 export {
   getNoParagraphsUploadCount,
@@ -100,15 +85,6 @@ export { getStoredProbe } from './get-stored-probe';
 export { default as indexDocument } from './index-document';
 export { default as isUploadFinalized } from './is-upload-finalized';
 export { default as processImage } from './process-image';
-export {
-  default as processAnthropicAnnotationBatchOutput,
-  type ProcessAnthropicAnnotationBatchOutputResult,
-} from './process-anthropic-annotation-batch-output';
-export {
-  default as processLlmBatchOutput,
-  type ProcessLlmBatchOutputArgs,
-  type ProcessLlmBatchOutputResult,
-} from './process-llm-batch-output';
 export {
   getReindexCount,
   type ReindexBatchParams,
@@ -147,18 +123,7 @@ export {
   type StorageAuditSummary,
   sendStorageAuditEmail,
 } from './storage-audit';
-export {
-  default as submitAnthropicAnnotationBatch,
-  type SubmitAnthropicAnnotationBatchResult,
-  validateAnthropicAnnotationBatchConfig,
-} from './submit-anthropic-annotation-batch';
 export { default as storeTranscriptParagraphs } from './store-transcript-paragraphs';
-export {
-  default as submitLlmBatch,
-  type LlmBatchKind,
-  type SubmitLlmBatchArgs,
-  type SubmitLlmBatchResult,
-} from './submit-llm-batch';
 export { default as subscribeNewsletter } from './subscribe-newsletter';
 export { default as summarizeUpload } from './summarize-upload';
 export {

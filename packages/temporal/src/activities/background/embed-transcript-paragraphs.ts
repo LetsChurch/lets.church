@@ -16,7 +16,7 @@ const moduleLogger = logger.child({
 
 /**
  * Embed `transcript_paragraph` rows with `openai/text-embedding-3-small`
- * (1536 dims) via OpenRouter, then persist vectors back.
+ * (1536 dims) through OpenAI's standard Embeddings API, then persist vectors.
  *
  * Idempotency: by default (`force: false`) only rows where `embedding IS
  * NULL` are sent — parent-workflow retries that re-enter this activity

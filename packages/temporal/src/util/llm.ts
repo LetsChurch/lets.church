@@ -8,34 +8,36 @@ import {
 } from './llm-completion-guards';
 import { computeCost } from './llm-pricing';
 
-const openaiBatchModel = z
+const openaiProductionModel = z
   .string()
   .startsWith(
     'openai/',
-    'Production Batch API models must use the canonical openai/* id',
+    'Production OpenAI models must use the canonical openai/* id',
   );
 
 const env = z
   .object({
-    // Primary production processing goes through OpenAI Batch. OpenRouter is
-    // used by the admin LLM-eval page, legacy live workflow replays, and the
-    // live summary fallback.
+    // Primary production chat completions use OpenAI Flex. OpenRouter is used
+    // by the admin LLM-eval page and the live content-filter fallbacks.
     OPENAI_API_KEY: z.string().min(1),
     OPENROUTER_API_KEY: z.string().min(1),
-    OPENROUTER_SUMMARY_MODEL: openaiBatchModel.default('openai/gpt-5.6-luna'),
+    OPENROUTER_SUMMARY_MODEL: openaiProductionModel.default(
+      'openai/gpt-5.6-luna',
+    ),
     // Annotation defaults to gpt-5.6-luna. The full-doc markdown-output
     // approach (paragraph-echo + inline links, see annotate-transcript.ts)
     // is the only output format the activity supports; the earlier
     // strict-JSON-schema path that ran into OpenAI's response-side
     // safety classifier was retired with that rewrite. Sampling parameters
     // stay at the provider default because supported overrides vary by model.
-    OPENROUTER_ANNOTATE_MODEL: openaiBatchModel.default('openai/gpt-5.6-luna'),
-    // Direct Anthropic Message Batches fallback for OpenAI annotation
-    // content-filter responses. Empty disables the fallback. Keep this as the
-    // bare Anthropic model id; llm_call stores the canonical anthropic/* form.
-    ANTHROPIC_ANNOTATE_BATCH_MODEL: z
-      .union([z.literal(''), z.string().startsWith('claude-')])
-      .default('claude-haiku-4-5'),
+    OPENROUTER_ANNOTATE_MODEL: openaiProductionModel.default(
+      'openai/gpt-5.6-luna',
+    ),
+    // Live OpenRouter fallback for annotations rejected by OpenAI's content
+    // classifier. Empty disables the fallback.
+    OPENROUTER_ANNOTATE_FALLBACK_MODEL: z
+      .string()
+      .default('anthropic/claude-haiku-4-5'),
     // The summary fallback remains live through OpenRouter. Separate config
     // lets operators choose a different model for the shorter summary task.
     OPENROUTER_SUMMARY_FALLBACK_MODEL: z
@@ -45,16 +47,20 @@ const env = z
   .parse(process.env);
 
 // Production client — OpenAI direct (default baseURL https://api.openai.com/v1).
-// Used for every live chat completion + embedding. SDK built-in exponential
-// backoff handles 429/5xx; we bump from the default 2 → 5 attempts. Temporal
-// activity retry sits on top of that.
+// Non-Flex calls keep SDK retries. Flex calls override retries per request so
+// Temporal owns the durable retry horizon instead of nesting long SDK retries.
 export const openaiClient = new OpenAI({
   apiKey: env.OPENAI_API_KEY,
   maxRetries: 5,
 });
+const FLEX_REQUEST_TIMEOUT_MS = 60 * 60 * 1000;
+const FLEX_BACKGROUND_ACTIVITIES: Record<string, true> = {
+  annotateTranscript: true,
+  summarizeUpload: true,
+};
 
-// OpenRouter client — used by the admin LLM-eval page, legacy live workflow
-// replays, and the live summary content-filter fallback.
+// OpenRouter client — used by the admin LLM-eval page and the live
+// content-filter fallbacks.
 export const openrouterClient = new OpenAI({
   apiKey: env.OPENROUTER_API_KEY,
   baseURL: 'https://openrouter.ai/api/v1',
@@ -63,9 +69,8 @@ export const openrouterClient = new OpenAI({
 
 // Model ids are kept canonical (`openai/…`, the OpenRouter form) everywhere we
 // store/aggregate them — env defaults, the pricing table, `llm_call.model` — so
-// cost lookups stay stable across the OpenAI/OpenRouter split. When talking to
-// OpenAI directly the id must be bare, so we strip the prefix at that one
-// boundary (mirrors `openai-batch.ts`, which hits OpenAI direct too).
+// cost lookups stay stable across providers. OpenAI direct expects a bare id,
+// so strip the prefix at that boundary.
 export function stripOpenaiPrefix(model: string): string {
   return model.startsWith('openai/') ? model.slice('openai/'.length) : model;
 }
@@ -74,13 +79,10 @@ export function stripOpenaiPrefix(model: string): string {
 // new output. Override via `OPENROUTER_SUMMARY_MODEL` when needed.
 export const SUMMARY_MODEL = env.OPENROUTER_SUMMARY_MODEL;
 export const ANNOTATE_MODEL = env.OPENROUTER_ANNOTATE_MODEL;
-export const ANTHROPIC_ANNOTATE_BATCH_MODEL =
-  env.ANTHROPIC_ANNOTATE_BATCH_MODEL.length > 0
-    ? env.ANTHROPIC_ANNOTATE_BATCH_MODEL
+export const ANNOTATE_FALLBACK_MODEL =
+  env.OPENROUTER_ANNOTATE_FALLBACK_MODEL.length > 0
+    ? env.OPENROUTER_ANNOTATE_FALLBACK_MODEL
     : null;
-export const ANNOTATE_FALLBACK_MODEL = ANTHROPIC_ANNOTATE_BATCH_MODEL
-  ? `anthropic/${ANTHROPIC_ANNOTATE_BATCH_MODEL}`
-  : null;
 export const SUMMARY_FALLBACK_MODEL =
   env.OPENROUTER_SUMMARY_FALLBACK_MODEL.length > 0
     ? env.OPENROUTER_SUMMARY_FALLBACK_MODEL
@@ -88,14 +90,14 @@ export const SUMMARY_FALLBACK_MODEL =
 
 // Hardcoded — NOT env-configurable. Changing the embedding model invalidates
 // every stored vector because cross-model cosine similarity is meaningless.
-// The `openai/` prefix is part of OpenRouter's id and stays here.
+// Keep the canonical `openai/` prefix for storage; strip it at the API boundary.
 export const EMBED_MODEL = 'openai/text-embedding-3-small';
 export const EMBED_DIMS = 1536;
 
 // OpenAI's per-request input cap for `embeddings.create` (`openai/text-
-// embedding-3-small` is in the 2048-bracket of the embeddings API). Live
-// and batch embed paths both have to chunk requests at this limit;
-// hoisted here so they can't drift. Verify when bumping the embedding
+// embedding-3-small` is in the 2048-bracket of the embeddings API). Direct
+// embedding activities chunk requests at this limit; hoisting it here keeps
+// them consistent. Verify when bumping the embedding
 // model — the cap is per-model and the relevant docs are at
 // https://platform.openai.com/docs/api-reference/embeddings/create.
 export const EMBED_MAX_INPUTS = 2_048;
@@ -177,12 +179,10 @@ export type RecordLlmCallArgs = {
    */
   responseText?: string | null;
   /**
-   * Set when the call was processed through a provider Batch API. OpenAI Batch
-   * and Anthropic Message Batches both invoice at 50% of live rates, so this
-   * halves `computedCostUsd` and tags the row for cost reporting. Defaults to
-   * false for live calls.
+   * Multiplier applied to table-computed cost. Flex responses pass 0.5 because
+   * OpenAI prices them at Batch rates without marking them as Batch API calls.
    */
-  viaBatch?: boolean;
+  costMultiplier?: number;
   /** Override the clock for tests / backfills. Defaults to `new Date()`. */
   at?: Date;
 };
@@ -270,23 +270,49 @@ export async function createChatCompletionTracked(
     guards,
     fallbackModel,
     via = 'openai',
+    service_tier: serviceTier,
     ...createArgs
   } = args;
+  if (
+    serviceTier === 'flex' &&
+    (via !== 'openai' ||
+      !tracking ||
+      !FLEX_BACKGROUND_ACTIVITIES[tracking.activity])
+  ) {
+    throw new Error(
+      'OpenAI Flex is restricted to tracked background annotation and summary activities',
+    );
+  }
   const t0 = Date.now();
 
   // Send a bare model id + no extras to OpenAI direct; keep the verbatim id +
   // OpenRouter routing extras for the OpenRouter path. `createArgs.model` (the
   // canonical, possibly-prefixed id) is what we record below, regardless.
+  // `service_tier` is intentionally omitted from OpenRouter fallbacks.
   const requestBody = (
     via === 'openrouter'
       ? { ...createArgs, ...openrouterExtras }
-      : { ...createArgs, model: stripOpenaiPrefix(createArgs.model) }
+      : {
+          ...createArgs,
+          model: stripOpenaiPrefix(createArgs.model),
+          service_tier: serviceTier,
+        }
   ) as OpenAI.ChatCompletionCreateParamsNonStreaming;
   const client = via === 'openrouter' ? openrouterClient : openaiClient;
 
   let completion: OpenAI.ChatCompletion;
   try {
-    completion = await client.chat.completions.create(requestBody);
+    completion = await client.chat.completions.create(
+      requestBody,
+      via === 'openai' && serviceTier === 'flex'
+        ? {
+            // Flex can legitimately take up to the configured one-hour
+            // timeout. Temporal, not the SDK, owns retries across days.
+            timeout: FLEX_REQUEST_TIMEOUT_MS,
+            maxRetries: 0,
+          }
+        : undefined,
+    );
   } catch (err) {
     if (tracking) {
       await recordLlmCall({
@@ -327,6 +353,7 @@ export async function createChatCompletionTracked(
       providerCostUsd:
         (completion.usage as unknown as { cost?: number } | undefined)?.cost ??
         null,
+      costMultiplier: completion.service_tier === 'flex' ? 0.5 : 1,
       durationMs,
       finishReason: choice?.finish_reason ?? null,
       outcome: result.outcome,
@@ -461,10 +488,7 @@ export async function createEmbeddingsTracked(
  */
 export async function recordLlmCall(args: RecordLlmCallArgs): Promise<void> {
   const at = args.at ?? new Date();
-  const viaBatch = args.viaBatch ?? false;
-  // OpenAI Batch and Anthropic Message Batches invoice at 50% of the
-  // posted live rate, so halve the computed cost at write time.
-  // `computeCost` remains a pure pricing-table lookup.
+  const costMultiplier = args.costMultiplier ?? 1;
   const computedRaw =
     args.promptTokens != null && args.completionTokens != null
       ? computeCost(
@@ -475,8 +499,7 @@ export async function recordLlmCall(args: RecordLlmCallArgs): Promise<void> {
           at,
         )
       : null;
-  const computed =
-    computedRaw === null ? null : viaBatch ? computedRaw * 0.5 : computedRaw;
+  const computed = computedRaw === null ? null : computedRaw * costMultiplier;
   await db.insert(LlmCall).values({
     model: args.model,
     activity: args.activity,
@@ -497,7 +520,6 @@ export async function recordLlmCall(args: RecordLlmCallArgs): Promise<void> {
     outcome: args.outcome,
     errorMessage: args.errorMessage ?? null,
     responseText: args.responseText ?? null,
-    viaBatch,
     createdAt: at,
   });
 }

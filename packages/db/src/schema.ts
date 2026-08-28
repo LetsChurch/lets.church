@@ -3413,17 +3413,14 @@ export const LlmCall = pgTable(
     // activities parse it down to structured rows (annotations, summary
     // sections) and discard the rest, so keep it here for re-parsing after a
     // parser change, debugging skipped spans, and audit. Null for embeddings
-    // (the response is a vector, not text), for `create_failed` /
+    // (the response is a vector, not text), for historical
     // `batch_request_failed` rows (no response body), and for content-filter
     // rejections (the provider returns no content). Can be large; it's a
     // plain `text` column with no index — query by joining on the other
     // indexed columns (upload, activity, created_at), never by scanning this.
     responseText: text('response_text'),
-    // True when the call was processed through a provider Batch API. Both
-    // OpenAI Batch and Anthropic Message Batches invoice at 50% of the posted
-    // rate, so `computedCostUsd` for these rows is already halved before
-    // insert. Lets cost dashboards split live vs batch spend without inferring
-    // it from model ids.
+    // Historical marker retained for existing provider Batch API rows. New
+    // processing uses OpenAI Flex and leaves this false.
     viaBatch: boolean('via_batch').notNull().default(false),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
   },

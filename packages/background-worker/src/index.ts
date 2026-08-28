@@ -5,7 +5,6 @@ import {
   validateGeocodeConfig,
   validateSendEmailConfig,
   validateSendVerificationEmailConfig,
-  validateAnthropicAnnotationBatchConfig,
 } from '@letschurch/temporal/activities/background';
 import { BACKGROUND_QUEUE, GLACIER_QUEUE } from '@letschurch/temporal/queues';
 import {
@@ -37,7 +36,6 @@ if (process.env.NODE_ENV !== 'development') {
 }
 
 // Validate activity configurations on startup
-validateAnthropicAnnotationBatchConfig();
 validateSendEmailConfig();
 validateSendVerificationEmailConfig();
 validateGeocodeConfig();

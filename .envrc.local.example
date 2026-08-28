@@ -48,7 +48,6 @@ export PAGERDUTY_ROUTING_KEY=
 
 export OPENAI_API_KEY=
 export OPENROUTER_API_KEY=
-export ANTHROPIC_API_KEY=
 # Server-side PostHog AI Observability. The project token is public but must be
 # configured explicitly; unset disables LLM telemetry. Prompt, tool, embedding,
 # and response content stay excluded unless capture is deliberately enabled.
@@ -56,10 +55,11 @@ export POSTHOG_PROJECT_TOKEN=
 export POSTHOG_HOST=https://us.i.posthog.com
 export POSTHOG_AI_CAPTURE_CONTENT=false
 
-# Optional direct Message Batches fallback model for content-filtered
-# annotations. Default is claude-haiku-4-5; set empty to disable.
-# export ANTHROPIC_ANNOTATE_BATCH_MODEL=claude-haiku-4-5
-# Optional override. Default is openai/gpt-5.6-luna.
+# Optional OpenRouter models for content-filtered chat completions. Empty
+# disables the corresponding fallback.
+# export OPENROUTER_ANNOTATE_FALLBACK_MODEL=anthropic/claude-haiku-4-5
+# export OPENROUTER_SUMMARY_FALLBACK_MODEL=anthropic/claude-haiku-4-5
+# Optional summary-model override. Default is openai/gpt-5.6-luna.
 # export OPENROUTER_SUMMARY_MODEL=openai/gpt-5.6-luna
 
 # Mux live streaming API token (Settings -> Access Tokens in the Mux dashboard).

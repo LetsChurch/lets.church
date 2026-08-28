@@ -12,7 +12,7 @@ export type CompletionChoice = {
 };
 
 /**
- * Provider-level completion guards shared by live and Batch API responses.
+ * Provider-level completion guards shared by tracked chat-completion callers.
  * Returning null means the response passed and activity-specific guards may run.
  */
 export function getBuiltInCompletionGuard(

@@ -202,9 +202,8 @@ function ReprocessPage() {
         <Title order={1}>Reprocess Media</Title>
         <Text c="dimmed">
           Re-run uploads through the current pipeline. Jobs run at lowest
-          priority and won't disrupt normal uploads. When transcribing, LLM
-          stages use OpenAI Batch; each sequential batch stage may take up to 24
-          hours.
+          priority and won't disrupt normal uploads. Chat-completion stages use
+          OpenAI Flex with durable Temporal retries.
         </Text>
       </div>
 

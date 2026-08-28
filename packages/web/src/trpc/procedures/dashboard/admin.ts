@@ -3546,11 +3546,9 @@ export const adminRouter = router({
    * Uploads whose annotation pipeline failed and never produced any OUTLINE
    * annotations. Surface for the admin failed-annotations page so an
    * operator can review the failure reason (typically OpenAI's content
-   * filter on politically/theologically frank content) and decide whether to
-   * retry or accept that this content can't be annotated. OpenAI Batch
-   * content-filter responses retry through a direct Anthropic Message Batch;
-   * this page also offers a targeted bulk retry for any content-filter
-   * failures that remain after that path.
+   * filter on politically/theologically frank content) and retry or accept
+   * that this content can't be annotated. Content-filter responses retry live
+   * through the configured OpenRouter fallback before appearing here.
    *
    * "Failure" = the most recent `llm_call` row for this upload with
    * `activity='annotateTranscript'` has a non-success outcome (e.g.

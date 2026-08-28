@@ -231,14 +231,8 @@ export type RunAnnotationResult = {
 // OpenRouter reject the call before it ever runs).
 export const DEFAULT_ANNOTATION_MAX_TOKENS = 32768;
 
-// Exported so the OpenAI Batch path can submit the exact same system
-// prompt the live `runAnnotation` uses.
-export const ANNOTATE_SYSTEM_PROMPT_REF = (): string => SYSTEM_PROMPT;
-
-// Build the user-message content for an annotate request. Pure —
-// shared between the live `runAnnotation` and the batch request
-// builder so the two paths can't drift on prompt shape.
-export function buildAnnotationUserContent(
+// Build the user-message content for an annotation request.
+function buildAnnotationUserContent(
   paragraphs: EvalParagraph[],
   metadata: AnnotationMetadata,
 ): string {
@@ -251,9 +245,7 @@ export function buildAnnotationUserContent(
   return `${metadataLines.join('\n')}\n\nTranscript:\n\n${transcriptBody}`;
 }
 
-// Build a chat.completions.create body for an annotation request,
-// for the batch path's JSONL serialisation. Live `runAnnotation`
-// keeps its body inline to satisfy the typed wrapper signature.
+// Build a chat.completions.create body for annotation evals and tests.
 export function buildAnnotationChatBody(
   paragraphs: EvalParagraph[],
   metadata: AnnotationMetadata,
@@ -265,8 +257,7 @@ export function buildAnnotationChatBody(
     // gpt-5.4 family rejects `max_tokens` and requires
     // `max_completion_tokens`. OpenRouter accepts the new name and
     // forwards it correctly to non-OpenAI providers (verified against
-    // anthropic/claude-haiku-4-5), so both the direct-OpenAI batch
-    // path and the live OpenRouter path stay on the same field.
+    // anthropic/claude-haiku-4-5).
     max_completion_tokens: maxTokens,
     // Intentionally omit `temperature`. Production uses the model's default,
     // and this body is also shared by evals that target models with different
@@ -285,9 +276,8 @@ export function buildAnnotationChatBody(
 // char-diff + word-position maps, walk headings + inline-link pass +
 // keyword global pass. Returns the resolved annotations + skipped
 // items + counts, plus the stripped text for "copy output" eval
-// affordances. Pure — both `runAnnotation` (live) and the batch
-// output processor call this.
-export function parseAnnotationResponse(
+// affordances.
+function parseAnnotationResponse(
   raw: string,
   paragraphs: EvalParagraph[],
 ): {
@@ -760,11 +750,15 @@ export async function runAnnotation(
       uploadRecordId?: string | null;
     };
     /**
-     * Provider routing. Production annotate runs `'openai'` (direct); the admin
-     * LLM-eval page passes `'openrouter'` so it can run arbitrary multi-provider
-     * models. Defaults to `'openai'`.
+     * Provider routing. The admin LLM-eval page passes `'openrouter'` so it can
+     * run arbitrary multi-provider models. Defaults to direct OpenAI.
      */
     via?: 'openai' | 'openrouter';
+    /**
+     * Opt into OpenAI Flex. Restricted by the shared client to the tracked
+     * `annotateTranscript` background activity.
+     */
+    serviceTier?: 'flex';
     /**
      * Model used after a content-filter rejection. Defaults to the configured
      * annotation fallback; pass null when this call is already the fallback so
@@ -811,6 +805,7 @@ export async function runAnnotation(
     tracking: options.tracking,
     via: options.via ?? 'openai',
     model,
+    ...(options.serviceTier ? { service_tier: options.serviceTier } : {}),
     // Switch to ANNOTATE_FALLBACK_MODEL (defaults to Anthropic Haiku) only
     // when OpenAI's content classifier blocks the response — covers
     // politically/theologically frank content that hits the OpenAI guard
@@ -891,6 +886,7 @@ export async function runAnnotation(
         completion.usage?.completion_tokens ?? null,
         (completion.usage as unknown as { cost?: number } | undefined)?.cost ??
           null,
+        completion.service_tier === 'flex' ? 0.5 : 1,
       ),
     },
     prompt: { system: SYSTEM_PROMPT, user: userContent },
@@ -989,6 +985,7 @@ export default async function annotateTranscript(
     ANNOTATE_MODEL,
     {
       tracking: { activity: 'annotateTranscript', uploadRecordId },
+      serviceTier: 'flex',
     },
   );
 

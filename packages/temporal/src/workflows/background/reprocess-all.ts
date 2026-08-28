@@ -1,7 +1,6 @@
 import {
   continueAsNew,
   ParentClosePolicy,
-  patched,
   proxyActivities,
   startChild,
 } from '@temporalio/workflow';
@@ -18,7 +17,6 @@ import {
 } from '../../search-attributes';
 import { staticMeta, uploadDashboardLinks } from '../../util/dashboard-links';
 import { processMediaWorkflow } from './process-media';
-import { reprocessGroupWorkflow } from './reprocess-group';
 
 const { getReprocessBatch } = proxyActivities<typeof backgroundActivities>({
   startToCloseTimeout: '1 minute',
@@ -27,15 +25,10 @@ const { getReprocessBatch } = proxyActivities<typeof backgroundActivities>({
 });
 
 // Uploads dispatched per iterator history. Each upload is an independent
-// processMedia workflow; its LLM stages submit through OpenAI Batch.
+// processMedia workflow; its chat-completion stages use OpenAI Flex.
 const BATCH_SIZE = 50;
 
 export type ReprocessAllOptions = {
-  /**
-   * Replay-only input retained for histories created before all reprocessing
-   * began dispatching regular per-upload jobs. New callers omit this field.
-   */
-  viaBatch?: boolean;
   /**
    * Reuse each upload's stored probe.json instead of a fresh download +
    * ffprobe (falling back to a live probe per upload when none is
@@ -90,83 +83,37 @@ export async function reprocessAllWorkflow(
     },
   );
 
-  const dispatchRegularJobs = patched('always-batch-reprocess-regular-jobs-v1');
-  if (!dispatchRegularJobs && options.viaBatch) {
-    // Replay the legacy grouped child command for histories that were already
-    // running in the old opt-in Batch mode. New executions never enter here.
-    if (items.length > 0) {
-      try {
-        const linksByUpload: Record<
-          string,
-          ReturnType<typeof uploadDashboardLinks>
-        > = webUrl
-          ? Object.fromEntries(
-              items.map((item) => [
-                item.id,
-                uploadDashboardLinks(item.channelId, item.id, webUrl),
-              ]),
-            )
-          : {};
-        await startChild(reprocessGroupWorkflow, {
-          workflowId: `reprocessGroup:${items[0]?.id ?? 'empty'}:${items.length}`,
-          args: [
-            items.map((item) => item.id),
-            processingScope,
-            skipProbe,
-            linksByUpload,
-          ],
-          taskQueue: BACKGROUND_QUEUE,
-          parentClosePolicy: ParentClosePolicy.ABANDON,
-          priority: { priorityKey: PRIORITY_REPROCESS },
-          retry: { maximumAttempts: 1 },
-          ...staticMeta({
-            summary: `Reprocess group (${processingScope}, ${items.length} uploads)`,
-          }),
-        });
-      } catch (err) {
-        if (
-          !(
-            err instanceof Error &&
-            err.name === 'WorkflowExecutionAlreadyStartedError'
-          )
-        ) {
-          throw err;
-        }
+  for (const item of items) {
+    try {
+      // Build the deep-links from the explicitly-threaded webUrl (never the
+      // process.env default — that read isn't replay-safe in the sandbox).
+      const links = webUrl
+        ? uploadDashboardLinks(item.channelId, item.id, webUrl)
+        : [];
+      await startChild(processMediaWorkflow, {
+        workflowId: `reprocessUpload:${item.id}`,
+        args: [item.id, processingScope, skipProbe, links],
+        taskQueue: BACKGROUND_QUEUE,
+        parentClosePolicy: ParentClosePolicy.ABANDON,
+        priority: { priorityKey: PRIORITY_REPROCESS },
+        retry: { maximumAttempts: 2 },
+        ...staticMeta({ summary: `Reprocess (${processingScope})`, links }),
+        typedSearchAttributes: [
+          { key: UPLOAD_ID_KEY, value: item.id },
+          { key: CHANNEL_ID_KEY, value: item.channelId },
+          { key: CHANNEL_SLUG_KEY, value: item.channelSlug },
+          { key: USER_ID_KEY, value: item.appUserId },
+          { key: USERNAME_KEY, value: item.username },
+        ],
+      });
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        err.name === 'WorkflowExecutionAlreadyStartedError'
+      ) {
+        continue;
       }
-    }
-  } else {
-    for (const item of items) {
-      try {
-        // Build the deep-links from the explicitly-threaded webUrl (never the
-        // process.env default — that read isn't replay-safe in the sandbox).
-        const links = webUrl
-          ? uploadDashboardLinks(item.channelId, item.id, webUrl)
-          : [];
-        await startChild(processMediaWorkflow, {
-          workflowId: `reprocessUpload:${item.id}`,
-          args: [item.id, processingScope, skipProbe, links],
-          taskQueue: BACKGROUND_QUEUE,
-          parentClosePolicy: ParentClosePolicy.ABANDON,
-          priority: { priorityKey: PRIORITY_REPROCESS },
-          retry: { maximumAttempts: 2 },
-          ...staticMeta({ summary: `Reprocess (${processingScope})`, links }),
-          typedSearchAttributes: [
-            { key: UPLOAD_ID_KEY, value: item.id },
-            { key: CHANNEL_ID_KEY, value: item.channelId },
-            { key: CHANNEL_SLUG_KEY, value: item.channelSlug },
-            { key: USER_ID_KEY, value: item.appUserId },
-            { key: USERNAME_KEY, value: item.username },
-          ],
-        });
-      } catch (err) {
-        if (
-          err instanceof Error &&
-          err.name === 'WorkflowExecutionAlreadyStartedError'
-        ) {
-          continue;
-        }
-        throw err;
-      }
+      throw err;
     }
   }
 

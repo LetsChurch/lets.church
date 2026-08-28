@@ -68,6 +68,62 @@ describe('buildAnnotationChatBody', () => {
     expect(
       mocks.createChatCompletionTracked.mock.calls[0]?.[0],
     ).not.toHaveProperty('temperature');
+    expect(
+      mocks.createChatCompletionTracked.mock.calls[0]?.[0],
+    ).not.toHaveProperty('service_tier');
+  });
+
+  it('uses Flex for direct OpenAI annotation requests', async () => {
+    mocks.createChatCompletionTracked.mockResolvedValue({
+      choices: [
+        {
+          finish_reason: 'stop',
+          message: { content: 'Test paragraph' },
+        },
+      ],
+      service_tier: 'flex',
+      usage: { prompt_tokens: 10, completion_tokens: 10 },
+    });
+
+    await runAnnotation(
+      [{ id: 'p1', order: 0, text: 'Test paragraph', words: [] }],
+      { channelName: 'Test channel', title: null, description: null },
+      'openai/test-model',
+      {
+        serviceTier: 'flex',
+        tracking: { activity: 'annotateTranscript' },
+      },
+    );
+
+    expect(mocks.createChatCompletionTracked).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: 'openai/test-model',
+        service_tier: 'flex',
+        via: 'openai',
+      }),
+    );
+  });
+
+  it('keeps unmarked direct calls on the standard tier', async () => {
+    mocks.createChatCompletionTracked.mockResolvedValue({
+      choices: [
+        {
+          finish_reason: 'stop',
+          message: { content: 'Test paragraph' },
+        },
+      ],
+      usage: { prompt_tokens: 10, completion_tokens: 10 },
+    });
+
+    await runAnnotation(
+      [{ id: 'p1', order: 0, text: 'Test paragraph', words: [] }],
+      { channelName: 'Test channel', title: null, description: null },
+      'openai/test-model',
+    );
+
+    expect(
+      mocks.createChatCompletionTracked.mock.calls[0]?.[0],
+    ).not.toHaveProperty('service_tier');
   });
 
   it('can disable recursive fallback when already calling the fallback model', async () => {

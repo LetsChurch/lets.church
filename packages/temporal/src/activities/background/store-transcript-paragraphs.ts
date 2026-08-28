@@ -1,9 +1,10 @@
+import { createHash } from 'node:crypto';
+
 import { db, TranscriptParagraph, UploadRecord } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import { eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 
-import { fingerprintTranscriptSource } from '../../util/llm-batch-source';
 import logger from '../../util/logger';
 import {
   type TranscriptJsonSegment,
@@ -13,6 +14,39 @@ import {
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/store-transcript-paragraphs',
 });
+
+type TranscriptSourceParagraph = {
+  order: number;
+  start: number;
+  end: number;
+  speaker: string | null;
+  speakerEmbedding: unknown;
+  text: string;
+  words: ReadonlyArray<{ word: string; start: number; end: number }>;
+};
+
+function fingerprintTranscriptSource(
+  paragraphs: ReadonlyArray<TranscriptSourceParagraph>,
+): string {
+  return createHash('sha256')
+    .update(
+      JSON.stringify(
+        paragraphs.map(
+          ({ order, start, end, speaker, speakerEmbedding, text, words }) => ({
+            order,
+            start,
+            end,
+            speaker,
+            speakerEmbedding,
+            text,
+            words: words.map(({ word, start, end }) => ({ word, start, end })),
+          }),
+        ),
+      ),
+    )
+    .digest('hex')
+    .slice(0, 20);
+}
 
 /**
  * Read the worker's `{uploadRecordId}/transcript.json`, group its sentence-level

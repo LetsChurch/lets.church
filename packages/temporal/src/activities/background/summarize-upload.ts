@@ -124,20 +124,14 @@ export type RunSummaryResult = {
 // ones (DeepSeek v3.x).
 export const DEFAULT_SUMMARY_MAX_TOKENS = 4096;
 
-// Exported system prompt so the batch path can submit the exact same
-// instructions the live `runSummary` uses.
-export const SUMMARY_SYSTEM_PROMPT = SYSTEM_PROMPT;
-
-// Build the user-message content for a summary request. Pure — used
-// by both the live `runSummary` and the batch request builder so the
-// two paths can't drift on prompt shape.
+// Build the user-message content for a summary request.
 //
 // `sections` (optional): pre-identified outline from the annotate
 // pass. When provided, the model is asked to also produce a 2-3
 // sentence description per section, returned in the `sections`
 // array keyed by section id. When empty, the prompt just yields
 // `summary`/`searchSummary` and `sections: []`.
-export function buildSummaryUserContent(
+function buildSummaryUserContent(
   paragraphTexts: string[],
   metadata: SummaryMetadata,
   sections: ReadonlyArray<SummarySectionInput> = [],
@@ -162,35 +156,9 @@ export function buildSummaryUserContent(
   return `${metadataLines.join('\n')}${sectionLines}\n\nTranscript:\n\n${numbered}`;
 }
 
-// Build a chat.completions.create body for a summary request. Used by
-// the live path (then spread with `openrouterExtras`) and the batch
-// builder (which strips those extras and the `openai/` model prefix).
-export function buildSummaryChatBody(
-  paragraphTexts: string[],
-  metadata: SummaryMetadata,
-  model: string,
-  maxTokens: number = DEFAULT_SUMMARY_MAX_TOKENS,
-  sections: ReadonlyArray<SummarySectionInput> = [],
-): Record<string, unknown> {
-  return {
-    model,
-    response_format: { type: 'json_object' },
-    // gpt-5.4 family requires `max_completion_tokens` (see annotate
-    // batch body for the equivalent comment + verification).
-    max_completion_tokens: maxTokens,
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      {
-        role: 'user',
-        content: buildSummaryUserContent(paragraphTexts, metadata, sections),
-      },
-    ],
-  };
-}
-
-// Parse a model-emitted summary response: defensive fence-strip, then
-// JSON + zod. Returns the raw stripped JSON alongside the parsed
-// values so callers can stash `responseText` for the LLM-eval surface.
+// Parse a model-emitted summary response: defensive fence-strip, then JSON +
+// zod. Returns the raw stripped JSON alongside the parsed values so callers can
+// stash `responseText` for the LLM-eval surface.
 //
 // `expectedSectionIds` is always required — it's the set of OUTLINE
 // annotation IDs the user message advertised to the model. Sections
@@ -198,7 +166,7 @@ export function buildSummaryChatBody(
 // section), and when the set is empty (annotate never ran for this
 // upload) ALL sections are dropped — the UI joins sections to OUTLINE
 // annotations by id, so unjoinable sections only inflate storage.
-export function parseSummaryResponse(
+function parseSummaryResponse(
   raw: string,
   expectedSectionIds: ReadonlySet<string>,
 ): {
@@ -280,10 +248,15 @@ export async function runSummary(
       uploadRecordId?: string | null;
     };
     /**
-     * Provider routing. Production summarize runs `'openai'` (direct); the admin
-     * LLM-eval page passes `'openrouter'`. Defaults to `'openai'`.
+     * Provider routing. The admin LLM-eval page passes `'openrouter'`.
+     * Defaults to direct OpenAI.
      */
     via?: 'openai' | 'openrouter';
+    /**
+     * Opt into OpenAI Flex. Restricted by the shared client to the tracked
+     * `summarizeUpload` background activity.
+     */
+    serviceTier?: 'flex';
   } = {},
 ): Promise<RunSummaryResult> {
   invariant(paragraphTexts.length > 0, 'runSummary: no paragraphs provided');
@@ -307,14 +280,14 @@ export async function runSummary(
   // create() throw). No activity-specific guards needed here — the
   // zod parse below catches malformed JSON.
   //
-  // Body kept inline (vs reusing `buildSummaryChatBody`) so the
-  // typed `createChatCompletionTracked` signature is happy — that
-  // helper exists for the batch path which serialises as raw JSON.
+  // Keep the body inline to satisfy the typed
+  // `createChatCompletionTracked` signature.
   const t0 = Date.now();
   const completion = await createChatCompletionTracked({
     tracking: options.tracking,
     via: options.via ?? 'openai',
     model,
+    ...(options.serviceTier ? { service_tier: options.serviceTier } : {}),
     // Same content_filter fallback hook as annotate. Most summarize prompts
     // are short transcript echoes (much smaller than annotate), but the
     // model still occasionally trips OpenAI's classifier on politically/
@@ -358,6 +331,7 @@ export async function runSummary(
         completion.usage?.completion_tokens ?? null,
         (completion.usage as unknown as { cost?: number } | undefined)?.cost ??
           null,
+        completion.service_tier === 'flex' ? 0.5 : 1,
       ),
     },
     prompt: { system: SYSTEM_PROMPT, user: userContent },
@@ -468,6 +442,7 @@ export default async function summarizeUpload(
     {
       sections: sectionInputs,
       tracking: { activity: 'summarizeUpload', uploadRecordId },
+      serviceTier: 'flex',
     },
   );
 

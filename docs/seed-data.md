@@ -244,27 +244,27 @@ Snapshot-based seed (the default flow):
 Refreshing the snapshots (`just dump-llm-seed-data` against a freshly
 live-pipeline-seeded DB):
 
-- 1 chat completion per upload against `OPENROUTER_ANNOTATE_MODEL` (default
-  `openai/gpt-5.6-luna`) — ~$0.01–0.03 per upload. Annotate echoes the
-  transcript back with inline section headings and scripture/keyword
-  annotations, so completion tokens scale with transcript length.
-- 1 chat completion per upload against `OPENROUTER_SUMMARY_MODEL` (default
-  `openai/gpt-5.6-luna`) — ~$0.005–0.01 per upload. Summarize consumes
+- 1 OpenAI Flex chat completion per upload using the model configured by
+  `OPENROUTER_ANNOTATE_MODEL` (default `openai/gpt-5.6-luna`) —
+  ~$0.01–0.03 per upload. Annotate echoes the transcript back with inline
+  section headings and scripture/keyword annotations, so completion tokens
+  scale with transcript length.
+- 1 OpenAI Flex chat completion per upload using `OPENROUTER_SUMMARY_MODEL`
+  (default `openai/gpt-5.6-luna`) — ~$0.005–0.01 per upload. Summarize consumes
   the outline + paragraphs and emits prose summary + searchSummary +
   per-section descriptions.
-- 1 embedding call per paragraph (`embedTranscriptParagraphs`) + 2
-  embedding calls per upload summary (`embedUpload`), all routed to
-  `openai/text-embedding-3-small` via OpenRouter — sub-cent total per
-  upload.
+- Direct Embeddings API calls for transcript paragraphs
+  (`embedTranscriptParagraphs`) and each upload's display/search summaries
+  (`embedUpload`), using `openai/text-embedding-3-small`. Flex does not support
+  embeddings, so these retain standard pricing.
 - `~30–60 s` wall time per upload during the live-pipeline seed (annotate
   runs first, then summarize). With 27 uploads that's **~15–30 minutes**
   of one-time LLM cost.
 
-When the OpenAI content filter blocks annotation in the live seed script, the
-wrapper retries through OpenRouter with the model selected by
-`ANTHROPIC_ANNOTATE_BATCH_MODEL` (default `claude-haiku-4-5`). Production
-OpenAI Batch annotations use the same model through Anthropic's Message Batches
-API. Summary content-filter responses use the live
+When the OpenAI content filter blocks annotation in the live seed or production
+Flex request, the wrapper retries through OpenRouter with the model selected by
+`OPENROUTER_ANNOTATE_FALLBACK_MODEL` (default
+`anthropic/claude-haiku-4-5`). Summary content-filter responses use the live
 `OPENROUTER_SUMMARY_FALLBACK_MODEL` (default
 `anthropic/claude-haiku-4-5`).
 

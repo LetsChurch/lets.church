@@ -69,9 +69,8 @@ export const MODEL_PRICING: ModelPricing[] = [
     ],
   },
   {
-    // Annotation fallback model. Production uses Anthropic Message Batches
-    // after an OpenAI content-filter response; live eval and seed paths route
-    // the same canonical model id through OpenRouter.
+    // Anthropic model used by the live OpenRouter annotation and summary
+    // fallbacks.
     model: 'anthropic/claude-haiku-4-5',
     windows: [
       {
@@ -194,9 +193,11 @@ export function resolveCostUsd(
   promptTokens: number | null,
   completionTokens: number | null,
   providerCostUsd: number | null,
+  costMultiplier = 1,
   at: Date = new Date(),
 ): number | null {
   if (providerCostUsd != null && providerCostUsd > 0) return providerCostUsd;
   if (promptTokens == null || completionTokens == null) return null;
-  return computeCost(model, promptTokens, completionTokens, null, at);
+  const computed = computeCost(model, promptTokens, completionTokens, null, at);
+  return computed === null ? null : computed * costMultiplier;
 }

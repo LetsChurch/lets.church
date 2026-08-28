@@ -65,9 +65,6 @@ export {
 } from './reindex';
 export { remakeThumbnailsWorkflow } from './remake-thumbnails';
 export { reprocessAllWorkflow } from './reprocess-all';
-// Kept registered until pre-always-batch executions have drained. New
-// reprocessAllWorkflow runs dispatch regular per-upload jobs instead.
-export { reprocessGroupWorkflow } from './reprocess-group';
 export { resetPasswordWorkflow } from './reset-password';
 export { scrapeAndImportWorkflow } from './scrape-and-import';
 export { sendEmailWorkflow } from './send-email';

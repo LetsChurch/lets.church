@@ -15,9 +15,8 @@ const moduleLogger = logger.child({
 
 /**
  * Embed the upload's `summary` and `search_summary` with
- * `openai/text-embedding-3-small` (1536 dims) via OpenRouter, then persist
- * both vectors on the upload row.
- *
+ * `openai/text-embedding-3-small` (1536 dims) through OpenAI's standard
+ * Embeddings API, then persist both vectors on the upload row.
  * One HTTP call with two-element `input` array — both vectors come back in
  * one round-trip. Depends on `summarize-upload` having run first (will throw
  * if either summary is null).
