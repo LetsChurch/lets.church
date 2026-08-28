@@ -4,20 +4,25 @@ from __future__ import annotations
 
 import asyncio
 import threading
-from types import SimpleNamespace
 
 import pytest
 
-from src import activities
+from src.activity_runtime import (
+    attempt_work_dir,
+    cleanup_attempt_work_dir,
+    run_blocking_with_heartbeat,
+)
 
 
-def test_blocking_with_heartbeat_returns_result(monkeypatch):
+def test_blocking_with_heartbeat_returns_result():
     heartbeats: list[str] = []
-    monkeypatch.setattr(activities.activity, "heartbeat", heartbeats.append)
 
     result = asyncio.run(
-        activities._blocking_with_heartbeat(
-            lambda: "finished", detail="normal work", interval_s=0.01
+        run_blocking_with_heartbeat(
+            lambda: "finished",
+            heartbeat=heartbeats.append,
+            detail="normal work",
+            interval_s=0.01,
         )
     )
 
@@ -25,22 +30,25 @@ def test_blocking_with_heartbeat_returns_result(monkeypatch):
     assert heartbeats == ["normal work"]
 
 
-def test_blocking_with_heartbeat_preserves_blocking_exception(monkeypatch):
+def test_blocking_with_heartbeat_preserves_blocking_exception():
     class BlockingFailureError(Exception):
         pass
-
-    monkeypatch.setattr(activities.activity, "heartbeat", lambda _detail: None)
 
     def fail():
         raise BlockingFailureError("native failure")
 
     with pytest.raises(BlockingFailureError, match="native failure"):
         asyncio.run(
-            activities._blocking_with_heartbeat(fail, detail="failing work", interval_s=0.01)
+            run_blocking_with_heartbeat(
+                fail,
+                heartbeat=lambda _detail: None,
+                detail="failing work",
+                interval_s=0.01,
+            )
         )
 
 
-def test_cancellation_waits_for_blocking_work_before_cleanup(monkeypatch):
+def test_cancellation_waits_for_blocking_work_before_cleanup():
     started = threading.Event()
     release = threading.Event()
     completed = threading.Event()
@@ -56,8 +64,6 @@ def test_cancellation_waits_for_blocking_work_before_cleanup(monkeypatch):
             if heartbeat_count >= 2:
                 drain_heartbeats.set()
 
-    monkeypatch.setattr(activities.activity, "heartbeat", heartbeat)
-
     def blocking_work():
         started.set()
         release.wait()
@@ -66,8 +72,11 @@ def test_cancellation_waits_for_blocking_work_before_cleanup(monkeypatch):
     async def scenario():
         async def run_with_cleanup():
             try:
-                await activities._blocking_with_heartbeat(
-                    blocking_work, detail="blocked work", interval_s=0.01
+                await run_blocking_with_heartbeat(
+                    blocking_work,
+                    heartbeat=heartbeat,
+                    detail="blocked work",
+                    interval_s=0.01,
                 )
             finally:
                 cleaned_up.set()
@@ -95,7 +104,7 @@ def test_cancellation_waits_for_blocking_work_before_cleanup(monkeypatch):
     asyncio.run(scenario())
 
 
-def test_repeated_cancellation_is_drained_without_finishing_early(monkeypatch):
+def test_repeated_cancellation_is_drained_without_finishing_early():
     started = threading.Event()
     release = threading.Event()
     first_cancel_drained = threading.Event()
@@ -108,8 +117,6 @@ def test_repeated_cancellation_is_drained_without_finishing_early(monkeypatch):
         elif cancellation_count == 2:
             second_cancel_drained.set()
 
-    monkeypatch.setattr(activities.activity, "heartbeat", heartbeat)
-
     def blocking_work():
         started.set()
         release.wait()
@@ -117,8 +124,11 @@ def test_repeated_cancellation_is_drained_without_finishing_early(monkeypatch):
     async def scenario():
         nonlocal cancellation_count
         task = asyncio.create_task(
-            activities._blocking_with_heartbeat(
-                blocking_work, detail="blocked work", interval_s=0.01
+            run_blocking_with_heartbeat(
+                blocking_work,
+                heartbeat=heartbeat,
+                detail="blocked work",
+                interval_s=0.01,
             )
         )
         try:
@@ -143,12 +153,9 @@ def test_repeated_cancellation_is_drained_without_finishing_early(monkeypatch):
     asyncio.run(scenario())
 
 
-def test_attempt_work_directories_are_distinct_and_cleanup_is_isolated(monkeypatch, tmp_path):
-    contexts = iter([SimpleNamespace(attempt=1), SimpleNamespace(attempt=2)])
-    monkeypatch.setattr(activities.activity, "info", lambda: next(contexts))
-
-    first = activities._attempt_work_dir(str(tmp_path), "upload-123")
-    second = activities._attempt_work_dir(str(tmp_path), "upload-123")
+def test_attempt_work_directories_are_distinct_and_cleanup_is_isolated(tmp_path):
+    first = attempt_work_dir(str(tmp_path), "upload-123", attempt=1)
+    second = attempt_work_dir(str(tmp_path), "upload-123", attempt=2)
 
     assert first != second
     assert first.parent == second.parent
@@ -158,7 +165,7 @@ def test_attempt_work_directories_are_distinct_and_cleanup_is_isolated(monkeypat
     second_marker = second / "marker"
     second_marker.write_text("second")
 
-    activities._cleanup_attempt_work_dir(first)
+    cleanup_attempt_work_dir(first)
 
     assert not first.exists()
     assert second_marker.read_text() == "second"

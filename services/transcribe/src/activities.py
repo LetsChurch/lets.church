@@ -21,14 +21,17 @@ import asyncio
 import json
 import logging
 import os
-import shutil
 import time
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 
 from temporalio import activity
 
+from .activity_runtime import (
+    attempt_work_dir,
+    cleanup_attempt_work_dir,
+    run_blocking_with_heartbeat,
+)
 from .alignment import align_segments
 from .audio import convert_to_wav, load_audio
 from .diarization import assign_word_speakers
@@ -39,55 +42,6 @@ from .storage import get_s3_client, update_upload_record
 from .vtt import segments_to_plaintext, segments_to_vtt
 
 logger = logging.getLogger(__name__)
-
-
-async def _blocking_with_heartbeat(fn, *, detail: str, interval_s: float = 30.0):
-    """Run a blocking, zero-arg `fn` in a worker thread while heartbeating.
-
-    Cancelling this coroutine cannot stop an already-running native thread.
-    Instead, cancellation is recorded and temporarily cleared while the same
-    shielded future is drained. Heartbeats continue during that drain, and the
-    cancellation is re-raised only after the blocking work has quiesced.
-    """
-    fut = asyncio.create_task(asyncio.to_thread(fn))
-    shielded = asyncio.shield(fut)
-    pending_cancel: asyncio.CancelledError | None = None
-    current_task = asyncio.current_task()
-
-    while True:
-        try:
-            done, _ = await asyncio.wait({shielded}, timeout=interval_s)
-        except asyncio.CancelledError as exc:
-            if pending_cancel is None:
-                pending_cancel = exc
-            if current_task is not None:
-                current_task.uncancel()
-            activity.heartbeat(detail)
-            continue
-
-        activity.heartbeat(detail)
-        if shielded in done:
-            break
-
-    if pending_cancel is not None:
-        try:
-            shielded.result()
-        except BaseException:
-            pass
-        raise pending_cancel
-
-    return shielded.result()
-
-
-def _attempt_work_dir(work_dir_base: str, upload_record_id: str) -> Path:
-    """Return the upload work directory isolated to this Temporal attempt."""
-    attempt = activity.info().attempt
-    return Path(work_dir_base) / upload_record_id / f"attempt-{attempt}"
-
-
-def _cleanup_attempt_work_dir(work_dir: Path) -> None:
-    """Remove only one attempt's filesystem state."""
-    shutil.rmtree(work_dir, ignore_errors=True)
 
 
 class ThrottledProgressUpdater:
@@ -151,7 +105,7 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
     progress = ThrottledProgressUpdater(upload_record_id)
 
     models = get_model_manager()
-    work_dir = _attempt_work_dir(work_dir_base, upload_record_id)
+    work_dir = attempt_work_dir(work_dir_base, upload_record_id, attempt=activity.info().attempt)
     download_path = work_dir / "download"
     wav_path = work_dir / "audio.wav"
 
@@ -164,16 +118,18 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
 
     try:
         work_dir.mkdir(parents=True, exist_ok=True)
-        await _blocking_with_heartbeat(
+        await run_blocking_with_heartbeat(
             lambda: ingest_s3.download_file(s3_ingest_bucket, s3_upload_key, str(download_path)),
+            heartbeat=activity.heartbeat,
             detail="downloading media",
         )
         size_mb = download_path.stat().st_size / (1024 * 1024)
         activity.logger.info(f"downloaded {size_mb:.2f} MB")
         await progress.update(0.05)
 
-        await _blocking_with_heartbeat(
+        await run_blocking_with_heartbeat(
             lambda: convert_to_wav(download_path, wav_path),
+            heartbeat=activity.heartbeat,
             detail="converting to wav",
         )
         download_path.unlink(missing_ok=True)
@@ -213,8 +169,9 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
 
         # Load the audio once for the GPU-side stages below (alignment + diarization).
         # ffmpeg decodes the entire (multi-hour) file here, so heartbeat through it.
-        audio = await _blocking_with_heartbeat(
+        audio = await run_blocking_with_heartbeat(
             lambda: load_audio(str(wav_path)),
+            heartbeat=activity.heartbeat,
             detail="loading audio",
         )
 
@@ -222,16 +179,18 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
         # frame ranges (much tighter for word-level highlighting). Skipped via
         # ALIGN_ENABLED=false; falls back per-segment on internal errors.
         if models.align is not None:
-            segments = await _blocking_with_heartbeat(
+            segments = await run_blocking_with_heartbeat(
                 lambda: align_segments(audio, segments, models.align),
+                heartbeat=activity.heartbeat,
                 detail="aligning",
             )
             activity.logger.info("alignment done")
         await progress.update(0.65, force=True)
 
         # 3. Diarize with titanet (speaker labels + speaker vectors).
-        per_segment_labels, speaker_vectors = await _blocking_with_heartbeat(
+        per_segment_labels, speaker_vectors = await run_blocking_with_heartbeat(
             lambda: models.diarizer.diarize(audio, segments),
+            heartbeat=activity.heartbeat,
             detail="diarizing",
         )
         for seg, label in zip(segments, per_segment_labels, strict=True):
@@ -244,7 +203,7 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
 
         # 4. Re-segment + restore terminal punctuation via wtpsplit per speaker turn.
         before = len(segments)
-        segments = await _blocking_with_heartbeat(
+        segments = await run_blocking_with_heartbeat(
             lambda: process_speaker_segments(
                 segments,
                 models.sat,
@@ -252,6 +211,7 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
                 paragraph_threshold=paragraph_threshold,
                 paragraph_target_chars=paragraph_target_chars,
             ),
+            heartbeat=activity.heartbeat,
             detail="segmenting sentences",
         )
         paragraph_count = sum(1 for s in segments if s.get("is_paragraph_start"))
@@ -333,4 +293,4 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
             activity.logger.exception("failed to reset transcribing timestamps")
         raise
     finally:
-        _cleanup_attempt_work_dir(work_dir)
+        cleanup_attempt_work_dir(work_dir)
