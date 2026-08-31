@@ -70,25 +70,26 @@ export function Loader({ size, className, color }: LoaderProps) {
 type LoadingOverlayProps = {
   visible?: boolean;
   className?: string;
-  loaderProps?: LoaderProps;
+  withLoader?: boolean;
 };
 
 // Absolutely fills its nearest positioned ancestor — the parent must be
-// `relative`.
+// `relative`. Its layer stays above local z-10 controls and decorative
+// pseudo-elements so the backdrop blur covers the entire subtree.
 export function LoadingOverlay({
   visible,
   className,
-  loaderProps,
+  withLoader = true,
 }: LoadingOverlayProps) {
   if (!visible) return null;
   return (
     <div
       className={cn(
-        'absolute inset-0 z-10 flex items-center justify-center rounded-[inherit] bg-white/60 backdrop-blur-sm dark:bg-zinc-950/60',
+        'absolute inset-0 z-20 flex items-center justify-center rounded-[inherit] bg-white/60 backdrop-blur-sm dark:bg-zinc-950/60',
         className,
       )}
     >
-      <Loader {...loaderProps} />
+      {withLoader ? <Loader /> : null}
     </div>
   );
 }

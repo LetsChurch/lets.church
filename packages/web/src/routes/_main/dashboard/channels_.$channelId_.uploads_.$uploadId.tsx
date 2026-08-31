@@ -770,7 +770,9 @@ function ChannelUploadPage() {
   return (
     <div className="relative w-full">
       <form.Subscribe selector={(state) => state.isSubmitting}>
-        {(isSubmitting) => <LoadingOverlay visible={isSubmitting} />}
+        {(isSubmitting) => (
+          <LoadingOverlay visible={isSubmitting} withLoader={false} />
+        )}
       </form.Subscribe>
 
       {/* Private Upload Warning Banner */}
