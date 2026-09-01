@@ -29,10 +29,17 @@ function uploadPart(
             progress(loaded / total);
           });
 
-          xhr.addEventListener('error', (error) => reject(error));
-          xhr.addEventListener('abort', (error) => reject(error));
+          xhr.addEventListener('error', (error) =>
+            reject(
+              new Error(`Failed to upload part ${part}`, { cause: error }),
+            ),
+          );
+          xhr.addEventListener('abort', (error) =>
+            reject(
+              new Error(`Upload of part ${part} was aborted`, { cause: error }),
+            ),
+          );
           xhr.addEventListener('loadend', () => {
-            progress(1);
             const eTag = xhr.getResponseHeader('ETag');
             if (eTag) {
               resolve(eTag.replaceAll('"', ''));
