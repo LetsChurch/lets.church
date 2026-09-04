@@ -51,3 +51,38 @@ test('LB-CMP-04 compare back link returns to the reader', async ({ page }) => {
   await page.getByRole('link', { name: /Read/ }).click();
   await expect(page).toHaveURL(/\/bible\/john\/1/);
 });
+
+test('LB-CMP-05 add-translation menu overlays the sticky header', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 420, height: 700 });
+  await page.goto('/compare/john/1?with=BSB');
+  const trigger = page.getByRole('button', { name: '+ Add translation' });
+  const menu = page.getByRole('menu');
+  await expect(async () => {
+    await trigger.click();
+    await expect(menu).toBeVisible({ timeout: 1000 });
+  }).toPass();
+  await expect(
+    menu.evaluate((element) => {
+      const stickyHeader = element
+        .closest('body')
+        ?.querySelector<HTMLElement>('.sticky');
+      if (!stickyHeader) {
+        return false;
+      }
+      const menuRect = element.getBoundingClientRect();
+      const headerRect = stickyHeader.getBoundingClientRect();
+      const overlapTop = Math.max(menuRect.top, headerRect.top);
+      const overlapBottom = Math.min(menuRect.bottom, headerRect.bottom);
+      if (overlapTop >= overlapBottom) {
+        return false;
+      }
+      const topmost = document.elementFromPoint(
+        menuRect.left + menuRect.width / 2,
+        overlapTop + 1,
+      );
+      return topmost != null && element.contains(topmost);
+    }),
+  ).resolves.toBe(true);
+});

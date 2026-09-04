@@ -357,8 +357,8 @@ function AddTranslation({
         + Add translation
       </Menu.Trigger>
       <Menu.Portal>
-        <Menu.Positioner sideOffset={6} align="end">
-          <Menu.Popup className="border-line-strong bg-paper-raised z-40 rounded-xl border p-1 shadow-[0_26px_50px_-28px_rgba(40,34,18,0.45)]">
+        <Menu.Positioner sideOffset={6} align="end" className="z-50">
+          <Menu.Popup className="border-line-strong bg-paper-raised rounded-xl border p-1 shadow-[0_26px_50px_-28px_rgba(40,34,18,0.45)]">
             {addable.map((t) => (
               <Menu.Item
                 key={t.id}
