@@ -126,7 +126,7 @@ and content attributes remain intact and PostHog classifies model calls as
 
 ### Deliberate exclusions
 
-Temporal transcript annotation and other offline `packages/temporal` calls continue to use `llm_call` only. This avoids duplicate accounting and sending retained transcript prompts/outputs into a second system. A general OTEL Collector, non-AI auto-instrumentation, and a second tracing backend remain deferred until they solve a concrete routing or service-tracing need.
+Temporal transcript annotation and other offline `packages/temporal` calls continue to use `llm_call` only. Tracked provider calls insert an `outcome='started'` row before request I/O and settle the same row afterward; rows left as `started` expose worker exits during in-flight calls. Temporal remains authoritative for workflow and activity retry state. This avoids duplicate PostHog accounting and sending retained transcript prompts/outputs into a second system. A general OTEL Collector, non-AI auto-instrumentation, and a second tracing backend remain deferred until they solve a concrete routing or service-tracing need.
 
 ## Cost and volume
 
@@ -147,4 +147,4 @@ A one-route proof is successful only if all of the following are observed in Pos
 7. `$session_id` links to the correct session replay when enabled.
 8. Privacy mode omits prompt and output content while preserving operational metadata.
 9. Process shutdown or request completion flushes queued events.
-10. The existing `llm_call` records remain unchanged and authoritative.
+10. `llm_call` remains the authoritative logical-call ledger; PostHog remains the per-generation ledger for AI SDK multi-step calls.

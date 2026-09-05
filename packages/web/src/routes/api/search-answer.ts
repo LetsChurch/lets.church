@@ -289,7 +289,7 @@ export const Route = createFileRoute('/api/search-answer')({
           { classifyAnswerMode, recollectionGate, classifyRecollection },
           { SEARCH_AGENT_MODEL, agentModel },
           { runMediaKnnProbe },
-          { recordLlmCall },
+          { completeLlmCall, startLlmCall },
           { hydrateUploads },
           { db, SearchLogEntry, UploadRecord },
           { eq, sql },
@@ -691,6 +691,11 @@ Cite every claim with the tool-provided [upload:...] tokens. If the library genu
               ? recollectionPrompt
               : questionPrompt;
 
+            const digLlmCall = await startLlmCall({
+              model: SEARCH_AGENT_MODEL,
+              activity: 'searchDetectiveAgent',
+            });
+            let digError: unknown = null;
             const digGenStart = Date.now();
             const digResult = streamText({
               model: agentModel,
@@ -700,6 +705,7 @@ Cite every claim with the tool-provided [upload:...] tokens. If the library genu
               stopWhen: isStepCount(DIG_STEP_BUDGET),
               ...aiTelemetry('web.search-answer.deep', telemetryContext),
               onError: ({ error }) => {
+                digError = error;
                 moduleLogger.error(
                   {
                     context: {
@@ -852,6 +858,7 @@ Cite every claim with the tool-provided [upload:...] tokens. If the library genu
                         flushes.push(flushNewSources());
                         break;
                       case 'error':
+                        digError = part.error;
                         moduleLogger.warn(
                           { context: { error: String(part.error) } },
                           'dig fullStream error part',
@@ -863,6 +870,7 @@ Cite every claim with the tool-provided [upload:...] tokens. If the library genu
                     pending = reader.read();
                   }
                 } catch (err) {
+                  digError = err;
                   moduleLogger.warn(
                     {
                       context: {
@@ -894,9 +902,7 @@ Cite every claim with the tool-provided [upload:...] tokens. If the library genu
                   const finishReason = await Promise.resolve(
                     digResult.finishReason,
                   ).catch(() => null);
-                  await recordLlmCall({
-                    model: SEARCH_AGENT_MODEL,
-                    activity: 'searchDetectiveAgent',
+                  await completeLlmCall(digLlmCall, {
                     promptTokens:
                       usage?.inputTokens ?? usage?.promptTokens ?? null,
                     completionTokens:
@@ -904,7 +910,13 @@ Cite every claim with the tool-provided [upload:...] tokens. If the library genu
                     durationMs: Date.now() - digGenStart,
                     finishReason:
                       typeof finishReason === 'string' ? finishReason : null,
-                    outcome: 'success',
+                    outcome: digError === null ? 'success' : 'stream_failed',
+                    errorMessage:
+                      digError === null
+                        ? null
+                        : digError instanceof Error
+                          ? digError.message
+                          : String(digError),
                     responseText: answerText,
                   });
                 } catch (err) {
@@ -1073,6 +1085,11 @@ Formatting rules:
 Sources:
 ${sourcesBlock}`;
 
+          const answerLlmCall = await startLlmCall({
+            model: SEARCH_AGENT_MODEL,
+            activity: 'searchAnswerAgent',
+          });
+          let generationError: unknown = null;
           const genStart = Date.now();
           const result = streamText({
             model: agentModel,
@@ -1085,6 +1102,7 @@ ${sourcesBlock}`;
             // Surface a generation error instead of silently ending the stream;
             // the catch below records the decline and the card shows the error.
             onError: ({ error }) => {
+              generationError = error;
               moduleLogger.error(
                 {
                   context: {
@@ -1121,6 +1139,7 @@ ${sourcesBlock}`;
               );
               const deadline = Date.now() + 90_000;
               let answerText = '';
+              let streamError: unknown = null;
               // Keep a SINGLE outstanding read() and race the same promise
               // against an idle timer — so a chunk whose read() loses the race
               // (e.g. a >1s pause during a tool call) is NOT discarded; the next
@@ -1167,6 +1186,7 @@ ${sourcesBlock}`;
                   pending = reader.read();
                 }
               } catch (err) {
+                streamError = err;
                 // Log, then fall through to close + cleanup with the partial
                 // answer. We can't rethrow/propagate: start() runs after the
                 // handler already returned the Response, so the outer catch
@@ -1184,9 +1204,7 @@ ${sourcesBlock}`;
               controller.close();
               void reader.cancel();
 
-              // Record the agent generation in `llm_call`. `streamText` makes
-              // the OpenAI request directly (the tracked wrappers don't see it),
-              // so log it manually from the resolved usage/finishReason.
+              // Settle the durable pre-request audit row from final usage.
               try {
                 const usage = (await Promise.resolve(
                   result.usage as unknown,
@@ -1199,9 +1217,8 @@ ${sourcesBlock}`;
                 const finishReason = await Promise.resolve(
                   result.finishReason,
                 ).catch(() => null);
-                await recordLlmCall({
-                  model: SEARCH_AGENT_MODEL,
-                  activity: 'searchAnswerAgent',
+                const auditError = streamError ?? generationError;
+                await completeLlmCall(answerLlmCall, {
                   promptTokens:
                     usage?.inputTokens ?? usage?.promptTokens ?? null,
                   completionTokens:
@@ -1209,7 +1226,16 @@ ${sourcesBlock}`;
                   durationMs: Date.now() - genStart,
                   finishReason:
                     typeof finishReason === 'string' ? finishReason : null,
-                  outcome: 'success',
+                  outcome:
+                    generationError === null && streamError === null
+                      ? 'success'
+                      : 'stream_failed',
+                  errorMessage:
+                    auditError === null
+                      ? null
+                      : auditError instanceof Error
+                        ? auditError.message
+                        : String(auditError),
                   responseText: answerText,
                 });
               } catch (err) {

@@ -1,7 +1,15 @@
-import { executeChild, setCurrentDetails } from '@temporalio/workflow';
+import {
+  ApplicationFailure,
+  executeChild,
+  setCurrentDetails,
+} from '@temporalio/workflow';
 
 import { BACKGROUND_QUEUE } from '../../queues';
 import { UPLOAD_ID_KEY } from '../../search-attributes';
+import {
+  DETERMINISTIC_LLM_FALLBACK_FAILURE,
+  isDeterministicLlmFallbackFailure,
+} from '../../util/llm-completion-guards';
 import { indexDocumentWorkflow } from './index-document';
 import { annotateTranscriptFlex } from './llm-flex';
 
@@ -34,7 +42,17 @@ export async function annotateTranscriptWorkflow(
   { force = false }: AnnotateTranscriptOptions = {},
 ) {
   setCurrentDetails('Annotating transcript via OpenAI Flex');
-  await annotateTranscriptFlex(uploadRecordId, { force });
+  try {
+    await annotateTranscriptFlex(uploadRecordId, { force });
+  } catch (error) {
+    if (isDeterministicLlmFallbackFailure(error)) {
+      throw ApplicationFailure.nonRetryable(
+        error instanceof Error ? error.message : String(error),
+        DETERMINISTIC_LLM_FALLBACK_FAILURE,
+      );
+    }
+    throw error;
+  }
 
   setCurrentDetails('Indexing media');
   await executeChild(indexDocumentWorkflow, {

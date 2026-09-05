@@ -3,6 +3,35 @@ export type GuardOutcome = {
   errorMessage: string | null;
 };
 
+export const DETERMINISTIC_LLM_FALLBACK_FAILURE =
+  'DeterministicLlmFallbackFailure';
+
+const DETERMINISTIC_FALLBACK_OUTCOMES: Record<string, true> = {
+  guard_length_truncation: true,
+  guard_silent_summarization: true,
+};
+
+export function isDeterministicFallbackOutcome(outcome: string): boolean {
+  return DETERMINISTIC_FALLBACK_OUTCOMES[outcome] === true;
+}
+
+/** Walk a Temporal failure cause chain without depending on runtime classes. */
+export function isDeterministicLlmFallbackFailure(error: unknown): boolean {
+  let current = error;
+  const seen = new Set<unknown>();
+  while (current && typeof current === 'object' && !seen.has(current)) {
+    seen.add(current);
+    if (
+      'type' in current &&
+      current.type === DETERMINISTIC_LLM_FALLBACK_FAILURE
+    ) {
+      return true;
+    }
+    current = 'cause' in current ? current.cause : null;
+  }
+  return false;
+}
+
 export type CompletionChoice = {
   finish_reason?: string | null;
   message?: {

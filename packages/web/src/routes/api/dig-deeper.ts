@@ -115,7 +115,7 @@ export const Route = createFileRoute('/api/dig-deeper')({
         const [
           { CHAT_INSTRUCTIONS, detectiveTools },
           { SEARCH_AGENT_MODEL, agentModel },
-          { recordLlmCall },
+          { completeLlmCall, startLlmCall },
           { hydrateUploads },
           { streamText, isStepCount },
           { aiTelemetry },
@@ -139,6 +139,10 @@ export const Route = createFileRoute('/api/dig-deeper')({
         const encoder = new TextEncoder();
 
         try {
+          const startedLlmCall = await startLlmCall({
+            model: SEARCH_AGENT_MODEL,
+            activity: 'searchDigDeeperAgent',
+          });
           const genStart = Date.now();
           const result = streamText({
             model: agentModel,
@@ -356,9 +360,7 @@ export const Route = createFileRoute('/api/dig-deeper')({
                         promptTokens?: number;
                         completionTokens?: number;
                       } | null);
-                await recordLlmCall({
-                  model: SEARCH_AGENT_MODEL,
-                  activity: 'searchDigDeeperAgent',
+                await completeLlmCall(startedLlmCall, {
                   promptTokens:
                     usage?.inputTokens ?? usage?.promptTokens ?? null,
                   completionTokens:
@@ -369,6 +371,8 @@ export const Route = createFileRoute('/api/dig-deeper')({
                     terminal.status === 'done'
                       ? 'success'
                       : `dig_${terminal.reason.replaceAll('-', '_')}`,
+                  errorMessage:
+                    terminal.status === 'done' ? null : terminal.reason,
                   responseText: answerText,
                 });
               } catch (err) {

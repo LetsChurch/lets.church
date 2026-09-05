@@ -6,6 +6,10 @@ import {
 
 import { BACKGROUND_QUEUE } from '../../queues';
 import { UPLOAD_ID_KEY } from '../../search-attributes';
+import {
+  DETERMINISTIC_LLM_FALLBACK_FAILURE,
+  isDeterministicLlmFallbackFailure,
+} from '../../util/llm-completion-guards';
 import { indexDocumentWorkflow } from './index-document';
 import {
   embedTranscriptParagraphsDirect,
@@ -95,6 +99,16 @@ export async function summarizeUploadWorkflow(
 function throwCombinedFlexFailures(errors: ReadonlyArray<unknown>): void {
   const failures = errors.filter((error) => error !== null);
   if (failures.length === 0) return;
+  if (failures.some(isDeterministicLlmFallbackFailure)) {
+    throw ApplicationFailure.nonRetryable(
+      failures
+        .map((error) =>
+          error instanceof Error ? error.message : String(error),
+        )
+        .join('; '),
+      DETERMINISTIC_LLM_FALLBACK_FAILURE,
+    );
+  }
   if (failures.length === 1) throw failures[0];
   throw ApplicationFailure.retryable(
     `summarizeUploadWorkflow: multiple Flex/direct stages failed: ${failures

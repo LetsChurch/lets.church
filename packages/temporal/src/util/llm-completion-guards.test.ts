@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  DETERMINISTIC_LLM_FALLBACK_FAILURE,
   getAnnotationCompletenessGuard,
   getBuiltInCompletionGuard,
+  isDeterministicFallbackOutcome,
+  isDeterministicLlmFallbackFailure,
 } from './llm-completion-guards';
 
 describe('getBuiltInCompletionGuard', () => {
@@ -40,6 +43,31 @@ describe('getBuiltInCompletionGuard', () => {
         message: { content: null, tool_calls: [{}] },
       }),
     ).toBeNull();
+  });
+});
+
+describe('deterministic fallback failures', () => {
+  it('classifies only output-cap and completeness outcomes as deterministic', () => {
+    expect(isDeterministicFallbackOutcome('guard_length_truncation')).toBe(
+      true,
+    );
+    expect(isDeterministicFallbackOutcome('guard_silent_summarization')).toBe(
+      true,
+    );
+    expect(isDeterministicFallbackOutcome('guard_content_filter')).toBe(false);
+    expect(isDeterministicFallbackOutcome('create_failed')).toBe(false);
+  });
+
+  it('recognizes the failure type through Temporal cause wrappers', () => {
+    const failure = {
+      cause: {
+        cause: { type: DETERMINISTIC_LLM_FALLBACK_FAILURE },
+      },
+    };
+    expect(isDeterministicLlmFallbackFailure(failure)).toBe(true);
+    expect(isDeterministicLlmFallbackFailure(new Error('transient'))).toBe(
+      false,
+    );
   });
 });
 

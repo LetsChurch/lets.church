@@ -21,6 +21,10 @@ import {
 } from '../../queues';
 import { UPLOAD_ID_KEY } from '../../search-attributes';
 import { type LcLink, staticMeta } from '../../util/dashboard-links';
+import {
+  DETERMINISTIC_LLM_FALLBACK_FAILURE,
+  isDeterministicLlmFallbackFailure,
+} from '../../util/llm-completion-guards';
 import { probeIsVideoFile } from '../../util/zod';
 import { annotateTranscriptWorkflow } from './annotate-transcript';
 import { indexDocumentWorkflow } from './index-document';
@@ -157,11 +161,9 @@ export async function processMediaWorkflow(
       // persisted results so a parent retry does not submit duplicate work. The
       // admin "Regenerate" mutations pass `force: true` to bypass that check.
       //
-      // Graceful degradation: if annotate fails, we still attempt
-      // summarize (it writes a sections-less summary), then re-throw
-      // the annotate failure so the parent retry budget still applies.
-      // This avoids paying for annotate then losing the summary on a
-      // single-flake annotate failure.
+      // Graceful degradation: if annotate fails, still attempt summarize. A
+      // transient annotation failure may use the parent retry budget; a
+      // deterministic fallback failure is propagated as non-retryable.
       let annotateError: unknown = null;
       try {
         setCurrentDetails('Annotating transcript');
@@ -174,7 +176,6 @@ export async function processMediaWorkflow(
             : { priority: { priorityKey: PRIORITY_USER } }),
           typedSearchAttributes: childSearchAttrs,
           ...staticMeta({ summary: 'Annotate transcript', links }),
-          retry: { maximumAttempts: 2 },
         });
       } catch (err) {
         annotateError = err;
@@ -190,12 +191,22 @@ export async function processMediaWorkflow(
           : { priority: { priorityKey: PRIORITY_USER } }),
         typedSearchAttributes: childSearchAttrs,
         ...staticMeta({ summary: 'Summarize', links }),
-        retry: { maximumAttempts: 2 },
       });
 
       if (annotateError !== null) {
+        const message = `Post-transcribe pipeline: annotate failed — ${
+          annotateError instanceof Error
+            ? annotateError.message
+            : String(annotateError)
+        }`;
+        if (isDeterministicLlmFallbackFailure(annotateError)) {
+          throw ApplicationFailure.nonRetryable(
+            message,
+            DETERMINISTIC_LLM_FALLBACK_FAILURE,
+          );
+        }
         throw ApplicationFailure.retryable(
-          `Post-transcribe pipeline: annotate failed — ${annotateError instanceof Error ? annotateError.message : String(annotateError)}`,
+          message,
           'PostTranscribeAnnotationFailed',
         );
       }
@@ -219,7 +230,9 @@ export async function processMediaWorkflow(
   } catch (err) {
     const { attempt, retryPolicy } = workflowInfo();
     const maxAttempts = retryPolicy?.maximumAttempts ?? 1;
-    if (attempt >= maxAttempts) {
+    const terminal =
+      isDeterministicLlmFallbackFailure(err) || attempt >= maxAttempts;
+    if (terminal) {
       const message = err instanceof Error ? err.message : String(err);
       setCurrentDetails('Failed');
       await sendUploadErrorNotification(targetId, message);

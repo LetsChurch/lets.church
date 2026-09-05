@@ -1,13 +1,19 @@
 import { db, LlmCall } from '@letschurch/db';
+import { ApplicationFailure } from '@temporalio/activity';
+import { eq } from 'drizzle-orm';
 import OpenAI from 'openai';
 import { z } from 'zod';
 
 import {
+  DETERMINISTIC_LLM_FALLBACK_FAILURE,
   getBuiltInCompletionGuard,
   type GuardOutcome,
+  isDeterministicFallbackOutcome,
 } from './llm-completion-guards';
 import { computeCost } from './llm-pricing';
+import logger from './logger';
 
+const moduleLogger = logger.child({ module: 'temporal/util/llm' });
 const openaiProductionModel = z
   .string()
   .startsWith(
@@ -135,6 +141,18 @@ export const openrouterExtras = {
   usage: { include: true },
 } as const;
 
+export type StartLlmCallArgs = {
+  model: string;
+  activity: string;
+  uploadRecordId?: string | null;
+};
+
+export type StartedLlmCall = {
+  id: string;
+  model: string;
+  startedAt: Date;
+};
+
 /**
  * Insert one `llm_call` audit row. Called by activity code right after a
  * chat-completion response comes back — including the cases where
@@ -186,6 +204,95 @@ export type RecordLlmCallArgs = {
   /** Override the clock for tests / backfills. Defaults to `new Date()`. */
   at?: Date;
 };
+
+export type CompleteLlmCallArgs = Omit<
+  RecordLlmCallArgs,
+  'activity' | 'at' | 'model' | 'uploadRecordId'
+>;
+
+function completedLlmCallValues(
+  model: string,
+  at: Date,
+  args: CompleteLlmCallArgs,
+) {
+  const costMultiplier = args.costMultiplier ?? 1;
+  const computedRaw =
+    args.promptTokens != null && args.completionTokens != null
+      ? computeCost(
+          model,
+          args.promptTokens,
+          args.completionTokens,
+          args.cachedTokens ?? null,
+          at,
+        )
+      : null;
+  const computed = computedRaw === null ? null : computedRaw * costMultiplier;
+  return {
+    promptTokens: args.promptTokens,
+    completionTokens: args.completionTokens,
+    cachedTokens: args.cachedTokens ?? null,
+    computedCostUsd: computed === null ? null : computed.toString(),
+    providerCostUsd:
+      args.providerCostUsd == null ? null : args.providerCostUsd.toString(),
+    durationMs: args.durationMs,
+    finishReason: args.finishReason ?? null,
+    outcome: args.outcome,
+    errorMessage: args.errorMessage ?? null,
+    responseText: args.responseText ?? null,
+  };
+}
+
+/**
+ * Persist request intent before any provider I/O. A row that remains
+ * `outcome='started'` identifies a process exit during an in-flight call.
+ */
+export async function startLlmCall(
+  args: StartLlmCallArgs,
+): Promise<StartedLlmCall> {
+  const startedAt = new Date();
+  const [row] = await db
+    .insert(LlmCall)
+    .values({
+      model: args.model,
+      activity: args.activity,
+      uploadRecordId: args.uploadRecordId ?? null,
+      durationMs: 0,
+      outcome: 'started',
+      createdAt: startedAt,
+    })
+    .returning({ id: LlmCall.id });
+  if (!row) throw new Error('Failed to create llm_call start record');
+  return { id: row.id, model: args.model, startedAt };
+}
+
+/** Settle a row created by `startLlmCall` without changing its start identity. */
+export async function completeLlmCall(
+  started: StartedLlmCall,
+  args: CompleteLlmCallArgs,
+): Promise<void> {
+  await db
+    .update(LlmCall)
+    .set(completedLlmCallValues(started.model, started.startedAt, args))
+    .where(eq(LlmCall.id, started.id));
+}
+
+async function settleStartedLlmCall(
+  started: StartedLlmCall | null,
+  args: CompleteLlmCallArgs,
+): Promise<void> {
+  if (!started) return;
+  try {
+    await completeLlmCall(started, args);
+  } catch (error) {
+    // The durable `started` row is preferable to retrying a provider call that
+    // already completed. Surface the audit gap without duplicating LLM spend.
+    moduleLogger.error('Failed to settle llm_call audit row', {
+      error,
+      llmCallId: started.id,
+      model: started.model,
+    });
+  }
+}
 
 /**
  * Wrapper around `llm.chat.completions.create` that owns everything every
@@ -265,6 +372,13 @@ export type CreateTrackedChatCompletionArgs =
 export async function createChatCompletionTracked(
   args: CreateTrackedChatCompletionArgs,
 ): Promise<OpenAI.ChatCompletion> {
+  return createChatCompletionTrackedAttempt(args, false);
+}
+
+async function createChatCompletionTrackedAttempt(
+  args: CreateTrackedChatCompletionArgs,
+  isFallbackAttempt: boolean,
+): Promise<OpenAI.ChatCompletion> {
   const {
     tracking,
     guards,
@@ -283,6 +397,14 @@ export async function createChatCompletionTracked(
       'OpenAI Flex is restricted to tracked background annotation and summary activities',
     );
   }
+
+  const startedCall = tracking
+    ? await startLlmCall({
+        model: createArgs.model,
+        activity: tracking.activity,
+        uploadRecordId: tracking.uploadRecordId,
+      })
+    : null;
   const t0 = Date.now();
 
   // Send a bare model id + no extras to OpenAI direct; keep the verbatim id +
@@ -304,85 +426,95 @@ export async function createChatCompletionTracked(
   try {
     completion = await client.chat.completions.create(
       requestBody,
-      via === 'openai' && serviceTier === 'flex'
+      isFallbackAttempt
         ? {
-            // Flex can legitimately take up to the configured one-hour
-            // timeout. Temporal, not the SDK, owns retries across days.
-            timeout: FLEX_REQUEST_TIMEOUT_MS,
+            // One fallback invocation must mean one OpenRouter HTTP request.
+            // Temporal owns durable retries and records each attempt separately.
             maxRetries: 0,
           }
-        : undefined,
+        : via === 'openai' && serviceTier === 'flex'
+          ? {
+              // Flex can legitimately take up to the configured one-hour
+              // timeout. Temporal, not the SDK, owns retries across days.
+              timeout: FLEX_REQUEST_TIMEOUT_MS,
+              maxRetries: 0,
+            }
+          : undefined,
     );
   } catch (err) {
-    if (tracking) {
-      await recordLlmCall({
-        model: createArgs.model,
-        activity: tracking.activity,
-        uploadRecordId: tracking.uploadRecordId ?? null,
-        promptTokens: null,
-        completionTokens: null,
-        providerCostUsd: null,
-        durationMs: Date.now() - t0,
-        finishReason: null,
-        outcome: 'create_failed',
-        errorMessage: err instanceof Error ? err.message : String(err),
-      });
-    }
+    await settleStartedLlmCall(startedCall, {
+      promptTokens: null,
+      completionTokens: null,
+      providerCostUsd: null,
+      durationMs: Date.now() - t0,
+      finishReason: null,
+      outcome: 'create_failed',
+      errorMessage: err instanceof Error ? err.message : String(err),
+    });
     throw err;
   }
 
   const durationMs = Date.now() - t0;
   const choice = completion.choices[0];
+  const completionAudit = {
+    promptTokens: completion.usage?.prompt_tokens ?? null,
+    completionTokens: completion.usage?.completion_tokens ?? null,
+    providerCostUsd:
+      (completion.usage as unknown as { cost?: number } | undefined)?.cost ??
+      null,
+    costMultiplier: completion.service_tier === 'flex' ? 0.5 : 1,
+    durationMs,
+    finishReason: choice?.finish_reason ?? null,
+    responseText: choice?.message.content ?? null,
+  };
 
   // Built-in guards run first. Activity-specific `guards` callback only
   // sees the completion if all built-ins passed.
-  const builtInGuard = getBuiltInCompletionGuard(choice);
-  const result: GuardOutcome =
-    builtInGuard ??
-    (guards
-      ? await guards(completion)
-      : { outcome: 'success', errorMessage: null });
-
-  if (tracking) {
-    await recordLlmCall({
-      model: createArgs.model,
-      activity: tracking.activity,
-      uploadRecordId: tracking.uploadRecordId ?? null,
-      promptTokens: completion.usage?.prompt_tokens ?? null,
-      completionTokens: completion.usage?.completion_tokens ?? null,
-      providerCostUsd:
-        (completion.usage as unknown as { cost?: number } | undefined)?.cost ??
-        null,
-      costMultiplier: completion.service_tier === 'flex' ? 0.5 : 1,
-      durationMs,
-      finishReason: choice?.finish_reason ?? null,
-      outcome: result.outcome,
-      errorMessage: result.errorMessage,
-      // Retain the verbatim completion text even on guard rejections —
-      // a silent-summarization or length-truncated response is exactly
-      // what we want to inspect after the fact. Null when the provider
-      // returned no content (content_filter / empty_content).
-      responseText: choice?.message.content ?? null,
+  let result: GuardOutcome;
+  try {
+    result =
+      getBuiltInCompletionGuard(choice) ??
+      (guards
+        ? await guards(completion)
+        : { outcome: 'success', errorMessage: null });
+  } catch (err) {
+    await settleStartedLlmCall(startedCall, {
+      ...completionAudit,
+      outcome: 'guard_evaluation_failed',
+      errorMessage: err instanceof Error ? err.message : String(err),
     });
+    throw err;
   }
 
+  await settleStartedLlmCall(startedCall, {
+    ...completionAudit,
+    outcome: result.outcome,
+    errorMessage: result.errorMessage,
+  });
+
   if (result.errorMessage) {
-    // Fallback path: a different model on OpenRouter when the primary's
-    // provider classifier blocks the response. Always routed `via: 'openrouter'`
-    // — the fallback is a non-OpenAI provider (e.g. anthropic/claude-haiku-4-5)
-    // that OpenAI-direct can't reach. Recurse with the fallback model swapped in
-    // + `fallbackModel: null` so we only ever switch once per request. All other
-    // failure modes (length, empty, custom guards) throw normally — switching
-    // models there would mask different underlying bugs.
+    // A provider content-filter rejection gets one different-model fallback.
+    // The recursive call is marked so it disables SDK retries and can classify
+    // deterministic output-cap/completeness failures as non-retryable.
     if (result.outcome === 'guard_content_filter' && fallbackModel) {
-      return createChatCompletionTracked({
-        ...createArgs,
-        model: fallbackModel,
-        via: 'openrouter',
-        tracking,
-        guards,
-        fallbackModel: null,
-      });
+      return createChatCompletionTrackedAttempt(
+        {
+          ...createArgs,
+          model: fallbackModel,
+          via: 'openrouter',
+          tracking,
+          guards,
+          fallbackModel: null,
+        },
+        true,
+      );
+    }
+    if (isFallbackAttempt && isDeterministicFallbackOutcome(result.outcome)) {
+      throw ApplicationFailure.nonRetryable(
+        result.errorMessage,
+        DETERMINISTIC_LLM_FALLBACK_FAILURE,
+        { model: createArgs.model, outcome: result.outcome },
+      );
     }
     throw new Error(result.errorMessage);
   }
@@ -406,6 +538,17 @@ export async function createEmbeddingsTracked(
   args: CreateTrackedEmbeddingArgs,
 ): Promise<OpenAI.CreateEmbeddingResponse> {
   const { tracking, ...createArgs } = args;
+  const model =
+    typeof createArgs.model === 'string'
+      ? createArgs.model
+      : String(createArgs.model);
+  const startedCall = tracking
+    ? await startLlmCall({
+        model,
+        activity: tracking.activity,
+        uploadRecordId: tracking.uploadRecordId,
+      })
+    : null;
   const t0 = Date.now();
 
   let res: OpenAI.CreateEmbeddingResponse;
@@ -413,113 +556,48 @@ export async function createEmbeddingsTracked(
     // OpenAI direct: bare model id (strip the canonical `openai/` prefix).
     res = await openaiClient.embeddings.create({
       ...createArgs,
-      model: stripOpenaiPrefix(
-        typeof createArgs.model === 'string'
-          ? createArgs.model
-          : String(createArgs.model),
-      ),
+      model: stripOpenaiPrefix(model),
     });
   } catch (err) {
-    if (tracking) {
-      // Asymmetry with the success path is intentional: failed creates
-      // record `completionTokens: null` (no usage block from the SDK),
-      // success records `0` (embeddings have no completion tokens but we
-      // need a number to satisfy `recordLlmCall`'s computeCost
-      // precondition). Combined with `outcome = 'create_failed'`, a
-      // future `COUNT(*) WHERE completion_tokens IS NULL` query for
-      // embed rows selects only failures — keep the success path
-      // emitting 0 so this remains true.
-      await recordLlmCall({
-        model:
-          typeof createArgs.model === 'string'
-            ? createArgs.model
-            : String(createArgs.model),
-        activity: tracking.activity,
-        uploadRecordId: tracking.uploadRecordId ?? null,
-        promptTokens: null,
-        completionTokens: null,
-        providerCostUsd: null,
-        durationMs: Date.now() - t0,
-        finishReason: null,
-        outcome: 'create_failed',
-        errorMessage: err instanceof Error ? err.message : String(err),
-      });
-    }
-    throw err;
-  }
-
-  if (tracking) {
-    await recordLlmCall({
-      model:
-        typeof createArgs.model === 'string'
-          ? createArgs.model
-          : String(createArgs.model),
-      activity: tracking.activity,
-      uploadRecordId: tracking.uploadRecordId ?? null,
-      // Embeddings have no completion tokens; pass 0 (not null) so the
-      // `promptTokens != null && completionTokens != null` precondition
-      // in `recordLlmCall` is satisfied and `computeCost` runs against
-      // the price table's `outputPerMTokens: 0`. Passing null instead
-      // would short-circuit cost computation and silently leave
-      // `computedCostUsd` empty for the production embed model
-      // (`openai/text-embedding-3-small`).
-      promptTokens: res.usage?.prompt_tokens ?? null,
-      completionTokens: 0,
-      // OpenAI direct doesn't return a per-call cost, so provider cost is null
-      // and `computedCostUsd` (from the pricing table, keyed on the canonical
-      // `openai/text-embedding-3-small`) is the source of truth for embed spend.
+    await settleStartedLlmCall(startedCall, {
+      promptTokens: null,
+      completionTokens: null,
       providerCostUsd: null,
       durationMs: Date.now() - t0,
       finishReason: null,
-      outcome: 'success',
-      errorMessage: null,
+      outcome: 'create_failed',
+      errorMessage: err instanceof Error ? err.message : String(err),
     });
+    throw err;
   }
+
+  await settleStartedLlmCall(startedCall, {
+    // Embeddings have no completion tokens; use 0 so cost calculation runs
+    // against the model's zero output-token price.
+    promptTokens: res.usage?.prompt_tokens ?? null,
+    completionTokens: 0,
+    providerCostUsd: null,
+    durationMs: Date.now() - t0,
+    finishReason: null,
+    outcome: 'success',
+    errorMessage: null,
+  });
 
   return res;
 }
 
 /**
- * Insert one row in `llm_call` directly — for the rare case where the
- * caller already has the tokens / duration outside the
- * `createChatCompletionTracked` / `createEmbeddingsTracked` shape (e.g.
- * backfilling historical data). New activity code should prefer the
- * wrappers.
+ * Insert one already-completed `llm_call` directly. Provider call sites should
+ * use `startLlmCall` before I/O and `completeLlmCall` afterward; this helper is
+ * retained for historical backfills and callers that only receive final usage.
  */
 export async function recordLlmCall(args: RecordLlmCallArgs): Promise<void> {
   const at = args.at ?? new Date();
-  const costMultiplier = args.costMultiplier ?? 1;
-  const computedRaw =
-    args.promptTokens != null && args.completionTokens != null
-      ? computeCost(
-          args.model,
-          args.promptTokens,
-          args.completionTokens,
-          args.cachedTokens ?? null,
-          at,
-        )
-      : null;
-  const computed = computedRaw === null ? null : computedRaw * costMultiplier;
   await db.insert(LlmCall).values({
     model: args.model,
     activity: args.activity,
     uploadRecordId: args.uploadRecordId ?? null,
-    promptTokens: args.promptTokens,
-    completionTokens: args.completionTokens,
-    cachedTokens: args.cachedTokens ?? null,
-    computedCostUsd: computed === null ? null : computed.toString(),
-    providerCostUsd:
-      args.providerCostUsd == null ? null : args.providerCostUsd.toString(),
-    durationMs: args.durationMs,
-    finishReason: args.finishReason ?? null,
-    // `outcome` is required by `RecordLlmCallArgs` and NOT NULL in the
-    // schema. The schema default of 'success' is a belt-and-braces
-    // safety net for any direct SQL insert that skips this path; the
-    // canonical callers (`createChatCompletionTracked`,
-    // `createEmbeddingsTracked`) always pass an explicit value.
-    outcome: args.outcome,
-    errorMessage: args.errorMessage ?? null,
-    responseText: args.responseText ?? null,
+    ...completedLlmCallValues(args.model, at, args),
     createdAt: at,
   });
 }

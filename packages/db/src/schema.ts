@@ -3341,11 +3341,11 @@ export const ImportHistoryRelations = relations(ImportHistory, ({ one }) => ({
   }),
 }));
 
-// Audit log of every chat-completion call we make to an upstream LLM
-// (annotation, summarization, and the admin LLM-eval surface). One row
-// per call, recorded right after the completion comes back — including
-// calls that subsequently fail downstream guards (silent-summarization,
-// content-filter), since we paid for those tokens too.
+// Durable audit log of LLM provider calls. Tracked callers insert an
+// `outcome='started'` row before sending the request, then update that row when
+// the provider settles — including responses rejected by downstream guards
+// (silent-summarization, content-filter). A row left as `started` identifies a
+// worker crash or rollout during an in-flight request.
 //
 // `computedCostUsd` is calculated on our side from `MODEL_PRICING` at
 // the time of the call (see `packages/temporal/src/util/llm-pricing.ts`).
@@ -3393,16 +3393,12 @@ export const LlmCall = pgTable(
     // 'content_filter' on the failure paths that the downstream guards
     // also catch. Null when the provider didn't return one.
     finishReason: text('finish_reason'),
-    // Caller-supplied disposition tag. 'success' on the happy path,
-    // 'guard_*' values when one of the activity's downstream guards
-    // rejected the response (silent_summarization, length_truncation,
-    // content_filter, empty_content), or 'create_failed' when
-    // `llm.chat.completions.create` itself threw. Distinct from
-    // `finish_reason` because a silent-summarization rejection still
-    // has `finish_reason='stop'` — the model "successfully" returned a
-    // summary we then threw out. Free-form so new guards don't need a
-    // migration; defaults to 'success' so "all calls" dashboards never
-    // miss a row.
+    // Caller-supplied disposition tag. Tracked calls begin as `started`, then
+    // transition to `success`, a `guard_*` rejection, or `create_failed`.
+    // Distinct from `finish_reason` because a silent-summarization rejection
+    // still has `finish_reason='stop'`. Free-form so new guards don't need a
+    // migration. The default remains `success` for historical direct inserts;
+    // tracked callers always pass an explicit value.
     outcome: text('outcome').notNull().default('success'),
     // Free-form failure detail when `outcome` is a guard rejection
     // (mirrors the thrown Error's message). Null on success.

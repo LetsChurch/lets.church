@@ -375,7 +375,6 @@ async function retryAllFailedLlmWorkflows({
                 links: commonOptions.links,
               }),
               args: [upload.uploadId, { force: true }],
-              retry: { maximumAttempts: 3 },
               typedSearchAttributes: [
                 { key: UPLOAD_ID_KEY, value: upload.uploadId },
               ],
@@ -390,7 +389,6 @@ async function retryAllFailedLlmWorkflows({
                 links: commonOptions.links,
               }),
               args: [upload.uploadId, { force: true }],
-              retry: { maximumAttempts: 3 },
               typedSearchAttributes: [
                 { key: UPLOAD_ID_KEY, value: upload.uploadId },
               ],
@@ -4209,7 +4207,6 @@ export const adminRouter = router({
           // be bypassed. Without this the existing summary is treated as
           // "already done" and the call no-ops.
           args: [input.uploadRecordId, { force: true }],
-          retry: { maximumAttempts: 3 },
           // Same convention as the rest of the upload-scoped workflows so
           // the run is filterable by UploadId in the Temporal UI.
           typedSearchAttributes: [
@@ -4353,7 +4350,6 @@ export const adminRouter = router({
           // must be bypassed. Without this any existing annotation rows
           // are treated as "already done" and the call no-ops.
           args: [input.uploadRecordId, { force: true }],
-          retry: { maximumAttempts: 3 },
           typedSearchAttributes: [
             { key: UPLOAD_ID_KEY, value: input.uploadRecordId },
           ],
