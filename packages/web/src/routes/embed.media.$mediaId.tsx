@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { Player } from '@/components/player';
 import { trpcClient, useTRPC } from '@/trpc/react';
+import { cn } from '@/util/cn';
 
 export const Route = createFileRoute('/embed/media/$mediaId')({
   component: RouteComponent,
@@ -174,16 +175,10 @@ function RouteComponent() {
 
   return (
     <div
-      className="flex w-full items-center justify-center bg-black"
-      style={
-        !showVideo
-          ? {
-              height: '150px',
-            }
-          : {
-              minHeight: 0,
-            }
-      }
+      className={cn(
+        'flex w-full items-center justify-center bg-black',
+        showVideo ? 'h-screen' : 'h-[150px]',
+      )}
     >
       <Player
         uploadRecordId={params.mediaId}
@@ -195,7 +190,7 @@ function RouteComponent() {
         videoHeight={aspectHeight}
         peaksJsonUrl={media.peaksJsonUrl}
         lengthSeconds={media.lengthSeconds}
-        videoClassName="w-full"
+        videoClassName="size-full"
         embed={true}
       />
     </div>

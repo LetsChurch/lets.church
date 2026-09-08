@@ -544,18 +544,11 @@ export function Player({
                 '--media-background-color': 'none',
                 width:
                   mediaType === 'audio' || embed ? '100%' : `${videoWidth}px`,
-                height:
-                  mediaType === 'audio' && !embed
+                height: embed
+                  ? '100%'
+                  : mediaType === 'audio'
                     ? '240px'
-                    : embed && mediaType === 'video'
-                      ? 'auto'
-                      : embed && mediaType === 'audio'
-                        ? '100%'
-                        : `${videoHeight}px`,
-                aspectRatio:
-                  embed && mediaType === 'video'
-                    ? `${videoWidth} / ${videoHeight}`
-                    : undefined,
+                    : `${videoHeight}px`,
               }}
               autohide={mediaType === 'audio' ? '-1' : '2'}
             >
