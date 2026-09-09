@@ -141,6 +141,7 @@ import {
 } from '../../speaker-labeling/queue';
 import { authProcedure, router } from '../../trpc';
 import { newsletterListsRouter } from '../newsletter-lists';
+import { deleteUserAccount } from './delete-user';
 import { getDuplicateUploads } from './duplicate-uploads';
 import {
   addFeaturedUploadAtomically,
@@ -643,7 +644,10 @@ export const adminRouter = router({
           },
           orderBy: (t, { asc }) => [asc(t.createdAt)],
         }),
-        db.select({ cnt: count() }).from(AppUser),
+        db
+          .select({ cnt: count() })
+          .from(AppUser)
+          .where(isNull(AppUser.deletedAt)),
       ]);
 
     const userCount = userCountRows[0]?.cnt ?? 0;
@@ -1617,6 +1621,7 @@ export const adminRouter = router({
         bannedAt: true,
         banReason: true,
       },
+      where: (t, { isNull }) => isNull(t.deletedAt),
       with: {
         emails: {
           columns: { email: true, verifiedAt: true },
@@ -1629,7 +1634,10 @@ export const adminRouter = router({
   getUserCount: adminProcedure.query(async () => {
     moduleLogger.info('Fetching user count');
 
-    const rows = await db.select({ cnt: count() }).from(AppUser);
+    const rows = await db
+      .select({ cnt: count() })
+      .from(AppUser)
+      .where(isNull(AppUser.deletedAt));
     return rows[0]?.cnt ?? 0;
   }),
 
@@ -1839,6 +1847,59 @@ export const adminRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to update user',
+        });
+      }
+    }),
+
+  deleteUser: adminProcedure
+    .input(
+      z.object({
+        appUserId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          targetId: input.appUserId,
+        },
+        'Deleting user',
+      );
+
+      try {
+        await deleteUserAccount({
+          actingAdminId: ctx.session.appUserId,
+          appUserId: input.appUserId,
+        });
+
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.appUserId,
+          },
+          'User deleted successfully',
+        );
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to delete user',
+        );
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to delete user',
         });
       }
     }),

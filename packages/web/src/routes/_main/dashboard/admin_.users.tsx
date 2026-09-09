@@ -5,6 +5,7 @@ import {
   IconLockOpen,
   IconMail,
   IconPlus,
+  IconTrash,
 } from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
@@ -73,6 +74,8 @@ type User = {
 
 type UserTableMeta = {
   onBan: (user: User) => void;
+  currentUserId: string;
+  onDelete: (user: User) => void;
   onEdit: (user: User) => void;
   onResendVerification: (userId: string) => void;
   onResetPassword: (userId: string) => void;
@@ -211,6 +214,15 @@ const USER_COLUMNS: ColumnDef<User>[] = [
               Ban user
             </MenuItemButton>
           )}
+          {user.id !== meta.currentUserId ? (
+            <MenuItemButton
+              icon={<IconTrash size={14} />}
+              className="text-red-600 dark:text-red-400"
+              onClick={() => meta.onDelete(user)}
+            >
+              Delete user
+            </MenuItemButton>
+          ) : null}
         </OverflowMenu>
       );
     },
@@ -227,6 +239,9 @@ function UsersPage() {
 
   const { data: users, refetch } = useSuspenseQuery(
     trpc.dashboard.admin.getUsers.queryOptions(),
+  );
+  const { data: currentUser } = useSuspenseQuery(
+    trpc.common.getCurrentUser.queryOptions(),
   );
 
   const form = useAppForm({
@@ -417,6 +432,39 @@ function UsersPage() {
     });
   };
 
+  const handleDelete = (user: User) => {
+    modals.openConfirmModal({
+      title: 'Delete User',
+      children: (
+        <Text size="sm">
+          Are you sure you want to delete <strong>{user.username}</strong>? They
+          will be logged out and lose access immediately. Their uploads and
+          administrative history will be retained.
+        </Text>
+      ),
+      labels: { confirm: 'Delete User', cancel: 'Cancel' },
+      confirmProps: { color: 'red' },
+      onConfirm: async () => {
+        try {
+          await trpcClient.dashboard.admin.deleteUser.mutate({
+            appUserId: user.id,
+          });
+          await refetch();
+        } catch (error) {
+          console.error('Failed to delete user:', error);
+          modals.open({
+            title: 'Error',
+            children: (
+              <Text size="sm" c="red">
+                Failed to delete user. Please try again.
+              </Text>
+            ),
+          });
+        }
+      },
+    });
+  };
+
   return (
     <div className="flex flex-col gap-5">
       <DashboardPageHeader
@@ -439,7 +487,9 @@ function UsersPage() {
         searchPlaceholder="Search users by name, username, email, or role"
         emptyState="No user accounts match this view."
         meta={{
+          currentUserId: currentUser.id,
           onBan: handleBan,
+          onDelete: handleDelete,
           onEdit: handleEdit,
           onResendVerification: handleResendVerificationEmail,
           onResetPassword: handleResetPassword,
