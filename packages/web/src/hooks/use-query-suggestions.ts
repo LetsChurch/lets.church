@@ -16,7 +16,7 @@ export type QuerySuggestContext = {
 
 /**
  * Debounced, grounded "Grok-style" query suggestions for the palette's left
- * column (gpt-5.6-luna via `search.suggestQueries`). Fired on the same 150ms
+ * column (gpt-6-luna via `search.suggestQueries`). Fired on the same 150ms
  * cadence as the palette but as a separate, non-blocking query so the OS
  * suggestions render instantly and these fill in a beat later. Only fires once
  * there's grounding context, so we never spend an LLM call on a query the corpus

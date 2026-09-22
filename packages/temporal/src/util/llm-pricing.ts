@@ -27,9 +27,7 @@ const moduleLogger = logger.child({ module: 'temporal/util/llm-pricing' });
  * will drift from `providerCostUsd`. Periodically reconcile.
  */
 
-export type PriceWindow = {
-  /** ISO 8601 date (YYYY-MM-DD). Inclusive lower bound. */
-  effectiveFrom: string;
+type TokenRates = {
   /** USD per 1,000,000 input tokens. */
   inputPerMTokens: number;
   /** USD per 1,000,000 output tokens. */
@@ -42,8 +40,20 @@ export type PriceWindow = {
   cachedInputPerMTokens?: number;
 };
 
+type PromptTokenPriceOverride = TokenRates & {
+  /** Inclusive prompt-token threshold at which these rates apply. */
+  minPromptTokens: number;
+};
+
+export type PriceWindow = TokenRates & {
+  /** ISO 8601 date (YYYY-MM-DD). Inclusive lower bound. */
+  effectiveFrom: string;
+  /** Provider pricing tiers keyed by total prompt tokens. */
+  promptTokenOverrides?: PromptTokenPriceOverride[];
+};
+
 export type ModelPricing = {
-  /** OpenRouter model id, e.g. 'openai/gpt-5.6-luna'. */
+  /** OpenRouter model id, e.g. 'openai/gpt-6-luna'. */
   model: string;
   /** Windows in any order — `priceFor` sorts them when picking the active one. */
   windows: PriceWindow[];
@@ -55,9 +65,29 @@ export type ModelPricing = {
  */
 export const MODEL_PRICING: ModelPricing[] = [
   {
-    // Production annotate + summarize model. `effectiveFrom` is the date
-    // we landed on these prices on OpenRouter for this model; bump when
-    // they change rather than overwriting.
+    // Current production annotate + summarize model. `effectiveFrom` is the
+    // date we landed on these prices on OpenRouter for this model; add a
+    // window when they change rather than overwriting.
+    model: 'openai/gpt-6-luna',
+    windows: [
+      {
+        effectiveFrom: '2026-09-22',
+        inputPerMTokens: 0.1,
+        outputPerMTokens: 0.5,
+        cachedInputPerMTokens: 0.01,
+        promptTokenOverrides: [
+          {
+            minPromptTokens: 272_000,
+            inputPerMTokens: 0.2,
+            outputPerMTokens: 0.75,
+            cachedInputPerMTokens: 0.02,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    // Historical production pricing retained for existing audit rows.
     model: 'openai/gpt-5.6-luna',
     windows: [
       {
@@ -167,13 +197,26 @@ export function computeCost(
     );
     return null;
   }
+  let rates: TokenRates = price;
+  let activeThreshold = -1;
+  if (price.promptTokenOverrides) {
+    for (const override of price.promptTokenOverrides) {
+      if (
+        override.minPromptTokens <= promptTokens &&
+        override.minPromptTokens > activeThreshold
+      ) {
+        rates = override;
+        activeThreshold = override.minPromptTokens;
+      }
+    }
+  }
   const cached = cachedTokens ?? 0;
   const uncachedInput = Math.max(0, promptTokens - cached);
-  const inputCost = (uncachedInput * price.inputPerMTokens) / 1_000_000;
+  const inputCost = (uncachedInput * rates.inputPerMTokens) / 1_000_000;
   const cachedCost =
-    (cached * (price.cachedInputPerMTokens ?? price.inputPerMTokens)) /
+    (cached * (rates.cachedInputPerMTokens ?? rates.inputPerMTokens)) /
     1_000_000;
-  const outputCost = (completionTokens * price.outputPerMTokens) / 1_000_000;
+  const outputCost = (completionTokens * rates.outputPerMTokens) / 1_000_000;
   return inputCost + cachedCost + outputCost;
 }
 
@@ -185,7 +228,7 @@ export function computeCost(
  * open-weight routes — gemma, llama-on-Cloudflare, etc.) but returns
  * `null` or `0` for direct-from-vendor routes (`openai/*`, `anthropic/*`,
  * `google/*`). Using `providerCostUsd` blindly makes the badge read "$0"
- * on every production gpt-5.6-luna call. Use the provider value only
+ * on every production gpt-6-luna call. Use the provider value only
  * when it's present AND positive; otherwise fall back to our table.
  */
 export function resolveCostUsd(

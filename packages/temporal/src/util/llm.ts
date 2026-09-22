@@ -27,18 +27,16 @@ const env = z
     // by the admin LLM-eval page and the live content-filter fallbacks.
     OPENAI_API_KEY: z.string().min(1),
     OPENROUTER_API_KEY: z.string().min(1),
-    OPENROUTER_SUMMARY_MODEL: openaiProductionModel.default(
-      'openai/gpt-5.6-luna',
-    ),
-    // Annotation defaults to gpt-5.6-luna. The full-doc markdown-output
+    OPENROUTER_SUMMARY_MODEL:
+      openaiProductionModel.default('openai/gpt-6-luna'),
+    // Annotation defaults to gpt-6-luna. The full-doc markdown-output
     // approach (paragraph-echo + inline links, see annotate-transcript.ts)
     // is the only output format the activity supports; the earlier
     // strict-JSON-schema path that ran into OpenAI's response-side
     // safety classifier was retired with that rewrite. Sampling parameters
     // stay at the provider default because supported overrides vary by model.
-    OPENROUTER_ANNOTATE_MODEL: openaiProductionModel.default(
-      'openai/gpt-5.6-luna',
-    ),
+    OPENROUTER_ANNOTATE_MODEL:
+      openaiProductionModel.default('openai/gpt-6-luna'),
     // Live OpenRouter fallback for annotations rejected by OpenAI's content
     // classifier. Empty disables the fallback.
     OPENROUTER_ANNOTATE_FALLBACK_MODEL: z

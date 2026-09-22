@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The annotation activity (`packages/temporal/src/activities/background/annotate-transcript.ts`) ships transcripts to an LLM through OpenRouter and gets back a markdown-formatted version with section headings and inline scripture/keyword links. The `SYSTEM_PROMPT` constant in that file is the system prompt; changing it changes every uploaded transcript's annotations. Production runs against `openai/gpt-5.6-luna` using the model's default sampling parameters. The production and eval paths intentionally do not send `temperature`, because supported overrides vary by model.
+The annotation activity (`packages/temporal/src/activities/background/annotate-transcript.ts`) ships transcripts to an LLM through OpenRouter and gets back a markdown-formatted version with section headings and inline scripture/keyword links. The `SYSTEM_PROMPT` constant in that file is the system prompt; changing it changes every uploaded transcript's annotations. Production runs against `openai/gpt-6-luna` using the model's default sampling parameters. The production and eval paths intentionally do not send `temperature`, because supported overrides vary by model.
 
 This document is the reference for evaluating that prompt — verifying that changes don't regress, and qualifying new candidate models before swapping them into the activity.
 
@@ -28,7 +28,7 @@ A prompt + model combination should meet all of these on a realistic full-length
 
 5. **Explicit citations annotated.** Every "Romans 8:28", "1 Corinthians 6:9–11", "Matthew 19", etc., must be wrapped, with OSIS book abbreviations (`Rom`, `1Cor`, `Matt`).
 
-6. **Non-overlapping refs.** In phrases like "1 Corinthians 6 and 1 Timothy 1 and Romans 1", each reference must be its own link wrapping only that span — never one link covering the whole conjunction, and never three duplicate-span links with different URLs.
+6. **Non-overlapping refs.** In phrases like "1 Corinthians 6 and 1 Timothy 1 and Romans 1", each reference must be its own link wrapping only that span — never one link covering the whole conjunction, and never three duplicate-span links with different URLs. When a model separately links a citation and its immediately adjacent quotation to the same reference, the parser coalesces spans separated by at most two words into one annotation; later mentions remain distinct.
 
 7. **Verbatim text preservation.** Every input paragraph is in the output, in order, with no paraphrasing, no reordering, no merging. Each link's bracket text is an exact substring of the original paragraph. The body of `prompt.md` (or whatever transcript is being tested) must round-trip byte-equal after stripping the inserted headings and link wrappers.
 
@@ -59,7 +59,7 @@ Workflow:
 
 1. Pick an upload via the search box (min 2 chars).
 2. Pick task = `annotate`.
-3. The model field pre-fills with `openai/gpt-5.6-luna` (the production default). Add other OpenRouter model ids (e.g. `openai/gpt-5.4`, `google/gemini-2.5-flash`, `anthropic/claude-haiku-4-5`) to A/B-compare. Up to 8.
+3. The model field pre-fills with `openai/gpt-6-luna` (the production default). Add other OpenRouter model ids (e.g. `openai/gpt-5.4`, `google/gemini-2.5-flash`, `anthropic/claude-haiku-4-5`) to A/B-compare. Up to 8.
 4. Optionally override `maxTokens` (the activity default for annotate is 32768; lower for providers with tighter caps — DeepSeek v3.x = 8K–16K, Groq llama-4-scout = 8K).
 5. Click "Run evaluation". Each model fires in parallel and renders as soon as its call resolves.
 
@@ -128,7 +128,7 @@ const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
-    model: 'openai/gpt-5.6-luna',
+    model: 'openai/gpt-6-luna',
     max_tokens: 32768,
     // Intentionally omit temperature so this request uses the model's
     // provider default, matching production and the in-app eval page.
@@ -228,7 +228,7 @@ Once the iterated `prompt.md` passes consistently, port the system-prompt half i
 After production-prompt changes that affect the seed corpus annotations, regenerate the LLM seed annotations:
 
 ```bash
-just generate-seed-annotations   # ~5 min, ~$0.10–0.15 at gpt-5.6-luna
+just generate-seed-annotations   # ~5 min, ~$0.10–0.15 at gpt-6-luna
 just dump-llm-seed-data          # capture into committed snapshots
 ```
 

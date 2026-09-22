@@ -18,7 +18,7 @@ const { OPENROUTER_VIDEO_QUESTIONS_MODEL } = z
     // Same default model as the other generators, with its own env so per-video
     // question generation can be tuned independently. The answer agent handles
     // responses; this call only drafts the starter questions.
-    OPENROUTER_VIDEO_QUESTIONS_MODEL: z.string().default('openai/gpt-5.6-luna'),
+    OPENROUTER_VIDEO_QUESTIONS_MODEL: z.string().default('openai/gpt-6-luna'),
   })
   .parse(process.env);
 
@@ -51,7 +51,7 @@ Rules:
 
 /**
  * Generate per-video starter questions for the media-page "ask about this video"
- * dropdown, from the upload's title/description/summary, with gpt-5.6-luna.
+ * dropdown, from the upload's title/description/summary, with gpt-6-luna.
  * Cached in Valkey by model + internal upload id (suggestions don't depend on the
  * date). Best-effort: any model/parse error resolves to an empty list. The LLM
  * call is recorded in `llm_call` (activity `videoSuggestedQuestions`).

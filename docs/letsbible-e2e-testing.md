@@ -216,8 +216,8 @@ In scope (everything implemented to date):
   more-quoted verse edges out an equally-good text match — a `rank_feature` boost
   server-side, a log term in the FlexSearch `score()` client-side.
 - **AI answer (agentic search)** — a two-lane, streamed answer card at the top of
-  the results page (`src/components/ai-answer.tsx` → `/api/answer`, gpt-5.6-luna).
-  A deterministic-then-model **gate** (`src/ai/gate.ts`, gpt-5.6-luna) routes each
+  the results page (`src/components/ai-answer.tsx` → `/api/answer`, gpt-6-luna).
+  A deterministic-then-model **gate** (`src/ai/gate.ts`, gpt-6-luna) routes each
   query to one of two lanes:
   - **Verse-finder (dig).** For a half-remembered verse — a paraphrase, a partial
     quote, a reference paired with wording, or a proverbial saying — a streamed

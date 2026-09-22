@@ -8,7 +8,7 @@ const { OPENAI_API_KEY, OPENROUTER_SEARCH_AGENT_MODEL } = z
     // The answer-generation model for the search agent. Env-configurable.
     // Kept under the OPENROUTER_* name (it only holds a model id) to avoid a
     // deploy-config rename; the value is the canonical `openai/…` form.
-    OPENROUTER_SEARCH_AGENT_MODEL: z.string().default('openai/gpt-5.6-luna'),
+    OPENROUTER_SEARCH_AGENT_MODEL: z.string().default('openai/gpt-6-luna'),
   })
   .parse(process.env);
 initAiTelemetry({ serviceName: 'lets.church-web' });

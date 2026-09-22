@@ -8,11 +8,11 @@ import { z } from 'zod';
 const { OPENAI_API_KEY, LETS_BIBLE_ANSWER_MODEL, LETS_BIBLE_PARSE_MODEL } = z
   .object({
     OPENAI_API_KEY: z.string().trim().min(1),
-    LETS_BIBLE_ANSWER_MODEL: z.string().default('openai/gpt-5.6-luna'),
+    LETS_BIBLE_ANSWER_MODEL: z.string().default('openai/gpt-6-luna'),
     // Parse model for the deterministic-then-model gates (is this a verse
     // recollection worth the detective loop? is this even a Scripture question?).
     // Tunable independently of the answer model, even when both defaults match.
-    LETS_BIBLE_PARSE_MODEL: z.string().default('openai/gpt-5.6-luna'),
+    LETS_BIBLE_PARSE_MODEL: z.string().default('openai/gpt-6-luna'),
   })
   .parse(process.env);
 initAiTelemetry({ serviceName: 'lets.bible' });

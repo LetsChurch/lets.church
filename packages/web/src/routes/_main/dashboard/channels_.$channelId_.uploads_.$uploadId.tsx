@@ -1492,7 +1492,7 @@ function ChannelUploadPage() {
                                     search: {
                                       uploadId,
                                       task: 'annotate',
-                                      models: 'openai/gpt-5.6-luna',
+                                      models: 'openai/gpt-6-luna',
                                     },
                                   }).catch(() => {
                                     // Resolved case unmounts this route; this

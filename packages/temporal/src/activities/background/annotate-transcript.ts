@@ -133,6 +133,26 @@ const bibleMetadataSchema = z.object({
   endChapter: z.coerce.number().int().positive().optional(),
   endVerse: z.coerce.number().int().positive().optional(),
 });
+type BibleMetadata = z.infer<typeof bibleMetadataSchema>;
+
+// Citation text and its immediately following quotation are one local
+// reference event, even when the model links them separately. Two intervening
+// words covers natural joins such as "says" and "says that" without collapsing
+// later repetitions of the same passage.
+const MAX_SAME_REFERENCE_GAP_WORDS = 2;
+
+function isSameBibleReference(
+  left: BibleMetadata,
+  right: BibleMetadata,
+): boolean {
+  return (
+    left.book === right.book &&
+    left.chapter === right.chapter &&
+    left.verse === right.verse &&
+    left.endChapter === right.endChapter &&
+    left.endVerse === right.endVerse
+  );
+}
 
 // Match every inline annotation link in a paragraph's annotatedText.
 // Captures: 1=span, 2=kind, 3=query string (incl. leading `?`, optional).
@@ -316,6 +336,14 @@ function parseAnnotationResponse(
   let bibleCount = 0;
   let keywordCount = 0;
   let skippedInline = 0;
+  let lastBible:
+    | {
+        annotation: ResolvedAnnotation;
+        metadata: BibleMetadata;
+        startOrig: number;
+        endOrig: number;
+      }
+    | undefined;
 
   // --- Headings -----------------------------------------------------
   // A heading line in the model output is a pure insertion (no
@@ -438,14 +466,45 @@ function parseAnnotationResponse(
       });
       continue;
     }
-    annotations.push({
+    const metadata = metaCandidate.data;
+    const annotation: ResolvedAnnotation = {
       paragraphId: paragraph.id,
       kind: 'BIBLE',
       startWord: startWp.wordIdx,
       endWord: endWp.wordIdx + 1,
       rawSpan: span,
-      metadata: metaCandidate.data as unknown as Record<string, unknown>,
-    });
+      metadata: metadata as unknown as Record<string, unknown>,
+    };
+    const previousStart = lastBible?.annotation.startWord;
+    const previousEnd = lastBible?.annotation.endWord;
+    if (
+      lastBible &&
+      lastBible.annotation.paragraphId === paragraph.id &&
+      previousStart !== null &&
+      previousStart !== undefined &&
+      previousEnd !== null &&
+      previousEnd !== undefined &&
+      startWp.wordIdx <= previousEnd + MAX_SAME_REFERENCE_GAP_WORDS &&
+      endWp.wordIdx + 1 >= previousStart &&
+      isSameBibleReference(lastBible.metadata, metadata)
+    ) {
+      const mergedStart = Math.min(previousStart, startWp.wordIdx);
+      const mergedEnd = Math.max(previousEnd, endWp.wordIdx + 1);
+      const mergedStartOrig = Math.min(lastBible.startOrig, startOrig);
+      const mergedEndOrig = Math.max(lastBible.endOrig, endOrig);
+      lastBible.annotation.startWord = mergedStart;
+      lastBible.annotation.endWord = mergedEnd;
+      lastBible.annotation.rawSpan = transcriptBody.slice(
+        mergedStartOrig,
+        mergedEndOrig + 1,
+      );
+      lastBible.startOrig = mergedStartOrig;
+      lastBible.endOrig = mergedEndOrig;
+      continue;
+    }
+
+    annotations.push(annotation);
+    lastBible = { annotation, metadata, startOrig, endOrig };
     bibleCount += 1;
   }
 

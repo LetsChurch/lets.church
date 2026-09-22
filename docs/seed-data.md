@@ -245,12 +245,12 @@ Refreshing the snapshots (`just dump-llm-seed-data` against a freshly
 live-pipeline-seeded DB):
 
 - 1 OpenAI Flex chat completion per upload using the model configured by
-  `OPENROUTER_ANNOTATE_MODEL` (default `openai/gpt-5.6-luna`) —
+  `OPENROUTER_ANNOTATE_MODEL` (default `openai/gpt-6-luna`) —
   ~$0.01–0.03 per upload. Annotate echoes the transcript back with inline
   section headings and scripture/keyword annotations, so completion tokens
   scale with transcript length.
 - 1 OpenAI Flex chat completion per upload using `OPENROUTER_SUMMARY_MODEL`
-  (default `openai/gpt-5.6-luna`) — ~$0.005–0.01 per upload. Summarize consumes
+  (default `openai/gpt-6-luna`) — ~$0.005–0.01 per upload. Summarize consumes
   the outline + paragraphs and emits prose summary + searchSummary +
   per-section descriptions.
 - Direct Embeddings API calls for transcript paragraphs

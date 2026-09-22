@@ -60,15 +60,11 @@ describe('createChatCompletionTracked Flex processing', () => {
       },
     });
 
-    const standardCost = computeCost(
-      'openai/gpt-5.6-luna',
-      1_000_000,
-      1_000_000,
-    );
+    const standardCost = computeCost('openai/gpt-6-luna', 1_000_000, 1_000_000);
     expect(standardCost).not.toBeNull();
 
     await createChatCompletionTracked({
-      model: 'openai/gpt-5.6-luna',
+      model: 'openai/gpt-6-luna',
       messages: [{ role: 'user', content: 'work' }],
       service_tier: 'flex',
       tracking: { activity: 'annotateTranscript' },
@@ -76,7 +72,7 @@ describe('createChatCompletionTracked Flex processing', () => {
 
     expect(mocks.chatCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'gpt-5.6-luna',
+        model: 'gpt-6-luna',
         service_tier: 'flex',
       }),
       { maxRetries: 0, timeout: 60 * 60 * 1000 },
@@ -112,7 +108,7 @@ describe('createChatCompletionTracked Flex processing', () => {
       });
 
     await createChatCompletionTracked({
-      model: 'openai/gpt-5.6-luna',
+      model: 'openai/gpt-6-luna',
       messages: [{ role: 'user', content: 'work' }],
       service_tier: 'flex',
       fallbackModel: 'anthropic/claude-haiku-4-5',
@@ -141,7 +137,7 @@ describe('createChatCompletionTracked Flex processing', () => {
 
     await expect(
       createChatCompletionTracked({
-        model: 'openai/gpt-5.6-luna',
+        model: 'openai/gpt-6-luna',
         messages: [{ role: 'user', content: 'work' }],
         fallbackModel: 'anthropic/claude-haiku-4-5',
         tracking: { activity: 'annotateTranscript' },
@@ -167,7 +163,7 @@ describe('createChatCompletionTracked Flex processing', () => {
 
     await expect(
       createChatCompletionTracked({
-        model: 'openai/gpt-5.6-luna',
+        model: 'openai/gpt-6-luna',
         messages: [{ role: 'user', content: 'work' }],
         tracking: { activity: 'annotateTranscript' },
       }),
@@ -180,7 +176,7 @@ describe('createChatCompletionTracked Flex processing', () => {
   it('rejects Flex on user-facing tracked activities', async () => {
     await expect(
       createChatCompletionTracked({
-        model: 'openai/gpt-5.6-luna',
+        model: 'openai/gpt-6-luna',
         messages: [{ role: 'user', content: 'work' }],
         service_tier: 'flex',
         tracking: { activity: 'searchAnswerAgent' },

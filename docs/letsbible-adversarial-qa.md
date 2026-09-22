@@ -6,7 +6,7 @@ It is the lets.bible analog of `docs/search-adversarial-qa.md` (the web app). A 
 
 ## Result
 
-Run on **gpt-5.6-luna** (the production default; `LETS_BIBLE_ANSWER_MODEL`), gate on **gpt-5.6-luna** (`LETS_BIBLE_PARSE_MODEL`): **73/73 auto-clean.** 46 queries took the verse-finder (dig) lane, 27 the cheap topical lane.
+Run on **gpt-5.6-luna** (the then-production default; `LETS_BIBLE_ANSWER_MODEL`), gate on **gpt-5.6-luna** (`LETS_BIBLE_PARSE_MODEL`): **73/73 auto-clean.** 46 queries took the verse-finder (dig) lane, 27 the cheap topical lane.
 
 The one residual auto-flag is a harness marker gap, not a defect: *"everything happens for a reason"* (a borderline saying that genuinely maps onto biblical providence) is answered by pointing to [Romans 8:28] as "the closest biblical wording" with the clarification that "it does not teach a vague fate" — no fabricated citation. Every clear non-biblical misquote ("God helps those who help themselves", "cleanliness is next to godliness", "to thine own self be true") is still refused outright.
 

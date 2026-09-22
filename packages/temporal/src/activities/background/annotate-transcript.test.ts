@@ -153,3 +153,79 @@ describe('buildAnnotationChatBody', () => {
     );
   });
 });
+
+describe('Bible annotation normalization', () => {
+  it('coalesces adjacent spans for the same reference', async () => {
+    const text = 'Proverbs 20, verse 17, says bread gained by deceit is sweet.';
+    const words = text.split(/\s+/).map((word, index) => ({
+      word,
+      start: index,
+      end: index + 1,
+    }));
+    mocks.createChatCompletionTracked.mockResolvedValue({
+      choices: [
+        {
+          finish_reason: 'stop',
+          message: {
+            content:
+              '[Proverbs 20, verse 17](#bible?book=Prov&chapter=20&verse=17), says [bread gained by deceit is sweet](#bible?book=Prov&chapter=20&verse=17).',
+          },
+        },
+      ],
+      usage: { prompt_tokens: 10, completion_tokens: 10 },
+    });
+
+    const result = await runAnnotation(
+      [{ id: 'p1', order: 0, text, words }],
+      { channelName: 'Test channel', title: null, description: null },
+      'openai/test-model',
+    );
+
+    expect(result.annotations).toEqual([
+      expect.objectContaining({
+        paragraphId: 'p1',
+        kind: 'BIBLE',
+        startWord: 0,
+        endWord: words.length,
+        metadata: expect.objectContaining({
+          book: 'Prov',
+          chapter: 20,
+          verse: 17,
+        }),
+      }),
+    ]);
+    expect(result.stats.bible).toBe(1);
+  });
+
+  it('preserves distinct mentions of the same reference', async () => {
+    const text = 'John 3:16 is central. Later in the sermon John 3:16 returns.';
+    const words = text.split(/\s+/).map((word, index) => ({
+      word,
+      start: index,
+      end: index + 1,
+    }));
+    mocks.createChatCompletionTracked.mockResolvedValue({
+      choices: [
+        {
+          finish_reason: 'stop',
+          message: {
+            content:
+              '[John 3:16](#bible?book=John&chapter=3&verse=16) is central. Later in the sermon [John 3:16](#bible?book=John&chapter=3&verse=16) returns.',
+          },
+        },
+      ],
+      usage: { prompt_tokens: 10, completion_tokens: 10 },
+    });
+
+    const result = await runAnnotation(
+      [{ id: 'p1', order: 0, text, words }],
+      { channelName: 'Test channel', title: null, description: null },
+      'openai/test-model',
+    );
+
+    expect(
+      result.annotations.filter((annotation) => annotation.kind === 'BIBLE'),
+    ).toHaveLength(2);
+    expect(result.stats.bible).toBe(2);
+  });
+});

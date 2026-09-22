@@ -1,7 +1,7 @@
 # Agentic search — adversarial QA transcript
 
 **System under test:** the two-lane agentic search answer endpoint (`/api/search-answer`).<br>
-**Answer/detective model:** `openai/gpt-5.6-luna` (production default).<br>
+**Answer/detective model:** `openai/gpt-5.6-luna` (production default at the time of the run).<br>
 **Gate/parse model:** `openai/gpt-5.6-luna`.<br>
 **Corpus:** the *Alpha & Omega Ministries* (aomin) channel, loaded into dev (3,907 uploads / 761k paragraphs).<br>
 **Date:** 2026-07-14. Single run per query (LLM output has run-to-run variance).

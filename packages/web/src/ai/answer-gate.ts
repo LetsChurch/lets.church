@@ -9,7 +9,7 @@ const { OPENROUTER_SEARCH_PARSE_MODEL } = z
   .object({
     // Same model setting used for query parsing — reused here for the
     // answerability pre-check so it can be tuned independently of the agent.
-    OPENROUTER_SEARCH_PARSE_MODEL: z.string().default('openai/gpt-5.6-luna'),
+    OPENROUTER_SEARCH_PARSE_MODEL: z.string().default('openai/gpt-6-luna'),
   })
   .parse(process.env);
 

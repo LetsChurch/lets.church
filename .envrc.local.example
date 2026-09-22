@@ -59,8 +59,8 @@ export POSTHOG_AI_CAPTURE_CONTENT=false
 # disables the corresponding fallback.
 # export OPENROUTER_ANNOTATE_FALLBACK_MODEL=anthropic/claude-haiku-4-5
 # export OPENROUTER_SUMMARY_FALLBACK_MODEL=anthropic/claude-haiku-4-5
-# Optional summary-model override. Default is openai/gpt-5.6-luna.
-# export OPENROUTER_SUMMARY_MODEL=openai/gpt-5.6-luna
+# Optional summary-model override. Default is openai/gpt-6-luna.
+# export OPENROUTER_SUMMARY_MODEL=openai/gpt-6-luna
 
 # Mux live streaming API token (Settings -> Access Tokens in the Mux dashboard).
 # Grant it both Mux Video AND Mux System permissions — the mux-webhooks
