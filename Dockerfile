@@ -155,10 +155,14 @@ COPY --from=build-audiowaveform /home/build/audiowaveform/build/audiowaveform /u
 USER nodeapp
 CMD ["pnpm", "--filter", "@letschurch/transcode-worker", "run", "start"]
 
+# AMD documents anonymous AMA 1.5.0 APT access, but the feed can become
+# unavailable or reject anonymous requests. Preserve the vendor runtime from
+# the immutable, production-proven image instead of depending on it per build.
+FROM registry.gitlab.com/letschurch/lets.church/transcode-worker-ama@sha256:f61772649d198da2447c273207069180304fc401420b34aae5afebe81af164bd AS ama-sdk-1-5-0
+
 FROM ubuntu:22.04 AS transcode-worker-ama
 ARG DEBIAN_FRONTEND=noninteractive
-# AMA SDK version — must match the amd-ama-driver installed on the host (e.g. tnw-worker-01).
-# Bump this in lockstep with the host driver; see https://amd.github.io/ama-sdk/latest/docker.html
+# AMA SDK version must match the amd-ama-driver installed on the host (e.g. tnw-worker-01).
 ARG AMA_SDK_VERSION=1.5.0
 ENV PNPM_HOME="/pnpm"
 ENV PATH="/opt/amd/ama/ma35/bin:$PNPM_HOME:$PATH"
@@ -170,21 +174,15 @@ RUN ln -s /usr/local/lib/node_modules/corepack/dist/corepack.js /usr/local/bin/c
   corepack enable
 # System tools + ffmpeg fallback (Prisma needs openssl/libssl-dev)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates curl openssl libssl-dev \
-    wget pciutils ffmpeg imagemagick jpegoptim && \
+    ca-certificates curl openssl libssl-dev wget pciutils ffmpeg imagemagick jpegoptim \
+    libaprutil1 libfontconfig1 libfreetype6 libgssapi-krb5-2 libminizip1 libpci3 \
+    libsdl2-2.0-0 libsndio7.0 libxinerama1 libxxf86vm1 && \
   rm -rf /var/lib/apt/lists/*
-# AMA SDK (Ubuntu 22.04 / jammy required for Xilinx APT repo)
-RUN wget -qO /usr/share/keyrings/xilinx-master-signing-key.asc \
-    https://www.xilinx.com/support/download/2018-2-1/xilinx-master-signing-key.asc && \
-  echo "deb [arch=amd64 signed-by=/usr/share/keyrings/xilinx-master-signing-key.asc] \
-    https://packages.xilinx.com/artifactory/debian-packages jammy main" \
-    > /etc/apt/sources.list.d/xilinx-ama.list && \
-  apt-get update && apt-get install -y --no-install-recommends \
-    amd-ama-core=${AMA_SDK_VERSION}-* \
-    amd-ama-xma=${AMA_SDK_VERSION}-* \
-    amd-ama-ffmpeg=${AMA_SDK_VERSION}-* && \
-  apt-mark hold amd-ama-core amd-ama-xma amd-ama-ffmpeg && \
-  rm -rf /var/lib/apt/lists/*
+# The SDK packages install their runtime beneath /opt/amd/ama. The remaining
+# package-owned files are documentation plus host-only systemd/udev integration.
+COPY --from=ama-sdk-1-5-0 /opt/amd/ama /opt/amd/ama
+RUN grep -q "^${AMA_SDK_VERSION}-" /opt/amd/ama/ma35/version && \
+  /opt/amd/ama/ma35/bin/ffmpeg -version
 COPY --from=oxipng /usr/local/bin/oxipng /usr/local/bin/oxipng
 COPY --from=build-audiowaveform /home/build/audiowaveform/build/audiowaveform /usr/bin/
 RUN mkdir -p /usr/src/app /data
