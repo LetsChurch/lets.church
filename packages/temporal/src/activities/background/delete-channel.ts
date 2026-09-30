@@ -1,10 +1,12 @@
 import {
   Channel,
   ChannelSubscription,
+  compactFeaturedUploadRanks,
   db,
   OrganizationChannelAssociation,
   UploadRecord,
   UploadState,
+  withFeaturedUploadOrderingLock,
 } from '@letschurch/db';
 import { backupS3 } from '@letschurch/s3/backup';
 import { publicS3 } from '@letschurch/s3/public';
@@ -220,7 +222,10 @@ export async function deleteChannelDb(channelId: string): Promise<boolean> {
   activityLogger.info(`Deleting channel ${channelId} from database`);
 
   try {
-    await db.delete(Channel).where(eq(Channel.id, channelId));
+    await withFeaturedUploadOrderingLock(async (tx) => {
+      await tx.delete(Channel).where(eq(Channel.id, channelId));
+      await compactFeaturedUploadRanks(tx);
+    });
     activityLogger.info(`Channel ${channelId} deleted from database`);
     return true;
   } catch (e) {

@@ -1,19 +1,15 @@
 import {
-  db,
+  compactFeaturedUploadRanks,
   FeaturedUpload,
   type TransactionClient,
   UploadRecord,
+  withFeaturedUploadOrderingLock,
 } from '@letschurch/db';
-import { asc, eq, gt, gte, sql } from 'drizzle-orm';
-
-// Global persistence lock for the site-wide featured list. Every writer must
-// acquire this transaction-scoped key before reading or changing the list.
-export const FEATURED_UPLOADS_ADVISORY_LOCK_KEY = 1_279_474_502;
+import { eq, gt, gte, sql } from 'drizzle-orm';
 
 type FeaturedUploadOrderingErrorCode =
   | 'ALREADY_FEATURED'
   | 'FEATURED_UPLOAD_NOT_FOUND'
-  | 'INVARIANT_VIOLATION'
   | 'STALE_ORDER'
   | 'STALE_WRITE'
   | 'UPLOAD_NOT_FOUND'
@@ -32,35 +28,6 @@ type FeaturedUploadSnapshot = {
   uploadRecordId: string;
   rank: number;
 };
-
-async function withFeaturedUploadOrderingLock<T>(
-  callback: (tx: TransactionClient) => Promise<T>,
-): Promise<T> {
-  return db.transaction(async (tx) => {
-    await tx.execute(
-      sql`select pg_advisory_xact_lock(${FEATURED_UPLOADS_ADVISORY_LOCK_KEY})`,
-    );
-    return callback(tx);
-  });
-}
-
-async function readFeaturedUploadSnapshot(
-  tx: TransactionClient,
-): Promise<FeaturedUploadSnapshot[]> {
-  const snapshot = await tx
-    .select({
-      uploadRecordId: FeaturedUpload.uploadRecordId,
-      rank: FeaturedUpload.rank,
-    })
-    .from(FeaturedUpload)
-    .orderBy(asc(FeaturedUpload.rank));
-
-  if (snapshot.some(({ rank }, index) => rank !== index)) {
-    throw new FeaturedUploadOrderingError('INVARIANT_VIOLATION');
-  }
-
-  return snapshot;
-}
 
 async function requireEligibleUpload(
   tx: TransactionClient,
@@ -141,7 +108,7 @@ async function removeFromSnapshot(
 
 export async function addFeaturedUploadAtomically(uploadId: string) {
   return withFeaturedUploadOrderingLock(async (tx) => {
-    const snapshot = await readFeaturedUploadSnapshot(tx);
+    const snapshot = await compactFeaturedUploadRanks(tx);
     await requireEligibleUpload(tx, uploadId, true);
 
     if (snapshot.some((row) => row.uploadRecordId === uploadId)) {
@@ -161,7 +128,7 @@ export async function addFeaturedUploadAtomically(uploadId: string) {
 
 export async function removeFeaturedUploadAtomically(uploadId: string) {
   return withFeaturedUploadOrderingLock(async (tx) => {
-    const snapshot = await readFeaturedUploadSnapshot(tx);
+    const snapshot = await compactFeaturedUploadRanks(tx);
     const removed = snapshot.find((row) => row.uploadRecordId === uploadId);
     if (!removed) {
       throw new FeaturedUploadOrderingError('FEATURED_UPLOAD_NOT_FOUND');
@@ -173,7 +140,7 @@ export async function removeFeaturedUploadAtomically(uploadId: string) {
 
 export async function reorderFeaturedUploadsAtomically(uploadIds: string[]) {
   return withFeaturedUploadOrderingLock(async (tx) => {
-    const snapshot = await readFeaturedUploadSnapshot(tx);
+    const snapshot = await compactFeaturedUploadRanks(tx);
     const existingIds = new Set(snapshot.map((row) => row.uploadRecordId));
     const inputIds = new Set(uploadIds);
     if (
@@ -210,7 +177,7 @@ export async function reorderFeaturedUploadsAtomically(uploadIds: string[]) {
 
 export async function toggleFeaturedUploadAtomically(uploadId: string) {
   return withFeaturedUploadOrderingLock(async (tx) => {
-    const snapshot = await readFeaturedUploadSnapshot(tx);
+    const snapshot = await compactFeaturedUploadRanks(tx);
     const existing = snapshot.find((row) => row.uploadRecordId === uploadId);
 
     if (existing) {

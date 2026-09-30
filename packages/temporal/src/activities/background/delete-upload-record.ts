@@ -1,4 +1,9 @@
-import { db, UploadRecord } from '@letschurch/db';
+import {
+  compactFeaturedUploadRanks,
+  db,
+  UploadRecord,
+  withFeaturedUploadOrderingLock,
+} from '@letschurch/db';
 import {
   client as esClient,
   MEDIA_INDEX,
@@ -66,7 +71,10 @@ export async function deleteUploadRecordDb(id: string) {
   });
   activityLogger.info(`Deleting upload record from database for ${id}`);
 
-  await db.delete(UploadRecord).where(eq(UploadRecord.id, id));
+  await withFeaturedUploadOrderingLock(async (tx) => {
+    await tx.delete(UploadRecord).where(eq(UploadRecord.id, id));
+    await compactFeaturedUploadRanks(tx);
+  });
 
   return true;
 }

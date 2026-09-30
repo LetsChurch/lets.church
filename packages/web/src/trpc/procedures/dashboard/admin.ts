@@ -200,11 +200,6 @@ function featuredUploadOrderingTrpcError(
         code: 'BAD_REQUEST',
         message: 'Upload must finish transcoding before featuring',
       });
-    case 'INVARIANT_VIOLATION':
-      return new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Featured upload ordering invariant is invalid',
-      });
   }
 }
 
