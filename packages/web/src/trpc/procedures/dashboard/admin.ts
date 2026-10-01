@@ -21,6 +21,7 @@ import {
 import { ingestConfig, ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { runAnnotation } from '@letschurch/temporal/activities/background/annotate-transcript';
+import { runAnnotationEdits } from '@letschurch/temporal/activities/background/annotate-transcript-edits';
 import type { StorageAuditSummary } from '@letschurch/temporal/activities/background/storage-audit';
 import { runSummary } from '@letschurch/temporal/activities/background/summarize-upload';
 import {
@@ -4454,6 +4455,9 @@ export const adminRouter = router({
       z.object({
         uploadRecordId: IncomingIdSchema,
         task: z.enum(['annotate', 'summarize']),
+        annotationStrategy: z
+          .enum(['markdown', 'span-edits'])
+          .default('markdown'),
         model: z.string().min(1),
         // Override the activity's default output cap. Required for
         // providers with tight output limits (e.g. DeepSeek v3.x =
@@ -4524,18 +4528,37 @@ export const adminRouter = router({
       };
 
       if (input.task === 'annotate') {
-        const r = await runAnnotation(paragraphs, metadata, input.model, {
+        const options = {
           maxTokens: input.maxTokens,
           // The eval page runs arbitrary, possibly non-OpenAI models — route it
           // through OpenRouter (production annotate runs OpenAI-direct).
-          via: 'openrouter',
+          via: 'openrouter' as const,
           tracking: {
             activity: 'evalAnnotate',
             uploadRecordId: input.uploadRecordId,
           },
-        });
+        };
+        const r =
+          input.annotationStrategy === 'span-edits'
+            ? await runAnnotationEdits(
+                paragraphs,
+                metadata,
+                input.model,
+                options,
+              )
+            : {
+                ...(await runAnnotation(
+                  paragraphs,
+                  metadata,
+                  input.model,
+                  options,
+                )),
+                editDiagnostics: null,
+              };
         return {
           task: 'annotate' as const,
+          annotationStrategy: input.annotationStrategy,
+          editDiagnostics: r.editDiagnostics,
           annotations: r.annotations,
           stats: r.stats,
           prompt: r.prompt,

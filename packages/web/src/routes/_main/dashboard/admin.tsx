@@ -406,7 +406,7 @@ function AdminPage() {
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Link
           to="/dashboard/admin/llm-eval"
-          search={{ task: 'annotate' }}
+          search={{ task: 'annotate', annotationStrategy: 'markdown' }}
           className="block"
         >
           <div className="dashboard-card" data-interactive="true">

@@ -2,13 +2,13 @@
 
 ## Purpose
 
-The annotation activity (`packages/temporal/src/activities/background/annotate-transcript.ts`) ships transcripts to an LLM through OpenRouter and gets back a markdown-formatted version with section headings and inline scripture/keyword links. The `SYSTEM_PROMPT` constant in that file is the system prompt; changing it changes every uploaded transcript's annotations. Production runs against `openai/gpt-6-luna` using the model's default sampling parameters. The production and eval paths intentionally do not send `temperature`, because supported overrides vary by model.
+The annotation activity (`packages/temporal/src/activities/background/annotate-transcript.ts`) sends transcripts directly to OpenAI and gets back a markdown-formatted version with section headings and inline scripture/keyword links. The `SYSTEM_PROMPT` constant in that file is the system prompt; changing it changes every uploaded transcript's annotations. Production runs against `openai/gpt-6-luna` using the model's default sampling parameters. The admin eval page routes through OpenRouter so arbitrary models can be compared. Neither path sends `temperature`, because supported overrides vary by model.
 
 This document is the reference for evaluating that prompt — verifying that changes don't regress, and qualifying new candidate models before swapping them into the activity.
 
-There are two evaluation surfaces:
+There are three evaluation surfaces:
 
-1. **In-app eval page** at `/dashboard/admin/llm-eval` (admin-only). Runs the production prompt against the production code path for one upload against N models in parallel. Does not write annotations to the DB, but every chat-completion call is logged to the `llm_call` table with `activity='evalAnnotate'` / `'evalSummarize'` so cost is captured. Use when comparing models against the _current_ prompt.
+1. **In-app eval page** at `/dashboard/admin/llm-eval` (admin-only). Runs one upload against up to eight models in parallel, with a choice of production full-transcript annotations or experimental source-span edits with targeted repair. Does not write annotations to the DB, but every chat-completion call is logged to the `llm_call` table with `activity='evalAnnotate'` / `'evalSummarize'` so cost is captured. Use when comparing models and annotation strategies.
 
 2. **Direct OpenRouter testing** with a local prompt file. Bypasses the production code so the prompt itself can be iterated freely. Use when changing the prompt.
 
@@ -33,6 +33,8 @@ A prompt + model combination should meet all of these on a realistic full-length
 7. **Verbatim text preservation.** Every input paragraph is in the output, in order, with no paraphrasing, no reordering, no merging. Each link's bracket text is an exact substring of the original paragraph. The body of `prompt.md` (or whatever transcript is being tested) must round-trip byte-equal after stripping the inserted headings and link wrappers.
 
 8. **Canon discipline.** `#bible` is reserved for the 66-book Protestant canon (Genesis through Revelation). Non-canonical / apocryphal / gnostic / pseudepigraphal works — Gospel of Thomas, Gospel of Mary, Gospel of Judas, Gospel of Philip, the Nag Hammadi codices, the Apocrypha (Tobit, Judith, Sirach, Wisdom, 1–2 Maccabees, etc.), 1 Enoch, the Book of Mormon, the Quran, and similar — must be wrapped as `#keyword`, never as `#bible`. Spot-check at least one transcript where the speaker engages a non-canonical text in depth (e.g. Dividing Line episodes critiquing the Gospel of Thomas) — every mention should be `#keyword`.
+
+For source-span edits, apply the same semantic criteria to the resolved annotations rather than markdown syntax. Criteria 3 and 7's transcript-echo requirements apply only to the full-transcript strategy. Span edits instead require valid source identity, exact source spans and word alignment. A structurally valid edit result does not prove citation recall, correct references or appropriate headings.
 
 ## Common failure modes
 
@@ -59,22 +61,38 @@ Workflow:
 
 1. Pick an upload via the search box (min 2 chars).
 2. Pick task = `annotate`.
-3. The model field pre-fills with `openai/gpt-6-luna` (the production default). Add other OpenRouter model ids (e.g. `openai/gpt-5.4`, `google/gemini-2.5-flash`, `anthropic/claude-haiku-4-5`) to A/B-compare. Up to 8.
-4. Optionally override `maxTokens` (the activity default for annotate is 32768; lower for providers with tighter caps — DeepSeek v3.x = 8K–16K, Groq llama-4-scout = 8K).
-5. Click "Run evaluation". Each model fires in parallel and renders as soon as its call resolves.
+3. Pick **Annotation strategy**: **Full transcript (production)** is the default; **Source-span edits + targeted repair (experimental)** selects the JSON edit strategy. The selector is hidden for `summarize`.
+4. The model field pre-fills with `openai/gpt-6-luna` (the production default). Add other OpenRouter model ids (e.g. `openai/gpt-5.4`, `google/gemini-2.5-flash`, `anthropic/claude-haiku-4-5`) to A/B-compare. Up to 8.
+5. Optionally override `maxTokens` (the activity default for annotate is 32768; lower for providers with tighter caps). For source-span edits, this cap applies separately to the initial completion and optional repair.
+6. Click "Run evaluation". Each model fires in parallel and renders as soon as its call resolves.
 
-The URL captures `uploadId`, `task`, comma-separated `models`, and `maxTokens` so results are shareable and refresh-safe. Queries are user-driven and do not auto-refresh — refocusing the window won't re-spend tokens.
+The URL captures `uploadId`, `task`, `annotationStrategy` (`markdown` or `span-edits`), comma-separated `models`, and `maxTokens` so configuration is shareable and refresh-safe. Missing or invalid strategy values in the URL default to `markdown`; the server accepts only the two named strategies. Queries are user-driven and do not auto-refresh: refocusing the window won't re-spend tokens.
 
 Each result card shows:
 
-- Latency, prompt/completion tokens, OpenRouter-reported USD cost.
+- Latency, prompt/completion tokens and USD cost. Span-edit stats aggregate the returned initial and repair completions. Usage from internally rejected provider attempts is not included in those totals; use `llm_call` to audit all attempts, including content-filter fallbacks.
 - Counts: outline / bible / keyword / skipped.
+- The annotation strategy actually used, plus structural validity and repair-attempt badges for span edits.
 - The parsed annotations grouped by paragraph, with the matched word range and bible metadata for each inline annotation.
-- A "Skipped" section listing inline annotations the model emitted but we couldn't materialize (span not found verbatim, or invalid bible metadata).
-- Per-card "Copy raw output" button (markdown for annotate, JSON for summarize — best-effort pretty-printed).
+- For full-transcript runs, a "Skipped" section lists inline annotations that could not be materialized (span not found or invalid Bible metadata). Span-edit runs show initial and remaining diagnostics instead; rejected batches have no accepted annotations.
+- Per-card "Copy raw output" button (markdown for full-transcript annotations; JSON for span edits and summaries, best-effort pretty-printed).
 - Per-page "Copy prompt" button (the exact `[system]`/`[user]` text sent to every model in the run).
 
-The eval activity bypasses the DB write — nothing is persisted. To re-test the same model after a code change, retry it from its card.
+Evaluation does not replace an upload's persisted annotations or summary; completion audit rows are still written to `llm_call`. To re-test a model after a code or strategy change, retry it from its card.
+
+### Source-span edits and targeted repair
+
+`runAnnotationEdits` reuses the canonical annotation policy, Bible metadata schema, adjacent same-reference coalescing and global keyword propagation. It changes the output contract, not the production annotation workflow.
+
+- The initial request includes every paragraph under an opaque handle, a full-source snapshot and the final paragraph handle. The model returns only `snapshot`, `last`, `headings`, `wraps` and `keywords`, without echoing the transcript. Source identity checks are not recall checks.
+- Initial and repair JSON may have one complete outer `json` or unlabeled Markdown code fence. The parser removes only that wrapper; surrounding commentary, incomplete fences and multiple fenced replies remain invalid. Raw responses remain available for debugging.
+- Bible wraps must match the selected paragraph character-for-character and align to stored words. Repeated phrases require exact, immediately adjacent `before`/`after` context that selects one occurrence. No fuzzy matching or first-occurrence fallback.
+- Keywords are source-verbatim vocabulary seeds, propagated globally with the production punctuation/case-insensitive matcher, including inside Bible spans.
+- At most one targeted repair receives rejected slots and bounded source context. Valid operations remain locked; repairs cannot change Bible reference metadata or heading titles. Drops require validator-authorized duplicate or same-reference coverage checks. Invalid source identity, malformed envelopes and invalid Bible metadata are not repaired.
+- Repair is bounded to 128 rejected slots, at most nine source paragraphs per slot, 128 × 1024 source-context characters and 512 × 1024 repair-input characters. If the required context is unavailable or exceeds a limit, the batch is rejected rather than regenerated.
+- Any remaining error rejects the entire batch with zero accepted annotations. Cards retain initial and remaining diagnostics, the initial raw output, and copy controls for an attempted repair's prompt and output.
+
+This strategy is experimental and eval-only. It has no Jev verifier or paragraph filter. Structural validity does not establish semantic correctness or complete annotation coverage; compare the resolved annotations against the source. Production continues to use full-transcript markdown.
 
 ### What to look at
 
@@ -239,10 +257,12 @@ The summarize activity uses a live OpenRouter fallback configured by `OPENROUTER
 ## Reference
 
 - Production prompt: `packages/temporal/src/activities/background/annotate-transcript.ts` (`SYSTEM_PROMPT`)
-- Activity (the page and the production workflow both call this): `packages/temporal/src/activities/background/annotate-transcript.ts` (`runAnnotation`)
+- Production/default eval runner: `packages/temporal/src/activities/background/annotate-transcript.ts` (`runAnnotation`)
+- Experimental span-edit eval runner: `packages/temporal/src/activities/background/annotate-transcript-edits.ts` (`runAnnotationEdits`)
+- Span-edit behavior regressions: `packages/temporal/src/activities/background/annotate-transcript-edits.test.ts`
 - Silent-summarization guard knobs: `SILENT_SUMMARY_FLOOR`, `CHARS_PER_TOKEN` (named exports in the same file, top of `runAnnotation`)
 - Text-only prompt-tuning eval CLI: `services/transcribe/scripts/segment_text.py` (wtpsplit-segments a plain-text transcript into paragraph JSON) → `packages/web/src/seed/eval-annotate-from-json.ts` (runs `runAnnotation` against the JSON, prints heading + annotation counts + writes the raw markdown). Use this loop when tuning the prompt against a new content format without going through the full upload pipeline. Scratch artifacts land under `seed-data/eval/` (gitignored).
-- Admin eval page: `packages/web/src/routes/dashboard_/admin_.llm-eval.tsx`
+- Admin eval page: `packages/web/src/routes/_main/dashboard/admin_.llm-eval.tsx`
 - Admin failure-surface pages: `packages/web/src/routes/dashboard_/admin_.failed-annotations.tsx`, `admin_.failed-summaries.tsx` (list uploads whose latest annotate/summarize `llm_call` failed AND no annotations/summary landed; both expose the existing `regenerateUploadAnnotations` / `regenerateUploadSummary` mutations as per-row buttons)
 - Annotation live fallback: `OPENROUTER_API_KEY`; model selected by `OPENROUTER_ANNOTATE_FALLBACK_MODEL` (default `anthropic/claude-haiku-4-5`). Empty disables the fallback.
 - Summary live fallback: `OPENROUTER_SUMMARY_FALLBACK_MODEL` (default `anthropic/claude-haiku-4-5`).

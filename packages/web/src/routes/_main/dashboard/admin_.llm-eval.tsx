@@ -209,6 +209,7 @@ function ModelsInput({
 const searchSchema = z.object({
   uploadId: z.string().optional(),
   task: z.enum(['annotate', 'summarize']).catch('annotate'),
+  annotationStrategy: z.enum(['markdown', 'span-edits']).catch('markdown'),
   models: z.string().optional(),
   // Per-call override of the activity's default output cap. Use when
   // routing to providers with tighter limits (DeepSeek v3.x = 8K-16K) —
@@ -264,6 +265,21 @@ type AnnotationItem = {
 
 type SentPrompt = { system: string; user: string };
 
+type AnnotationStrategy = 'markdown' | 'span-edits';
+const STRATEGY_LABELS: Record<AnnotationStrategy, string> = {
+  markdown: 'Full transcript (production)',
+  'span-edits': 'Source-span edits + targeted repair (experimental)',
+};
+type EditError = { reason: string; slot?: string; at?: string; text?: string };
+type EditDiagnostics = {
+  valid: boolean;
+  initialErrors: EditError[];
+  errors: EditError[];
+  repairAttempted: boolean;
+  repairPrompt?: SentPrompt;
+  repairResponseText?: string;
+};
+
 type SkippedItem = {
   paragraphId: string;
   paragraphOrder: number;
@@ -276,6 +292,8 @@ type SkippedItem = {
 type AnnotateOk = {
   status: 'ok';
   task: 'annotate';
+  annotationStrategy: AnnotationStrategy;
+  editDiagnostics: EditDiagnostics | null;
   annotations: AnnotationItem[];
   stats: {
     paragraphs: number;
@@ -325,6 +343,8 @@ function LlmEvalPage() {
   // keystroke would re-mount the upload selector; instead we sync up the
   // URL when the user actually triggers a run.
   const [task, setTask] = useState<'annotate' | 'summarize'>(search.task);
+  const [annotationStrategy, setAnnotationStrategy] =
+    useState<AnnotationStrategy>(search.annotationStrategy);
   // Default to the production annotate model when no URL state — admins land
   // on the page already able to run a baseline comparison with one click.
   const [models, setModels] = useState<string[]>(() => {
@@ -440,6 +460,7 @@ function LlmEvalPage() {
         const res = await evaluateMutation.mutateAsync({
           uploadRecordId: uploadId,
           task,
+          annotationStrategy,
           model,
           maxTokens,
         });
@@ -458,7 +479,7 @@ function LlmEvalPage() {
         showFailure({ message: `${model}: ${message}` });
       }
     },
-    [uploadId, task, maxTokens, evaluateMutation],
+    [uploadId, task, annotationStrategy, maxTokens, evaluateMutation],
   );
 
   async function run() {
@@ -466,7 +487,13 @@ function LlmEvalPage() {
     // Sync URL so the eval is shareable / refresh-safe.
     navigate({
       to: '.',
-      search: { uploadId, task, models: models.join(','), maxTokens },
+      search: {
+        uploadId,
+        task,
+        annotationStrategy,
+        models: models.join(','),
+        maxTokens,
+      },
       replace: true,
     });
     // Seed pending state for every selected model so each card renders
@@ -515,10 +542,11 @@ function LlmEvalPage() {
         <div className="flex flex-col gap-2.5">
           <Title order={1}>LLM model evaluation</Title>
           <Text c="dimmed" size="sm">
-            Runs the production <Code>annotate</Code> / <Code>summarize</Code>{' '}
-            pipelines against the chosen upload and models in parallel and shows
-            the parsed outputs side by side. Read-only — does not persist
-            results to the upload's stored summary / annotations.
+            Runs annotation or summary evaluation against the chosen upload and
+            models in parallel and shows parsed outputs side by side. Annotation
+            defaults to the production pipeline; source-span edits are
+            experimental. Read-only — does not persist results to the upload's
+            stored summary / annotations.
           </Text>
         </div>
 
@@ -552,6 +580,27 @@ function LlmEvalPage() {
                 <Radio value="summarize" label={TASK_LABELS.summarize} />
               </div>
             </Radio.Group>
+
+            {task === 'annotate' ? (
+              <Radio.Group
+                label="Annotation strategy"
+                value={annotationStrategy}
+                onChange={(v) => setAnnotationStrategy(v as AnnotationStrategy)}
+              >
+                <div className="mt-2.5 flex flex-col gap-2.5">
+                  <Radio value="markdown" label={STRATEGY_LABELS.markdown} />
+                  <Radio
+                    value="span-edits"
+                    label={STRATEGY_LABELS['span-edits']}
+                  />
+                  <Text size="xs" c="dimmed">
+                    Full transcript returns annotated markdown. Source-span
+                    edits use exact source text and at most one targeted repair;
+                    invalid results are rejected.
+                  </Text>
+                </div>
+              </Radio.Group>
+            ) : null}
 
             <ModelsInput
               label="OpenRouter models"
@@ -660,21 +709,21 @@ function ResultCard({
                   {Math.round(state.stats.durationMs / 100) / 10}s
                 </Badge>
                 {state.stats.promptTokens != null ? (
-                  <Tooltip label="Prompt tokens">
+                  <Tooltip label="Total prompt tokens across initial and any repair calls">
                     <Badge variant="light" color="gray">
                       in {state.stats.promptTokens.toLocaleString()}
                     </Badge>
                   </Tooltip>
                 ) : null}
                 {state.stats.completionTokens != null ? (
-                  <Tooltip label="Completion tokens">
+                  <Tooltip label="Total completion tokens across initial and any repair calls">
                     <Badge variant="light" color="gray">
                       out {state.stats.completionTokens.toLocaleString()}
                     </Badge>
                   </Tooltip>
                 ) : null}
                 {state.stats.costUsd != null ? (
-                  <Tooltip label="OpenRouter-reported USD cost for this call">
+                  <Tooltip label="OpenRouter-reported total USD cost across initial and any repair calls">
                     <Badge variant="light" color="green">
                       {formatUsd(state.stats.costUsd)}
                     </Badge>
@@ -730,6 +779,65 @@ function ResultCard({
           </div>
         ) : (
           <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Badge variant="light" color="gray">
+                {STRATEGY_LABELS[state.annotationStrategy]}
+              </Badge>
+              {state.editDiagnostics ? (
+                <>
+                  <Badge
+                    variant="light"
+                    color={state.editDiagnostics.valid ? 'green' : 'red'}
+                  >
+                    {state.editDiagnostics.valid ? 'Valid' : 'Rejected'}
+                  </Badge>
+                  <Badge
+                    variant="light"
+                    color={
+                      state.editDiagnostics.repairAttempted ? 'orange' : 'gray'
+                    }
+                  >
+                    {state.editDiagnostics.repairAttempted
+                      ? 'Targeted repair attempted'
+                      : 'No repair attempted'}
+                  </Badge>
+                </>
+              ) : null}
+            </div>
+            {state.editDiagnostics ? (
+              <div className="flex flex-col gap-2.5">
+                {state.editDiagnostics.repairPrompt ||
+                state.editDiagnostics.repairResponseText != null ? (
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    {state.editDiagnostics.repairPrompt ? (
+                      <CopyPromptButton
+                        prompt={state.editDiagnostics.repairPrompt}
+                        label="Repair prompt"
+                      />
+                    ) : null}
+                    {state.editDiagnostics.repairResponseText != null ? (
+                      <CopyOutputButton
+                        responseText={state.editDiagnostics.repairResponseText}
+                        label="Copy repair output"
+                      />
+                    ) : null}
+                  </div>
+                ) : null}
+                <EditErrors
+                  label="Initial diagnostics"
+                  errors={state.editDiagnostics.initialErrors}
+                />
+                <EditErrors
+                  label="Remaining diagnostics"
+                  errors={state.editDiagnostics.errors}
+                />
+                {!state.editDiagnostics.valid ? (
+                  <Alert color="red" variant="light">
+                    Edit result rejected. No annotations were accepted.
+                  </Alert>
+                ) : null}
+              </div>
+            ) : null}
             <div className="flex flex-wrap items-center justify-start gap-2.5">
               <Badge variant="light">{state.stats.outline} outline</Badge>
               <Badge variant="light" color="indigo">
@@ -739,19 +847,28 @@ function ResultCard({
                 {state.stats.keyword} keyword
               </Badge>
               {state.stats.skipped > 0 ? (
-                <Tooltip label="Spans the LLM wrapped that we couldn't locate verbatim in the paragraph's word array">
+                <Tooltip
+                  label={
+                    state.editDiagnostics
+                      ? 'Remaining structural diagnostics for the rejected edit batch'
+                      : "Spans the LLM wrapped that we couldn't locate verbatim in the paragraph's word array"
+                  }
+                >
                   <Badge variant="light" color="orange">
-                    {state.stats.skipped} skipped
+                    {state.stats.skipped}{' '}
+                    {state.editDiagnostics ? 'diagnostics' : 'skipped'}
                   </Badge>
                 </Tooltip>
               ) : null}
             </div>
-            <AnnotationsList
-              annotations={state.annotations}
-              paragraphs={paragraphs}
-              paragraphsById={paragraphsById}
-              skippedItems={state.skippedItems ?? []}
-            />
+            {state.editDiagnostics?.valid !== false ? (
+              <AnnotationsList
+                annotations={state.annotations}
+                paragraphs={paragraphs}
+                paragraphsById={paragraphsById}
+                skippedItems={state.skippedItems ?? []}
+              />
+            ) : null}
           </div>
         )}
       </div>
@@ -774,10 +891,18 @@ function formatUsd(usd: number): string {
 // pasted into an OpenAI / OpenRouter playground or another debugging
 // tool. The 2-second "copied" feedback uses an icon swap, not a toast,
 // since multiple cards' buttons can be clicked in close succession.
-function CopyPromptButton({ prompt }: { prompt: SentPrompt }) {
+function CopyPromptButton({
+  prompt,
+  label = 'Prompt',
+}: {
+  prompt: SentPrompt;
+  label?: string;
+}) {
   const { copied, copy } = useCopied(2000);
   return (
-    <Tooltip label={copied ? 'Copied!' : 'Copy prompt (system + user)'}>
+    <Tooltip
+      label={copied ? 'Copied!' : `Copy ${label.toLowerCase()} (system + user)`}
+    >
       <Button
         size="xs"
         variant="light"
@@ -787,7 +912,7 @@ function CopyPromptButton({ prompt }: { prompt: SentPrompt }) {
           copy(`[system]\n${prompt.system}\n\n[user]\n${prompt.user}\n`)
         }
       >
-        Prompt
+        {label}
       </Button>
     </Tooltip>
   );
@@ -798,10 +923,16 @@ function CopyPromptButton({ prompt }: { prompt: SentPrompt }) {
 // otherwise the raw text. Per-card because each model's output is
 // distinct (the whole point of comparing models is to see their
 // outputs side by side).
-function CopyOutputButton({ responseText }: { responseText: string }) {
+function CopyOutputButton({
+  responseText,
+  label = 'Copy output',
+}: {
+  responseText: string;
+  label?: string;
+}) {
   const { copied, copy } = useCopied(2000);
   return (
-    <Tooltip label={copied ? 'Copied!' : 'Copy raw model output'}>
+    <Tooltip label={copied ? 'Copied!' : label}>
       <ActionIcon
         variant="subtle"
         color={copied ? 'green' : 'gray'}
@@ -817,11 +948,30 @@ function CopyOutputButton({ responseText }: { responseText: string }) {
           }
           copy(text);
         }}
-        aria-label="Copy output"
+        aria-label={label}
       >
         {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
       </ActionIcon>
     </Tooltip>
+  );
+}
+
+function EditErrors({ label, errors }: { label: string; errors: EditError[] }) {
+  if (errors.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-1">
+      <SectionLabel label={label} muted />
+      <ul className="text-secondary max-h-48 list-disc overflow-y-auto pl-5 text-xs">
+        {errors.map((error, index) => (
+          <li key={index} className="whitespace-pre-wrap">
+            {error.reason}
+            {error.slot ? ` · slot ${error.slot}` : ''}
+            {error.at ? ` · ${error.at}` : ''}
+            {error.text ? ` · ${error.text}` : ''}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

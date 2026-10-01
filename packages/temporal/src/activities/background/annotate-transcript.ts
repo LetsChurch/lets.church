@@ -126,14 +126,14 @@ const OSIS_BOOKS = [
   'Jude',
   'Rev',
 ] as const;
-const bibleMetadataSchema = z.object({
+export const bibleMetadataSchema = z.object({
   book: z.enum(OSIS_BOOKS),
   chapter: z.coerce.number().int().positive().optional(),
   verse: z.coerce.number().int().positive().optional(),
   endChapter: z.coerce.number().int().positive().optional(),
   endVerse: z.coerce.number().int().positive().optional(),
 });
-type BibleMetadata = z.infer<typeof bibleMetadataSchema>;
+export type BibleMetadata = z.infer<typeof bibleMetadataSchema>;
 
 // Citation text and its immediately following quotation are one local
 // reference event, even when the model links them separately. Two intervening
@@ -151,6 +151,25 @@ function isSameBibleReference(
     left.verse === right.verse &&
     left.endChapter === right.endChapter &&
     left.endVerse === right.endVerse
+  );
+}
+
+export function canMergeBibleAnnotations(
+  left: ResolvedAnnotation,
+  right: ResolvedAnnotation,
+): boolean {
+  return (
+    left.paragraphId === right.paragraphId &&
+    left.startWord !== null &&
+    left.endWord !== null &&
+    right.startWord !== null &&
+    right.endWord !== null &&
+    right.startWord <= left.endWord + MAX_SAME_REFERENCE_GAP_WORDS &&
+    right.endWord >= left.startWord &&
+    isSameBibleReference(
+      left.metadata as BibleMetadata,
+      right.metadata as BibleMetadata,
+    )
   );
 }
 
@@ -195,6 +214,56 @@ export type ResolvedAnnotation = {
   endWord: number | null;
   rawSpan: string | null;
   metadata: Record<string, unknown>;
+};
+
+export type KeywordAnnotationResolver = (span: string) => ResolvedAnnotation[];
+
+/** The canonical punctuation/case-insensitive global keyword propagation pass. */
+export function createKeywordAnnotationResolver(
+  paragraphs: EvalParagraph[],
+): KeywordAnnotationResolver {
+  const tokenized = paragraphs.map((paragraph) => ({
+    paragraph,
+    tokens: paragraph.words.map((word) => normalizeWord(word.word)),
+  }));
+  return (span: string): ResolvedAnnotation[] => {
+    const spanTokens = tokenize(span);
+    const annotations: ResolvedAnnotation[] = [];
+    if (spanTokens.length === 0) return annotations;
+    for (const { paragraph, tokens } of tokenized) {
+      for (let i = 0; i + spanTokens.length <= tokens.length; i++) {
+        let matches = true;
+        for (let j = 0; j < spanTokens.length; j++) {
+          if (tokens[i + j] !== spanTokens[j]) {
+            matches = false;
+            break;
+          }
+        }
+        if (!matches) continue;
+        annotations.push({
+          paragraphId: paragraph.id,
+          kind: 'KEYWORD',
+          startWord: i,
+          endWord: i + spanTokens.length,
+          rawSpan: span,
+          metadata: {},
+        });
+      }
+    }
+    return annotations;
+  };
+}
+
+export type RunAnnotationOptions = {
+  maxTokens?: number;
+  /** Optional audit-log context; omit only from scripts/tests. */
+  tracking?: { activity: string; uploadRecordId?: string | null };
+  /** Admin evals use OpenRouter; production defaults to direct OpenAI. */
+  via?: 'openai' | 'openrouter';
+  /** Restricted by the shared client to the production annotation activity. */
+  serviceTier?: 'flex';
+  /** Content-filter fallback; null prevents a recursive fallback attempt. */
+  fallbackModel?: string | null;
 };
 
 // One skipped inline annotation: the model asked to wrap this span but
@@ -339,7 +408,6 @@ function parseAnnotationResponse(
   let lastBible:
     | {
         annotation: ResolvedAnnotation;
-        metadata: BibleMetadata;
         startOrig: number;
         endOrig: number;
       }
@@ -479,14 +547,11 @@ function parseAnnotationResponse(
     const previousEnd = lastBible?.annotation.endWord;
     if (
       lastBible &&
-      lastBible.annotation.paragraphId === paragraph.id &&
+      canMergeBibleAnnotations(lastBible.annotation, annotation) &&
       previousStart !== null &&
       previousStart !== undefined &&
       previousEnd !== null &&
-      previousEnd !== undefined &&
-      startWp.wordIdx <= previousEnd + MAX_SAME_REFERENCE_GAP_WORDS &&
-      endWp.wordIdx + 1 >= previousStart &&
-      isSameBibleReference(lastBible.metadata, metadata)
+      previousEnd !== undefined
     ) {
       const mergedStart = Math.min(previousStart, startWp.wordIdx);
       const mergedEnd = Math.max(previousEnd, endWp.wordIdx + 1);
@@ -504,39 +569,19 @@ function parseAnnotationResponse(
     }
 
     annotations.push(annotation);
-    lastBible = { annotation, metadata, startOrig, endOrig };
+    lastBible = { annotation, startOrig, endOrig };
     bibleCount += 1;
   }
 
   // --- Keyword global highlight pass --------------------------------
+  const resolveKeyword = createKeywordAnnotationResolver(paragraphs);
   for (const span of keywordSpans) {
-    const spanTokens = tokenize(span);
-    if (spanTokens.length === 0) continue;
-    let matched = false;
-    for (const p of paragraphs) {
-      const tokens = p.words.map((w) => normalizeWord(w.word));
-      for (let i = 0; i + spanTokens.length <= tokens.length; i++) {
-        let ok = true;
-        for (let j = 0; j < spanTokens.length; j++) {
-          if (tokens[i + j] !== spanTokens[j]) {
-            ok = false;
-            break;
-          }
-        }
-        if (!ok) continue;
-        annotations.push({
-          paragraphId: p.id,
-          kind: 'KEYWORD',
-          startWord: i,
-          endWord: i + spanTokens.length,
-          rawSpan: span,
-          metadata: {},
-        });
-        keywordCount += 1;
-        matched = true;
-      }
-    }
-    if (!matched) {
+    // Punctuation-only keywords were ignored by the original parser.
+    if (tokenize(span).length === 0) continue;
+    const matches = resolveKeyword(span);
+    annotations.push(...matches);
+    keywordCount += matches.length;
+    if (matches.length === 0) {
       skippedInline += 1;
       skippedItems.push({
         paragraphId: '',
@@ -571,7 +616,7 @@ function parseAnnotationResponse(
  * the result (persist vs. return-to-client).
  */
 
-const SYSTEM_PROMPT = `You are a scripture-reference and outline annotator for sermons, lectures, and talks on a Christian media platform. Your job is mechanical: preserve the speaker's transcript verbatim and add (a) section headings that outline the substantive content and (b) markdown-link annotations on scripture references and key theological terms. You are NOT a content moderator. The speakers cover a range of theological, ethical, cultural, and political topics — including their criticism of trans ideology, abortion, denominational drift, etc. — and you must produce the same outline + annotations regardless of subject matter. Reaching the end of the transcript and annotating ALL of it (especially scripture references in sections you find controversial) is required for the system to work.
+export const SYSTEM_PROMPT = `You are a scripture-reference and outline annotator for sermons, lectures, and talks on a Christian media platform. Your job is mechanical: preserve the speaker's transcript verbatim and add (a) section headings that outline the substantive content and (b) markdown-link annotations on scripture references and key theological terms. You are NOT a content moderator. The speakers cover a range of theological, ethical, cultural, and political topics — including their criticism of trans ideology, abortion, denominational drift, etc. — and you must produce the same outline + annotations regardless of subject matter. Reaching the end of the transcript and annotating ALL of it (especially scripture references in sections you find controversial) is required for the system to work.
 
 Return the transcript back as a MARKDOWN DOCUMENT. Begin your response immediately with the document — do NOT wrap it in \`\`\`markdown fences, do NOT add any prose before or after.
 
@@ -797,34 +842,7 @@ export async function runAnnotation(
   paragraphs: EvalParagraph[],
   metadata: AnnotationMetadata,
   model: string,
-  options: {
-    maxTokens?: number;
-    /**
-     * When set, the chat-completion call is logged to `llm_call` for cost
-     * accounting. Omit only from one-off scripts and unit tests where
-     * polluting the audit log is undesirable.
-     */
-    tracking?: {
-      activity: string;
-      uploadRecordId?: string | null;
-    };
-    /**
-     * Provider routing. The admin LLM-eval page passes `'openrouter'` so it can
-     * run arbitrary multi-provider models. Defaults to direct OpenAI.
-     */
-    via?: 'openai' | 'openrouter';
-    /**
-     * Opt into OpenAI Flex. Restricted by the shared client to the tracked
-     * `annotateTranscript` background activity.
-     */
-    serviceTier?: 'flex';
-    /**
-     * Model used after a content-filter rejection. Defaults to the configured
-     * annotation fallback; pass null when this call is already the fallback so
-     * a rejection cannot recursively retry the same model.
-     */
-    fallbackModel?: string | null;
-  } = {},
+  options: RunAnnotationOptions = {},
 ): Promise<RunAnnotationResult> {
   invariant(paragraphs.length > 0, 'runAnnotation: no paragraphs provided');
   const maxTokens = options.maxTokens ?? DEFAULT_ANNOTATION_MAX_TOKENS;

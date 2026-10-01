@@ -17,6 +17,21 @@ Validate shape, scheme, and size where data enters the system (request schemas),
 and **allow-list rather than deny-list**. Reject what you can't positively
 classify as safe, as early as possible, so later code can assume a narrow domain.
 
+The admin LLM eval mutation allow-lists `annotationStrategy` to `markdown` or
+`span-edits`. The eval-only `runAnnotationEdits` boundary treats model output as
+untrusted: bounded JSON envelopes, exact source identity and span matching,
+verified word alignment, and the canonical `bibleMetadataSchema` enforce the
+accepted domain. A single targeted repair is limited to 128 rejected slots,
+128 × 1024 source-context characters and 512 × 1024 repair-input characters.
+Valid operations stay locked; replacements preserve Bible reference metadata and
+heading titles, and drops require deterministic duplicate or same-reference
+coverage authorization. Remaining errors reject the whole batch rather than
+returning partial annotations. Diagnostics render as React text, not HTML.
+A single complete outer `json` or unlabeled Markdown code fence is removed
+before JSON parsing. Surrounding commentary, incomplete fences and extra JSON
+documents remain invalid; raw-response size limits and all subsequent validation
+still apply.
+
 ## 2. Treat any outbound request to a user-influenced destination as SSRF
 
 A URL that a user can influence (directly, via a feed, or via a redirect) must be

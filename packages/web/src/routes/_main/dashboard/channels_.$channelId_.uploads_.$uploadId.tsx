@@ -1492,6 +1492,7 @@ function ChannelUploadPage() {
                                     search: {
                                       uploadId,
                                       task: 'annotate',
+                                      annotationStrategy: 'markdown',
                                       models: 'openai/gpt-6-luna',
                                     },
                                   }).catch(() => {
