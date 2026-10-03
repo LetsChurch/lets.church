@@ -24,7 +24,8 @@
     "generate-seed-annotations": "DB_LOG=0 tsx src/seed/generate-annotations.ts",
     "generate-seed-summaries": "DB_LOG=0 tsx src/seed/generate-summaries.ts",
     "backfill-diarization-merge": "DB_LOG=0 tsx src/seed/backfill-diarization-merge.ts",
-    "generate-seed-bible-refs": "DB_LOG=0 tsx src/seed/generate-bible-refs.ts"
+    "generate-seed-bible-refs": "DB_LOG=0 tsx src/seed/generate-bible-refs.ts",
+    "eval:annotation-models": "DB_LOG=0 tsx src/seed/eval-annotation-models.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.42",

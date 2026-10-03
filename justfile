@@ -268,6 +268,13 @@ dump-llm-seed-data:
 generate-seed-annotations:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run generate-seed-annotations'
 
+# Run the reproducible annotation model/strategy matrix against the gold corpus.
+# Pass CLI options through verbatim; start with --dry-run to validate the model
+# IDs, pricing, corpus, and call count without spending.
+#   just eval-annotation-models --models openai/gpt-6-luna,openai/gpt-6.1-sol --dry-run
+eval-annotation-models *args:
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run eval:annotation-models -- {{args}}'
+
 # Re-run the summarize activity against the LLM-seeded uploads using whatever
 # OUTLINE annotations are currently in the DB, then re-embed the resulting
 # summary + searchSummary. Use this when the summarize prompt changes (e.g.

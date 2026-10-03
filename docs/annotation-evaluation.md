@@ -6,13 +6,15 @@ The annotation activity (`packages/temporal/src/activities/background/annotate-t
 
 This document is the reference for evaluating that prompt — verifying that changes don't regress, and qualifying new candidate models before swapping them into the activity.
 
-There are three evaluation surfaces:
+There are four evaluation surfaces:
 
 1. **In-app eval page** at `/dashboard/admin/llm-eval` (admin-only). Runs one upload against up to eight models in parallel, with a choice of production full-transcript annotations or experimental source-span edits with targeted repair. Does not write annotations to the DB, but every chat-completion call is logged to the `llm_call` table with `activity='evalAnnotate'` / `'evalSummarize'` so cost is captured. Use when comparing models and annotation strategies.
 
-2. **Direct OpenRouter testing** with a local prompt file. Bypasses the production code so the prompt itself can be iterated freely. Use when changing the prompt.
+2. **Reproducible model matrix CLI** via `just eval-annotation-models`. Runs a model list against the gold corpus, both annotation strategies, and repeated trials. It resolves current OpenRouter model versions and pricing before spending, resumes completed runs, and writes machine-readable results plus a Markdown report. Use for model qualification and cost/quality comparisons.
 
-3. **`llm_call` audit log**. Every production + eval call lands here with `model`, `activity`, `upload_record_id`, token counts, computed cost, provider cost, `outcome` (`success` / `guard_length_truncation` / `guard_content_filter` / `guard_silent_summarization`), `error_message`, and `duration_ms`. Filter by `outcome != 'success'` to find pay-but-reject calls; aggregate by `(model, day)` for cost trends. Indices on `(model, created_at)`, `(activity, created_at)`, `(upload_record_id)` make those queries cheap.
+3. **Direct OpenRouter testing** with a local prompt file. Bypasses the production code so the prompt itself can be iterated freely. Use when changing the prompt.
+
+4. **`llm_call` audit log**. Every production + eval call lands here with `model`, `activity`, `upload_record_id`, token counts, computed cost, provider cost, `outcome` (`success` / `guard_length_truncation` / `guard_content_filter` / `guard_silent_summarization`), `error_message`, and `duration_ms`. Filter by `outcome != 'success'` to find pay-but-reject calls; aggregate by `(model, day)` for cost trends. Indices on `(model, created_at)`, `(activity, created_at)`, `(upload_record_id)` make those queries cheap.
 
 ## Acceptance criteria
 
@@ -109,6 +111,60 @@ Re-use the LLM-seeded uploads from `LLM_SEEDED_UPLOAD_IDS` (`packages/web/src/se
 - Topical talks — mix of allusion and explicit citation, multiple section breaks.
 
 Pick at least one from each category before declaring a prompt change good. A change that improves Dividing Line outputs can silently regress expository sermons by over-fragmenting their outlines.
+
+## Reproducible model matrix
+
+The matrix CLI is the agent-facing path for evaluating a supplied list of OpenRouter models against the source-grounded annotation corpus. It calls the current `runAnnotation` and `runAnnotationEdits` implementations rather than copied prompts.
+
+### Agent procedure
+
+1. Choose an explicit output directory so the dry run and paid run share one resumable plan:
+
+   ```sh
+   OUTPUT=/seed-data/eval/annotation-models-YYYYMMDD
+   ```
+
+2. Validate model IDs, concrete versions, published pricing, corpus contents, and total call count without making LLM calls:
+
+   ```sh
+   just eval-annotation-models \
+     --models openai/gpt-6-luna,openai/gpt-6.1-sol \
+     --output \"$OUTPUT\" \
+     --dry-run
+   ```
+
+3. Read `$OUTPUT/plan.json` and `$OUTPUT/models.json`. Report the planned model × strategy × corpus × repeat count and the catalog input/output prices. A model missing from the live OpenRouter catalog, or without numeric input/output pricing, fails before any paid call.
+
+4. When the user's request authorizes the evaluation, run the same command without `--dry-run`:
+
+   ```sh
+   just eval-annotation-models \
+     --models openai/gpt-6-luna,openai/gpt-6.1-sol \
+     --output \"$OUTPUT\"
+   ```
+
+   Defaults are both `markdown` and `span-edits`, two repeats, the three-sermon gold corpus, a 32768 completion-token limit, provider sampling defaults, no fallback model, and an 80% selected-word overlap threshold with exact Bible-reference metadata.
+
+5. If the process is interrupted, rerun the identical command. Successful per-run JSON files are reused; failed files are retried. Do not use `--no-resume` unless fresh paid repetitions are intentional.
+
+6. Deliver `$OUTPUT/report.md`, cite `$OUTPUT/summary.json` for aggregates, and inspect every failed or structurally invalid run. Raw outputs and repair diagnostics remain in `$OUTPUT/results/`.
+
+The repository's `seed-data` directory is mounted at `/seed-data` in the web container, so these artifacts appear on the host under `seed-data/eval/`. Scratch evaluation artifacts there are gitignored.
+
+Useful scope controls:
+
+```sh
+# One strategy only
+just eval-annotation-models --models openai/gpt-6-luna --strategies markdown
+
+# One corpus item and one repeat for a smoke run
+just eval-annotation-models --models openai/gpt-6-luna --limit 1 --repeats 1
+
+# Pin one item by corpus id
+just eval-annotation-models --models openai/gpt-6-luna --item <upload-uuid>
+```
+
+Each result records requested and concrete model IDs, timestamps, structural validity, resolved annotations, raw output, span-repair diagnostics, tokens, latency, gold-case details, and a list-price estimate. `summary.json` excludes the large raw response bodies. Pricing uses the live catalog's applicable prompt-token tier and audited prompt/completion counts. It assumes uncached input because the activity result does not expose cache-read tokens; therefore it is an estimated list price, not an invoice total.
 
 ## Direct OpenRouter testing (for prompt iteration)
 
@@ -262,6 +318,7 @@ The summarize activity uses a live OpenRouter fallback configured by `OPENROUTER
 - Span-edit behavior regressions: `packages/temporal/src/activities/background/annotate-transcript-edits.test.ts`
 - Silent-summarization guard knobs: `SILENT_SUMMARY_FLOOR`, `CHARS_PER_TOKEN` (named exports in the same file, top of `runAnnotation`)
 - Text-only prompt-tuning eval CLI: `services/transcribe/scripts/segment_text.py` (wtpsplit-segments a plain-text transcript into paragraph JSON) → `packages/web/src/seed/eval-annotate-from-json.ts` (runs `runAnnotation` against the JSON, prints heading + annotation counts + writes the raw markdown). Use this loop when tuning the prompt against a new content format without going through the full upload pipeline. Scratch artifacts land under `seed-data/eval/` (gitignored).
+- Reproducible model matrix CLI: `packages/web/src/seed/eval-annotation-models.ts`; scoring, pricing, and aggregation helpers: `packages/web/src/seed/annotation-model-eval.ts`; command: `just eval-annotation-models`.
 - Admin eval page: `packages/web/src/routes/_main/dashboard/admin_.llm-eval.tsx`
 - Admin failure-surface pages: `packages/web/src/routes/dashboard_/admin_.failed-annotations.tsx`, `admin_.failed-summaries.tsx` (list uploads whose latest annotate/summarize `llm_call` failed AND no annotations/summary landed; both expose the existing `regenerateUploadAnnotations` / `regenerateUploadSummary` mutations as per-row buttons)
 - Annotation live fallback: `OPENROUTER_API_KEY`; model selected by `OPENROUTER_ANNOTATE_FALLBACK_MODEL` (default `anthropic/claude-haiku-4-5`). Empty disables the fallback.
