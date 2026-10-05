@@ -1,10 +1,12 @@
+import { IconMapOff } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { ClientOnly, Link } from '@tanstack/react-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { ChurchComboboxProps } from '@/components/church-combobox';
 import { ChurchCombobox } from '@/components/church-combobox';
 import { ChurchMap } from '@/components/church-map';
+import { Button } from '@/components/ui/button';
 import type { ParsedFilters } from '@/routes/_main/churches';
 import {
   getInitialSidebarCollapsed,
@@ -36,6 +38,7 @@ export function ChurchesView({
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth < 640 : false,
   );
+  const [mapInitializationFailed, setMapInitializationFailed] = useState(false);
   const trpc = useTRPC();
 
   // Fetch church data based on filters
@@ -109,6 +112,10 @@ export function ChurchesView({
     };
   }, [isMobile, isEmbed]);
 
+  const handleMapInitializationError = useCallback(() => {
+    setMapInitializationFailed(true);
+  }, []);
+
   const pane = (
     <Pane
       churchData={churchData}
@@ -119,6 +126,10 @@ export function ChurchesView({
       hideOrganization={hideOrganization}
     />
   );
+
+  if (mapInitializationFailed) {
+    return <MapUnavailable isEmbed={isEmbed} />;
+  }
 
   return (
     <div
@@ -143,6 +154,7 @@ export function ChurchesView({
           filters={filters}
           churchData={churchData}
           isEmbed={isEmbed}
+          onInitializationError={handleMapInitializationError}
           // debug={true} // Enable to show red crosshairs at the map's vanishing point (center after padding)
         />
         {/* Floating pane - desktop left side, mobile bottom */}
@@ -157,6 +169,40 @@ export function ChurchesView({
           </div>
         </div>
       </ClientOnly>
+    </div>
+  );
+}
+
+function MapUnavailable({ isEmbed }: { isEmbed: boolean }) {
+  return (
+    <div
+      className={cn(
+        'flex size-full items-center justify-center px-6 text-center',
+        isEmbed && 'h-screen w-screen',
+      )}
+      role="alert"
+    >
+      <div className="border-fancy-pants max-w-md rounded-2xl bg-white/80 p-8 shadow-lg backdrop-blur-sm dark:bg-zinc-900/80">
+        <IconMapOff
+          aria-hidden="true"
+          className="mx-auto size-12 text-indigo-600 dark:text-indigo-400"
+          stroke={1.5}
+        />
+        <h1 className="text-primary mt-5 text-2xl font-bold">
+          The church map is unavailable
+        </h1>
+        <p className="text-secondary mt-3 leading-7">
+          Your browser could not start the interactive map. Check that WebGL and
+          hardware acceleration are enabled, then try again.
+        </p>
+        <Button
+          size="lg"
+          className="mt-6"
+          onClick={() => window.location.reload()}
+        >
+          Reload page
+        </Button>
+      </div>
     </div>
   );
 }
