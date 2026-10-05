@@ -160,6 +160,11 @@ registration still requires a password. Passwordless users can set one from
 account security, and the password-reset flow works for both account types.
 Completing a password reset revokes every existing session.
 
+Sign-in emails include both a visibly styled action and the escaped URL as a
+linked copy-and-paste fallback; the plain-text part also includes the URL. This
+keeps the credential usable when a mail client drops document-level CSS while
+preserving attribute-safe output encoding.
+
 Authentication tokens, passwords, CAPTCHA responses, and import CSV contents
 are redacted by the tRPC logging boundary. Redirects stored with sign-in tokens
 pass through `safeRedirect` both before storage and before use.

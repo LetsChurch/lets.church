@@ -22,7 +22,11 @@ export function generateEmailSignInEmail(token: string) {
   const html = emailHtml(
     "Sign in to Let's Church",
     stripIndent`
-      Use <a href="${safeUrl}">this secure link</a> to sign in to Let's Church.
+      Use the button below to sign in to Let's Church.
+
+      <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="background-color: #3f46c8; border-radius: 6px; color: #ffffff; display: inline-block; font-weight: 600; padding: 12px 20px; text-decoration: none;">Sign in to Let's Church</a>
+
+      If the button doesn't work, copy and paste this address into your browser:<br><a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="color: #3f46c8; text-decoration: underline; word-break: break-all;">${safeUrl}</a>
 
       The link expires in 20 minutes and can only be used once.
 
