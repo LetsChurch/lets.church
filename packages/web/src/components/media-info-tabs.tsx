@@ -11,7 +11,7 @@ import { useEffect, useRef } from 'react';
 
 import { LcTooltip } from '@/components/lc-tooltip';
 import { $setPlayAt } from '@/stores/player';
-import { formatTime } from '@/util/format';
+import { formatDate, formatTime } from '@/util/format';
 import type { KeywordIndexEntry } from '@/util/keyword-index';
 import { getLicenseInfo } from '@/util/license';
 import type { ScriptureIndexGroup } from '@/util/scripture-index';
@@ -200,11 +200,8 @@ export function MediaInfoTabs({
               {viewCount.toLocaleString()} views
             </span>
             <span className="text-primary/70 text-xs font-medium">
-              {new Date(publishedAt || createdAt).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
+              {/* UTC-pinned: publishedAt is a calendar date at UTC midnight. */}
+              {formatDate(publishedAt || createdAt)}
             </span>
             <LcTooltip
               content={

@@ -1,6 +1,7 @@
 import { browser } from 'wxt/browser';
 import { defineBackground } from 'wxt/utils/define-background';
 
+import { toLetsChurchPublishedAt } from '@/lib/dates';
 import { enqueueJobs } from '@/lib/jobs';
 import { lcApi } from '@/lib/lc-api';
 import { onMessage, send } from '@/lib/messages';
@@ -30,7 +31,7 @@ export default defineBackground(() => {
           candidates: message.videos.map((v) => ({
             key: v.videoId,
             title: v.title,
-            publishedAt: new Date(v.publishedAt),
+            publishedAt: toLetsChurchPublishedAt(v.publishedAt),
             lengthSeconds: v.lengthSeconds,
             originalFileName: v.originalFileName,
           })),

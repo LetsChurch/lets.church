@@ -5,6 +5,7 @@
  */
 import pRetry, { AbortError } from 'p-retry';
 
+import { toLetsChurchPublishedAt } from './dates';
 import { lcApi, type MultipartTarget } from './lc-api';
 import type { MirrorJob } from './types';
 
@@ -248,7 +249,7 @@ export async function runTransfer(
       channelId: job.channelId,
       title: job.video.title.trim() || fileName,
       description: job.video.description,
-      publishedAt: new Date(job.video.publishedAt),
+      publishedAt: toLetsChurchPublishedAt(job.video.publishedAt),
       originalFileName: fileName,
       uploadMimeType: guessMimeType(contentType, fileName),
       bytes,
