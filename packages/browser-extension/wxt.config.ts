@@ -24,8 +24,12 @@ export default defineConfig({
         `${lcOrigin}/*`,
         // Studio pages we augment, and Studio's own video API.
         'https://studio.youtube.com/*',
-        // "Download" on your own videos, which redirects to googlevideo.
+        // "Download" on your own videos: www.youtube.com/download_my_video
+        // redirects to a media host, observed as rr*---sn-*.c.youtube.com
+        // (October 2026) and historically *.googlevideo.com. Without host
+        // access the redirect is CORS-blocked.
         'https://www.youtube.com/*',
+        'https://*.c.youtube.com/*',
         'https://*.googlevideo.com/*',
       ],
       ...(browser === 'firefox'

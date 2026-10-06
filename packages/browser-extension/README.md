@@ -21,7 +21,7 @@ studio.content (shadow-root UI)
                                                                         dashboard.mirror.findDuplicates
                        queue:enqueue ──▶ storage.local job:<id>
                                          queue page (runner)
-                                           ├─ fetch download_my_video (googlevideo)
+                                           ├─ fetch download_my_video (→ *.c.youtube.com)
                                            ├─ createUpload ───────────▶ record + presigned parts
                                            ├─ PUT 10 MB parts ────────▶ ingest bucket (S3)
                                            └─ finalizeUpload ─────────▶ processing workflow
@@ -38,7 +38,10 @@ studio.content (shadow-root UI)
 - **Transfers run in the queue tab**, one video at a time, streaming the
   download into parts (never holding the whole file). Service workers / event
   pages can be suspended mid-download; a tab can't, and it shows progress.
-  Downloads without a `Content-Length` are spooled to OPFS first. Download links
+  Downloads without a `Content-Length` are spooled to OPFS first. Studio's
+  download redirects to a YouTube media host (`rr*---sn-*.c.youtube.com`, or
+  `*.googlevideo.com`); those need host permissions, or the redirect is
+  CORS-blocked. Download links
   expire, so before each job the queue asks any open Studio tab for a fresh one.
 - **Duplicates** are matched heuristically on title, publish date, duration and
   original filename (`packages/web/src/util/mirror-duplicates.ts`). Certain
