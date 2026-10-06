@@ -72,22 +72,59 @@ function guessMimeType(contentType: string | null, fileName: string) {
   }
 }
 
+/** Temp files in the origin-private file system are named with this prefix. */
+export const SPOOL_FILE_PREFIX = 'mirror-';
+
+export type SpoolDirectory = Pick<
+  FileSystemDirectoryHandle,
+  'getFileHandle' | 'removeEntry' | 'keys'
+>;
+
+function spoolDirectory(): Promise<SpoolDirectory> {
+  return navigator.storage.getDirectory();
+}
+
 /**
  * Some downloads don't advertise a length, but the server needs the size up
  * front to presign parts. Spool those to the origin-private file system first.
+ * A failed or aborted download removes its partial file before rethrowing.
  */
-async function spoolToDisk(
+export async function spoolToDisk(
   stream: ReadableStream<Uint8Array>,
-  name: string,
+  jobId: string,
+  dir?: SpoolDirectory,
 ): Promise<{ file: File; cleanup: () => Promise<void> }> {
-  const dir = await navigator.storage.getDirectory();
-  const handle = await dir.getFileHandle(name, { create: true });
-  const writable = await handle.createWritable();
-  await stream.pipeTo(writable);
-  return {
-    file: await handle.getFile(),
-    cleanup: () => dir.removeEntry(name),
-  };
+  const directory = dir ?? (await spoolDirectory());
+  const name = SPOOL_FILE_PREFIX + jobId;
+  const remove = () => directory.removeEntry(name).catch(() => undefined);
+  try {
+    const handle = await directory.getFileHandle(name, { create: true });
+    const writable = await handle.createWritable();
+    await stream.pipeTo(writable);
+    return { file: await handle.getFile(), cleanup: remove };
+  } catch (err) {
+    await remove();
+    throw err;
+  }
+}
+
+/**
+ * Delete every spooled download. Called when the queue runner starts: a tab
+ * closed or a browser crash mid-transfer leaves files no one will clean up,
+ * and only one runner exists at a time (see queue/main.tsx), so nothing is
+ * using them.
+ */
+export async function clearSpoolFiles(dir?: SpoolDirectory) {
+  const directory = dir ?? (await spoolDirectory());
+  const stale: Array<string> = [];
+  for await (const name of directory.keys()) {
+    if (name.startsWith(SPOOL_FILE_PREFIX)) {
+      stale.push(name);
+    }
+  }
+  await Promise.all(
+    stale.map((name) => directory.removeEntry(name).catch(() => undefined)),
+  );
 }
 
 async function putPart(
@@ -198,7 +235,7 @@ export async function runTransfer(
   let bytes = Number(res.headers.get('content-length'));
   let cleanup: (() => Promise<void>) | null = null;
   if (!Number.isSafeInteger(bytes) || bytes <= 0) {
-    const spooled = await spoolToDisk(res.body, `mirror-${job.id}`);
+    const spooled = await spoolToDisk(res.body, job.id);
     stream = spooled.file.stream();
     bytes = spooled.file.size;
     cleanup = spooled.cleanup;

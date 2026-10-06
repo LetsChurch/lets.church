@@ -7,7 +7,7 @@ import { browser } from 'wxt/browser';
 import { isCancelRequested, listJobs, patchJob } from '@/lib/jobs';
 import { describeApiError, lcApi } from '@/lib/lc-api';
 import { sendToTab } from '@/lib/messages';
-import { CancelledError, runTransfer } from '@/lib/transfer';
+import { CancelledError, clearSpoolFiles, runTransfer } from '@/lib/transfer';
 import type { MirrorJob } from '@/lib/types';
 
 const CANCEL_POLL_MS = 1000;
@@ -115,6 +115,7 @@ function waitForChange() {
 }
 
 export async function startRunner() {
+  await clearSpoolFiles().catch(() => undefined);
   await recoverInterrupted();
   for (;;) {
     const next = (await listJobs()).find((j) => j.status === 'queued');
