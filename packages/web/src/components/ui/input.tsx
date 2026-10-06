@@ -2,8 +2,10 @@ import { Checkbox as BaseCheckbox } from '@base-ui/react/checkbox';
 import { Combobox } from '@base-ui/react/combobox';
 import { Radio as BaseRadio } from '@base-ui/react/radio';
 import { RadioGroup as BaseRadioGroup } from '@base-ui/react/radio-group';
+import { Select as BaseSelect } from '@base-ui/react/select';
 import {
   IconCheck,
+  IconChevronDown,
   IconEye,
   IconEyeOff,
   IconMinus,
@@ -263,7 +265,7 @@ export function Textarea({
   );
 }
 
-// --- Select (native) -------------------------------------------------------
+// --- Select ---------------------------------------------------------------
 
 export type SelectOption = { value: string; label: string; disabled?: boolean };
 export type SelectGroup = {
@@ -276,72 +278,129 @@ function isGroup(item: SelectOption | SelectGroup): item is SelectGroup {
   return 'group' in item && 'items' in item;
 }
 
-type SelectProps = Omit<
-  ComponentPropsWithoutRef<'select'>,
-  'value' | 'defaultValue' | 'onChange'
-> & {
+type SelectProps = {
   label?: ReactNode;
   description?: ReactNode;
   error?: ReactNode;
   data: SelectData;
+  /** The selected option's value; `''` means nothing selected. */
   value?: string;
   defaultValue?: string;
   placeholder?: string;
   onChange?: (value: string) => void;
+  onBlur?: () => void;
+  /** Submitted with forms through Base UI's hidden input. */
+  name?: string;
+  id?: string;
+  required?: boolean;
+  disabled?: boolean;
+  className?: string;
   wrapperClassName?: string;
 };
 
+/**
+ * Single-value select built on Base UI's Select: a button trigger plus a
+ * listbox popup, with keyboard navigation, typeahead, and ARIA from Base UI.
+ * `''` maps to "no selection" so callers can keep using empty-string state.
+ */
 export function Select({
   label,
   description,
   error,
   required,
+  disabled,
   data,
+  value,
+  defaultValue,
   placeholder,
   onChange,
+  onBlur,
+  name,
+  id,
   className,
   wrapperClassName,
-  id,
-  ...props
 }: SelectProps) {
   const generatedId = useId();
-  const inputId = id ?? generatedId;
+  const triggerId = id ?? generatedId;
+  const items = data.flatMap((item) => (isGroup(item) ? item.items : [item]));
   const renderOption = (opt: SelectOption) => (
-    <option key={opt.value} value={opt.value} disabled={opt.disabled}>
-      {opt.label}
-    </option>
+    <BaseSelect.Item
+      key={opt.value}
+      value={opt.value}
+      disabled={opt.disabled}
+      className="text-primary data-[highlighted]:bg-brand/10 flex cursor-default items-center justify-between gap-3 rounded px-3 py-1.5 text-sm outline-none select-none data-[disabled]:opacity-50"
+    >
+      <BaseSelect.ItemText>{opt.label}</BaseSelect.ItemText>
+      <BaseSelect.ItemIndicator>
+        <IconCheck size={14} className="text-brand" />
+      </BaseSelect.ItemIndicator>
+    </BaseSelect.Item>
   );
+
   return (
     <InputWrapper
       label={label}
       description={description}
       error={error}
       required={required}
-      htmlFor={inputId}
+      htmlFor={triggerId}
       className={wrapperClassName}
     >
-      <select
-        id={inputId}
+      <BaseSelect.Root
+        items={items}
+        name={name}
         required={required}
-        className={cn(controlClasses(Boolean(error)), 'pr-8', className)}
-        onChange={(e) => onChange?.(e.target.value)}
-        {...props}
+        disabled={disabled}
+        {...(value !== undefined
+          ? { value: value === '' ? null : value }
+          : { defaultValue: defaultValue || null })}
+        onValueChange={(next) => onChange?.(next ?? '')}
       >
-        {placeholder ? (
-          <option value="" disabled>
-            {placeholder}
-          </option>
-        ) : null}
-        {data.map((item) =>
-          isGroup(item) ? (
-            <optgroup key={item.group} label={item.group}>
-              {item.items.map(renderOption)}
-            </optgroup>
-          ) : (
-            renderOption(item)
-          ),
-        )}
-      </select>
+        <BaseSelect.Trigger
+          id={triggerId}
+          onBlur={onBlur}
+          aria-invalid={error ? true : undefined}
+          className={cn(
+            controlClasses(Boolean(error)),
+            // Native selects size to their widest option; keep inline uses from
+            // shrinking to the current label.
+            'flex min-w-40 cursor-default items-center justify-between gap-2 text-left',
+            className,
+          )}
+        >
+          <BaseSelect.Value
+            placeholder={placeholder}
+            className="data-[placeholder]:text-muted truncate"
+          />
+          <BaseSelect.Icon className="text-muted shrink-0">
+            <IconChevronDown size={16} aria-hidden />
+          </BaseSelect.Icon>
+        </BaseSelect.Trigger>
+        <BaseSelect.Portal>
+          <BaseSelect.Positioner
+            sideOffset={4}
+            alignItemWithTrigger={false}
+            className="z-50 outline-none"
+          >
+            <BaseSelect.Popup className="border-fancy-pants max-h-[var(--available-height)] min-w-[var(--anchor-width)] overflow-y-auto rounded-lg bg-white p-1 shadow-lg outline-none dark:bg-zinc-900">
+              <BaseSelect.List>
+                {data.map((item) =>
+                  isGroup(item) ? (
+                    <BaseSelect.Group key={item.group}>
+                      <BaseSelect.GroupLabel className="text-muted px-3 pt-2 pb-1 text-xs font-medium">
+                        {item.group}
+                      </BaseSelect.GroupLabel>
+                      {item.items.map(renderOption)}
+                    </BaseSelect.Group>
+                  ) : (
+                    renderOption(item)
+                  ),
+                )}
+              </BaseSelect.List>
+            </BaseSelect.Popup>
+          </BaseSelect.Positioner>
+        </BaseSelect.Portal>
+      </BaseSelect.Root>
     </InputWrapper>
   );
 }
