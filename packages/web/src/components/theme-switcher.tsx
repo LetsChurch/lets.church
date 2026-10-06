@@ -24,15 +24,19 @@ export function ThemeSwitcher({ collapsed = false }: ThemeSwitcherProps) {
 
   if (collapsed) {
     return (
-      <LcTooltip content={label} side="right">
-        <button
-          type="button"
-          className="text-primary/70 hover:text-primary/90 flex size-6 cursor-pointer items-center justify-center transition-colors"
-          onClick={handleToggle}
-          aria-label={label}
-        >
-          <Icon size={16} />
-        </button>
+      <LcTooltip
+        content={label}
+        side="right"
+        render={
+          <button
+            type="button"
+            className="text-primary/70 hover:text-primary/90 flex size-6 cursor-pointer items-center justify-center transition-colors"
+            onClick={handleToggle}
+            aria-label={label}
+          />
+        }
+      >
+        <Icon size={16} />
       </LcTooltip>
     );
   }

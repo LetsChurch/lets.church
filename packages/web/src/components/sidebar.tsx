@@ -221,25 +221,33 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                   DMCA
                 </Link>
                 <div className="mt-2.5 flex gap-1.5 px-2 py-1.5">
-                  <LcTooltip content="GitLab">
-                    <a
-                      href="https://gitlab.com/LetsChurch/lets.church"
-                      target="_blank"
-                      rel="noopener"
-                      className="text-primary/50 hover:text-primary/80 transition-colors"
-                    >
-                      <IconBrandGitlab size={16} />
-                    </a>
+                  <LcTooltip
+                    content="GitLab"
+                    render={
+                      <a
+                        href="https://gitlab.com/LetsChurch/lets.church"
+                        target="_blank"
+                        rel="noopener"
+                        aria-label="GitLab"
+                        className="text-primary/50 hover:text-primary/80 transition-colors"
+                      />
+                    }
+                  >
+                    <IconBrandGitlab size={16} />
                   </LcTooltip>
-                  <LcTooltip content="GitHub">
-                    <a
-                      href="https://github.com/LetsChurch/lets.church"
-                      target="_blank"
-                      rel="noopener"
-                      className="text-primary/50 hover:text-primary/80 transition-colors"
-                    >
-                      <IconBrandGithub size={16} />
-                    </a>
+                  <LcTooltip
+                    content="GitHub"
+                    render={
+                      <a
+                        href="https://github.com/LetsChurch/lets.church"
+                        target="_blank"
+                        rel="noopener"
+                        aria-label="GitHub"
+                        className="text-primary/50 hover:text-primary/80 transition-colors"
+                      />
+                    }
+                  >
+                    <IconBrandGithub size={16} />
                   </LcTooltip>
                 </div>
               </div>
@@ -632,13 +640,18 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
         {/* Donate Button (Collapsed) */}
         {collapsed && !showAltMenu ? (
           <div className="px-4 pb-3">
-            <LcTooltip content="Donate" side="right">
-              <Link
-                className="text-brand flex size-6 cursor-pointer items-center justify-center transition-all hover:scale-110 hover:animate-pulse hover:text-indigo-400"
-                to="/donate"
-              >
-                <IconHeartFilled size={20} />
-              </Link>
+            <LcTooltip
+              content="Donate"
+              side="right"
+              render={
+                <Link
+                  className="text-brand flex size-6 cursor-pointer items-center justify-center transition-all hover:scale-110 hover:animate-pulse hover:text-indigo-400"
+                  to="/donate"
+                  aria-label="Donate"
+                />
+              }
+            >
+              <IconHeartFilled size={20} />
             </LcTooltip>
           </div>
         ) : null}
@@ -646,17 +659,22 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
         {/* About Menu Button (Collapsed) */}
         {collapsed && !showAltMenu ? (
           <div className="px-4 pb-3">
-            <LcTooltip content="About Let's Church" side="right">
-              <button
-                type="button"
-                onClick={openAltMenuFromCollapsed}
-                className="hover:text-primary/80 flex size-6 cursor-pointer items-center justify-center transition-colors"
-              >
-                <IconInfoCircle
-                  size={16}
-                  className="text-gray-600 dark:text-gray-400"
+            <LcTooltip
+              content="About Let's Church"
+              side="right"
+              render={
+                <button
+                  type="button"
+                  onClick={openAltMenuFromCollapsed}
+                  aria-label="About Let's Church"
+                  className="hover:text-primary/80 flex size-6 cursor-pointer items-center justify-center transition-colors"
                 />
-              </button>
+              }
+            >
+              <IconInfoCircle
+                size={16}
+                className="text-gray-600 dark:text-gray-400"
+              />
             </LcTooltip>
           </div>
         ) : null}
@@ -689,19 +707,24 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
               <ThemeSwitcher collapsed={collapsed && !showAltMenu} />
             )}
             {collapsed ? (
-              <LcTooltip content="Expand Sidebar" side="right">
-                <button
-                  type="button"
-                  className="hover:text-primary/80 flex w-full cursor-pointer items-center gap-2.5 transition-colors"
-                  onClick={toggleCollapsed}
-                >
-                  <div className="flex size-6 items-center justify-center">
-                    <IconLayoutSidebarLeftExpand
-                      size={16}
-                      className="text-gray-600 dark:text-gray-400"
-                    />
-                  </div>
-                </button>
+              <LcTooltip
+                content="Expand Sidebar"
+                side="right"
+                render={
+                  <button
+                    type="button"
+                    aria-label="Expand Sidebar"
+                    className="hover:text-primary/80 flex w-full cursor-pointer items-center gap-2.5 transition-colors"
+                    onClick={toggleCollapsed}
+                  />
+                }
+              >
+                <div className="flex size-6 items-center justify-center">
+                  <IconLayoutSidebarLeftExpand
+                    size={16}
+                    className="text-gray-600 dark:text-gray-400"
+                  />
+                </div>
               </LcTooltip>
             ) : (
               <button
