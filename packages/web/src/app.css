@@ -36,6 +36,9 @@
 }
 
 :root {
+  /* Tell the browser which theme is active so native control parts (the date
+     picker's calendar icon, scrollbars) match it. */
+  color-scheme: light;
   --dashboard-canvas: #f3f5f8;
   --dashboard-surface: #ffffff;
   --dashboard-raised: #ffffff;
@@ -46,6 +49,7 @@
 
 /* Dark theme */
 :root[data-theme='dark'] {
+  color-scheme: dark;
   --color-primary: var(--color-white);
   --color-secondary: var(--color-zinc-300);
   --color-muted: var(--color-zinc-400);
