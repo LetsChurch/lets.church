@@ -7,6 +7,7 @@ import { hasAcceptedParticipationAgreements } from '@/util/participation';
 import { redactLogInput } from '@/util/redact-log-input';
 
 import type { Context } from './context';
+import { trpcFailureLogLevel } from './failure-log-level';
 
 const moduleLogger = logger.child({
   module: 'trpc/trpc',
@@ -38,32 +39,12 @@ const loggingMiddleware = t.middleware(
       `tRPC ${type}: ${path}`,
     );
 
-    try {
-      const result = await next();
-      const durationMs = Date.now() - start;
-
-      // Log successful completion
-      moduleLogger.info(
-        {
-          appUserId,
-          context: {
-            procedure: path,
-            type,
-            durationMs,
-            success: true,
-          },
-        },
-        `tRPC ${type} completed: ${path}`,
-      );
-
-      return result;
-    } catch (error) {
+    const logFailure = (error: unknown) => {
       const durationMs = Date.now() - start;
       const errorObj =
         error instanceof Error ? error : new Error(String(error));
-
-      const isRateLimit =
-        error instanceof TRPCError && error.code === 'TOO_MANY_REQUESTS';
+      const errorCode = error instanceof TRPCError ? error.code : undefined;
+      const isRateLimit = errorCode === 'TOO_MANY_REQUESTS';
       const logContext = {
         appUserId,
         err: errorObj,
@@ -72,7 +53,7 @@ const loggingMiddleware = t.middleware(
           type,
           durationMs,
           errorName: errorObj.name,
-          errorCode: error instanceof TRPCError ? error.code : undefined,
+          errorCode,
           retryAfter: isRateLimit
             ? ctx.resHeaders.get('Retry-After')
             : undefined,
@@ -84,12 +65,43 @@ const loggingMiddleware = t.middleware(
       // flooding error monitoring during a traffic spike.
       if (isRateLimit) {
         moduleLogger.warn(logContext, `tRPC ${type} rate limited: ${path}`);
+      } else if (trpcFailureLogLevel(error) === 'warn') {
+        moduleLogger.warn(logContext, `tRPC ${type} rejected: ${path}`);
       } else {
         moduleLogger.error(logContext, `tRPC ${type} error: ${path}`);
       }
+    };
 
+    let result: Awaited<ReturnType<typeof next>>;
+    try {
+      result = await next();
+    } catch (error) {
+      logFailure(error);
       throw error;
     }
+
+    // tRPC catches errors thrown further down the chain and returns them as a
+    // failed result instead of rethrowing, so a failure must be read from
+    // `result.ok`, not caught.
+    if (!result.ok) {
+      logFailure(result.error);
+      return result;
+    }
+
+    moduleLogger.info(
+      {
+        appUserId,
+        context: {
+          procedure: path,
+          type,
+          durationMs: Date.now() - start,
+          success: true,
+        },
+      },
+      `tRPC ${type} completed: ${path}`,
+    );
+
+    return result;
   },
 );
 
