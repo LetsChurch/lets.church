@@ -344,10 +344,6 @@ function DonatePage() {
           </Text>
           <Text size="sm" c="dimmed" className="mt-3 leading-relaxed">
             EIN 92-3744006
-            <br />
-            2140 S Dupont Highway
-            <br />
-            Camden, DE 19934
           </Text>
         </div>
         <Text size="sm" c="dimmed" className="mt-4 max-w-xl">

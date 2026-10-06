@@ -68,10 +68,6 @@ function DonationStatementPage() {
           Let&apos;s Church Inc.
         </Text>
         <Text size="sm" className="print:text-black">
-          2140 S Dupont Highway
-          <br />
-          Camden, DE 19934
-          <br />
           EIN 92-3744006
         </Text>
       </header>
