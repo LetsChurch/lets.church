@@ -1,0 +1,82 @@
+@import 'tailwindcss';
+
+/*
+ * Semantic tokens shared by every surface. The extension's own pages (popup,
+ * queue) use the Let's Church dashboard palette below; inside YouTube Studio,
+ * `studio.content/style.css` remaps the same tokens to Studio's own theme so
+ * the injected UI looks native there.
+ */
+@theme {
+  --font-sans:
+    'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --color-canvas: var(--lc-canvas);
+  --color-surface: var(--lc-surface);
+  --color-rule: var(--lc-rule);
+  --color-ink: var(--lc-ink);
+  --color-muted: var(--lc-muted);
+  --color-accent-soft: var(--lc-accent-soft);
+  --color-primary: var(--lc-primary);
+  --color-on-primary: var(--lc-on-primary);
+  --color-tonal: var(--lc-tonal);
+  --color-tonal-hover: var(--lc-tonal-hover);
+  --color-control-border: var(--lc-control-border);
+  --color-focus: var(--lc-focus);
+  --color-danger: var(--lc-danger);
+  --color-link: var(--lc-link);
+  --color-success-soft: var(--lc-success-soft);
+  --color-success: var(--lc-success);
+  --color-warning-soft: var(--lc-warning-soft);
+  --color-warning: var(--lc-warning);
+
+  --radius-control: var(--lc-radius-control);
+  --radius-field: var(--lc-radius-field);
+  --radius-card: var(--lc-radius-card);
+}
+
+:root,
+:host {
+  --lc-canvas: #f3f5f8;
+  --lc-surface: #ffffff;
+  --lc-rule: #dfe4ec;
+  --lc-ink: #172033;
+  --lc-muted: #5b6475;
+  --lc-accent-soft: #e8edff;
+  --lc-primary: #4f46e5;
+  --lc-on-primary: #ffffff;
+  --lc-tonal: #ffffff;
+  --lc-tonal-hover: #f3f5f8;
+  --lc-control-border: #dfe4ec;
+  --lc-focus: #6366f1;
+  --lc-danger: #dc2626;
+  --lc-link: #4f46e5;
+  --lc-success-soft: #d1fae5;
+  --lc-success: #047857;
+  --lc-warning-soft: #fef3c7;
+  --lc-warning: #b45309;
+  --lc-radius-control: 8px;
+  --lc-radius-field: 8px;
+  --lc-radius-card: 12px;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root,
+  :host {
+    --lc-canvas: #111318;
+    --lc-surface: #171a21;
+    --lc-rule: #2c303a;
+    --lc-ink: #f5f7fb;
+    --lc-muted: #a1a8b5;
+    --lc-accent-soft: #282c4d;
+    --lc-tonal: #1d2028;
+    --lc-tonal-hover: #282c36;
+    --lc-control-border: #2c303a;
+    --lc-danger: #f87171;
+    --lc-link: #a5b4fc;
+    --lc-success-soft: #022c22;
+    --lc-success: #6ee7b7;
+    --lc-warning-soft: #451a03;
+    --lc-warning: #fcd34d;
+  }
+}

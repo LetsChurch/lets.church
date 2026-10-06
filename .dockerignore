@@ -28,5 +28,10 @@ packages/lets.bible/seed/embeddings
 **/node_modules
 .pnpm-store
 
+# Browser extension: built and shipped separately (store packages), never part
+# of a server image. Its deps aren't installed in the image's deps stage, so
+# `pnpm run -r build` would fail on it.
+packages/browser-extension
+
 # Local data
 seed-data

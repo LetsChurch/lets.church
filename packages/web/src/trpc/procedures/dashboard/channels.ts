@@ -19,7 +19,6 @@ import {
   UploadView,
 } from '@letschurch/db';
 import { suggestSpeakersByEmbedding } from '@letschurch/opensearch';
-import { PART_SIZE } from '@letschurch/s3';
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
@@ -100,7 +99,6 @@ import {
   client,
   completeMultipartMediaUpload,
   deleteUpload,
-  handleMultipartMediaUpload,
   importMedia,
   makeProcessMediaWorkflowId,
   sendInvitationEmail,
@@ -115,6 +113,7 @@ import {
 } from '@/util/avatar-sizes';
 import { coverImageFull, thumbnailMedium } from '@/util/image-sizes';
 import logger from '@/util/logger';
+import { startMultipartUpload } from '@/util/media-multipart';
 import { escapeLikePattern } from '@/util/misc';
 import { getPublicImageUrl, getPublicMediaUrl } from '@/util/server-env';
 import { slugify } from '@/util/slugify';
@@ -208,20 +207,22 @@ export const channelAdminProcedure = channelProcedure.use(
   },
 );
 
-const channelUploadProcedure = channelProcedure.use(async ({ ctx, next }) => {
-  if (!ctx.canUpload) {
-    moduleLogger.warn(
-      {
-        appUserId: ctx.session.appUserId,
-      },
-      'User cannot upload to channel',
-    );
+export const channelUploadProcedure = channelProcedure.use(
+  async ({ ctx, next }) => {
+    if (!ctx.canUpload) {
+      moduleLogger.warn(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'User cannot upload to channel',
+      );
 
-    throw new TRPCError({ code: 'FORBIDDEN' });
-  }
+      throw new TRPCError({ code: 'FORBIDDEN' });
+    }
 
-  return next();
-});
+    return next();
+  },
+);
 
 const siteAdminChannelProcedure = channelProcedure.use(
   async ({ ctx, next }) => {
@@ -2897,31 +2898,12 @@ export const channelRouter = router({
           resolvedTargetId = channelId;
         }
 
-        const { uploadKey, uploadId } = await ingestS3.createMultipartUpload(
-          resolvedTargetId,
+        return startMultipartUpload({
+          targetId: resolvedTargetId,
           uploadMimeType,
-        );
-
-        await handleMultipartMediaUpload(
-          resolvedTargetId,
-          'INGEST',
-          uploadId,
-          uploadKey,
-          postProcess,
-        );
-
-        const urls = await ingestS3.createPresignedPartUploadUrls(
-          uploadId,
-          uploadKey,
           bytes,
-        );
-
-        return {
-          s3UploadKey: uploadKey,
-          s3UploadId: uploadId,
-          partSize: PART_SIZE,
-          urls,
-        };
+          postProcess,
+        });
       },
     ),
 

@@ -4,6 +4,7 @@ import { channelRouter } from './channels';
 import { churchRouter } from './churches';
 import { importSourcesRouter } from './import-sources';
 import { liveStreamingRouter } from './live-streaming';
+import { mirrorRouter } from './mirror';
 import { organizationRouter } from './organizations';
 
 export const dashboardRouter = router({
@@ -12,5 +13,6 @@ export const dashboardRouter = router({
   churches: churchRouter,
   importSources: importSourcesRouter,
   liveStreaming: liveStreamingRouter,
+  mirror: mirrorRouter,
   organizations: organizationRouter,
 });

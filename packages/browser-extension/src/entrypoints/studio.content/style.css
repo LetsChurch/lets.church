@@ -1,0 +1,76 @@
+@import '../../assets/app.css';
+
+/*
+ * This UI lives in shadow roots inside YouTube Studio, whose <html> sets
+ * font-size: 10px. Tailwind's theme is rem-based, so restate the tokens we use
+ * in px to keep sizes independent of the host page.
+ */
+@theme {
+  --spacing: 4px;
+
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 14px;
+  --text-sm--line-height: 20px;
+  --text-base: 16px;
+  --text-base--line-height: 22px;
+  --text-lg: 18px;
+  --text-lg--line-height: 26px;
+  --text-xl: 20px;
+  --text-xl--line-height: 28px;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+
+  --container-md: 448px;
+  --container-lg: 512px;
+  --container-2xl: 672px;
+  --container-3xl: 768px;
+}
+
+/*
+ * Studio skin: map our tokens onto Studio's `--ytcp-*` theme variables (they
+ * inherit through the shadow boundary), so light/dark follow Studio's own
+ * theme. Fallbacks are Studio's light values, measured October 2026.
+ *
+ * These go on :host, where Tailwind resolves `--color-*: var(--lc-*)`; setting
+ * them deeper would be too late. WXT's `all: initial` host reset doesn't touch
+ * custom properties, so Studio's variables still inherit in.
+ */
+:host {
+  --lc-canvas: var(--ytcp-general-background-a, rgba(0, 0, 0, 0.05));
+  --lc-surface: var(--ytcp-card-background, #fff);
+  --lc-rule: var(--ytcp-line-divider, rgba(0, 0, 0, 0.1));
+  --lc-ink: var(--ytcp-text-primary, #0f0f0f);
+  --lc-muted: var(--ytcp-text-secondary, #606060);
+  --lc-accent-soft: var(--ytcp-general-background-a, rgba(0, 0, 0, 0.05));
+  --lc-primary: var(--ytcp-background-inverse, #0f0f0f);
+  --lc-on-primary: var(--ytcp-text-primary-inverse, #fff);
+  --lc-tonal: var(--ytcp-general-background-a, rgba(0, 0, 0, 0.05));
+  --lc-tonal-hover: var(--ytcp-chip-background-hover, rgba(0, 0, 0, 0.1));
+  --lc-control-border: transparent;
+  --lc-focus: var(--ytcp-focus, #0f0f0f);
+  --lc-danger: var(--ytcp-error-red, #c30027);
+  --lc-link: var(--ytcp-call-to-action, #065fd4);
+  --lc-success-soft: var(--ytcp-success-background, #deffde);
+  --lc-success: var(--ytcp-text-primary, #0f0f0f);
+  --lc-warning-soft: var(--ytcp-warning-background, #ffeacf);
+  --lc-warning: var(--ytcp-text-primary, #0f0f0f);
+  --lc-radius-control: 18px;
+  --lc-radius-field: 8px;
+  --lc-radius-card: 12px;
+}
+
+/* Text styles go on our own root element (see index.tsx): `all: initial`
+   wins over anything inherited from :host. */
+.lc-root {
+  font-family: Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--lc-ink);
+}

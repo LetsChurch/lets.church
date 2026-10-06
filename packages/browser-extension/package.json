@@ -1,0 +1,39 @@
+{
+  "name": "@letschurch/browser-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox --mv3",
+    "build:chrome": "wxt build",
+    "build:firefox": "wxt build -b firefox --mv3",
+    "zip": "wxt zip && wxt zip -b firefox --mv3",
+    "postinstall": "wxt prepare",
+    "test": "vitest",
+    "check": "pnpm run /^check:/",
+    "check:fmt": "oxfmt --check",
+    "check:lint": "oxlint",
+    "check:ts": "tsc --noEmit",
+    "fix": "oxfmt && oxlint --fix",
+    "fix!": "oxfmt && oxlint --fix-dangerously"
+  },
+  "dependencies": {
+    "@base-ui/react": "catalog:",
+    "@trpc/client": "catalog:",
+    "p-retry": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "superjson": "catalog:"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@wxt-dev/module-react": "^1.2.2",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wxt": "^0.21.4"
+  }
+}

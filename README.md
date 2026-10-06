@@ -6,23 +6,19 @@
 
 1. Setup two S3 (or S3-compatible) buckets on your provider of choice for
    `ingest` and `public`
-2. Ensure the `ingest` bucket has the following CORS configuration:
+2. Ensure the `ingest` bucket has the following CORS configuration. Browsers
+   (including the YouTube Studio mirror extension,
+   [`packages/browser-extension`](packages/browser-extension/README.md), whose
+   `chrome-extension://` / `moz-extension://` origins can't be listed
+   individually) upload parts directly and must be able to read each `ETag`:
 
 ```json
 [
   {
-    "AllowedOrigins": [
-      "*"
-    ],
-    "AllowedMethods": [
-      "PUT"
-    ],
-    "AllowedHeaders": [
-      "*"
-    ],
-    "ExposeHeaders": [
-      "ETag"
-    ]
+    "AllowedOrigins": ["*"],
+    "AllowedMethods": ["PUT"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["ETag"]
   }
 ]
 ```
@@ -32,12 +28,8 @@
 ```json
 [
   {
-    "AllowedOrigins": [
-      "*"
-    ],
-    "AllowedMethods": [
-      "GET"
-    ]
+    "AllowedOrigins": ["*"],
+    "AllowedMethods": ["GET"]
   }
 ]
 ```

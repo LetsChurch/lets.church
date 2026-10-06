@@ -333,6 +333,31 @@ export async function completeMultipartMediaUpload(
     .signal(uploadDoneSignal, partETags, userId);
 }
 
+/**
+ * Stop the workflow waiting on a multipart upload that the client gave up on,
+ * so it doesn't sit for its day-long timeout and then abort an upload the
+ * caller already aborted. Already-finished/unknown workflows are fine.
+ */
+export async function cancelMultipartMediaUpload(
+  s3UploadId: string,
+  s3UploadKey: string,
+) {
+  try {
+    await (
+      await client
+    ).workflow
+      .getHandle(makeMultipartMediaUploadWorkflowId(s3UploadId, s3UploadKey))
+      .terminate('Multipart upload cancelled by client');
+  } catch (err) {
+    // Match by name: a value import of Temporal's error classes breaks the
+    // SSR bundle (see CLAUDE.md).
+    if (err instanceof Error && err.name === 'WorkflowNotFoundError') {
+      return;
+    }
+    throw err;
+  }
+}
+
 export async function createUploadRecord(
   data: UploadRecordCreateData,
   creationOperationId: string,

@@ -101,8 +101,9 @@ slightly-different copy is how a fix silently regresses at one call site.
 | 3 — URL scheme allow-list    | `isSafeUrl`, `safeHttpHref`                                                    | `packages/web/src/util/safe-url.ts`                                                 |
 | 4 — read/write authorization | `isChannelRoutable`, `canViewMedia`, `canViewMediaById`, `getMemberChannelIds` | `packages/web/src/util/media-visibility.ts`                                         |
 | 5 — log redaction            | `redactLogInput`, `redactSensitive`                                            | `packages/web/src/util/redact-log-input.ts`, `packages/web/src/util/trpc-logger.ts` |
-| 6 — AI quota admission      | `enforceAiRateLimit`                                                           | `packages/web/src/ai/abuse-control.ts`                                              |
+| 6 — AI quota admission       | `enforceAiRateLimit`                                                           | `packages/web/src/ai/abuse-control.ts`                                              |
 | 7 — open-redirect            | `safeRedirect`                                                                 | `packages/web/src/util/safe-redirect.ts`                                            |
+| CSRF (cookie POSTs)          | `isAllowedPostOrigin`                                                          | `packages/web/src/util/request-origin.ts`                                           |
 
 The pure helpers above are covered by unit tests in the matching `*.test.ts`
 files; run `pnpm --filter @letschurch/web test` / `--filter @letschurch/temporal`.
@@ -140,6 +141,36 @@ lets.bible calls it in-cluster; it applies every principle above:
 
 lets.bible's caller (`bible.relatedMedia`) fails closed — a non-2xx, network
 error, or unparseable payload degrades to an empty result, never a thrown error.
+
+---
+
+## Browser extension clients
+
+The YouTube Studio mirror extension (`packages/browser-extension`) is a
+first-party client that calls `/trpc` **with the user's normal `lc-session`
+cookie**. The browser attaches it because the user installed the extension
+with host permissions for the site; there is no separate token or OIDC client.
+
+- **Origin gate (CSRF defense-in-depth).** `handleTrpcRequest` rejects any POST
+  whose `Origin` is a foreign web origin (`isAllowedPostOrigin`). Allowed: no
+  `Origin`, this app's host or `WEB_URL`, and `chrome-extension:` /
+  `moz-extension:` / `safari-web-extension:` origins. Extension origins can't be
+  pinned to an id: Firefox assigns each install a random `moz-extension://<uuid>`.
+  `SameSite=Lax` remains the primary control.
+- **Authorization** (`dashboard.mirror.*`, `trpc/procedures/dashboard/mirror.ts`)
+  derives from channel membership: `canUpload` (or channel/site admin) may create
+  an upload _with_ its metadata, mirroring `importMedia`. Finalize and abort only
+  act on a record the caller created, in that channel, that isn't finalized, and
+  whose S3 key is prefixed by that record's id, so a client can't complete or
+  cancel someone else's upload with a guessed key.
+- **Bounds.** Title/description/filename/mime are capped and allow-listed;
+  `bytes` is capped at the multipart ceiling; the duplicate check takes at most
+  100 candidates; `createUpload` is token-bucket limited per user.
+- **YouTube credentials never leave Studio.** The content script derives
+  Studio's `SAPISIDHASH` header from the SAPISID cookie and sends it only to
+  `studio.youtube.com`; the owner's `download_my_video` link is fetched from an
+  extension page. Nothing YouTube-side is sent to Let's Church except the
+  video's metadata and bytes.
 
 ---
 
@@ -227,5 +258,8 @@ When adding or changing an endpoint or a render path, ask:
 - [ ] Logging? → no secrets or raw input in context. (principle 5)
 - [ ] Unbounded array/number from the client? → cap it. (principle 6)
 - [ ] User-supplied redirect target? → origin-validate it. (principle 7)
+- [ ] New cookie-authenticated POST surface or new non-browser client? → it
+      goes through `handleTrpcRequest`'s Origin gate (`isAllowedPostOrigin`);
+      don't add a parallel route that skips it.
 - [ ] A control like the above already exists? → reuse it, don't fork it.
       (principle 8)

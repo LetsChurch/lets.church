@@ -5,6 +5,7 @@ import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import { createContext } from '@/trpc/context';
 import { appRouter } from '@/trpc/router';
 import logger from '@/util/logger';
+import { isAllowedPostOrigin } from '@/util/request-origin';
 
 const moduleLogger = logger.child({
   module: 'routes/trpc',
@@ -15,6 +16,17 @@ export async function handleTrpcRequest(
   maxBodyBytes: number,
 ) {
   moduleLogger.info(`${request.method} /trpc`);
+
+  if (request.method === 'POST' && !isAllowedPostOrigin(request)) {
+    moduleLogger.warn(
+      { context: { origin: request.headers.get('origin') } },
+      'Rejected tRPC POST from foreign origin',
+    );
+    return new Response('Forbidden', {
+      status: 403,
+      headers: { 'cache-control': 'no-store' },
+    });
+  }
 
   let boundedRequest = request;
   if (request.method === 'POST') {
