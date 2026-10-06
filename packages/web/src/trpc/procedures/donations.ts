@@ -10,9 +10,15 @@ import { and, count, desc, eq, ilike, inArray, lt, or, sum } from 'drizzle-orm';
 import type Stripe from 'stripe';
 import { z } from 'zod';
 
+import { donationAmounts } from '@/donations/amounts';
 import { donationStatementYear } from '@/donations/dates';
 import { claimDonorsForVerifiedUser } from '@/donations/identity';
 import { getStripe, getStripeConfig } from '@/donations/stripe-client';
+import {
+  recurringDonationProductId,
+  subscriptionAmountUpdateParams,
+} from '@/donations/subscription-amount';
+import { donationSubscriptionAmountSchema } from '@/schemas/donations';
 
 import { authProcedure, publicProcedure } from '../trpc';
 
@@ -40,6 +46,21 @@ async function syncSubscriptionControlState(subscription: Stripe.Subscription) {
       endedAt: subscription.ended_at
         ? new Date(subscription.ended_at * 1000)
         : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(DonationSubscription.stripeSubscriptionId, subscription.id));
+}
+
+async function syncSubscriptionAmount(
+  subscription: Stripe.Subscription,
+  amounts: ReturnType<typeof donationAmounts>,
+) {
+  await syncSubscriptionControlState(subscription);
+  await db
+    .update(DonationSubscription)
+    .set({
+      ...amounts,
+      stripePriceId: subscription.items.data[0]?.price.id ?? null,
       updatedAt: new Date(),
     })
     .where(eq(DonationSubscription.stripeSubscriptionId, subscription.id));
@@ -187,13 +208,64 @@ export const donationProcedures = {
 
       const updated = await getStripe().subscriptions.update(
         subscription.stripeSubscriptionId,
-        { cancel_at_period_end: input.cancelAtPeriodEnd },
+        {
+          cancel_at_period_end: input.cancelAtPeriodEnd,
+        },
       );
       await syncSubscriptionControlState(updated);
       return {
         success: true,
         cancelAtPeriodEnd: updated.cancel_at_period_end,
       };
+    }),
+
+  updateMySubscriptionAmount: authProcedure
+    .input(donationSubscriptionAmountSchema)
+    .mutation(async ({ ctx, input }) => {
+      await claimDonorsForVerifiedUser(ctx.session.appUserId);
+      const subscription = await db
+        .select({
+          stripeSubscriptionId: DonationSubscription.stripeSubscriptionId,
+          status: DonationSubscription.status,
+        })
+        .from(DonationSubscription)
+        .innerJoin(
+          DonationDonor,
+          eq(DonationDonor.id, DonationSubscription.donorId),
+        )
+        .where(
+          and(
+            eq(DonationSubscription.id, input.subscriptionId),
+            eq(DonationDonor.appUserId, ctx.session.appUserId),
+          ),
+        )
+        .limit(1)
+        .then((rows) => rows[0] ?? null);
+      if (!subscription) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Recurring donation not found',
+        });
+      }
+      if (!['ACTIVE', 'TRIALING', 'PAST_DUE'].includes(subscription.status)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'This recurring donation can no longer be changed',
+        });
+      }
+
+      const amounts = donationAmounts(input.amountCents, input.coverFees);
+      const stripe = getStripe();
+      const [current, productId] = await Promise.all([
+        stripe.subscriptions.retrieve(subscription.stripeSubscriptionId),
+        recurringDonationProductId(stripe),
+      ]);
+      const updated = await stripe.subscriptions.update(
+        subscription.stripeSubscriptionId,
+        subscriptionAmountUpdateParams(current, amounts, productId),
+      );
+      await syncSubscriptionAmount(updated, amounts);
+      return { success: true, amountCents: amounts.amountCents };
     }),
 
   getAdminOverview: adminProcedure.query(async () => {

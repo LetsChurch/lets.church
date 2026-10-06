@@ -48,19 +48,19 @@ The current application uses one Stripe API key for checkout, webhook
 reconciliation, donor and administrator subscription controls, refunds, and
 recurring-plan imports. Give that restricted key these permissions:
 
-| Stripe resource     | Permission | Used for                                                       |
-| ------------------- | ---------- | -------------------------------------------------------------- |
-| Customers           | Write      | Creating Checkout customers and validating imported customers  |
-| Checkout Sessions   | Write      | Creating donation checkouts and retrieving completed sessions  |
-| Customer portal     | Write      | Opening Stripe's billing portal for donors and administrators  |
-| Subscriptions       | Write      | Reading, creating, canceling, and resuming recurring donations |
-| Charges and Refunds | Write      | Reading charge results and issuing administrator refunds       |
-| Products            | Write      | Finding or creating the product used by recurring-plan imports |
-| Invoices            | Read       | Reconciling recurring payments and payment failures            |
-| Payment Intents     | Read       | Reconciling one-time payments and expanded invoice payments    |
-| Disputes            | Read       | Recording dispute status changes                               |
-| Payment Methods     | Read       | Validating imported `pm_...` payment methods                   |
-| Sources             | Read       | Validating imported legacy payment sources                     |
+| Stripe resource     | Permission | Used for                                                      |
+| ------------------- | ---------- | ------------------------------------------------------------- |
+| Customers           | Write      | Creating Checkout customers and validating imported customers |
+| Checkout Sessions   | Write      | Creating donation checkouts and retrieving completed sessions |
+| Customer portal     | Write      | Opening Stripe's billing portal for donors and administrators |
+| Subscriptions       | Write      | Reading, creating, canceling, resuming, and repricing plans   |
+| Charges and Refunds | Write      | Reading charge results and issuing administrator refunds      |
+| Products            | Write      | Finding or creating products for imports and amount changes   |
+| Invoices            | Read       | Reconciling recurring payments and payment failures           |
+| Payment Intents     | Read       | Reconciling one-time payments and expanded invoice payments   |
+| Disputes            | Read       | Recording dispute status changes                              |
+| Payment Methods     | Read       | Validating imported `pm_...` payment methods                  |
+| Sources             | Read       | Validating imported legacy payment sources                    |
 
 Leave every other resource set to **None**. Stripe's Write permission includes
 Read access for the same resource.
@@ -76,15 +76,14 @@ Without this permission, `stripe listen` fails with HTTP 403 and no local
 webhooks are delivered. Leave **Debugging Tools** set to **None** on the
 production application key.
 
-`Products`, `Payment Methods`, and `Sources` are needed only while importing
-recurring plans. They can be returned to **None** after the migration is
-finished. The application must be changed to accept a second Stripe key before
+`Payment Methods` and `Sources` are needed only while importing recurring
+plans. They can be returned to **None** after the migration is finished. The application must be changed to accept a second Stripe key before
 these permissions can be isolated onto a separate import-only key.
 
 Create and exercise the restricted key in test mode before matching its
 permissions in live mode. Test one-time and monthly checkout, the customer
-portal, cancellation and resumption, an administrator refund, webhook
-processing, and a recurring-plan import. Review the key's Stripe request logs
+portal, a recurring amount change, cancellation and resumption, an
+administrator refund, webhook processing, and a recurring-plan import. Review the key's Stripe request logs
 for permission errors before retiring the old key.
 
 `STRIPE_WEBHOOK_SECRET` is not an API key and has no configurable permissions.
@@ -181,11 +180,25 @@ checkouts from `/donate` with Stripe test payment details.
 ## Operations
 
 Donors can open `/dashboard/account/donations` to see gift history, download
-receipts, print annual statements, update billing details, stop a recurring
-gift at the end of its billing period, or keep a scheduled cancellation active.
+receipts, print annual statements, update billing details, change the amount
+of a recurring gift, stop a recurring gift at the end of its billing period, or
+keep a scheduled cancellation active.
 Someone who donated without an account can request an email sign-in link with
 the checkout email. Confirming the address creates an account when needed and
 attaches matching guest gifts.
+
+A changed amount replaces the subscription item's price with a new inline price
+in the same currency and interval, with `proration_behavior: 'none'`:
+nothing is charged at the time of the change, and the next invoice uses the new
+amount. The base-gift and fee-coverage split is written to the subscription's
+`donationBaseAmountCents` / `donationFeeCoverageCents` metadata, which webhook
+reconciliation prefers over the original checkout's split. The Stripe customer
+portal is not used for amount changes, because its plan switching only offers
+catalog prices and donation prices are one-off. The new price goes on a shared
+active product, "Recurring donation to Let's Church" (metadata
+`donationRecurringProduct=true`), which the app finds or creates on first use.
+Checkout's inline product is created inactive, and Stripe refuses new prices
+on inactive products.
 
 Administrators can open `/dashboard/admin/donations` to search donations,
 export CSV, issue full refunds, review disputes, manage recurring plans, and run

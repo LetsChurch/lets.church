@@ -1,16 +1,20 @@
 import {
   IconCalendarCancel,
+  IconEdit,
   IconExternalLink,
   IconFileText,
   IconRefresh,
 } from '@tabler/icons-react';
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
+import { useState } from 'react';
 
 import { Alert, Badge, Button, Table, Text, Title } from '@/components/ui';
 import { formatDonationAmount } from '@/donations/amounts';
 import { formatDonationDate } from '@/donations/dates';
 import { useTRPC } from '@/trpc/react';
+
+import { ChangeDonationAmountModal } from './-components/change-donation-amount-modal';
 
 export const Route = createFileRoute('/_main/dashboard/account_/donations')({
   component: DonationsPage,
@@ -67,6 +71,9 @@ function DonationsPage() {
       onSuccess: ({ url }) => window.location.assign(url),
     }),
   );
+  const [amountSubscriptionId, setAmountSubscriptionId] = useState<
+    string | null
+  >(null);
   const cancellationMutation = useMutation(
     trpc.donations.setMySubscriptionCancellation.mutationOptions({
       onSuccess: () => refetch(),
@@ -149,6 +156,16 @@ function DonationsPage() {
                   </Alert>
                 ) : null}
                 <div className="flex flex-wrap gap-2">
+                  {subscription.cancelAtPeriodEnd ? null : (
+                    <Button
+                      variant="light"
+                      size="sm"
+                      leftSection={<IconEdit size={16} />}
+                      onClick={() => setAmountSubscriptionId(subscription.id)}
+                    >
+                      Change amount
+                    </Button>
+                  )}
                   <Button
                     variant="light"
                     size="sm"
@@ -202,6 +219,16 @@ function DonationsPage() {
                       : 'Stop future payments'}
                   </Button>
                 </div>
+                <ChangeDonationAmountModal
+                  key={`${subscription.id}:${subscription.amountCents}`}
+                  subscription={subscription}
+                  cadence={billingCadence(subscription.frequency)}
+                  open={amountSubscriptionId === subscription.id}
+                  onOpenChange={(open) =>
+                    setAmountSubscriptionId(open ? subscription.id : null)
+                  }
+                  onChanged={() => refetch()}
+                />
               </div>
             ))}
           </div>

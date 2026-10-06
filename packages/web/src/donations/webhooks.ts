@@ -239,27 +239,29 @@ async function upsertSubscription(
     'donationFeeCoverageCents',
     subscription.id,
   );
+  // Metadata comes first: imports and donor amount changes write the current
+  // split there, while the checkout row keeps the original gift's split.
   const { baseAmountCents, feeCoverageCents } = resolveSubscriptionAmounts(
     amountCents,
     [
-      checkout
-        ? {
-            baseAmountCents: checkout.baseAmountCents,
-            feeCoverageCents: checkout.feeCoverageCents,
-          }
-        : null,
-      existing
-        ? {
-            baseAmountCents: existing.baseAmountCents,
-            feeCoverageCents: existing.feeCoverageCents,
-          }
-        : null,
       metadataBaseAmountCents == null || metadataFeeCoverageCents == null
         ? null
         : {
             baseAmountCents: metadataBaseAmountCents,
             feeCoverageCents: metadataFeeCoverageCents,
           },
+      existing
+        ? {
+            baseAmountCents: existing.baseAmountCents,
+            feeCoverageCents: existing.feeCoverageCents,
+          }
+        : null,
+      checkout
+        ? {
+            baseAmountCents: checkout.baseAmountCents,
+            feeCoverageCents: checkout.feeCoverageCents,
+          }
+        : null,
     ],
   );
   const customerId = stripeId(subscription.customer);

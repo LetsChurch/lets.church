@@ -2,12 +2,14 @@ import { z } from 'zod';
 
 import { DONATION_MAX_CENTS, DONATION_MIN_CENTS } from '@/donations/amounts';
 
+const donationAmountCentsSchema = z
+  .number()
+  .int()
+  .min(DONATION_MIN_CENTS, 'Donation must be at least $5')
+  .max(DONATION_MAX_CENTS, 'Donation cannot exceed $50,000');
+
 export const donationCheckoutSchema = z.object({
-  amountCents: z
-    .number()
-    .int()
-    .min(DONATION_MIN_CENTS, 'Donation must be at least $5')
-    .max(DONATION_MAX_CENTS, 'Donation cannot exceed $50,000'),
+  amountCents: donationAmountCentsSchema,
   frequency: z.enum(['ONE_TIME', 'MONTHLY']),
   coverFees: z.boolean(),
   email: z
@@ -21,4 +23,10 @@ export const donationCheckoutSchema = z.object({
 
 export const checkoutStatusSchema = z.object({
   sessionId: z.string().min(1).max(255),
+});
+
+export const donationSubscriptionAmountSchema = z.object({
+  subscriptionId: z.uuid(),
+  amountCents: donationAmountCentsSchema,
+  coverFees: z.boolean(),
 });
