@@ -28,7 +28,16 @@ describe('MCP session ids', () => {
     expect(
       session.verifyMcpSessionId(`${version}.${issuedAt}.${otherNonce}.${mac}`),
     ).toBeNull();
-    expect(session.verifyMcpSessionId(`${id.slice(0, -1)}x`)).toBeNull();
+    // Changing any single character — issuedAt, nonce or MAC — invalidates it.
+    // Always substitute a *different* character: a fixed replacement would be
+    // a no-op whenever the id already has that character there.
+    for (let i = 0; i < id.length; i++) {
+      if (id[i] === '.') continue;
+      const swapped = id[i] === 'A' ? 'B' : 'A';
+      expect(
+        session.verifyMcpSessionId(id.slice(0, i) + swapped + id.slice(i + 1)),
+      ).toBeNull();
+    }
     expect(session.verifyMcpSessionId('v1.a.b')).toBeNull();
     expect(session.verifyMcpSessionId('not-a-session')).toBeNull();
     expect(session.verifyMcpSessionId('x'.repeat(500))).toBeNull();
