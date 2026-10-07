@@ -247,3 +247,16 @@ describe('find_churches', () => {
     expect(churches[2]).toMatchObject({ address: null, distanceMiles: null });
   });
 });
+
+describe('search snippets', () => {
+  it('strips highlight tags and decodes the highlighter’s HTML escaping', () => {
+    expect(
+      handlers.snippetToPlainText(
+        'I&#x27;m <mark>called</mark> &amp; &quot;sent&quot; &lt;3 &#8212; &#x2F;',
+      ),
+    ).toBe('I\'m called & "sent" <3 — /');
+    // Decoding happens once: an escaped entity stays literal text.
+    expect(handlers.snippetToPlainText('&amp;lt;')).toBe('&lt;');
+    expect(handlers.snippetToPlainText('&bogus; &#0;')).toBe('&bogus; &#0;');
+  });
+});

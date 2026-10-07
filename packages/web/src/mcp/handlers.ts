@@ -67,8 +67,28 @@ const churchUrl = (slug: string) =>
   `${WEB_URL}/churches/${encodeURIComponent(slug)}`;
 const seriesUrl = (id: string) => `${WEB_URL}/series/${id}`;
 
-// Search snippets carry BM25 highlight markup; agents get plain text.
-const stripMarks = (text: string) => text.replace(/<\/?mark>/g, '');
+// Search snippets come from OpenSearch's highlighter with `encoder: 'html'`
+// (so the web UI can render them as HTML): `<mark>` tags plus escaped text
+// (`&#x27;`, `&amp;`, …). Agents get plain text.
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+};
+export function snippetToPlainText(html: string): string {
+  return html
+    .replace(/<\/?mark>/g, '')
+    .replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi, (entity, body: string) => {
+      if (body[0] !== '#') return NAMED_ENTITIES[body.toLowerCase()] ?? entity;
+      const code =
+        body[1] === 'x' || body[1] === 'X'
+          ? Number.parseInt(body.slice(2), 16)
+          : Number.parseInt(body.slice(1), 10);
+      return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : entity;
+    });
+}
 
 const toIso = (value: Date | string | null) =>
   value instanceof Date ? value.toISOString() : value;
@@ -285,7 +305,7 @@ export async function searchSermons(
         return {
           startSec,
           endSec: segment.end / 1000,
-          text: stripMarks(segment.text),
+          text: snippetToPlainText(segment.text),
           paragraph: segment.order ?? null,
           url: timestampUrl(item.id, startSec),
         };
