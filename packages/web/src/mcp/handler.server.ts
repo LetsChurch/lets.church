@@ -24,6 +24,7 @@ import {
   ToolError,
 } from './handlers';
 import { enforceMcpCallRateLimit, mcpRateLimitSubject } from './rate-limit';
+import { exposeSecuritySchemes } from './security-schemes';
 import { serverInfo, serverInstructions } from './server-info';
 import { mintMcpSessionId, verifyMcpSessionId } from './session';
 import {
@@ -120,9 +121,10 @@ function createServer(ctx: Context) {
     // `annotations.title` rather than the tool's top-level `title`, so mirror it.
     const annotations = { ...config.annotations, title: config.title };
     // Every tool runs anonymously (the context is always session: null).
-    // ChatGPT reads each tool's auth policy from `securitySchemes`; the SDK
-    // only serializes known tool fields, so use OpenAI's documented `_meta`
-    // mirror. Without it ChatGPT's app portal assumes OAuth.
+    // ChatGPT reads each tool's auth policy from `securitySchemes`; without it
+    // ChatGPT's app portal assumes OAuth. The SDK only serializes known tool
+    // fields, so declare it in OpenAI's `_meta` mirror and let
+    // exposeSecuritySchemes (below) copy it to the top level.
     const _meta = { securitySchemes: [{ type: 'noauth' }] };
     server.registerTool(name, { ...config, annotations, _meta }, (async (
       input: z.infer<I>,
@@ -161,6 +163,7 @@ function createServer(ctx: Context) {
   register(getSeriesTool, getSeries);
   register(findChurchesTool, findChurches);
   register(listChurchTagsTool, listChurchTags);
+  exposeSecuritySchemes(server);
 
   return server;
 }
