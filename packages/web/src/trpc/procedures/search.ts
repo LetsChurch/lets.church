@@ -78,7 +78,10 @@ type SearchModelRequestKind = Extract<
   'search-embed' | 'search-meta' | 'search-suggest' | 'search-warm-embed'
 >;
 
-type SearchModelContext = Pick<Context, 'req' | 'resHeaders' | 'session'>;
+type SearchModelContext = Pick<
+  Context,
+  'req' | 'resHeaders' | 'session' | 'rateLimitSubject'
+>;
 
 function normalizeSearchModelText(value: string): string {
   return value.trim().replace(/\s+/g, ' ').toLowerCase();
@@ -110,6 +113,7 @@ async function enforceSearchModelAdmission(
 
   const decision = await enforceAiRateLimit({
     headers: ctx.req.headers,
+    subject: ctx.rateLimitSubject,
     resourceId,
     kind,
   });
@@ -454,6 +458,7 @@ export const searchProcedures = {
       if (!ctx.session) {
         const rateLimit = await enforceSearchRateLimit({
           headers: ctx.req.headers,
+          subject: ctx.rateLimitSubject,
           kind: deep ? 'search-deep' : 'search',
         });
         if (!rateLimit.allowed) {

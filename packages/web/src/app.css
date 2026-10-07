@@ -323,10 +323,53 @@
     color: var(--color-primary);
   }
 
+  & h4 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: var(--color-primary);
+  }
+
   & p {
     line-height: 1.75;
     margin-top: 1.25em;
     margin-bottom: 1.25em;
+  }
+
+  & code {
+    font-size: 0.875em;
+    padding: 0.125em 0.375em;
+    border-radius: 0.25rem;
+    background: color-mix(in srgb, var(--color-primary) 7%, transparent);
+  }
+
+  & pre {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    padding: 0.875em 1em;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    background: color-mix(in srgb, var(--color-primary) 7%, transparent);
+
+    & code {
+      font-size: inherit;
+      padding: 0;
+      background: none;
+    }
+  }
+
+  & dt {
+    font-weight: 600;
+    margin-top: 1em;
+  }
+
+  & dd {
+    margin-top: 0.25em;
+    margin-left: 0;
+    line-height: 1.75;
+    color: var(--color-secondary);
   }
 
   & a:not(.inline-block) {

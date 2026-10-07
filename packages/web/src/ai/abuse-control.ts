@@ -1,7 +1,9 @@
 import { type TokenBucketOptions, type TokenBucketResult } from '@/util/cache';
 import {
+  clientBuckets,
   consumeTokenBucketWithFallback,
   rateLimitIdentifier,
+  type RateLimitSubject,
 } from '@/util/rate-limit';
 import { getClientIpAddress } from '@/util/request-ip';
 
@@ -16,7 +18,7 @@ export type AiRequestKind =
   | 'search-suggest'
   | 'search-warm-embed';
 
-type BucketScope = 'ip' | 'resource';
+type BucketScope = 'ip' | 'shared-ip' | 'subject' | 'resource';
 type BucketConsumer = (
   options: TokenBucketOptions,
 ) => Promise<TokenBucketResult | null>;
@@ -62,32 +64,30 @@ export async function enforceAiRateLimit(
     headers,
     resourceId,
     kind,
+    subject,
   }: {
     headers: Headers;
     resourceId: string;
     kind: AiRequestKind;
+    /** A verified per-client identity (see `RateLimitSubject`). */
+    subject?: RateLimitSubject | null;
   },
   consume: BucketConsumer = consumeWithFallback,
 ): Promise<AiRateLimitDecision> {
   const cost = REQUEST_COST[kind];
-  const clientIp = getClientIpAddress(headers);
+  // Check IP (or the shared-IP ceiling plus the subject's own bucket) first so
+  // rotating resource ids cannot allocate unlimited local buckets or evade the
+  // authoritative per-network burst limit.
   const buckets: Array<{
     scope: BucketScope;
     options: TokenBucketOptions;
-  }> = [];
-
-  // Check IP first so rotating resource ids cannot allocate unlimited local
-  // buckets or evade the authoritative per-network burst limit.
-  if (clientIp) {
-    buckets.push({
-      scope: 'ip',
-      options: {
-        key: `ai-rate:v1:ip:${rateLimitIdentifier(clientIp)}`,
-        ...IP_BUCKET,
-        cost,
-      },
-    });
-  }
+  }> = clientBuckets({
+    prefix: 'ai-rate:v1',
+    clientIp: getClientIpAddress(headers),
+    subject,
+    bucket: IP_BUCKET,
+    cost,
+  });
   buckets.push({
     scope: 'resource',
     options: {

@@ -1,6 +1,7 @@
 import type { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch';
 
 import { getSession } from '@/util/auth';
+import type { RateLimitSubject } from '@/util/rate-limit';
 
 export async function createContext({
   req,
@@ -14,6 +15,9 @@ export async function createContext({
     req,
     resHeaders,
     isSiteAdmin,
+    // Web requests are limited per IP. Callers that verify a finer-grained
+    // client identity (the MCP endpoint's signed sessions) set this instead.
+    rateLimitSubject: null as RateLimitSubject | null,
   };
 }
 

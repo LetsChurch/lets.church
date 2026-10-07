@@ -189,6 +189,12 @@ export default function Sidebar({ className, forceCollapsed }: SidebarProps) {
                 >
                   How to Add Your Church
                 </Link>
+                <Link
+                  to="/about/mcp"
+                  className="text-primary rounded-lg px-2 py-1.5 text-sm font-medium transition-colors hover:bg-white/10"
+                >
+                  Use with AI (MCP)
+                </Link>
                 {/* <Link */}
                 {/*   to="/about/roadmap" */}
                 {/*   className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10" */}

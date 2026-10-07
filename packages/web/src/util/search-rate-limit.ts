@@ -1,6 +1,7 @@
-import { cacheConsumeTokenBucket, type TokenBucketOptions } from '@/util/cache';
+import { cacheConsumeTokenBucket } from '@/util/cache';
 import {
-  rateLimitIdentifier,
+  clientBuckets,
+  type RateLimitSubject,
   type TokenBucketConsumer,
 } from '@/util/rate-limit';
 import { getClientIpAddress } from '@/util/request-ip';
@@ -24,29 +25,33 @@ export async function enforceSearchRateLimit(
   {
     headers,
     kind,
+    subject,
   }: {
     headers: Headers;
     kind: SearchRequestKind;
+    /** A verified per-client identity (see `RateLimitSubject`). */
+    subject?: RateLimitSubject | null;
   },
   consume: TokenBucketConsumer = cacheConsumeTokenBucket,
 ): Promise<SearchRateLimitDecision> {
-  const clientIp = getClientIpAddress(headers);
-  if (!clientIp) return { allowed: true };
-
-  const options: TokenBucketOptions = {
-    key: `search-rate:v1:ip:${rateLimitIdentifier(clientIp)}`,
-    ...IP_BUCKET,
+  const buckets = clientBuckets({
+    prefix: 'search-rate:v1',
+    clientIp: getClientIpAddress(headers),
+    subject,
+    bucket: IP_BUCKET,
     cost: kind === 'search-deep' ? 2 : 1,
-  };
-  // Search remains available when Valkey is disabled or unavailable. This
-  // limiter is traffic protection, not an availability dependency.
-  const result = await consume(options);
-  if (!result) return { allowed: true };
+  });
 
-  return result.allowed
-    ? { allowed: true }
-    : {
+  for (const { options } of buckets) {
+    // Search remains available when Valkey is disabled or unavailable. This
+    // limiter is traffic protection, not an availability dependency.
+    const result = await consume(options);
+    if (result && !result.allowed) {
+      return {
         allowed: false,
         retryAfterSeconds: Math.max(1, result.retryAfterSeconds),
       };
+    }
+  }
+  return { allowed: true };
 }

@@ -1,5 +1,6 @@
 import { Channel, db, UploadListEntry, UploadRecord } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
+import { TRPCError } from '@trpc/server';
 import {
   and,
   asc,
@@ -73,7 +74,7 @@ export const seriesProcedures = {
 
       if (!series || series.type !== 'SERIES') {
         moduleLogger.warn({ context: { seriesId } }, 'Series not found');
-        throw new Error('Series not found');
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Series not found' });
       }
 
       if (series.channel) {
@@ -89,7 +90,10 @@ export const seriesProcedures = {
             },
             'Channel not accessible',
           );
-          throw new Error('Series not found');
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Series not found',
+          });
         }
       }
 
@@ -219,7 +223,7 @@ export const seriesProcedures = {
 
       if (!series) {
         moduleLogger.warn({ context: { seriesId } }, 'Series not found');
-        throw new Error('Series not found');
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Series not found' });
       }
 
       if (series.type !== 'SERIES') {
@@ -227,7 +231,7 @@ export const seriesProcedures = {
           { context: { seriesId, type: series.type } },
           'Not a series',
         );
-        throw new Error('Series not found');
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Series not found' });
       }
 
       // UNLISTED channels remain reachable by direct link, matching media.
@@ -244,7 +248,10 @@ export const seriesProcedures = {
             },
             'Channel not accessible',
           );
-          throw new Error('Series not found');
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Series not found',
+          });
         }
       }
 
@@ -417,7 +424,7 @@ export const seriesProcedures = {
 
       if (!series || series.type !== 'SERIES') {
         moduleLogger.warn({ context: { seriesId } }, 'Series not found');
-        throw new Error('Series not found');
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Series not found' });
       }
 
       if (series.channel) {
@@ -433,7 +440,10 @@ export const seriesProcedures = {
             },
             'Channel not accessible',
           );
-          throw new Error('Series not found');
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Series not found',
+          });
         }
       }
 

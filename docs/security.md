@@ -78,6 +78,12 @@ deep `search.hybridSearch` calls plus `search.searchMeta`, `search.warmEmbed`,
 and `search.suggestQueries`; their bounded tRPC schemas are the allocation and
 downstream-quota boundary.
 
+Per-client limiters key on the trusted client IP. A caller may pass a finer
+`RateLimitSubject` (via `ctx.rateLimitSubject` → `clientBuckets`) only when it
+has **verified** that identity server-side, like the MCP endpoint's signed
+sessions — never from an unverified client-supplied value, which would let a
+client pick its own bucket. Subjects always stay under a shared per-IP ceiling.
+
 ## 7. Validate redirects against your own origin
 
 Only allow same-origin internal navigation targets. Resolve the candidate
@@ -171,6 +177,36 @@ with host permissions for the site; there is no separate token or OIDC client.
   `studio.youtube.com`; the owner's `download_my_video` link is fetched from an
   extension page. Nothing YouTube-side is sent to Let's Church except the
   video's metadata and bytes.
+
+---
+
+## MCP server (`/mcp`)
+
+`packages/web/src/mcp/` serves a stateless Streamable HTTP Model Context
+Protocol endpoint. Every tool is read-only and wraps existing procedures via
+`appRouter.createCaller(ctx)`, so validation, visibility checks, the anonymous
+search rate limit and the AI-budget admission all still apply. The context is
+**always anonymous** (`session: null`): the endpoint ignores the `lc-session`
+cookie, so a cross-site request can't act as a signed-in user and the endpoint
+needs no Origin check. Request bodies are capped (`MCP_MAX_BODY_BYTES`, 64 KiB)
+and tool inputs are bounded zod schemas in `mcp/tools.ts`. Tools that act for a
+user need real OAuth (bearer tokens from the OIDC provider) before they land —
+never a client-supplied user id.
+
+**Rate limiting.** Hosted MCP clients funnel many users through a few egress
+IPs, so per-IP limits alone would make them share one budget. `initialize`
+mints a stateless, HMAC-signed `Mcp-Session-Id` (`mcp/session.ts`, key
+domain-separated from `JWT_SECRET`, 24 h TTL; forged/expired ids get 404 so the
+client re-initializes). It carries no identity or authority — it only selects
+rate-limit buckets: the request's tRPC context gets a `RateLimitSubject`, and
+the search, AI-budget and per-tool-call limiters (`clientBuckets` in
+`util/rate-limit.ts`) give each session its own bucket **under a shared per-IP
+ceiling** of `MCP_SHARED_IP_MULTIPLIER`× the normal budget. Minting more
+sessions therefore can't push one network past that ceiling, and the ceiling is
+checked first so a session flood is cut off before it allocates buckets.
+Requests without a session fall back to the ordinary per-IP buckets. Remaining
+gap: a single abusive client behind a shared gateway can still use up that
+gateway's ceiling; per-user limits need authenticated (OAuth) MCP clients.
 
 ---
 

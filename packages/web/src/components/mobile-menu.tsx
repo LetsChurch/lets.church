@@ -169,6 +169,13 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
               >
                 How to Add Your Church
               </Link>
+              <Link
+                to="/about/mcp"
+                onClick={handleClose}
+                className="text-primary block text-lg font-semibold hover:text-indigo-400"
+              >
+                Use with AI (MCP)
+              </Link>
             </div>
 
             {/* Theme Switcher */}

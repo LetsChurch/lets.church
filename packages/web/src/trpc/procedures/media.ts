@@ -2032,6 +2032,7 @@ export const mediaProcedures = {
             columns: {
               id: true,
               name: true,
+              slug: true,
               avatarPath: true,
               defaultThumbnailPath: true,
               visibility: true,
@@ -2083,6 +2084,7 @@ export const mediaProcedures = {
               title: upload.title,
               thumbnailUrl,
               channelName: channel.name,
+              channelSlug: channel.slug,
               channelAvatarUrl,
               lengthSeconds: upload.lengthSeconds,
               publishedAt: upload.publishedAt,

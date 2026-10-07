@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MaintenanceRouteImport } from './routes/maintenance'
 import { Route as AuthRouteImport } from './routes/auth_'
 import { Route as MainRouteImport } from './routes/_main'
@@ -75,6 +76,7 @@ import { Route as MainChannelSlugRouteImport } from './routes/_main/channel.$slu
 import { Route as MainAboutTheologyRouteImport } from './routes/_main/about/theology'
 import { Route as MainAboutTermsRouteImport } from './routes/_main/about/terms'
 import { Route as MainAboutPrivacyRouteImport } from './routes/_main/about/privacy'
+import { Route as MainAboutMcpRouteImport } from './routes/_main/about/mcp'
 import { Route as MainAboutDoreanRouteImport } from './routes/_main/about/dorean'
 import { Route as MainAboutDmcaRouteImport } from './routes/_main/about/dmca'
 import { Route as MainAboutAddContentRouteImport } from './routes/_main/about/add-content'
@@ -134,6 +136,11 @@ import { Route as MainDashboardAccountDonationsYearRouteImport } from './routes/
 import { Route as MainDashboardChannelsChannelIdUploadsUploadIdRouteImport } from './routes/_main/dashboard/channels_.$channelId_.uploads_.$uploadId'
 import { Route as MainDashboardChannelsChannelIdPlaylistsPlaylistIdRouteImport } from './routes/_main/dashboard/channels_.$channelId_.playlists_.$playlistId'
 
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MaintenanceRoute = MaintenanceRouteImport.update({
   id: '/maintenance',
   path: '/maintenance',
@@ -467,6 +474,11 @@ const MainAboutTermsRoute = MainAboutTermsRouteImport.update({
 const MainAboutPrivacyRoute = MainAboutPrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => MainAboutRoute,
+} as any)
+const MainAboutMcpRoute = MainAboutMcpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => MainAboutRoute,
 } as any)
 const MainAboutDoreanRoute = MainAboutDoreanRouteImport.update({
@@ -815,6 +827,7 @@ export interface FileRoutesByFullPath {
   '/': typeof MainIndexRoute
   '/auth': typeof AuthRouteWithChildren
   '/maintenance': typeof MaintenanceRoute
+  '/mcp': typeof McpRoute
   '/.well-known/jwks.json': typeof DotwellKnownJwksDotjsonRoute
   '/.well-known/openid-configuration': typeof DotwellKnownOpenidConfigurationRoute
   '/$slug': typeof MainSlugRoute
@@ -854,6 +867,7 @@ export interface FileRoutesByFullPath {
   '/about/add-content': typeof MainAboutAddContentRoute
   '/about/dmca': typeof MainAboutDmcaRoute
   '/about/dorean': typeof MainAboutDoreanRoute
+  '/about/mcp': typeof MainAboutMcpRoute
   '/about/privacy': typeof MainAboutPrivacyRoute
   '/about/terms': typeof MainAboutTermsRoute
   '/about/theology': typeof MainAboutTheologyRoute
@@ -939,6 +953,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
   '/maintenance': typeof MaintenanceRoute
+  '/mcp': typeof McpRoute
   '/.well-known/jwks.json': typeof DotwellKnownJwksDotjsonRoute
   '/.well-known/openid-configuration': typeof DotwellKnownOpenidConfigurationRoute
   '/$slug': typeof MainSlugRoute
@@ -977,6 +992,7 @@ export interface FileRoutesByTo {
   '/about/add-content': typeof MainAboutAddContentRoute
   '/about/dmca': typeof MainAboutDmcaRoute
   '/about/dorean': typeof MainAboutDoreanRoute
+  '/about/mcp': typeof MainAboutMcpRoute
   '/about/privacy': typeof MainAboutPrivacyRoute
   '/about/terms': typeof MainAboutTermsRoute
   '/about/theology': typeof MainAboutTheologyRoute
@@ -1064,6 +1080,7 @@ export interface FileRoutesById {
   '/_main': typeof MainRouteWithChildren
   '/auth_': typeof AuthRouteWithChildren
   '/maintenance': typeof MaintenanceRoute
+  '/mcp': typeof McpRoute
   '/.well-known/jwks.json': typeof DotwellKnownJwksDotjsonRoute
   '/.well-known/openid-configuration': typeof DotwellKnownOpenidConfigurationRoute
   '/_main/$slug': typeof MainSlugRoute
@@ -1104,6 +1121,7 @@ export interface FileRoutesById {
   '/_main/about/add-content': typeof MainAboutAddContentRoute
   '/_main/about/dmca': typeof MainAboutDmcaRoute
   '/_main/about/dorean': typeof MainAboutDoreanRoute
+  '/_main/about/mcp': typeof MainAboutMcpRoute
   '/_main/about/privacy': typeof MainAboutPrivacyRoute
   '/_main/about/terms': typeof MainAboutTermsRoute
   '/_main/about/theology': typeof MainAboutTheologyRoute
@@ -1192,6 +1210,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/maintenance'
+    | '/mcp'
     | '/.well-known/jwks.json'
     | '/.well-known/openid-configuration'
     | '/$slug'
@@ -1231,6 +1250,7 @@ export interface FileRouteTypes {
     | '/about/add-content'
     | '/about/dmca'
     | '/about/dorean'
+    | '/about/mcp'
     | '/about/privacy'
     | '/about/terms'
     | '/about/theology'
@@ -1316,6 +1336,7 @@ export interface FileRouteTypes {
   to:
     | '/auth'
     | '/maintenance'
+    | '/mcp'
     | '/.well-known/jwks.json'
     | '/.well-known/openid-configuration'
     | '/$slug'
@@ -1354,6 +1375,7 @@ export interface FileRouteTypes {
     | '/about/add-content'
     | '/about/dmca'
     | '/about/dorean'
+    | '/about/mcp'
     | '/about/privacy'
     | '/about/terms'
     | '/about/theology'
@@ -1440,6 +1462,7 @@ export interface FileRouteTypes {
     | '/_main'
     | '/auth_'
     | '/maintenance'
+    | '/mcp'
     | '/.well-known/jwks.json'
     | '/.well-known/openid-configuration'
     | '/_main/$slug'
@@ -1480,6 +1503,7 @@ export interface FileRouteTypes {
     | '/_main/about/add-content'
     | '/_main/about/dmca'
     | '/_main/about/dorean'
+    | '/_main/about/mcp'
     | '/_main/about/privacy'
     | '/_main/about/terms'
     | '/_main/about/theology'
@@ -1567,6 +1591,7 @@ export interface RootRouteChildren {
   MainRoute: typeof MainRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   MaintenanceRoute: typeof MaintenanceRoute
+  McpRoute: typeof McpRoute
   DotwellKnownJwksDotjsonRoute: typeof DotwellKnownJwksDotjsonRoute
   DotwellKnownOpenidConfigurationRoute: typeof DotwellKnownOpenidConfigurationRoute
   ApiDigDeeperRoute: typeof ApiDigDeeperRoute
@@ -1598,6 +1623,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/maintenance': {
       id: '/maintenance'
       path: '/maintenance'
@@ -2060,6 +2092,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAboutPrivacyRouteImport
       parentRoute: typeof MainAboutRoute
     }
+    '/_main/about/mcp': {
+      id: '/_main/about/mcp'
+      path: '/mcp'
+      fullPath: '/about/mcp'
+      preLoaderRoute: typeof MainAboutMcpRouteImport
+      parentRoute: typeof MainAboutRoute
+    }
     '/_main/about/dorean': {
       id: '/_main/about/dorean'
       path: '/dorean'
@@ -2474,6 +2513,7 @@ interface MainAboutRouteChildren {
   MainAboutAddContentRoute: typeof MainAboutAddContentRoute
   MainAboutDmcaRoute: typeof MainAboutDmcaRoute
   MainAboutDoreanRoute: typeof MainAboutDoreanRoute
+  MainAboutMcpRoute: typeof MainAboutMcpRoute
   MainAboutPrivacyRoute: typeof MainAboutPrivacyRoute
   MainAboutTermsRoute: typeof MainAboutTermsRoute
   MainAboutTheologyRoute: typeof MainAboutTheologyRoute
@@ -2485,6 +2525,7 @@ const MainAboutRouteChildren: MainAboutRouteChildren = {
   MainAboutAddContentRoute: MainAboutAddContentRoute,
   MainAboutDmcaRoute: MainAboutDmcaRoute,
   MainAboutDoreanRoute: MainAboutDoreanRoute,
+  MainAboutMcpRoute: MainAboutMcpRoute,
   MainAboutPrivacyRoute: MainAboutPrivacyRoute,
   MainAboutTermsRoute: MainAboutTermsRoute,
   MainAboutTheologyRoute: MainAboutTheologyRoute,
@@ -2723,6 +2764,7 @@ const rootRouteChildren: RootRouteChildren = {
   MainRoute: MainRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   MaintenanceRoute: MaintenanceRoute,
+  McpRoute: McpRoute,
   DotwellKnownJwksDotjsonRoute: DotwellKnownJwksDotjsonRoute,
   DotwellKnownOpenidConfigurationRoute: DotwellKnownOpenidConfigurationRoute,
   ApiDigDeeperRoute: ApiDigDeeperRoute,
