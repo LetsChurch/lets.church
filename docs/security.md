@@ -168,10 +168,13 @@ with host permissions for the site; there is no separate token or OIDC client.
   an upload _with_ its metadata, mirroring `importMedia`. Finalize and abort only
   act on a record the caller created, in that channel, that isn't finalized, and
   whose S3 key is prefixed by that record's id, so a client can't complete or
-  cancel someone else's upload with a guessed key.
+  cancel someone else's upload with a guessed key. The same rule gates
+  `createThumbnailUpload` / `abortThumbnailUpload` (a thumbnail for the
+  caller's own pending mirror only).
 - **Bounds.** Title/description/filename/mime are capped and allow-listed;
   `bytes` is capped at the multipart ceiling; the duplicate check takes at most
-  100 candidates; `createUpload` is token-bucket limited per user.
+  100 candidates; thumbnails are JPEG/PNG/WebP only and capped at 20 MB;
+  `createUpload` and `createThumbnailUpload` are token-bucket limited per user.
 - **YouTube credentials never leave Studio.** The content script derives
   Studio's `SAPISIDHASH` header from the SAPISID cookie and sends it only to
   `studio.youtube.com`; the owner's `download_my_video` link is fetched from an

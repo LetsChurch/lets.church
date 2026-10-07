@@ -12,6 +12,9 @@ export const MIRROR_DESCRIPTION_MAX = 10_000;
 export const MIRROR_DUPLICATE_CANDIDATES_MAX = 100;
 // 10 MB parts × S3's 10,000-part limit, matching `multipartUploadSchema`.
 const MIRROR_MAX_BYTES = 10_000_000 * 10_000;
+// YouTube's own thumbnail limit is 2 MB at upload; the max-res renditions
+// Studio serves are well under that. Leave headroom, but stay small.
+export const MIRROR_THUMBNAIL_MAX_BYTES = 20_000_000;
 
 const mirrorFileNameSchema = z
   .string()
@@ -38,6 +41,13 @@ export const finalizeMirrorUploadSchema = z.object({
   s3UploadId: z.string().min(1).max(1024),
   s3UploadKey: z.string().min(1).max(1024),
   s3PartETags: z.array(z.string().min(1).max(256)).min(1).max(10_000),
+});
+
+export const createMirrorThumbnailUploadSchema = z.object({
+  channelId: channelIdSchema,
+  uploadId: uploadIdSchema,
+  uploadMimeType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+  bytes: z.number().int().positive().max(MIRROR_THUMBNAIL_MAX_BYTES),
 });
 
 export const abortMirrorUploadSchema = z.object({

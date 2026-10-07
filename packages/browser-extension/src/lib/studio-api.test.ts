@@ -32,6 +32,19 @@ describe('toStudioVideo', () => {
         privacy: 'VIDEO_PRIVACY_PUBLIC',
         originalFilename: '20261001.mp4',
         downloadUrl: '/download_my_video?v=abc&t=tok',
+        thumbnailDetails: {
+          thumbnails: [
+            {
+              url: 'https://i9.ytimg.com/vi/abc/default.jpg?sqp=a',
+              width: 120,
+            },
+            {
+              url: 'https://i9.ytimg.com/vi/abc/maxresdefault.jpg?sqp=b',
+              width: 1920,
+            },
+            { url: 'https://i9.ytimg.com/vi/abc/hq720.jpg?sqp=c', width: 1280 },
+          ],
+        },
       }),
     ).toEqual({
       videoId: 'abc',
@@ -42,6 +55,7 @@ describe('toStudioVideo', () => {
       privacy: 'public',
       originalFileName: '20261001.mp4',
       downloadUrl: 'https://www.youtube.com/download_my_video?v=abc&t=tok',
+      thumbnailUrl: 'https://i9.ytimg.com/vi/abc/maxresdefault.jpg?sqp=b',
       youtubeChannelId: 'UC1',
     });
   });

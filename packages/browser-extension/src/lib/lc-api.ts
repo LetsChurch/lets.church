@@ -133,6 +133,30 @@ export const lcApi = {
     }>;
   },
 
+  createThumbnailUpload(input: {
+    channelId: string;
+    uploadId: string;
+    uploadMimeType: 'image/jpeg' | 'image/png' | 'image/webp';
+    bytes: number;
+  }): Promise<Omit<MultipartTarget, 'uploadId'>> {
+    return client.mutation(
+      'dashboard.mirror.createThumbnailUpload',
+      input,
+    ) as Promise<Omit<MultipartTarget, 'uploadId'>>;
+  },
+
+  abortThumbnailUpload(input: {
+    channelId: string;
+    uploadId: string;
+    s3UploadId: string;
+    s3UploadKey: string;
+  }): Promise<{ uploadId: string }> {
+    return client.mutation(
+      'dashboard.mirror.abortThumbnailUpload',
+      input,
+    ) as Promise<{ uploadId: string }>;
+  },
+
   abortUpload(input: {
     channelId: string;
     uploadId: string;

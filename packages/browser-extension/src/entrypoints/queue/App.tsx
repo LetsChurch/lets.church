@@ -35,14 +35,23 @@ function JobRow({ job }: { job: MirrorJob }) {
   return (
     <li className="border-rule bg-surface flex flex-col gap-2 rounded-xl border p-4">
       <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="truncate font-medium" title={job.video.title}>
-            {job.video.title || job.video.videoId}
-          </p>
-          <p className="text-muted text-xs">
-            to {job.channelName} · {formatDuration(job.video.lengthSeconds)} ·{' '}
-            {new Date(job.video.publishedAt).toLocaleDateString()}
-          </p>
+        <div className="flex min-w-0 items-start gap-3">
+          {job.video.thumbnailUrl ? (
+            <img
+              src={job.video.thumbnailUrl}
+              alt=""
+              className="aspect-video w-24 shrink-0 rounded-md object-cover"
+            />
+          ) : null}
+          <div className="min-w-0">
+            <p className="truncate font-medium" title={job.video.title}>
+              {job.video.title || job.video.videoId}
+            </p>
+            <p className="text-muted text-xs">
+              to {job.channelName} · {formatDuration(job.video.lengthSeconds)} ·{' '}
+              {new Date(job.video.publishedAt).toLocaleDateString()}
+            </p>
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span
@@ -103,6 +112,9 @@ function JobRow({ job }: { job: MirrorJob }) {
         </div>
       ) : null}
       {job.error ? <p className="text-danger text-sm">{job.error}</p> : null}
+      {job.warning ? (
+        <p className="text-warning text-sm">{job.warning}</p>
+      ) : null}
     </li>
   );
 }

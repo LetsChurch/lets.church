@@ -31,6 +31,9 @@ export default defineConfig({
         'https://www.youtube.com/*',
         'https://*.c.youtube.com/*',
         'https://*.googlevideo.com/*',
+        // Video thumbnails (Studio hands out signed i9.ytimg.com URLs, including
+        // for private videos).
+        'https://*.ytimg.com/*',
       ],
       ...(browser === 'firefox'
         ? {

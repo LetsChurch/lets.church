@@ -10,6 +10,8 @@ export type StudioVideo = {
   originalFileName: string | null;
   /** Absolute `download_my_video` URL; tokenized and short-lived. */
   downloadUrl: string | null;
+  /** Largest thumbnail Studio offers (signed i9.ytimg.com URL), if any. */
+  thumbnailUrl: string | null;
   youtubeChannelId: string | null;
 };
 
@@ -52,6 +54,8 @@ export type MirrorJob = {
   bytesTotal: number | null;
   bytesUploaded: number;
   error: string | null;
+  /** Something non-fatal went wrong (e.g. the thumbnail didn't mirror). */
+  warning: string | null;
   /** Set once `createUpload` succeeds; needed to finalize or abort. */
   upload: {
     uploadId: string;

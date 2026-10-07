@@ -296,6 +296,13 @@ export function MirrorDialog({
 
         {single && first ? (
           <div className="flex flex-col gap-3">
+            {first.thumbnailUrl ? (
+              <img
+                src={first.thumbnailUrl}
+                alt=""
+                className="aspect-video w-48 rounded-lg object-cover"
+              />
+            ) : null}
             <DuplicateBadge match={duplicates[first.videoId]} />
             <TextField
               label="Title"
@@ -368,8 +375,17 @@ export function MirrorDialog({
                       }
                     />
                   </td>
-                  <td className="max-w-64 truncate py-2 pr-2" title={v.title}>
-                    {v.title || v.videoId}
+                  <td className="max-w-72 py-2 pr-2" title={v.title}>
+                    <div className="flex items-center gap-3">
+                      {v.thumbnailUrl ? (
+                        <img
+                          src={v.thumbnailUrl}
+                          alt=""
+                          className="aspect-video w-16 shrink-0 rounded object-cover"
+                        />
+                      ) : null}
+                      <span className="truncate">{v.title || v.videoId}</span>
+                    </div>
                   </td>
                   <td className="text-muted py-2 pr-2 whitespace-nowrap">
                     {new Date(v.publishedAt).toLocaleDateString()}

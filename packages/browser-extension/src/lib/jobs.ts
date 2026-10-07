@@ -66,6 +66,7 @@ export async function retryJob(id: string) {
   await patchJob(id, {
     status: 'queued',
     error: null,
+    warning: null,
     bytesUploaded: 0,
     bytesTotal: null,
     upload: null,
@@ -121,6 +122,7 @@ export async function enqueueJobs({
       bytesTotal: null,
       bytesUploaded: 0,
       error: null,
+      warning: null,
       upload: null,
     };
   }

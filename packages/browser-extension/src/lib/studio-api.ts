@@ -26,6 +26,7 @@ const VIDEO_MASK = {
   privacy: true,
   originalFilename: true,
   downloadUrl: true,
+  thumbnailDetails: { all: true },
 } as const;
 
 const MAX_IDS_PER_REQUEST = 50;
@@ -52,7 +53,18 @@ type RawVideo = {
   privacy?: string;
   originalFilename?: string;
   downloadUrl?: string;
+  thumbnailDetails?: {
+    thumbnails?: Array<{ url?: string; width?: number; height?: number }>;
+  };
 };
+
+/** Highest-resolution thumbnail URL (Studio lists them smallest first). */
+function largestThumbnail(raw: RawVideo): string | null {
+  const best = (raw.thumbnailDetails?.thumbnails ?? [])
+    .filter((t) => t.url)
+    .sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0];
+  return best?.url ? new URL(best.url, 'https://i.ytimg.com').toString() : null;
+}
 
 /** Merge every `ytcfg.set({...})` object literal found in the given scripts. */
 export function parseStudioConfig(scriptTexts: Iterable<string>): StudioConfig {
@@ -142,6 +154,7 @@ export function toStudioVideo(raw: RawVideo): StudioVideo | null {
     downloadUrl: raw.downloadUrl
       ? new URL(raw.downloadUrl, 'https://www.youtube.com').toString()
       : null,
+    thumbnailUrl: largestThumbnail(raw),
     youtubeChannelId: raw.channelId ?? null,
   };
 }

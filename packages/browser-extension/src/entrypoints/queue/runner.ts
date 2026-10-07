@@ -8,11 +8,11 @@ import { isCancelRequested, listJobs, patchJob } from '@/lib/jobs';
 import { describeApiError, lcApi } from '@/lib/lc-api';
 import { sendToTab } from '@/lib/messages';
 import { CancelledError, clearSpoolFiles, runTransfer } from '@/lib/transfer';
-import type { MirrorJob } from '@/lib/types';
+import type { MirrorJob, StudioVideo } from '@/lib/types';
 
 const CANCEL_POLL_MS = 1000;
 
-async function freshDownloadUrl(videoId: string): Promise<string | null> {
+async function freshVideo(videoId: string): Promise<StudioVideo | null> {
   const tabs = await browser.tabs.query({
     url: 'https://studio.youtube.com/*',
   });
@@ -26,7 +26,7 @@ async function freshDownloadUrl(videoId: string): Promise<string | null> {
         videoIds: [videoId],
       });
       if (video?.downloadUrl) {
-        return video.downloadUrl;
+        return video;
       }
     } catch {
       // Tab is on another Google account, still loading, etc. Try the next.
@@ -62,10 +62,15 @@ async function runJob(job: MirrorJob) {
   };
 
   try {
-    await update({ status: 'uploading', error: null, bytesUploaded: 0 });
+    await update({
+      status: 'uploading',
+      error: null,
+      warning: null,
+      bytesUploaded: 0,
+    });
     await runTransfer(current, {
       signal: controller.signal,
-      refreshDownloadUrl: () => freshDownloadUrl(job.video.videoId),
+      refreshVideo: () => freshVideo(job.video.videoId),
       onUpdate: update,
     });
     await update({

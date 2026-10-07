@@ -23,6 +23,7 @@ studio.content (shadow-root UI)
                                          queue page (runner)
                                            ├─ fetch download_my_video (→ *.c.youtube.com)
                                            ├─ createUpload ───────────▶ record + presigned parts
+                                           ├─ thumbnail (i9.ytimg.com) ─▶ createThumbnailUpload → PUT → finalize
                                            ├─ PUT 10 MB parts ────────▶ ingest bucket (S3)
                                            └─ finalizeUpload ─────────▶ processing workflow
 ```
@@ -43,6 +44,12 @@ studio.content (shadow-root UI)
   `*.googlevideo.com`); those need host permissions, or the redirect is
   CORS-blocked. Download links
   expire, so before each job the queue asks any open Studio tab for a fresh one.
+- **Thumbnails** are mirrored too: the largest one Studio lists (signed
+  `i9.ytimg.com` URL, up to 1920×1080, private videos included) uploads as the
+  Let's Church upload's custom thumbnail before the video is finalized (the
+  server only accepts it for a still-pending mirror). It's best-effort: if it
+  fails, the job shows a warning and the video still mirrors with generated
+  thumbnails.
 - **Duplicates** are matched heuristically on title, publish date, duration and
   original filename (`packages/web/src/util/mirror-duplicates.ts`). Certain
   matches are unticked in the dialog; possible ones are flagged.

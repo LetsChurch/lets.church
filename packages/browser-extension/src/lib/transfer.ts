@@ -7,7 +7,7 @@ import pRetry, { AbortError } from 'p-retry';
 
 import { toLetsChurchPublishedAt } from './dates';
 import { lcApi, type MultipartTarget } from './lc-api';
-import type { MirrorJob } from './types';
+import type { MirrorJob, StudioVideo } from './types';
 
 const PART_CONCURRENCY = 3;
 const PART_RETRIES = 5;
@@ -160,7 +160,7 @@ async function uploadParts({
   onPartDone,
 }: {
   stream: ReadableStream<Uint8Array>;
-  target: MultipartTarget;
+  target: Pick<MultipartTarget, 'partSize' | 'urls'>;
   signal: AbortSignal;
   onPartDone: (bytes: number) => void;
 }): Promise<Array<string>> {
@@ -204,19 +204,106 @@ async function uploadParts({
   return etags;
 }
 
+const THUMBNAIL_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
+type ThumbnailType = (typeof THUMBNAIL_TYPES)[number];
+// Matches the server's cap (MIRROR_THUMBNAIL_MAX_BYTES).
+const THUMBNAIL_MAX_BYTES = 20_000_000;
+
+function thumbnailType(contentType: string | null): ThumbnailType | null {
+  const type = contentType?.split(';')[0]?.trim().toLowerCase();
+  return THUMBNAIL_TYPES.find((t) => t === type) ?? null;
+}
+
+/**
+ * Mirror the video's YouTube thumbnail as the upload's custom thumbnail.
+ * Best-effort: returns a warning instead of throwing, so a thumbnail problem
+ * never costs the user the video (it still gets generated thumbnails).
+ * Runs before the media is finalized: the server only accepts thumbnails for
+ * a still-pending mirror.
+ */
+export async function uploadThumbnail({
+  thumbnailUrl,
+  channelId,
+  uploadId,
+  signal,
+}: {
+  thumbnailUrl: string | null;
+  channelId: string;
+  uploadId: string;
+  signal: AbortSignal;
+}): Promise<string | null> {
+  if (!thumbnailUrl) {
+    return null;
+  }
+
+  let target: Awaited<ReturnType<typeof lcApi.createThumbnailUpload>> | null =
+    null;
+  try {
+    const res = await fetch(thumbnailUrl, { signal });
+    const type = thumbnailType(res.headers.get('content-type'));
+    if (!res.ok || !type) {
+      return `Couldn't download the YouTube thumbnail (${res.status}); Let's Church will generate one.`;
+    }
+    const image = await res.blob();
+    if (image.size === 0 || image.size > THUMBNAIL_MAX_BYTES) {
+      return "The YouTube thumbnail wasn't usable; Let's Church will generate one.";
+    }
+
+    target = await lcApi.createThumbnailUpload({
+      channelId,
+      uploadId,
+      uploadMimeType: type,
+      bytes: image.size,
+    });
+    const etags = await uploadParts({
+      stream: image.stream(),
+      target,
+      signal,
+      onPartDone: () => undefined,
+    });
+    await lcApi.finalizeUpload({
+      channelId,
+      uploadId,
+      s3UploadId: target.s3UploadId,
+      s3UploadKey: target.s3UploadKey,
+      s3PartETags: etags,
+    });
+    return null;
+  } catch (err) {
+    if (signal.aborted) {
+      throw err;
+    }
+    if (target) {
+      await lcApi
+        .abortThumbnailUpload({
+          channelId,
+          uploadId,
+          s3UploadId: target.s3UploadId,
+          s3UploadKey: target.s3UploadKey,
+        })
+        .catch(() => undefined);
+    }
+    return "The YouTube thumbnail didn't mirror; Let's Church will generate one.";
+  }
+}
+
 export type TransferHooks = {
   signal: AbortSignal;
-  /** Fresh `download_my_video` URL (tokens expire), or null to use the stored one. */
-  refreshDownloadUrl: () => Promise<string | null>;
+  /**
+   * Re-read the video from an open Studio tab (download and thumbnail links
+   * are signed and expire), or null to use what was stored at enqueue time.
+   */
+  refreshVideo: () => Promise<StudioVideo | null>;
   onUpdate: (patch: Partial<MirrorJob>) => Promise<void>;
 };
 
 export async function runTransfer(
   job: MirrorJob,
-  { signal, refreshDownloadUrl, onUpdate }: TransferHooks,
+  { signal, refreshVideo, onUpdate }: TransferHooks,
 ): Promise<{ uploadId: string }> {
-  const downloadUrl =
-    (await refreshDownloadUrl().catch(() => null)) ?? job.video.downloadUrl;
+  const fresh = await refreshVideo().catch(() => null);
+  const downloadUrl = fresh?.downloadUrl ?? job.video.downloadUrl;
+  const thumbnailUrl = fresh?.thumbnailUrl ?? job.video.thumbnailUrl;
   if (!downloadUrl) {
     throw new Error('YouTube did not offer a download for this video.');
   }
@@ -261,6 +348,16 @@ export async function runTransfer(
       s3UploadKey: target.s3UploadKey,
     };
     await onUpdate({ upload });
+
+    const warning = await uploadThumbnail({
+      thumbnailUrl,
+      channelId: job.channelId,
+      uploadId: upload.uploadId,
+      signal,
+    });
+    if (warning) {
+      await onUpdate({ warning });
+    }
 
     let uploaded = 0;
     const etags = await uploadParts({

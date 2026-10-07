@@ -20,6 +20,7 @@ import { and, asc, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 
 import {
   abortMirrorUploadSchema,
+  createMirrorThumbnailUploadSchema,
   createMirrorUploadSchema,
   finalizeMirrorUploadSchema,
   findMirrorDuplicatesSchema,
@@ -45,25 +46,39 @@ const moduleLogger = logger.child({
   module: 'trpc/procedures/dashboard/mirror',
 });
 
-// Bulk mirroring is client-paced (one video at a time), so this only needs to
-// stop a runaway client: a burst of 60 records, refilling one per minute.
+// Bulk mirroring is client-paced (one video at a time), so these only need to
+// stop a runaway client: a burst of 60, refilling one per minute.
 const CREATE_BUCKET = { capacity: 60, refillTokensPerSecond: 1 / 60 };
 
+async function enforceCreateLimit(
+  kind: 'upload' | 'thumbnail',
+  appUserId: string,
+) {
+  const limit = await consumeTokenBucketWithFallback({
+    key: `mirror-${kind}:${appUserId}`,
+    cost: 1,
+    ...CREATE_BUCKET,
+  });
+  if (!limit.allowed) {
+    throw new TRPCError({
+      code: 'TOO_MANY_REQUESTS',
+      message: `Too many uploads. Try again in ${Math.ceil(limit.retryAfterSeconds)} seconds.`,
+    });
+  }
+}
+
 /**
- * Load an in-flight mirror upload the caller may finish or cancel: in the
- * authorized channel, created by this user, not finalized or deleted, and whose
- * S3 key is the one this record's multipart upload was opened under.
+ * Load an in-flight mirror upload the caller may add to, finish, or cancel: in
+ * the authorized channel, created by this user, and not finalized or deleted.
  */
-async function findPendingMirrorUpload({
+async function findOwnPendingUpload({
   channelId,
   uploadId,
   appUserId,
-  s3UploadKey,
 }: {
   channelId: string;
   uploadId: string;
   appUserId: string;
-  s3UploadKey: string;
 }) {
   const upload = await db.query.UploadRecord.findFirst({
     columns: { id: true },
@@ -77,11 +92,33 @@ async function findPendingMirrorUpload({
       ),
   });
 
+  if (!upload) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Upload not found' });
+  }
+
+  return upload;
+}
+
+/**
+ * Like `findOwnPendingUpload`, and also require that `s3UploadKey` is one of
+ * this record's multipart uploads (the media file or its thumbnail).
+ */
+async function findPendingMirrorUpload({
+  s3UploadKey,
+  ...where
+}: {
+  channelId: string;
+  uploadId: string;
+  appUserId: string;
+  s3UploadKey: string;
+}) {
+  const upload = await findOwnPendingUpload(where);
+
   // Media multipart keys are `<uploadRecordId>/<uuid>` (the ingest client
   // appends a random suffix to the target id `startMultipartUpload` passes),
   // so requiring the prefix stops a caller finalizing or aborting another
   // record's upload.
-  if (!upload || !s3UploadKey.startsWith(`${upload.id}/`)) {
+  if (!s3UploadKey.startsWith(`${upload.id}/`)) {
     throw new TRPCError({
       code: 'NOT_FOUND',
       message: 'Upload not found',
@@ -89,6 +126,28 @@ async function findPendingMirrorUpload({
   }
 
   return upload;
+}
+
+/** Stop a multipart upload's waiting workflow and discard its S3 parts. */
+async function cancelMirrorMultipart(
+  upload: { id: string },
+  s3UploadId: string,
+  s3UploadKey: string,
+) {
+  await cancelMultipartMediaUpload(s3UploadId, s3UploadKey);
+
+  try {
+    await ingestS3.abortMultipartUpload(s3UploadId, s3UploadKey);
+  } catch (err) {
+    // Already aborted/completed upstream; nothing left to discard.
+    moduleLogger.warn(
+      {
+        err: err instanceof Error ? err : new Error(String(err)),
+        uploadId: upload.id,
+      },
+      'Failed to abort mirror multipart upload',
+    );
+  }
 }
 
 export const mirrorRouter = router({
@@ -170,17 +229,7 @@ export const mirrorRouter = router({
     .input(createMirrorUploadSchema)
     .mutation(async ({ ctx, input }) => {
       const appUserId = ctx.session.appUserId;
-      const limit = await consumeTokenBucketWithFallback({
-        key: `mirror-upload:${appUserId}`,
-        cost: 1,
-        ...CREATE_BUCKET,
-      });
-      if (!limit.allowed) {
-        throw new TRPCError({
-          code: 'TOO_MANY_REQUESTS',
-          message: `Too many uploads. Try again in ${Math.ceil(limit.retryAfterSeconds)} seconds.`,
-        });
-      }
+      await enforceCreateLimit('upload', appUserId);
 
       const channel = await db.query.Channel.findFirst({
         columns: {
@@ -292,26 +341,54 @@ export const mirrorRouter = router({
         s3UploadKey: input.s3UploadKey,
       });
 
-      await cancelMultipartMediaUpload(input.s3UploadId, input.s3UploadKey);
-
-      try {
-        await ingestS3.abortMultipartUpload(
-          input.s3UploadId,
-          input.s3UploadKey,
-        );
-      } catch (err) {
-        // Already aborted/completed upstream; the record still goes away.
-        moduleLogger.warn(
-          {
-            err: err instanceof Error ? err : new Error(String(err)),
-            uploadId: upload.id,
-          },
-          'Failed to abort mirror multipart upload',
-        );
-      }
+      await cancelMirrorMultipart(upload, input.s3UploadId, input.s3UploadKey);
 
       // The standard delete workflow also cleans up search and any objects.
       await deleteUpload(upload.id);
+
+      return { uploadId: upload.id };
+    }),
+
+  /**
+   * Open a one-off multipart upload for the video's thumbnail (e.g. YouTube's
+   * own), processed like a dashboard thumbnail upload into the record's
+   * override thumbnail. Only for the caller's own, still-pending mirror, so
+   * the client uploads it before finalizing the media. Finalize it with
+   * `finalizeUpload`; its key shares the record's prefix.
+   */
+  createThumbnailUpload: channelUploadProcedure
+    .input(createMirrorThumbnailUploadSchema)
+    .mutation(async ({ ctx, input }) => {
+      await enforceCreateLimit('thumbnail', ctx.session.appUserId);
+      const upload = await findOwnPendingUpload({
+        channelId: input.channelId,
+        uploadId: input.uploadId,
+        appUserId: ctx.session.appUserId,
+      });
+
+      return startMultipartUpload({
+        targetId: upload.id,
+        uploadMimeType: input.uploadMimeType,
+        bytes: input.bytes,
+        postProcess: 'thumbnail',
+      });
+    }),
+
+  /**
+   * Give up on a thumbnail upload without touching the mirror itself: the
+   * video still uploads and gets generated thumbnails instead.
+   */
+  abortThumbnailUpload: channelUploadProcedure
+    .input(abortMirrorUploadSchema)
+    .mutation(async ({ ctx, input }) => {
+      const upload = await findPendingMirrorUpload({
+        channelId: input.channelId,
+        uploadId: input.uploadId,
+        appUserId: ctx.session.appUserId,
+        s3UploadKey: input.s3UploadKey,
+      });
+
+      await cancelMirrorMultipart(upload, input.s3UploadId, input.s3UploadKey);
 
       return { uploadId: upload.id };
     }),
