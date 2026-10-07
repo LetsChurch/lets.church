@@ -12,10 +12,11 @@ import { db, oidcLoginRequest, oidcSession } from '@/db';
 // database (see src/db), so they survive server restarts and work across
 // multiple app instances. The browser cookie holds only the opaque session id.
 //
-// Two base URLs (see docker-compose): OIDC_ISSUER is the public, browser-facing
-// origin (and the `iss` we validate against); OIDC_INTERNAL_URL is used for
-// back-channel calls (token exchange, JWKS) from this server. In production both
-// are the same.
+// Two base URLs (see docker-compose): OIDC_ISSUER is the provider's public,
+// browser-facing origin; OIDC_INTERNAL_URL is used for back-channel calls
+// (token exchange, JWKS) from this server. In production both are the same.
+// The issuer identifier (the `iss` we validate) is that origin plus /oidc,
+// matching the provider (packages/web/src/util/oidc/config.ts).
 
 function required(name: string): string {
   const value = process.env[name];
@@ -25,8 +26,12 @@ function required(name: string): string {
   return value;
 }
 
-const ISSUER = required('OIDC_ISSUER').replace(/\/+$/, '');
-const INTERNAL = (process.env.OIDC_INTERNAL_URL ?? ISSUER).replace(/\/+$/, '');
+const ISSUER_ORIGIN = new URL(required('OIDC_ISSUER')).origin;
+const ISSUER = `${ISSUER_ORIGIN}/oidc`;
+const INTERNAL = (process.env.OIDC_INTERNAL_URL ?? ISSUER_ORIGIN).replace(
+  /\/+$/,
+  '',
+);
 const CLIENT_ID = required('OIDC_CLIENT_ID');
 const REDIRECT_URI = required('OIDC_REDIRECT_URI');
 const POST_LOGOUT_REDIRECT_URI = required('OIDC_POST_LOGOUT_REDIRECT_URI');
@@ -34,10 +39,10 @@ const SCOPE = 'openid profile email offline_access';
 
 // The bare auth origin (scheme + host, no path) — e.g. https://lets.church.
 // Surfaced to the client so UI can link back to the account host.
-export const authHost = new URL(ISSUER).origin;
+export const authHost = ISSUER_ORIGIN;
 
-const authorizationEndpoint = `${ISSUER}/oidc/authorize`;
-const endSessionEndpoint = `${ISSUER}/oidc/logout`;
+const authorizationEndpoint = `${ISSUER}/authorize`;
+const endSessionEndpoint = `${ISSUER}/logout`;
 const tokenEndpoint = `${INTERNAL}/oidc/token`;
 const jwks = createRemoteJWKSet(new URL(`${INTERNAL}/.well-known/jwks.json`));
 

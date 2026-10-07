@@ -1,7 +1,8 @@
 import { getIssuer, getOidcEndpoints, SUPPORTED_SCOPES } from './config';
 import { SIGNING_ALG } from './keys';
 
-// OpenID Provider metadata served at /.well-known/openid-configuration. Built
+// OpenID Provider metadata served at /oidc/.well-known/openid-configuration
+// (the issuer plus /.well-known/openid-configuration, per OIDC Discovery). Built
 // lazily so importing this module doesn't require OIDC env to be configured.
 export function getDiscoveryDocument() {
   const oidcEndpoints = getOidcEndpoints();

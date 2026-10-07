@@ -1,7 +1,12 @@
 import { z } from 'zod';
 
-// The OIDC issuer identifier. Must be the public, HTTPS origin of lets.church
-// (no trailing slash). All discovery metadata and token `iss` claims use it.
+// `OIDC_ISSUER` is the provider's public HTTPS origin (e.g.
+// https://lets.church). The issuer identifier itself — every token's `iss` and
+// the discovery `issuer` — is that origin plus `ISSUER_PATH`, so discovery lives
+// at /oidc/.well-known/openid-configuration rather than the origin root. A root
+// discovery document made MCP clients (ChatGPT) assume our MCP server at /mcp
+// uses this provider for OAuth; see routes/[.]well-known.openid-configuration.ts.
+// lets.bible derives the same issuer from the same env value.
 //
 // `OIDC_SIGNING_JWK` is the asymmetric signing key material for OIDC tokens. It
 // is a JSON string containing either a single private JWK or an array of them
@@ -27,8 +32,10 @@ function oidcEnv() {
   return cachedEnv;
 }
 
+export const ISSUER_PATH = '/oidc';
+
 export function getIssuer() {
-  return oidcEnv().OIDC_ISSUER.replace(/\/+$/, '');
+  return `${new URL(oidcEnv().OIDC_ISSUER).origin}${ISSUER_PATH}`;
 }
 
 export function getRawSigningJwk() {
@@ -38,11 +45,12 @@ export function getRawSigningJwk() {
 export function getOidcEndpoints() {
   const issuer = getIssuer();
   return {
-    authorization: `${issuer}/oidc/authorize`,
-    token: `${issuer}/oidc/token`,
-    userinfo: `${issuer}/oidc/userinfo`,
-    jwks: `${issuer}/.well-known/jwks.json`,
-    endSession: `${issuer}/oidc/logout`,
+    authorization: `${issuer}/authorize`,
+    token: `${issuer}/token`,
+    userinfo: `${issuer}/userinfo`,
+    // JWKS stays at the origin root; jwks_uri may live anywhere.
+    jwks: `${new URL(issuer).origin}/.well-known/jwks.json`,
+    endSession: `${issuer}/logout`,
   } as const;
 }
 
