@@ -263,6 +263,10 @@ status, and receipt links.
 Keep Stripe secret keys and webhook signing secrets out of client bundles and
 logs. Do not log donor names, email addresses, checkout payloads, or webhook
 bodies.
+Donation thank-you and admin notification emails go through the encrypted
+`sendEmailWorkflow` payload so donor names and addresses stay out of Temporal
+history, and the send-email activity does not log recipients for encrypted
+payloads.
 
 ---
 

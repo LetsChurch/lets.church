@@ -57,7 +57,13 @@ function resolveEmailArgs(input: SendEmailWorkflowInput): SendMailOptions {
 
 export default async function sendEmailActivity(input: SendEmailWorkflowInput) {
   const args = resolveEmailArgs(input);
-  moduleLogger.info(`Sending email from ${args.from} to ${args.to}`);
+  // Encrypted payloads carry credentials or donor PII; keep recipients out of
+  // logs for those.
+  if ('kind' in input && input.kind === 'encrypted') {
+    moduleLogger.info('Sending encrypted email');
+  } else {
+    moduleLogger.info(`Sending email from ${args.from} to ${args.to}`);
+  }
   const res = await getTransport().sendMail(args);
   moduleLogger.info('Done!');
   return res;

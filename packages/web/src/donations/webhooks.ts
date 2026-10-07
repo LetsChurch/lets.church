@@ -12,6 +12,7 @@ import type Stripe from 'stripe';
 
 import logger from '@/util/logger';
 
+import { sendDonationNotifications } from './notifications';
 import {
   resolveCheckoutDonationStatus,
   resolveDonationAdjustmentStatus,
@@ -23,6 +24,39 @@ import { getStripe } from './stripe-client';
 const moduleLogger = logger.child({
   module: 'donations/webhooks',
 });
+
+// Donation ids that moved into SUCCEEDED while applying an event. Their
+// notifications are sent only after the ledger transaction commits.
+type SucceededDonations = string[];
+
+/**
+ * Upsert a donation ledger row and record whether this write is the one that
+ * made it succeed, so a gift is acknowledged once even when Stripe sends
+ * several events for it (e.g. completed, then async_payment_succeeded).
+ */
+async function upsertDonation(
+  tx: TransactionClient,
+  values: typeof Donation.$inferInsert,
+  succeeded: SucceededDonations,
+) {
+  const previous = await tx.query.Donation.findFirst({
+    where: (table, { eq }) => eq(table.externalId, values.externalId),
+    columns: { status: true },
+  });
+  const [donation] = await tx
+    .insert(Donation)
+    .values(values)
+    .onConflictDoUpdate({
+      target: Donation.externalId,
+      set: values,
+    })
+    .returning();
+  if (!donation) return;
+  await reconcileDonationAdjustment(tx, donation);
+  if (donation.status === 'SUCCEEDED' && previous?.status !== 'SUCCEEDED') {
+    succeeded.push(donation.id);
+  }
+}
 
 type PreparedEvent = {
   session?: Stripe.Checkout.Session;
@@ -132,6 +166,7 @@ export async function reconcileStripeCheckoutSession(sessionId: string) {
       })
     : null;
 
+  const succeeded: SucceededDonations = [];
   await db.transaction(async (tx) => {
     await applyCheckoutSession(
       tx,
@@ -140,11 +175,16 @@ export async function reconcileStripeCheckoutSession(sessionId: string) {
         : 'checkout.session.completed',
       session,
       subscription,
+      succeeded,
     );
     if (invoice?.status === 'paid' && subscription) {
-      await applyPaidInvoice(tx, invoice, subscription);
+      await applyPaidInvoice(tx, invoice, subscription, succeeded);
     }
   });
+
+  for (const donationId of succeeded) {
+    await sendDonationNotifications(donationId);
+  }
 }
 
 function subscriptionStatus(
@@ -406,7 +446,8 @@ async function applyCheckoutSession(
   tx: TransactionClient,
   eventType: Stripe.Event.Type,
   session: Stripe.Checkout.Session,
-  subscription?: Stripe.Subscription,
+  subscription: Stripe.Subscription | undefined,
+  succeeded: SucceededDonations,
 ) {
   const checkoutId =
     session.metadata?.donationCheckoutId ?? session.client_reference_id;
@@ -486,17 +527,7 @@ async function applyCheckoutSession(
     updatedAt: new Date(),
   } satisfies typeof Donation.$inferInsert;
 
-  const [donation] = await tx
-    .insert(Donation)
-    .values(values)
-    .onConflictDoUpdate({
-      target: Donation.externalId,
-      set: values,
-    })
-    .returning();
-  if (donation) {
-    await reconcileDonationAdjustment(tx, donation);
-  }
+  await upsertDonation(tx, values, succeeded);
 }
 
 function invoicePaymentDetails(invoice: Stripe.Invoice) {
@@ -523,6 +554,7 @@ async function applyPaidInvoice(
   tx: TransactionClient,
   invoice: Stripe.Invoice,
   stripeSubscription: Stripe.Subscription,
+  succeeded: SucceededDonations,
 ) {
   const subscription = await upsertSubscription(tx, stripeSubscription);
   if (!subscription) return;
@@ -554,17 +586,7 @@ async function applyPaidInvoice(
     updatedAt: new Date(),
   } satisfies typeof Donation.$inferInsert;
 
-  const [donation] = await tx
-    .insert(Donation)
-    .values(values)
-    .onConflictDoUpdate({
-      target: Donation.externalId,
-      set: values,
-    })
-    .returning();
-  if (donation) {
-    await reconcileDonationAdjustment(tx, donation);
-  }
+  await upsertDonation(tx, values, succeeded);
 
   await tx
     .update(DonationSubscription)
@@ -676,6 +698,7 @@ async function applyEvent(
   tx: TransactionClient,
   event: Stripe.Event,
   prepared: PreparedEvent,
+  succeeded: SucceededDonations,
 ) {
   switch (event.type) {
     case 'checkout.session.completed':
@@ -688,12 +711,18 @@ async function applyEvent(
         event.type,
         prepared.session,
         prepared.subscription,
+        succeeded,
       );
       break;
     case 'invoice.paid':
       if (!prepared.invoice) throw new Error('Missing invoice');
       if (!prepared.subscription) break;
-      await applyPaidInvoice(tx, prepared.invoice, prepared.subscription);
+      await applyPaidInvoice(
+        tx,
+        prepared.invoice,
+        prepared.subscription,
+        succeeded,
+      );
       break;
     case 'invoice.payment_failed':
       if (!prepared.invoice) throw new Error('Missing failed invoice');
@@ -735,6 +764,7 @@ export async function processStripeEvent(event: Stripe.Event) {
 
   const prepared = await prepareEvent(event);
   let duplicate = false;
+  const succeeded: SucceededDonations = [];
 
   await db.transaction(async (tx) => {
     const [receipt] = await tx
@@ -752,8 +782,12 @@ export async function processStripeEvent(event: Stripe.Event) {
       return;
     }
 
-    await applyEvent(tx, event, prepared);
+    await applyEvent(tx, event, prepared, succeeded);
   });
+
+  for (const donationId of succeeded) {
+    await sendDonationNotifications(donationId);
+  }
 
   return { duplicate };
 }

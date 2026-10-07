@@ -179,6 +179,26 @@ checkouts from `/donate` with Stripe test payment details.
 
 ## Operations
 
+### Donation emails
+
+When a Stripe payment first reaches `SUCCEEDED` (a one-time checkout or each
+paid recurring invoice), the app sends two emails through the background
+`sendEmailWorkflow` after the ledger transaction commits
+(`packages/web/src/donations/notifications.ts`):
+
+- **Donor thank-you** to the donor's checkout email: amount, frequency, date,
+  the Stripe receipt link, the "no goods or services" statement and EIN, and a
+  link to giving history. Skipped when the donor has no email.
+- **Admin notice** to `ADMIN_EMAIL` with the amount, frequency, donor name and
+  email, and donation ID. Skipped when `ADMIN_EMAIL` is unset.
+
+These are in addition to Stripe's own receipt email. Both are sent from the
+webhook and from the confirmation page's checkout reconciliation, whichever
+marks the gift succeeded first. Workflow IDs are keyed to the donation
+(`donation-thank-you:<id>`, `donation-admin-notice:<id>`) with
+`REJECT_DUPLICATE`, so each gift is acknowledged once. Payloads are encrypted so
+donor details stay out of Temporal history. Admin imports never send email.
+
 Donors can open `/dashboard/account/donations` to see gift history, download
 receipts, print annual statements, update billing details, change the amount
 of a recurring gift, stop a recurring gift at the end of its billing period, or
