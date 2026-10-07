@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 
 const MCP_URL = 'https://lets.church/mcp';
+const CLAUDE_DIRECTORY_URL = 'https://claude.ai/directory/letschurch';
 
 export const Route = createFileRoute('/_main/about/mcp')({
   component: RouteComponent,
@@ -93,18 +94,18 @@ function RouteComponent() {
         It uses the Streamable HTTP transport and needs no account or API key.
       </p>
 
-      <h4>Claude (web and desktop)</h4>
-      <ol>
-        <li>
-          Open <strong>Settings</strong> → <strong>Connectors</strong>
-        </li>
-        <li>
-          Choose <strong>Add custom connector</strong>
-        </li>
-        <li>
-          Name it <em>Let's Church</em> and paste the server address above
-        </li>
-      </ol>
+      <h4>Claude</h4>
+      <p>
+        Let's Church is listed in Claude's connector directory. Open{' '}
+        <a href={CLAUDE_DIRECTORY_URL}>Let's Church in the Claude directory</a>{' '}
+        and choose <strong>Connect</strong>. There's nothing else to set up.
+      </p>
+      <p>
+        You can also add it by hand: open <strong>Settings</strong> →{' '}
+        <strong>Connectors</strong>, choose{' '}
+        <strong>Add custom connector</strong>, name it <em>Let's Church</em>,
+        and paste the server address above.
+      </p>
 
       <h4>ChatGPT</h4>
       <p>
