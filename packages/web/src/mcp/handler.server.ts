@@ -119,7 +119,12 @@ function createServer(ctx: Context) {
     // App directories (e.g. Claude's portal) read the display name from
     // `annotations.title` rather than the tool's top-level `title`, so mirror it.
     const annotations = { ...config.annotations, title: config.title };
-    server.registerTool(name, { ...config, annotations }, (async (
+    // Every tool runs anonymously (the context is always session: null).
+    // ChatGPT reads each tool's auth policy from `securitySchemes`; the SDK
+    // only serializes known tool fields, so use OpenAI's documented `_meta`
+    // mirror. Without it ChatGPT's app portal assumes OAuth.
+    const _meta = { securitySchemes: [{ type: 'noauth' }] };
+    server.registerTool(name, { ...config, annotations, _meta }, (async (
       input: z.infer<I>,
     ) => {
       const limit = await enforceMcpCallRateLimit({
