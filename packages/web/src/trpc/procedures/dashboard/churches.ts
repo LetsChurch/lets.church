@@ -11,9 +11,14 @@ import {
 import { PART_SIZE } from '@letschurch/s3';
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
+import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
+import { staticMeta } from '@letschurch/temporal/util/dashboard-links';
+import { emailHtml, sanitizeForHtml } from '@letschurch/temporal/util/email';
 import { TRPCError } from '@trpc/server';
 import { and, eq, inArray } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
+import { stripIndent } from 'proper-tags';
+import { z } from 'zod';
 
 import {
   OrganizationMembershipError,
@@ -43,6 +48,7 @@ import {
   completeMultipartMediaUpload,
   geocodeOrganization,
   handleMultipartMediaUpload,
+  startBackground,
 } from '@/temporal';
 import {
   mantineAvatarLg2x,
@@ -58,6 +64,95 @@ import { authProcedure, participationProcedure, router } from '../../trpc';
 const moduleLogger = logger.child({
   module: 'trpc/procedures/dashboard/churches',
 });
+
+const { ADMIN_EMAIL, WEB_URL } = z
+  .object({
+    ADMIN_EMAIL: z.email(),
+    WEB_URL: z.url(),
+  })
+  .parse(process.env);
+
+/**
+ * Tell the site admin that a newly created organization is waiting for
+ * approval. Mirrors the channel approval request email.
+ */
+async function sendOrganizationApprovalRequestEmail(
+  appUserId: string,
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+    websiteUrl: string | null;
+    primaryEmail: string | null;
+  },
+) {
+  const user = await db.query.AppUser.findFirst({
+    where: (t, { eq }) => eq(t.id, appUserId),
+    columns: {
+      username: true,
+      fullName: true,
+    },
+    with: {
+      emails: {
+        columns: { email: true, verifiedAt: true },
+        where: (t, { isNotNull }) => isNotNull(t.verifiedAt),
+        limit: 1,
+      },
+    },
+  });
+
+  const creator = user?.fullName || user?.username || 'Unknown';
+  const creatorEmail = user?.emails[0]?.email ?? null;
+  const approvalUrl = `${WEB_URL}/dashboard/admin/organizations?filter=pending`;
+  const safeApprovalUrl = sanitizeForHtml(approvalUrl);
+
+  const subject = `New Organization Approval Request: ${organization.name}`;
+  const text = stripIndent`
+    A new organization has been created and is pending approval.
+
+    Organization Name: ${organization.name}
+    Organization Slug: ${organization.slug}
+    ${organization.websiteUrl ? `Website: ${organization.websiteUrl}` : ''}
+    ${organization.primaryEmail ? `Organization Email: ${organization.primaryEmail}` : ''}
+    Creator: ${creator}
+    ${creatorEmail ? `Creator Email: ${creatorEmail}` : ''}
+
+    Please visit ${approvalUrl} to review and approve this organization.
+  `;
+  const html = emailHtml(
+    'New Organization Approval Request',
+    stripIndent`
+      A new organization has been created and is pending approval.
+
+      <b>Organization Name:</b> ${sanitizeForHtml(organization.name)}<br>
+      <b>Organization Slug:</b> ${sanitizeForHtml(organization.slug)}<br>
+      ${organization.websiteUrl ? `<b>Website:</b> ${sanitizeForHtml(organization.websiteUrl)}<br>` : ''}
+      ${organization.primaryEmail ? `<b>Organization Email:</b> ${sanitizeForHtml(organization.primaryEmail)}<br>` : ''}
+      <b>Creator:</b> ${sanitizeForHtml(creator)}<br>
+      ${creatorEmail ? `<b>Creator Email:</b> ${sanitizeForHtml(creatorEmail)}<br>` : ''}
+
+      Please <a href="${safeApprovalUrl}">click here</a> to review and approve this organization.
+
+      Alternatively, visit: ${safeApprovalUrl}
+    `,
+  ).html;
+
+  await startBackground('sendEmailWorkflow', {
+    ...staticMeta({ summary: 'Organization approval request email' }),
+    args: [
+      {
+        from: 'hello@lets.church',
+        to: ADMIN_EMAIL,
+        subject,
+        text,
+        html,
+      },
+    ],
+    workflowId: `organization-approval:${organization.id}`,
+    taskQueue: BACKGROUND_QUEUE,
+    retry: { maximumAttempts: 5 },
+  });
+}
 
 const churchProcedure = authProcedure
   .input(churchQuerySchema)
@@ -166,7 +261,13 @@ export const churchRouter = router({
       // Get the tag slugs from the single tags array
       const allTagSlugs = input.tags || [];
 
-      let church: { id: string };
+      let church: {
+        id: string;
+        name: string;
+        slug: string;
+        websiteUrl: string | null;
+        primaryEmail: string | null;
+      };
       try {
         church = await db.transaction(async (tx) => {
           const [newChurch] = await tx
@@ -182,7 +283,13 @@ export const churchRouter = router({
               automaticallyApproveOrganizationAssociations: false,
               updatedAt: new Date(),
             })
-            .returning({ id: Organization.id });
+            .returning({
+              id: Organization.id,
+              name: Organization.name,
+              slug: Organization.slug,
+              websiteUrl: Organization.websiteUrl,
+              primaryEmail: Organization.primaryEmail,
+            });
 
           if (!newChurch) {
             throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
@@ -269,6 +376,32 @@ export const churchRouter = router({
         'Church created successfully',
       );
 
+      try {
+        await sendOrganizationApprovalRequestEmail(
+          ctx.session.appUserId,
+          church,
+        );
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            organizationId: church.id,
+          },
+          'Organization approval request email workflow started',
+        );
+      } catch (error) {
+        // Log but don't fail church creation if the email fails
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            organizationId: church.id,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to send organization approval request email',
+        );
+      }
+
       if (input.addresses && input.addresses.length > 0) {
         try {
           await geocodeOrganization(church.id);
@@ -295,7 +428,7 @@ export const churchRouter = router({
         }
       }
 
-      return church;
+      return { id: church.id };
     }),
 
   getChurches: authProcedure.query(async ({ ctx }) => {
