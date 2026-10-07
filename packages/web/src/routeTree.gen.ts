@@ -47,6 +47,7 @@ import { Route as MainChannelsRouteImport } from './routes/_main/channels'
 import { Route as MainAboutRouteImport } from './routes/_main.about'
 import { Route as MainSlugRouteImport } from './routes/_main/$slug'
 import { Route as DotwellKnownOpenidConfigurationRouteImport } from './routes/[.]well-known.openid-configuration'
+import { Route as DotwellKnownOpenaiAppsChallengeRouteImport } from './routes/[.]well-known.openai-apps-challenge'
 import { Route as DotwellKnownJwksDotjsonRouteImport } from './routes/[.]well-known.jwks[.]json'
 import { Route as MainDashboardIndexRouteImport } from './routes/_main/dashboard/index'
 import { Route as MainAboutIndexRouteImport } from './routes/_main/about/index'
@@ -324,6 +325,12 @@ const DotwellKnownOpenidConfigurationRoute =
   DotwellKnownOpenidConfigurationRouteImport.update({
     id: '/.well-known/openid-configuration',
     path: '/.well-known/openid-configuration',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DotwellKnownOpenaiAppsChallengeRoute =
+  DotwellKnownOpenaiAppsChallengeRouteImport.update({
+    id: '/.well-known/openai-apps-challenge',
+    path: '/.well-known/openai-apps-challenge',
     getParentRoute: () => rootRouteImport,
   } as any)
 const DotwellKnownJwksDotjsonRoute = DotwellKnownJwksDotjsonRouteImport.update({
@@ -829,6 +836,7 @@ export interface FileRoutesByFullPath {
   '/maintenance': typeof MaintenanceRoute
   '/mcp': typeof McpRoute
   '/.well-known/jwks.json': typeof DotwellKnownJwksDotjsonRoute
+  '/.well-known/openai-apps-challenge': typeof DotwellKnownOpenaiAppsChallengeRoute
   '/.well-known/openid-configuration': typeof DotwellKnownOpenidConfigurationRoute
   '/$slug': typeof MainSlugRoute
   '/about': typeof MainAboutRouteWithChildren
@@ -955,6 +963,7 @@ export interface FileRoutesByTo {
   '/maintenance': typeof MaintenanceRoute
   '/mcp': typeof McpRoute
   '/.well-known/jwks.json': typeof DotwellKnownJwksDotjsonRoute
+  '/.well-known/openai-apps-challenge': typeof DotwellKnownOpenaiAppsChallengeRoute
   '/.well-known/openid-configuration': typeof DotwellKnownOpenidConfigurationRoute
   '/$slug': typeof MainSlugRoute
   '/channels': typeof MainChannelsRoute
@@ -1082,6 +1091,7 @@ export interface FileRoutesById {
   '/maintenance': typeof MaintenanceRoute
   '/mcp': typeof McpRoute
   '/.well-known/jwks.json': typeof DotwellKnownJwksDotjsonRoute
+  '/.well-known/openai-apps-challenge': typeof DotwellKnownOpenaiAppsChallengeRoute
   '/.well-known/openid-configuration': typeof DotwellKnownOpenidConfigurationRoute
   '/_main/$slug': typeof MainSlugRoute
   '/_main/about': typeof MainAboutRouteWithChildren
@@ -1212,6 +1222,7 @@ export interface FileRouteTypes {
     | '/maintenance'
     | '/mcp'
     | '/.well-known/jwks.json'
+    | '/.well-known/openai-apps-challenge'
     | '/.well-known/openid-configuration'
     | '/$slug'
     | '/about'
@@ -1338,6 +1349,7 @@ export interface FileRouteTypes {
     | '/maintenance'
     | '/mcp'
     | '/.well-known/jwks.json'
+    | '/.well-known/openai-apps-challenge'
     | '/.well-known/openid-configuration'
     | '/$slug'
     | '/channels'
@@ -1464,6 +1476,7 @@ export interface FileRouteTypes {
     | '/maintenance'
     | '/mcp'
     | '/.well-known/jwks.json'
+    | '/.well-known/openai-apps-challenge'
     | '/.well-known/openid-configuration'
     | '/_main/$slug'
     | '/_main/about'
@@ -1593,6 +1606,7 @@ export interface RootRouteChildren {
   MaintenanceRoute: typeof MaintenanceRoute
   McpRoute: typeof McpRoute
   DotwellKnownJwksDotjsonRoute: typeof DotwellKnownJwksDotjsonRoute
+  DotwellKnownOpenaiAppsChallengeRoute: typeof DotwellKnownOpenaiAppsChallengeRoute
   DotwellKnownOpenidConfigurationRoute: typeof DotwellKnownOpenidConfigurationRoute
   ApiDigDeeperRoute: typeof ApiDigDeeperRoute
   ApiSearchAnswerRoute: typeof ApiSearchAnswerRoute
@@ -1887,6 +1901,13 @@ declare module '@tanstack/react-router' {
       path: '/.well-known/openid-configuration'
       fullPath: '/.well-known/openid-configuration'
       preLoaderRoute: typeof DotwellKnownOpenidConfigurationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/openai-apps-challenge': {
+      id: '/.well-known/openai-apps-challenge'
+      path: '/.well-known/openai-apps-challenge'
+      fullPath: '/.well-known/openai-apps-challenge'
+      preLoaderRoute: typeof DotwellKnownOpenaiAppsChallengeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.well-known/jwks.json': {
@@ -2766,6 +2787,7 @@ const rootRouteChildren: RootRouteChildren = {
   MaintenanceRoute: MaintenanceRoute,
   McpRoute: McpRoute,
   DotwellKnownJwksDotjsonRoute: DotwellKnownJwksDotjsonRoute,
+  DotwellKnownOpenaiAppsChallengeRoute: DotwellKnownOpenaiAppsChallengeRoute,
   DotwellKnownOpenidConfigurationRoute: DotwellKnownOpenidConfigurationRoute,
   ApiDigDeeperRoute: ApiDigDeeperRoute,
   ApiSearchAnswerRoute: ApiSearchAnswerRoute,
