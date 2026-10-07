@@ -12,6 +12,7 @@ import {
   IconEye,
   IconEyeOff,
   IconFlask,
+  IconLink,
   IconPhoto,
   IconRefresh,
   IconReload,
@@ -267,6 +268,7 @@ function ChannelUploadPage() {
   ] = useState<string | null>(null);
   // Copied-state for the embed-code copy button — flips back after a short delay.
   const { copied: embedCopied, copy: copyEmbed } = useCopied(1000);
+  const { copied: linkCopied, copy: copyLink } = useCopied(1000);
   // Disable the LLM Eval menu item while the route transition is in
   // flight so a fast double-click can't fire `navigate` twice. The state
   // is only flipped back on navigate's rejection — the resolved case
@@ -758,9 +760,14 @@ function ChannelUploadPage() {
     debouncedSeriesSearch,
   ]);
 
+  const origin =
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : 'https://lets.church';
+  const mediaPath = `/media/${idTranslator.fromUUID(uploadId)}`;
   // The iframe embed snippet — computed once and reused by both the copy
   // button and the read-only textarea below.
-  const embedCode = `<iframe src="${typeof window !== 'undefined' ? window.location.origin : 'https://lets.church'}/embed/media/${idTranslator.fromUUID(uploadId)}" width="1920" height="1080" frameborder="0" allowfullscreen allow="fullscreen; picture-in-picture"></iframe>`;
+  const embedCode = `<iframe src="${origin}/embed/media/${idTranslator.fromUUID(uploadId)}" width="1920" height="1080" frameborder="0" allowfullscreen allow="fullscreen; picture-in-picture"></iframe>`;
   const selectedGeneratedThumbnail = upload.generatedThumbnails.find(
     (thumbnail) => thumbnail.index === selectedGeneratedThumbnailIndex,
   );
@@ -1278,17 +1285,42 @@ function ChannelUploadPage() {
               </form.Subscribe>
             </div>
 
-            {/* View Media Page Button */}
-            <Button
-              component={Link}
-              to={`/media/${idTranslator.fromUUID(uploadId)}`}
-              variant="light"
-              leftSection={<IconEye size={16} />}
-              fullWidth
-              disabled={isProcessing}
+            {/* View Media Page + copy shareable link, joined as one split
+                control. Like the media bar's Ask split button, the wrapper owns
+                the fancy-pants edge, rounding and clipping; the segments are
+                flat (their own ::after edge suppressed) with a hairline divider. */}
+            <div
+              role="group"
+              aria-label="Media page"
+              className="border-fancy-pants isolate flex overflow-clip rounded-lg"
             >
-              View Media Page
-            </Button>
+              <Button
+                component={Link}
+                to={mediaPath}
+                variant="light"
+                leftSection={<IconEye size={16} />}
+                className="min-w-0 flex-1 rounded-none after:hidden focus-visible:ring-offset-0 focus-visible:ring-inset"
+                disabled={isProcessing}
+              >
+                View Media Page
+              </Button>
+              <Tooltip label={linkCopied ? 'Copied!' : 'Copy shareable link'}>
+                <ActionIcon
+                  variant="light"
+                  size="lg"
+                  color={linkCopied ? 'green' : undefined}
+                  className="border-brand/15 -ml-px rounded-none border-l focus-visible:ring-offset-0 focus-visible:ring-inset dark:border-white/10"
+                  aria-label="Copy shareable link"
+                  onClick={() => copyLink(`${origin}${mediaPath}`)}
+                >
+                  {linkCopied ? (
+                    <IconCheck size={16} />
+                  ) : (
+                    <IconLink size={16} />
+                  )}
+                </ActionIcon>
+              </Tooltip>
+            </div>
 
             {/* Label speakers — available to admins once a transcript exists. */}
             {isAdmin && upload.transcribingFinishedAt ? (
