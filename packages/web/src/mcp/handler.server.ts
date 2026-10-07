@@ -116,7 +116,12 @@ function createServer(ctx: Context) {
     { name, ...config }: ToolDefinition<I>,
     run: (caller: Caller, input: z.infer<I>) => Promise<object>,
   ) {
-    server.registerTool(name, config, (async (input: z.infer<I>) => {
+    // App directories (e.g. Claude's portal) read the display name from
+    // `annotations.title` rather than the tool's top-level `title`, so mirror it.
+    const annotations = { ...config.annotations, title: config.title };
+    server.registerTool(name, { ...config, annotations }, (async (
+      input: z.infer<I>,
+    ) => {
       const limit = await enforceMcpCallRateLimit({
         headers: ctx.req.headers,
         subject: ctx.rateLimitSubject,
