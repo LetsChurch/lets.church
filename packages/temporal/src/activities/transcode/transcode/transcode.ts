@@ -21,7 +21,6 @@ import {
   probeToDecodeCost,
   resolveHwAccel,
   runFfmpegEncode,
-  transcodeHwAccel,
   variantsToEncodeCost,
   variantsToMasterVideoPlaylist,
 } from '../../../util/ffmpeg';
@@ -153,12 +152,6 @@ export default async function transcode(
     );
 
     const variants = getVariants(probe);
-    const hwAccel = transcodeHwAccel(probe, variants, HW_ACCEL);
-    if (hwAccel !== HW_ACCEL) {
-      activityLogger.info(
-        `Source can't run on ${HW_ACCEL}; encoding in software instead`,
-      );
-    }
 
     activityLogger.info(
       `Will encode ${variants.length} variants: ${formatter.format(variants)}`,
@@ -167,7 +160,7 @@ export default async function transcode(
     // Claim device budget on the AMA path so we don't oversubscribe the card.
     // This may block until in-flight jobs free up enough units; keep
     // heartbeating so Temporal doesn't time the activity out while it waits.
-    if (amaBudgetEnabled && hwAccel.startsWith('ama:')) {
+    if (amaBudgetEnabled) {
       const frameRate = probeFrameRate(probe);
       // Two-dimensional cost: one encoder session per video rendition (the
       // primary device limit), and pixel throughput = max(encode-ladder,
@@ -209,7 +202,7 @@ export default async function transcode(
       probe,
       variants,
       signal,
-      hwAccel,
+      hwAccel: HW_ACCEL,
     });
 
     encodeProc.stdout?.on('data', (data) => {
@@ -411,7 +404,7 @@ export default async function transcode(
       pipelineVersion: CURRENT_PIPELINE_VERSION,
       transcodingFinishedAt: new Date(),
       // Record how this transcode encoded the upload (see schema).
-      transcodeEncoder: hwAccel.startsWith('ama:') ? 'h264_ama' : 'libx264',
+      transcodeEncoder: HW_ACCEL.startsWith('ama:') ? 'h264_ama' : 'libx264',
     });
   } catch (e) {
     activityLogger

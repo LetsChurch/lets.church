@@ -173,16 +173,25 @@ function parseAspectRatio(value: unknown): number | null {
   return num / den;
 }
 
-function roundDownToEven(n: number): number {
-  return Math.max(2, Math.floor(n / 2) * 2);
+// The AMA encoder (h264_ama) only accepts frames whose width and height are
+// both multiples of 4 and between 144 and 3840 ("Invalid frame width 670,
+// must be between 144 - 3840 and a multiple of 4"). Every rung is sized to
+// that on all workers so the master playlist always matches what any worker
+// encodes; libx264 is happy with it too.
+const FRAME_ALIGN = 4;
+const MIN_FRAME_SIDE = 144;
+
+function alignDown(n: number): number {
+  return Math.max(MIN_FRAME_SIDE, Math.floor(n / FRAME_ALIGN) * FRAME_ALIGN);
 }
 
 /**
  * The frame size a rung is actually encoded at for this source: the source's
  * display size (non-square pixels applied) fit inside the rung's box, keeping
- * the source aspect ratio and never upscaling. The box is oriented to the
- * source, so portrait video gets a portrait box rather than being squashed
- * into a landscape one. Both dimensions are even (required by yuv420p/h264).
+ * the source aspect ratio and not upscaling, except just enough to bring the
+ * short side up to 144px for tiny sources. The box is oriented to the source,
+ * so portrait video gets a portrait box rather than being squashed into a
+ * landscape one. Both dimensions are multiples of 4 (see FRAME_ALIGN).
  */
 export function videoVariantOutputDimensions(
   variant: VideoVariant,
@@ -199,8 +208,18 @@ export function videoVariantOutputDimensions(
   const srcH = stream.height;
   const [boxW, boxH] = srcH > srcW ? [boxShort, boxLong] : [boxLong, boxShort];
 
-  const scale = Math.min(boxW / srcW, boxH / srcH, 1);
-  return [roundDownToEven(srcW * scale), roundDownToEven(srcH * scale)];
+  // Fit the box without upscaling, then enlarge tiny sources to the minimum
+  // side, but never past the box (which also keeps every side within the
+  // card's 3840 limit) — that only bites on absurd aspect ratios.
+  const scale = Math.min(
+    Math.max(
+      Math.min(boxW / srcW, boxH / srcH, 1),
+      MIN_FRAME_SIDE / Math.min(srcW, srcH),
+    ),
+    boxW / srcW,
+    boxH / srcH,
+  );
+  return [alignDown(srcW * scale), alignDown(srcH * scale)];
 }
 
 // Below this share of the rung's box area we stop lowering the bitrate, so
@@ -532,11 +551,25 @@ export function extraDecodeArgs(probe: Probe, hwAccel: HwAccel) {
       `/dev/ama_transcoder${hwAccel.split(':').at(-1)}`,
     ];
 
-    // Keyed on the real picture stream, not any stream: `-c:v` as an input
-    // option applies to every video stream, so H.264 cover art must not pick
-    // the decoder for, say, a VP9 picture.
-    const decoder = AMA_DECODERS[primaryVideoStream(probe)?.codec_name ?? ''];
-    return decoder ? [...base, '-c:v', decoder] : base;
+    const video = primaryVideoStream(probe);
+    if (!video) {
+      return base;
+    }
+    const decoder = amaDecoder(probe);
+    if (decoder) {
+      return [...base, '-c:v', decoder];
+    }
+    // No on-device decoder (VP9, MPEG-4 Part 2, ...): decode in software and
+    // upload to the card (see ffmpegAmaFilterComplex). `-hwaccel` only creates
+    // a device when a hardware decoder is used, so create one explicitly for
+    // the upload filter.
+    const device = `/dev/ama_transcoder${hwAccel.split(':').at(-1)}`;
+    return [
+      '-init_hw_device',
+      `ama=ama0:${device}`,
+      '-filter_hw_device',
+      'ama0',
+    ];
   }
 
   return [];
@@ -549,30 +582,23 @@ const AMA_DECODERS: Record<string, string> = {
   av1: 'av1_ama',
 };
 
-/**
- * The hardware path to use for one transcode job. A worker configured for AMA
- * still encodes in software (libx264) when the job has video renditions but
- * the source can't run on the card: no on-device decoder for its codec (e.g.
- * VP9, MPEG-4 Part 2), or larger than the 4K decode/scale limit. The
- * alternative for software-decoded input, `hwupload` into `scaler_ama`, fails
- * without an explicitly initialised device. Audio-only jobs keep the
- * configured path; they never touch the video encoder.
- */
-export function transcodeHwAccel(
-  probe: Probe,
-  variants: Array<UploadVariantValue>,
-  hwAccel: HwAccel,
-): HwAccel {
-  if (!hwAccel.startsWith('ama:') || encodeSessionCount(variants) === 0) {
-    return hwAccel;
-  }
+// Whether the source picture is smaller than the card accepts (any side under
+// 144px). Such frames can't go through the on-device decoder or be uploaded
+// as-is; they're decoded and enlarged in software first.
+function belowAmaMinimum(probe: Probe): boolean {
   const video = primaryVideoStream(probe);
-  const onDevice =
-    !!video &&
-    video.codec_name in AMA_DECODERS &&
-    video.width <= AMA_MAX_WIDTH &&
-    video.height <= AMA_MAX_HEIGHT;
-  return onDevice ? hwAccel : 'none';
+  return !!video && Math.min(video.width, video.height) < MIN_FRAME_SIDE;
+}
+
+// The on-device decoder for the source's real picture stream, if any. Keyed on
+// the picture rather than any stream: `-c:v` as an input option applies to
+// every video stream, so H.264 cover art must not pick the decoder for a VP9
+// picture.
+function amaDecoder(probe: Probe): string | undefined {
+  if (belowAmaMinimum(probe)) {
+    return undefined;
+  }
+  return AMA_DECODERS[primaryVideoStream(probe)?.codec_name ?? ''];
 }
 
 // Filter-graph input for the source's real picture stream. Explicit rather
@@ -622,11 +648,15 @@ export function ffmpegAmaFilterComplex(
     return [];
   }
 
-  const hwUpload = probe.streams.some((s) =>
-    ['h264', 'hevc', 'av1'].includes(s.codec_name as string),
-  )
+  // Software-decoded sources are converted to 8-bit 4:2:0 and uploaded to the
+  // card (the device comes from extraDecodeArgs). Generic `hwupload` and
+  // other pixel formats fail format negotiation on the AMA build. Sources
+  // under the card's 144px minimum are enlarged to the top rung's size first.
+  const [topW, topH] = videoVariantOutputDimensions(videoVariants[0], probe);
+  const preScale = belowAmaMinimum(probe) ? `scale=${topW}:${topH},` : '';
+  const hwUpload = amaDecoder(probe)
     ? ''
-    : 'hwupload,';
+    : `${preScale}format=yuv420p,hwupload_ama,`;
 
   const filterComplex = `${videoInputLabel(probe)}${hwUpload}scaler_ama=outputs=${videoVariants.length}:out_res=${videoVariants
     .map((v) => videoVariantOutputDimensions(v, probe))

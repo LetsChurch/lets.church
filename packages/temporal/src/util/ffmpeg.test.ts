@@ -12,7 +12,6 @@ import {
   probeFrameRate,
   probeToDecodeCost,
   thumbnailsUseAma,
-  transcodeHwAccel,
   variantEncodeUnits,
   variantsToEncodeCost,
   variantsToMasterVideoPlaylist,
@@ -321,10 +320,39 @@ describe('videoVariantOutputDimensions', () => {
     ]);
   });
 
-  test('always produces even dimensions', () => {
+  test('sizes are multiples of 4, as h264_ama requires', () => {
+    // Verified on the MA35D: 670 wide is rejected, 668 encodes; likewise a
+    // 202 high frame is rejected and 200 encodes.
+    expect(
+      videoVariantOutputDimensions('VIDEO_480P', mockProbe(670, 480)),
+    ).toEqual([668, 480]);
+    expect(
+      videoVariantOutputDimensions('VIDEO_480P', mockProbe(270, 202)),
+    ).toEqual([268, 200]);
     expect(
       videoVariantOutputDimensions('VIDEO_480P', mockProbe(638, 359)),
-    ).toEqual([638, 358]);
+    ).toEqual([636, 356]);
+  });
+
+  test('tiny sources are brought up to the 144px minimum side', () => {
+    // h264_ama rejects any side under 144 (e.g. 144x108). Two SermonIndex
+    // sources are this small; scale just enough, keeping aspect ratio.
+    expect(
+      videoVariantOutputDimensions('VIDEO_480P', mockProbe(176, 128)),
+    ).toEqual([196, 144]);
+    expect(
+      videoVariantOutputDimensions('VIDEO_480P', mockProbe(160, 128)),
+    ).toEqual([180, 144]);
+    expect(
+      videoVariantOutputDimensions('VIDEO_480P', mockProbe(144, 144)),
+    ).toEqual([144, 144]);
+    // Enlarging to the minimum never pushes the long side past the box.
+    expect(
+      videoVariantOutputDimensions('VIDEO_480P', mockProbe(4000, 100)),
+    ).toEqual([960, 144]);
+    expect(
+      videoVariantOutputDimensions('VIDEO_4K', mockProbe(100, 8000)),
+    ).toEqual([144, 3840]);
   });
 });
 
@@ -1140,9 +1168,10 @@ test('variantsToMasterVideoPlaylist advertises the real encoded size', () => {
   ).toContain('BANDWIDTH=717000,RESOLUTION=320x240,');
 });
 
-describe('transcodeHwAccel', () => {
-  // A probe whose real picture is `codec` and which also carries cover art
-  // as a second, attached video stream of `artCodec`.
+describe('AMA path for sources without an on-device decoder', () => {
+  // Command shapes verified on an MA35D (tnw-worker-01): software decode,
+  // explicit device, `format=yuv420p,hwupload_ama` into scaler_ama. Generic
+  // `hwupload`, a missing device, or another pixel format all fail.
   function withArt(codec: string, artCodec: string) {
     const probe = mockProbe(640, 360, codec);
     probe.streams.push({
@@ -1156,39 +1185,67 @@ describe('transcodeHwAccel', () => {
     return probe;
   }
 
-  test('software workers stay on software', () => {
-    const probe = mockProbe(1920, 1080, 'h264');
-    expect(transcodeHwAccel(probe, getVariants(probe), 'none')).toBe('none');
+  test.each(['vp9', 'mpeg4', 'vp8'])(
+    '%s creates the device explicitly instead of -hwaccel',
+    (codec) => {
+      expect(extraDecodeArgs(mockProbe(640, 360, codec), 'ama:0')).toEqual([
+        '-init_hw_device',
+        'ama=ama0:/dev/ama_transcoder0',
+        '-filter_hw_device',
+        'ama0',
+      ]);
+    },
+  );
+
+  test('VP9 encode command uploads to the card and encodes there', () => {
+    const probe = mockProbe(640, 360, 'vp9');
+    const args = ffmpegEncodeArgs(
+      'in.webm',
+      probe,
+      getVariants(probe),
+      'ama:0',
+    );
+    expect(args.slice(2, 6)).toEqual([
+      '-init_hw_device',
+      'ama=ama0:/dev/ama_transcoder0',
+      '-filter_hw_device',
+      'ama0',
+    ]);
+    expect(args).not.toContain('-hwaccel');
+    expect(args[args.indexOf('-filter_complex') + 1]).toBe(
+      '[0:0]format=yuv420p,hwupload_ama,scaler_ama=outputs=1:out_res=(640x360) [VIDEO_480P]',
+    );
+    expect(args[args.indexOf('-c:v') + 1]).toBe('h264_ama');
   });
 
-  test.each(['h264', 'hevc', 'av1'])(
-    'AMA-decodable %s stays on the card',
-    (codec) => {
-      const probe = mockProbe(640, 360, codec);
-      expect(transcodeHwAccel(probe, getVariants(probe), 'ama:0')).toBe(
-        'ama:0',
-      );
-    },
-  );
-
-  test.each(['vp9', 'mpeg4', 'vp8'])(
-    '%s has no on-device decoder, so it encodes in software',
-    (codec) => {
-      const probe = mockProbe(640, 360, codec);
-      expect(transcodeHwAccel(probe, getVariants(probe), 'ama:0')).toBe('none');
-    },
-  );
-
-  test('sources beyond the 4K decode limit encode in software', () => {
-    const probe = mockProbe(7680, 4320, 'h264');
-    expect(transcodeHwAccel(probe, getVariants(probe), 'ama:0')).toBe('none');
-    const atLimit = mockProbe(3840, 2160, 'h264');
-    expect(transcodeHwAccel(atLimit, getVariants(atLimit), 'ama:0')).toBe(
-      'ama:0',
+  test('sources under 144px are enlarged in software before upload', () => {
+    // Verified on the MA35D: a 176x128 frame fails at upload; scaling to
+    // 196x144 first works. Applies even to H.264, which the card could
+    // otherwise decode (both such SermonIndex sources are H.264).
+    const probe = mockProbe(176, 128, 'h264');
+    expect(extraDecodeArgs(probe, 'ama:0')).toContain('-init_hw_device');
+    expect(extraDecodeArgs(probe, 'ama:0')).not.toContain('h264_ama');
+    expect(ffmpegEncodingArgs(getVariants(probe), probe, 'ama:0')[1]).toBe(
+      '[0:0]scale=196:144,format=yuv420p,hwupload_ama,scaler_ama=outputs=1:out_res=(196x144) [VIDEO_480P]',
     );
   });
 
-  test('audio-only jobs keep the configured path', () => {
+  test('AMA-decodable sources keep on-device decode', () => {
+    const probe = mockProbe(640, 360, 'hevc');
+    expect(extraDecodeArgs(probe, 'ama:0')).toEqual([
+      '-hwaccel',
+      'ama',
+      '-hwaccel_device',
+      '/dev/ama_transcoder0',
+      '-c:v',
+      'hevc_ama',
+    ]);
+    expect(
+      ffmpegEncodingArgs(getVariants(probe), probe, 'ama:0')[1],
+    ).not.toContain('hwupload');
+  });
+
+  test('audio-only files keep the plain -hwaccel args', () => {
     const probe = {
       streams: [{ codec_type: 'audio' as const, codec_name: 'mp3', index: 0 }],
       format: {
@@ -1198,41 +1255,29 @@ describe('transcodeHwAccel', () => {
         nb_streams: 1,
       },
     };
-    expect(getVariants(probe)).toEqual(['AUDIO']);
-    expect(transcodeHwAccel(probe, ['AUDIO'], 'ama:0')).toBe('ama:0');
+    expect(extraDecodeArgs(probe, 'ama:0')).toEqual([
+      '-hwaccel',
+      'ama',
+      '-hwaccel_device',
+      '/dev/ama_transcoder0',
+    ]);
   });
 
-  test('decides on the real picture, not cover art', () => {
+  test('the decode path follows the real picture, not cover art', () => {
     const vp9WithH264Art = withArt('vp9', 'h264');
+    expect(extraDecodeArgs(vp9WithH264Art, 'ama:0')).toContain(
+      '-init_hw_device',
+    );
     expect(
-      transcodeHwAccel(vp9WithH264Art, getVariants(vp9WithH264Art), 'ama:0'),
-    ).toBe('none');
-    const h264WithJpegArt = withArt('h264', 'mjpeg');
-    expect(
-      transcodeHwAccel(h264WithJpegArt, getVariants(h264WithJpegArt), 'ama:0'),
-    ).toBe('ama:0');
-    // ...and the AMA decoder is chosen from the picture too
-    expect(extraDecodeArgs(vp9WithH264Art, 'ama:0')).not.toContain('-c:v');
+      ffmpegEncodingArgs(
+        getVariants(vp9WithH264Art),
+        vp9WithH264Art,
+        'ama:0',
+      )[1],
+    ).toContain('hwupload_ama');
     expect(extraDecodeArgs(withArt('hevc', 'h264'), 'ama:0')).toContain(
       'hevc_ama',
     );
-  });
-
-  test('a VP9 job on an AMA worker builds a plain software command', () => {
-    // The failure this guards against: `hwupload,scaler_ama` with no device
-    // ("A hardware device reference is required to upload frames to").
-    const probe = mockProbe(640, 360, 'vp9');
-    const variants = getVariants(probe);
-    const args = ffmpegEncodeArgs(
-      'in.webm',
-      probe,
-      variants,
-      transcodeHwAccel(probe, variants, 'ama:0'),
-    );
-    const joined = args.join(' ');
-    expect(joined).not.toMatch(/ama|hwupload/);
-    expect(joined).toContain('[0:0]scale=640:360');
-    expect(args[args.indexOf('-c:v') + 1]).toBe('h264');
   });
 });
 
@@ -1586,7 +1631,7 @@ test('ffmpegEncodingArgs ama hwupload for non-hw-accelerated codec', () => {
   ).toMatchInlineSnapshot(`
     [
       "-filter_complex",
-      "[0:0]hwupload,scaler_ama=outputs=2:out_res=(3840x2160)(1920x1080) [VIDEO_4K][VIDEO_1080P]",
+      "[0:0]format=yuv420p,hwupload_ama,scaler_ama=outputs=2:out_res=(3840x2160)(1920x1080) [VIDEO_4K][VIDEO_1080P]",
       "-map",
       "[VIDEO_4K]",
       "-an",
