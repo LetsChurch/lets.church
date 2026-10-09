@@ -15,8 +15,10 @@ import {
   variantEncodeUnits,
   variantsToEncodeCost,
   variantsToMasterVideoPlaylist,
+  videoVariantOutputDimensions,
+  videoVariantOutputKbps,
 } from './ffmpeg';
-import { ffprobeSchema } from './zod';
+import { ffprobeSchema, probeIsVideoFile } from './zod';
 
 function mockProbe(
   width: number,
@@ -266,6 +268,79 @@ describe('thumbnailsUseAma / ffmpegThumbnailArgs', () => {
   });
 });
 
+describe('videoVariantOutputDimensions', () => {
+  test('16:9 sources fill the box exactly', () => {
+    expect(
+      videoVariantOutputDimensions('VIDEO_1080P', mockProbe(3840, 2160)),
+    ).toEqual([1920, 1080]);
+    expect(
+      videoVariantOutputDimensions('VIDEO_480P', mockProbe(1920, 1080)),
+    ).toEqual([960, 540]);
+  });
+
+  test('never upscales sources smaller than the box', () => {
+    expect(
+      videoVariantOutputDimensions('VIDEO_480P', mockProbe(640, 360)),
+    ).toEqual([640, 360]);
+    expect(
+      videoVariantOutputDimensions('VIDEO_480P', mockProbe(320, 240)),
+    ).toEqual([320, 240]);
+  });
+
+  test('keeps the source aspect ratio instead of stretching', () => {
+    // 4:3 into a 16:9 box: height-bound
+    expect(
+      videoVariantOutputDimensions('VIDEO_720P', mockProbe(1440, 1080)),
+    ).toEqual([960, 720]);
+    // square
+    expect(
+      videoVariantOutputDimensions('VIDEO_720P', mockProbe(1000, 1000)),
+    ).toEqual([720, 720]);
+    // ultrawide: width-bound
+    expect(
+      videoVariantOutputDimensions('VIDEO_1080P', mockProbe(1920, 800)),
+    ).toEqual([1920, 800]);
+  });
+
+  test('orients the box to portrait sources', () => {
+    expect(
+      videoVariantOutputDimensions('VIDEO_720P', mockProbe(720, 1280)),
+    ).toEqual([720, 1280]);
+    expect(
+      videoVariantOutputDimensions('VIDEO_480P', mockProbe(720, 1280)),
+    ).toEqual([540, 960]);
+  });
+
+  test('applies non-square sample aspect ratio', () => {
+    const probe = mockProbe(720, 480);
+    Object.assign(probe.streams[0], { sample_aspect_ratio: '32:27' });
+    // 720 * 32/27 = 853.3 display width
+    expect(videoVariantOutputDimensions('VIDEO_480P', probe)).toEqual([
+      852, 480,
+    ]);
+  });
+
+  test('always produces even dimensions', () => {
+    expect(
+      videoVariantOutputDimensions('VIDEO_480P', mockProbe(638, 359)),
+    ).toEqual([638, 358]);
+  });
+});
+
+describe('videoVariantOutputKbps', () => {
+  test('full-box sources get the rung bitrate', () => {
+    expect(videoVariantOutputKbps('VIDEO_480P', mockProbe(1920, 1080))).toBe(
+      1400,
+    );
+  });
+
+  test('scales with picture area, floored for tiny sources', () => {
+    // 640x360 is 4/9 of 960x540
+    expect(videoVariantOutputKbps('VIDEO_480P', mockProbe(640, 360))).toBe(622);
+    expect(videoVariantOutputKbps('VIDEO_480P', mockProbe(320, 240))).toBe(350);
+  });
+});
+
 describe('getVariants', () => {
   test('standard resolutions', () => {
     expect(getVariants(mockProbe(3840, 2160))).toMatchInlineSnapshot(`
@@ -294,6 +369,7 @@ describe('getVariants', () => {
     `);
     expect(getVariants(mockProbe(842, 480))).toMatchInlineSnapshot(`
       [
+        "VIDEO_480P",
         "AUDIO",
       ]
     `);
@@ -326,6 +402,7 @@ describe('getVariants', () => {
     `);
     expect(getVariants(mockProbe(500, 500))).toMatchInlineSnapshot(`
       [
+        "VIDEO_480P",
         "AUDIO",
       ]
     `);
@@ -342,8 +419,22 @@ describe('getVariants', () => {
     `);
     expect(getVariants(mockProbe(500, 500, 'h264', false)))
       .toMatchInlineSnapshot(`
-      []
-    `);
+        [
+          "VIDEO_480P",
+        ]
+      `);
+  });
+
+  test('sub-box sources still get the floor video rung', () => {
+    for (const [w, h] of [
+      [842, 480],
+      [640, 360],
+      [480, 360],
+      [320, 240],
+      [270, 202],
+    ]) {
+      expect(getVariants(mockProbe(w, h))).toEqual(['VIDEO_480P', 'AUDIO']);
+    }
   });
 
   describe('real probes', () => {
@@ -846,9 +937,149 @@ describe('getVariants', () => {
   });
 });
 
+// Audio files with embedded album art. ffprobe reports the art as a `video`
+// stream (disposition.attached_pic = 1), which must never become a video
+// rendition. Probes are real ffprobe output (trimmed to the fields we read) of
+// 1400x1400 cover art muxed onto a 3s tone:
+//   ffmpeg -f lavfi -i testsrc=size=1400x1400:rate=1 -frames:v 1 cover.{jpg,png}
+//   mp3: ffmpeg -i a.mp3 -i cover.jpg -map 0 -map 1 -c copy -id3v2_version 3 \
+//          -disposition:v attached_pic out.mp3
+//   m4a: ffmpeg -f lavfi -i sine=duration=3 -i cover.jpg -map 0 -map 1 \
+//          -c:a aac -c:v copy -disposition:v attached_pic out.m4a
+// (each also with cover.png). The art is larger than the 720p box on purpose:
+// before the cover-art filter, a PNG cover in an m4a got 720p + 480p video.
+describe('album art', () => {
+  const mp3_jpg = ffprobeSchema.parse(
+    JSON.parse(
+      '{"streams": [{"index": 0, "codec_name": "mp3", "codec_type": "audio", "sample_rate": "44100", "channels": 1, "bit_rate": "64000", "avg_frame_rate": "0/0", "r_frame_rate": "0/0", "disposition": {"default": 0, "attached_pic": 0}}, {"index": 1, "codec_name": "mjpeg", "codec_type": "video", "width": 1400, "height": 1400, "avg_frame_rate": "0/0", "r_frame_rate": "90000/1", "disposition": {"default": 0, "attached_pic": 1}}], "format": {"filename": "mp3_jpg.mp3", "nb_streams": 2, "format_name": "mp3", "duration": "3.000000"}}',
+    ),
+  );
+  const mp3_png = ffprobeSchema.parse(
+    JSON.parse(
+      '{"streams": [{"index": 0, "codec_name": "mp3", "codec_type": "audio", "sample_rate": "44100", "channels": 1, "bit_rate": "64000", "avg_frame_rate": "0/0", "r_frame_rate": "0/0", "disposition": {"default": 0, "attached_pic": 0}}, {"index": 1, "codec_name": "png", "codec_type": "video", "width": 1400, "height": 1400, "avg_frame_rate": "0/0", "r_frame_rate": "90000/1", "disposition": {"default": 0, "attached_pic": 1}}], "format": {"filename": "mp3_png.mp3", "nb_streams": 2, "format_name": "mp3", "duration": "3.000000"}}',
+    ),
+  );
+  const m4a_jpg = ffprobeSchema.parse(
+    JSON.parse(
+      '{"streams": [{"index": 0, "codec_name": "aac", "codec_type": "audio", "sample_rate": "44100", "channels": 1, "bit_rate": "69584", "nb_frames": "131", "avg_frame_rate": "0/0", "r_frame_rate": "0/0", "disposition": {"default": 1, "attached_pic": 0}}, {"index": 1, "codec_name": "mjpeg", "codec_type": "video", "width": 1400, "height": 1400, "avg_frame_rate": "0/0", "r_frame_rate": "90000/1", "disposition": {"default": 0, "attached_pic": 1}}], "format": {"filename": "m4a_jpg.m4a", "nb_streams": 2, "format_name": "mov,mp4,m4a,3gp,3g2,mj2", "duration": "3.000000"}}',
+    ),
+  );
+  const m4a_png = ffprobeSchema.parse(
+    JSON.parse(
+      '{"streams": [{"index": 0, "codec_name": "aac", "codec_type": "audio", "sample_rate": "44100", "channels": 1, "bit_rate": "69584", "nb_frames": "131", "avg_frame_rate": "0/0", "r_frame_rate": "0/0", "disposition": {"default": 1, "attached_pic": 0}}, {"index": 1, "codec_name": "png", "codec_type": "video", "width": 1400, "height": 1400, "avg_frame_rate": "0/0", "r_frame_rate": "90000/1", "disposition": {"default": 0, "attached_pic": 1}}], "format": {"filename": "m4a_png.m4a", "nb_streams": 2, "format_name": "mov,mp4,m4a,3gp,3g2,mj2", "duration": "3.000000"}}',
+    ),
+  );
+
+  const albumArtProbes = { mp3_jpg, mp3_png, m4a_jpg, m4a_png };
+
+  test.each(Object.entries(albumArtProbes))(
+    '%s gets only the audio rendition',
+    (_name, probe) => {
+      expect(getVariants(probe)).toEqual(['AUDIO']);
+    },
+  );
+
+  test.each(Object.entries(albumArtProbes))(
+    '%s encodes audio only (no filter graph, no video output)',
+    (_name, probe) => {
+      const args = ffmpegEncodingArgs(getVariants(probe), probe, 'none');
+      expect(args).not.toContain('-filter_complex');
+      expect(args).not.toContain('-c:v');
+      expect(args.filter((a) => a === '-map')).toHaveLength(1);
+      expect(args).toContain('0:a');
+      expect(args.at(-1)).toBe('AUDIO.m3u8');
+    },
+  );
+
+  // `probeIsVideoFile` (the pre-existing mp3 / mjpeg workaround) is what
+  // process-media uses to decide whether to extract thumbnails. Pin its
+  // behavior so the getVariants cover-art filter isn't mistaken for it: an m4a
+  // with PNG art still counts as "video" there (thumbnails are taken from the
+  // art) even though it gets no video rendition.
+  test('probeIsVideoFile keeps its existing album-art behavior', () => {
+    expect(probeIsVideoFile(mp3_jpg)).toBe(false);
+    expect(probeIsVideoFile(mp3_png)).toBe(false);
+    expect(probeIsVideoFile(m4a_jpg)).toBe(false);
+    expect(probeIsVideoFile(m4a_png)).toBe(true);
+  });
+
+  test('attached pictures are skipped whatever their codec', () => {
+    // Some muxers store cover art as a single H.264 frame; the
+    // attached_pic disposition is what marks it as art.
+    const probe = ffprobeSchema.parse(
+      JSON.parse(JSON.stringify(m4a_png).replace('"png"', '"h264"')),
+    );
+    expect(getVariants(probe)).toEqual(['AUDIO']);
+  });
+
+  test('real video alongside album art still gets video renditions', () => {
+    // An mp4 carrying both the picture and a cover image (110 such uploads
+    // in prod, the real video always listed first). Rungs and output size
+    // must come from the real video, not the 1400x1400 square art.
+    const probe = ffprobeSchema.parse({
+      streams: [
+        {
+          index: 0,
+          codec_name: 'h264',
+          codec_type: 'video',
+          width: 1280,
+          height: 720,
+          disposition: { default: 1, attached_pic: 0 },
+        },
+        { ...m4a_jpg.streams[0], index: 1 },
+        { ...m4a_jpg.streams[1], index: 2 },
+      ],
+      format: { ...m4a_jpg.format, filename: 'video_with_art.mp4' },
+    });
+    const variants = getVariants(probe);
+    expect(variants).toEqual(['VIDEO_720P', 'VIDEO_480P', 'AUDIO']);
+    expect(ffmpegEncodingArgs(variants, probe, 'none')[1]).toBe(
+      '[0:0]scale=1280:720:flags=lanczos,setsar=1[VIDEO_720P];' +
+        '[0:0]scale=960:540:flags=lanczos,setsar=1[VIDEO_480P]',
+    );
+  });
+
+  test('scales the real video even when album art is listed first', () => {
+    const probe = ffprobeSchema.parse({
+      streams: [
+        { ...m4a_jpg.streams[1], index: 0 },
+        { ...m4a_jpg.streams[0], index: 1 },
+        {
+          index: 2,
+          codec_name: 'h264',
+          codec_type: 'video',
+          width: 1280,
+          height: 720,
+          disposition: { default: 1, attached_pic: 0 },
+        },
+      ],
+      format: { ...m4a_jpg.format, filename: 'art_first.mp4' },
+    });
+    const variants = getVariants(probe);
+    expect(variants).toEqual(['VIDEO_720P', 'VIDEO_480P', 'AUDIO']);
+    expect(ffmpegEncodingArgs(variants, probe, 'none')[1]).toBe(
+      '[0:2]scale=1280:720:flags=lanczos,setsar=1[VIDEO_720P];' +
+        '[0:2]scale=960:540:flags=lanczos,setsar=1[VIDEO_480P]',
+    );
+    expect(ffmpegEncodingArgs(variants, probe, 'ama:0')[1]).toMatch(
+      /^\[0:2\]scaler_ama=outputs=2:out_res=\(1280x720\)\(960x540\) /,
+    );
+  });
+
+  test('a still image encoded as ordinary video is still treated as video', () => {
+    // Known limitation: a slide/title card rendered into a real H.264 track
+    // (no attached_pic) is indistinguishable from video in the probe.
+    expect(getVariants(mockProbe(640, 480))).toEqual(['VIDEO_480P', 'AUDIO']);
+  });
+});
+
 test('variantsToMasterVideoPlaylist', () => {
-  expect(variantsToMasterVideoPlaylist(['VIDEO_4K', 'VIDEO_1080P', 'AUDIO']))
-    .toMatchInlineSnapshot(`
+  expect(
+    variantsToMasterVideoPlaylist(
+      ['VIDEO_4K', 'VIDEO_1080P', 'AUDIO'],
+      mockProbe(3840, 2160),
+    ),
+  ).toMatchInlineSnapshot(`
     "#EXTM3U
     #EXT-X-VERSION:6
 
@@ -862,12 +1093,10 @@ test('variantsToMasterVideoPlaylist', () => {
   `);
 
   expect(
-    variantsToMasterVideoPlaylist([
-      'VIDEO_1080P',
-      'VIDEO_720P',
-      'VIDEO_480P',
-      'AUDIO',
-    ]),
+    variantsToMasterVideoPlaylist(
+      ['VIDEO_1080P', 'VIDEO_720P', 'VIDEO_480P', 'AUDIO'],
+      mockProbe(1920, 1080),
+    ),
   ).toMatchInlineSnapshot(`
     "#EXTM3U
     #EXT-X-VERSION:6
@@ -885,7 +1114,12 @@ test('variantsToMasterVideoPlaylist', () => {
 
   // video-only (no audio stream): no mp4a codec hint, no audio bandwidth,
   // no audio rendition group
-  expect(variantsToMasterVideoPlaylist(['VIDEO_720P'])).toMatchInlineSnapshot(`
+  expect(
+    variantsToMasterVideoPlaylist(
+      ['VIDEO_720P'],
+      mockProbe(1280, 720, 'h264', false),
+    ),
+  ).toMatchInlineSnapshot(`
     "#EXTM3U
     #EXT-X-VERSION:6
 
@@ -893,6 +1127,16 @@ test('variantsToMasterVideoPlaylist', () => {
     VIDEO_720P.m3u8
     "
   `);
+});
+
+test('variantsToMasterVideoPlaylist advertises the real encoded size', () => {
+  // 4:3 sub-box source: encoded at its own size, bitrate scaled to the floor
+  expect(
+    variantsToMasterVideoPlaylist(
+      getVariants(mockProbe(320, 240)),
+      mockProbe(320, 240),
+    ),
+  ).toContain('BANDWIDTH=717000,RESOLUTION=320x240,');
 });
 
 describe('extraDecodeArgs', () => {
@@ -971,7 +1215,7 @@ test('ffmpegEncodingArgs software 4K+1080P', () => {
   ).toMatchInlineSnapshot(`
     [
       "-filter_complex",
-      "[0:v]scale=3840:2160:flags=lanczos,setsar=1[VIDEO_4K];[0:v]scale=1920:1080:flags=lanczos,setsar=1[VIDEO_1080P]",
+      "[0:0]scale=3840:2160:flags=lanczos,setsar=1[VIDEO_4K];[0:0]scale=1920:1080:flags=lanczos,setsar=1[VIDEO_1080P]",
       "-map",
       "[VIDEO_4K]",
       "-an",
@@ -1138,7 +1382,7 @@ test('ffmpegEncodingArgs ama 4K+1080P h264', () => {
   ).toMatchInlineSnapshot(`
     [
       "-filter_complex",
-      "scaler_ama=outputs=2:out_res=(3840x2160)(1920x1080) [VIDEO_4K][VIDEO_1080P]",
+      "[0:0]scaler_ama=outputs=2:out_res=(3840x2160)(1920x1080) [VIDEO_4K][VIDEO_1080P]",
       "-map",
       "[VIDEO_4K]",
       "-an",
@@ -1245,7 +1489,7 @@ test('ffmpegEncodingArgs ama hwupload for non-hw-accelerated codec', () => {
   ).toMatchInlineSnapshot(`
     [
       "-filter_complex",
-      "hwupload,scaler_ama=outputs=2:out_res=(3840x2160)(1920x1080) [VIDEO_4K][VIDEO_1080P]",
+      "[0:0]hwupload,scaler_ama=outputs=2:out_res=(3840x2160)(1920x1080) [VIDEO_4K][VIDEO_1080P]",
       "-map",
       "[VIDEO_4K]",
       "-an",

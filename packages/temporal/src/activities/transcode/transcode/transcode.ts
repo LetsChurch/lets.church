@@ -302,7 +302,7 @@ export default async function transcode(
       activityLogger.info('Uploading master playlist file');
       Context.current().heartbeat(`Uploading playlist file`);
       const playlistBuffer = Buffer.from(
-        variantsToMasterVideoPlaylist(variants),
+        variantsToMasterVideoPlaylist(variants, probe),
       );
       await publicS3.retryablePutFile({
         key: `${uploadRecordId}/master.m3u8`,

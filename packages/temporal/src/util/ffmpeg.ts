@@ -1,5 +1,4 @@
 import type { UploadVariant } from '@letschurch/db';
-import { invariant } from 'es-toolkit';
 import { execa } from 'execa';
 
 import logger from '../util/logger';
@@ -50,18 +49,29 @@ type VideoVariant = Exclude<
 
 export type HwAccel = 'none' | `ama:${number}`;
 
+type VideoStream = Extract<Probe['streams'][number], { codec_type: 'video' }>;
+
+// Still-image codecs ffprobe reports as `video` (cover art in m4a/mp3, etc.).
+const STILL_IMAGE_CODECS = new Set(['mjpeg', 'png', 'bmp', 'gif', 'webp']);
+
+// The source's real picture stream: skips embedded cover art (attached
+// pictures / still-image codecs), which must never become a video rendition.
+function primaryVideoStream(probe: Probe): VideoStream | undefined {
+  return probe.streams.find(
+    (s): s is VideoStream =>
+      s.codec_type === 'video' &&
+      !STILL_IMAGE_CODECS.has(s.codec_name) &&
+      (s.disposition as { attached_pic?: number } | undefined)?.attached_pic !==
+        1,
+  );
+}
+
 export function getVariants(probe: Probe): Array<UploadVariantValue> {
   const res: Array<UploadVariantValue> = [];
 
-  const hasVideo = probeIsVideoFile(probe);
+  const stream = probeIsVideoFile(probe) ? primaryVideoStream(probe) : null;
 
-  if (hasVideo) {
-    const stream = probe.streams.find(
-      (s): s is Extract<typeof s, { codec_type: 'video' }> =>
-        s.codec_type === 'video',
-    );
-    invariant(stream, 'Video stream is required');
-
+  if (stream) {
     if (stream.width >= 3840 || stream.height >= 2160) {
       res.push('VIDEO_4K');
     }
@@ -74,9 +84,12 @@ export function getVariants(probe: Probe): Array<UploadVariantValue> {
       res.push('VIDEO_720P');
     }
 
-    if (stream.width >= 960 || stream.height >= 540) {
-      res.push('VIDEO_480P');
-    }
+    // The bottom rung is the floor: every real video gets at least one video
+    // rendition. Sources smaller than its 960x540 box are encoded at their
+    // own size (see `videoVariantOutputDimensions`) rather than dropped —
+    // otherwise low-res uploads (lots of 640x360 / 320x240 archive sermons)
+    // silently publish as audio-only.
+    res.push('VIDEO_480P');
   }
 
   if (probe.streams.some((s) => s.codec_type === 'audio')) {
@@ -86,6 +99,8 @@ export function getVariants(probe: Probe): Array<UploadVariantValue> {
   return res;
 }
 
+// Target bitrate for the rung's full box. Use `videoVariantOutputKbps` for the
+// bitrate actually encoded for a given source.
 function videoVariantToKbps(variant: VideoVariant): number {
   if (variant === 'VIDEO_4K') {
     return 18200;
@@ -100,6 +115,37 @@ function videoVariantToKbps(variant: VideoVariant): number {
   }
 }
 
+const AUDIO_KBPS = 192;
+// Headroom over the ladder's target bitrates (VBR overshoot up to maxrate,
+// fMP4 container overhead, playlists) plus a fixed allowance for thumbnails,
+// hovernail, peaks and transcripts.
+const OUTPUT_OVERHEAD = 1.15;
+const FIXED_ARTIFACT_BYTES = 25_000_000;
+
+/**
+ * Estimate the public-bucket bytes a full transcode of `probe` will write:
+ * every ladder rung's target bitrate plus the shared audio rendition, times
+ * duration, with headroom. Used to reserve storage capacity before any
+ * artifact is written — deliberately on the high side.
+ */
+export function estimateHlsOutputBytes(probe: Probe): bigint {
+  const seconds = Number.parseFloat(probe.format.duration);
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return BigInt(FIXED_ARTIFACT_BYTES);
+  }
+  const kbps = getVariants(probe).reduce(
+    (sum, variant) =>
+      variant === 'AUDIO'
+        ? sum + AUDIO_KBPS
+        : variant.startsWith('VIDEO_')
+          ? sum + videoVariantOutputKbps(variant as VideoVariant, probe)
+          : sum,
+    0,
+  );
+  const bytes = ((kbps * 1000) / 8) * seconds * OUTPUT_OVERHEAD;
+  return BigInt(Math.ceil(bytes) + FIXED_ARTIFACT_BYTES);
+}
+
 function videoVariantToDimensions(variant: VideoVariant): [number, number] {
   if (variant === 'VIDEO_4K') {
     return [3840, 2160];
@@ -112,6 +158,69 @@ function videoVariantToDimensions(variant: VideoVariant): [number, number] {
   } else {
     throw new Error(`Invalid variant: ${String(variant)}`);
   }
+}
+
+// Parses an ffprobe aspect-ratio string ("32:27"). Returns null for missing or
+// degenerate values ("0:1", "N/A").
+function parseAspectRatio(value: unknown): number | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const [num, den] = value.split(':').map(Number);
+  if (!Number.isFinite(num) || !Number.isFinite(den) || num <= 0 || den <= 0) {
+    return null;
+  }
+  return num / den;
+}
+
+function roundDownToEven(n: number): number {
+  return Math.max(2, Math.floor(n / 2) * 2);
+}
+
+/**
+ * The frame size a rung is actually encoded at for this source: the source's
+ * display size (non-square pixels applied) fit inside the rung's box, keeping
+ * the source aspect ratio and never upscaling. The box is oriented to the
+ * source, so portrait video gets a portrait box rather than being squashed
+ * into a landscape one. Both dimensions are even (required by yuv420p/h264).
+ */
+export function videoVariantOutputDimensions(
+  variant: VideoVariant,
+  probe: Probe,
+): [number, number] {
+  const [boxLong, boxShort] = videoVariantToDimensions(variant);
+  const stream = primaryVideoStream(probe);
+  if (!stream || stream.width <= 0 || stream.height <= 0) {
+    return [boxLong, boxShort];
+  }
+
+  const sar = parseAspectRatio(stream.sample_aspect_ratio) ?? 1;
+  const srcW = stream.width * sar;
+  const srcH = stream.height;
+  const [boxW, boxH] = srcH > srcW ? [boxShort, boxLong] : [boxLong, boxShort];
+
+  const scale = Math.min(boxW / srcW, boxH / srcH, 1);
+  return [roundDownToEven(srcW * scale), roundDownToEven(srcH * scale)];
+}
+
+// Below this share of the rung's box area we stop lowering the bitrate, so
+// tiny sources (e.g. 320x240) still get enough bits for legible motion.
+const MIN_BITRATE_AREA_FRACTION = 0.25;
+
+// The rung's target bitrate, scaled down when the source fills less than the
+// full box (letterboxed aspect ratios, portrait, sub-box sources) so we don't
+// spend 960x540 bits on a 320x240 picture.
+export function videoVariantOutputKbps(
+  variant: VideoVariant,
+  probe: Probe,
+): number {
+  const [boxW, boxH] = videoVariantToDimensions(variant);
+  const [w, h] = videoVariantOutputDimensions(variant, probe);
+  const fraction = Math.max(
+    Math.min((w * h) / (boxW * boxH), 1),
+    MIN_BITRATE_AREA_FRACTION,
+  );
+  return Math.round(videoVariantToKbps(variant) * fraction);
 }
 
 // --- AMA encode-budget cost model -----------------------------------------
@@ -274,9 +383,10 @@ function videoVariantToLevel(variant: VideoVariant): string {
 
 function videoVariantToOutputArgs(
   variant: VideoVariant,
+  probe: Probe,
   hwAccel: HwAccel,
 ): string[] {
-  const kbps = videoVariantToKbps(variant);
+  const kbps = videoVariantOutputKbps(variant, probe);
   // `-profile:v` / `-level:v` are libx264-only; the AMA encoder manages
   // profile/level itself and doesn't take these flags.
   const profileLevelArgs = hwAccel.startsWith('ama:')
@@ -373,6 +483,7 @@ function audioOutputArgs(): string[] {
 
 export function variantsToMasterVideoPlaylist(
   variants: Array<UploadVariantValue>,
+  probe: Probe,
 ) {
   const videoVariants = variants.filter(
     (v): v is VideoVariant =>
@@ -397,8 +508,8 @@ export function variantsToMasterVideoPlaylist(
   }
 
   for (const v of videoVariants) {
-    const kbps = videoVariantToKbps(v);
-    const [w, h] = videoVariantToDimensions(v);
+    const kbps = videoVariantOutputKbps(v, probe);
+    const [w, h] = videoVariantOutputDimensions(v, probe);
     const codec = videoVariantToAvcCodec(v);
     const bandwidth = (Math.floor(kbps * 1.5) + (hasAudio ? 192 : 0)) * 1000;
     const codecStr = hasAudio ? `${codec},mp4a.40.2` : codec;
@@ -439,10 +550,17 @@ export function extraDecodeArgs(probe: Probe, hwAccel: HwAccel) {
   return [];
 }
 
-// TODO: portrait
-// TODO: pad videos: https://superuser.com/a/991412
+// Filter-graph input for the source's real picture stream. Explicit rather
+// than `[0:v]` (ffmpeg's first video stream) so embedded cover art listed
+// before the video can never be what gets scaled.
+function videoInputLabel(probe: Probe): string {
+  const stream = primaryVideoStream(probe);
+  return `[0:${stream ? stream.index : 'v'}]`;
+}
+
 export function ffmpegSoftwareFilterComplex(
   variants: Array<UploadVariantValue>,
+  probe: Probe,
 ): Array<string> {
   // TODO: remove 360P, see above
   const videoVariants = variants.filter(
@@ -454,18 +572,17 @@ export function ffmpegSoftwareFilterComplex(
     return [];
   }
 
+  const input = videoInputLabel(probe);
   const filterComplex = videoVariants
     .map((v) => {
-      const [w, h] = videoVariantToDimensions(v);
-      return `[0:v]scale=${w}:${h}:flags=lanczos,setsar=1[${v}]`;
+      const [w, h] = videoVariantOutputDimensions(v, probe);
+      return `${input}scale=${w}:${h}:flags=lanczos,setsar=1[${v}]`;
     })
     .join(';');
 
   return ['-filter_complex', filterComplex];
 }
 
-// TODO: portrait
-// TODO: pad https://superuser.com/a/991412
 export function ffmpegAmaFilterComplex(
   variants: Array<UploadVariantValue>,
   probe: Probe,
@@ -486,8 +603,8 @@ export function ffmpegAmaFilterComplex(
     ? ''
     : 'hwupload,';
 
-  const filterComplex = `${hwUpload}scaler_ama=outputs=${videoVariants.length}:out_res=${videoVariants
-    .map((v) => videoVariantToDimensions(v))
+  const filterComplex = `${videoInputLabel(probe)}${hwUpload}scaler_ama=outputs=${videoVariants.length}:out_res=${videoVariants
+    .map((v) => videoVariantOutputDimensions(v, probe))
     .map((d) => `(${d[0]}x${d[1]})`)
     .join('')} ${videoVariants.map((v) => `[${v}]`).join('')}`;
 
@@ -496,6 +613,7 @@ export function ffmpegAmaFilterComplex(
 
 function variantsToOutputMaps(
   variants: Array<UploadVariantValue>,
+  probe: Probe,
   hwAccel: HwAccel,
 ): string[] {
   // TODO: remove 360P, see above
@@ -507,7 +625,9 @@ function variantsToOutputMaps(
   const hasAudio = variants.includes('AUDIO');
 
   return [
-    ...videoVariants.flatMap((v) => videoVariantToOutputArgs(v, hwAccel)),
+    ...videoVariants.flatMap((v) =>
+      videoVariantToOutputArgs(v, probe, hwAccel),
+    ),
     ...(hasAudio ? audioOutputArgs() : []),
   ];
 }
@@ -519,8 +639,8 @@ export function ffmpegEncodingArgs(
 ): Array<string> {
   const filterComplex = hwAccel.startsWith('ama:')
     ? ffmpegAmaFilterComplex(variants, probe)
-    : ffmpegSoftwareFilterComplex(variants);
-  const outputMaps = variantsToOutputMaps(variants, hwAccel);
+    : ffmpegSoftwareFilterComplex(variants, probe);
+  const outputMaps = variantsToOutputMaps(variants, probe, hwAccel);
 
   return [...filterComplex, ...outputMaps];
 }
