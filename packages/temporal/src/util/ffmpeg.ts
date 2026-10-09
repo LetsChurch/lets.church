@@ -532,22 +532,47 @@ export function extraDecodeArgs(probe: Probe, hwAccel: HwAccel) {
       `/dev/ama_transcoder${hwAccel.split(':').at(-1)}`,
     ];
 
-    if (probe.streams.some((s) => s.codec_name === 'h264')) {
-      return [...base, '-c:v', 'h264_ama'];
-    }
-
-    if (probe.streams.some((s) => s.codec_name === 'hevc')) {
-      return [...base, '-c:v', 'hevc_ama'];
-    }
-
-    if (probe.streams.some((s) => s.codec_name === 'av1')) {
-      return [...base, '-c:v', 'av1_ama'];
-    }
-
-    return base;
+    // Keyed on the real picture stream, not any stream: `-c:v` as an input
+    // option applies to every video stream, so H.264 cover art must not pick
+    // the decoder for, say, a VP9 picture.
+    const decoder = AMA_DECODERS[primaryVideoStream(probe)?.codec_name ?? ''];
+    return decoder ? [...base, '-c:v', decoder] : base;
   }
 
   return [];
+}
+
+// Source codecs the MA35D can decode on-device, and their ffmpeg decoders.
+const AMA_DECODERS: Record<string, string> = {
+  h264: 'h264_ama',
+  hevc: 'hevc_ama',
+  av1: 'av1_ama',
+};
+
+/**
+ * The hardware path to use for one transcode job. A worker configured for AMA
+ * still encodes in software (libx264) when the job has video renditions but
+ * the source can't run on the card: no on-device decoder for its codec (e.g.
+ * VP9, MPEG-4 Part 2), or larger than the 4K decode/scale limit. The
+ * alternative for software-decoded input, `hwupload` into `scaler_ama`, fails
+ * without an explicitly initialised device. Audio-only jobs keep the
+ * configured path; they never touch the video encoder.
+ */
+export function transcodeHwAccel(
+  probe: Probe,
+  variants: Array<UploadVariantValue>,
+  hwAccel: HwAccel,
+): HwAccel {
+  if (!hwAccel.startsWith('ama:') || encodeSessionCount(variants) === 0) {
+    return hwAccel;
+  }
+  const video = primaryVideoStream(probe);
+  const onDevice =
+    !!video &&
+    video.codec_name in AMA_DECODERS &&
+    video.width <= AMA_MAX_WIDTH &&
+    video.height <= AMA_MAX_HEIGHT;
+  return onDevice ? hwAccel : 'none';
 }
 
 // Filter-graph input for the source's real picture stream. Explicit rather

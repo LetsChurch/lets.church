@@ -12,6 +12,7 @@ import {
   probeFrameRate,
   probeToDecodeCost,
   thumbnailsUseAma,
+  transcodeHwAccel,
   variantEncodeUnits,
   variantsToEncodeCost,
   variantsToMasterVideoPlaylist,
@@ -1137,6 +1138,102 @@ test('variantsToMasterVideoPlaylist advertises the real encoded size', () => {
       mockProbe(320, 240),
     ),
   ).toContain('BANDWIDTH=717000,RESOLUTION=320x240,');
+});
+
+describe('transcodeHwAccel', () => {
+  // A probe whose real picture is `codec` and which also carries cover art
+  // as a second, attached video stream of `artCodec`.
+  function withArt(codec: string, artCodec: string) {
+    const probe = mockProbe(640, 360, codec);
+    probe.streams.push({
+      codec_type: 'video' as const,
+      codec_name: artCodec,
+      width: 600,
+      height: 600,
+      index: 2,
+      disposition: { attached_pic: 1 },
+    } as (typeof probe.streams)[number]);
+    return probe;
+  }
+
+  test('software workers stay on software', () => {
+    const probe = mockProbe(1920, 1080, 'h264');
+    expect(transcodeHwAccel(probe, getVariants(probe), 'none')).toBe('none');
+  });
+
+  test.each(['h264', 'hevc', 'av1'])(
+    'AMA-decodable %s stays on the card',
+    (codec) => {
+      const probe = mockProbe(640, 360, codec);
+      expect(transcodeHwAccel(probe, getVariants(probe), 'ama:0')).toBe(
+        'ama:0',
+      );
+    },
+  );
+
+  test.each(['vp9', 'mpeg4', 'vp8'])(
+    '%s has no on-device decoder, so it encodes in software',
+    (codec) => {
+      const probe = mockProbe(640, 360, codec);
+      expect(transcodeHwAccel(probe, getVariants(probe), 'ama:0')).toBe('none');
+    },
+  );
+
+  test('sources beyond the 4K decode limit encode in software', () => {
+    const probe = mockProbe(7680, 4320, 'h264');
+    expect(transcodeHwAccel(probe, getVariants(probe), 'ama:0')).toBe('none');
+    const atLimit = mockProbe(3840, 2160, 'h264');
+    expect(transcodeHwAccel(atLimit, getVariants(atLimit), 'ama:0')).toBe(
+      'ama:0',
+    );
+  });
+
+  test('audio-only jobs keep the configured path', () => {
+    const probe = {
+      streams: [{ codec_type: 'audio' as const, codec_name: 'mp3', index: 0 }],
+      format: {
+        format_name: 'mp3',
+        filename: 'a.mp3',
+        duration: '60.0',
+        nb_streams: 1,
+      },
+    };
+    expect(getVariants(probe)).toEqual(['AUDIO']);
+    expect(transcodeHwAccel(probe, ['AUDIO'], 'ama:0')).toBe('ama:0');
+  });
+
+  test('decides on the real picture, not cover art', () => {
+    const vp9WithH264Art = withArt('vp9', 'h264');
+    expect(
+      transcodeHwAccel(vp9WithH264Art, getVariants(vp9WithH264Art), 'ama:0'),
+    ).toBe('none');
+    const h264WithJpegArt = withArt('h264', 'mjpeg');
+    expect(
+      transcodeHwAccel(h264WithJpegArt, getVariants(h264WithJpegArt), 'ama:0'),
+    ).toBe('ama:0');
+    // ...and the AMA decoder is chosen from the picture too
+    expect(extraDecodeArgs(vp9WithH264Art, 'ama:0')).not.toContain('-c:v');
+    expect(extraDecodeArgs(withArt('hevc', 'h264'), 'ama:0')).toContain(
+      'hevc_ama',
+    );
+  });
+
+  test('a VP9 job on an AMA worker builds a plain software command', () => {
+    // The failure this guards against: `hwupload,scaler_ama` with no device
+    // ("A hardware device reference is required to upload frames to").
+    const probe = mockProbe(640, 360, 'vp9');
+    const variants = getVariants(probe);
+    const args = ffmpegEncodeArgs(
+      'in.webm',
+      probe,
+      variants,
+      transcodeHwAccel(probe, variants, 'ama:0'),
+    );
+    const joined = args.join(' ');
+    expect(joined).not.toMatch(/ama|hwupload/);
+    expect(joined).toContain('[0:0]scale=640:360');
+    expect(args[args.indexOf('-c:v') + 1]).toBe('h264');
+  });
 });
 
 describe('extraDecodeArgs', () => {
