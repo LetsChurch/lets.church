@@ -17,7 +17,7 @@
   "license": "UNLICENSE",
   "dependencies": {
     "@aws-sdk/client-s3": "catalog:",
-    "zod": "catalog:"
+    "@letschurch/s3": "workspace:*"
   },
   "devDependencies": {
     "oxfmt": "catalog:",

@@ -45,11 +45,13 @@ export const Route = createFileRoute('/media/rss.xml')({
               publishedAt: UploadRecord.publishedAt,
               defaultThumbnailPath: UploadRecord.defaultThumbnailPath,
               overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
+              storageLocation: UploadRecord.storageLocation,
               channel: {
                 id: Channel.id,
                 name: Channel.name,
                 slug: Channel.slug,
                 defaultThumbnailPath: Channel.defaultThumbnailPath,
+                defaultThumbnailLocation: Channel.defaultThumbnailLocation,
               },
             })
             .from(UploadRecord)
@@ -74,9 +76,12 @@ export const Route = createFileRoute('/media/rss.xml')({
           // Add items to feed
           for (const upload of uploads) {
             const thumbnailUrl = resolveThumbnailUrl({
+              storageLocation: upload.storageLocation,
               overrideThumbnailPath: upload.overrideThumbnailPath,
               defaultThumbnailPath: upload.defaultThumbnailPath,
               channelDefaultThumbnailPath: upload.channel.defaultThumbnailPath,
+              channelDefaultThumbnailLocation:
+                upload.channel.defaultThumbnailLocation,
               size: 'card',
             });
 

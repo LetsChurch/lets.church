@@ -1,5 +1,4 @@
 import { Channel, db, UploadListEntry, UploadRecord } from '@letschurch/db';
-import { publicS3 } from '@letschurch/s3/public';
 import {
   and,
   asc,
@@ -24,7 +23,7 @@ import {
 } from '@/util/list-visibility-rules';
 import logger from '@/util/logger';
 import { isChannelRoutable } from '@/util/media-visibility';
-import { getPublicImageUrl } from '@/util/server-env';
+import { imageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 
 import { publicProcedure } from '../trpc';
@@ -109,6 +108,7 @@ export const playlistProcedures = {
               lengthSeconds: true,
               defaultThumbnailPath: true,
               overrideThumbnailPath: true,
+              storageLocation: true,
               visibility: true,
               transcodingFinishedAt: true,
               deletedAt: true,
@@ -120,7 +120,9 @@ export const playlistProcedures = {
                   name: true,
                   slug: true,
                   avatarPath: true,
+                  avatarLocation: true,
                   defaultThumbnailPath: true,
+                  defaultThumbnailLocation: true,
                 },
               },
             },
@@ -144,6 +146,7 @@ export const playlistProcedures = {
         const {
           defaultThumbnailPath,
           overrideThumbnailPath,
+          storageLocation,
           channel,
           visibility: _visibility,
           transcodingFinishedAt: _transcodingFinishedAt,
@@ -152,17 +155,21 @@ export const playlistProcedures = {
         } = upload;
 
         const thumbnailUrl = resolveThumbnailUrl({
+          storageLocation,
           overrideThumbnailPath,
           defaultThumbnailPath,
           channelDefaultThumbnailPath: channel.defaultThumbnailPath,
+          channelDefaultThumbnailLocation: channel.defaultThumbnailLocation,
           size: 'card',
         });
 
-        const channelAvatarUrl = channel.avatarPath
-          ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
-              resize: appAvatarXs2x,
-            })
-          : null;
+        const channelAvatarUrl = imageUrl(
+          channel.avatarLocation,
+          channel.avatarPath,
+          {
+            resize: appAvatarXs2x,
+          },
+        );
 
         return {
           ...uploadRest,
@@ -209,6 +216,7 @@ export const playlistProcedures = {
               id: true,
               username: true,
               avatarPath: true,
+              avatarLocation: true,
             },
           },
           channel: {
@@ -217,6 +225,7 @@ export const playlistProcedures = {
               name: true,
               slug: true,
               avatarPath: true,
+              avatarLocation: true,
               visibility: true,
               approvedAt: true,
               deletedAt: true,
@@ -278,23 +287,21 @@ export const playlistProcedures = {
 
       const uploadCount = Number(uploadCountResult?.count ?? 0);
 
-      const authorAvatarUrl = playlist.author.avatarPath
-        ? getPublicImageUrl(
-            publicS3.getS3ProtocolUri(playlist.author.avatarPath),
-            {
-              resize: appAvatarMd2x,
-            },
-          )
-        : null;
+      const authorAvatarUrl = imageUrl(
+        playlist.author.avatarLocation,
+        playlist.author.avatarPath,
+        {
+          resize: appAvatarMd2x,
+        },
+      );
 
-      const channelAvatarUrl = playlist.channel?.avatarPath
-        ? getPublicImageUrl(
-            publicS3.getS3ProtocolUri(playlist.channel.avatarPath),
-            {
-              resize: appAvatarXs2x,
-            },
-          )
-        : null;
+      const channelAvatarUrl = imageUrl(
+        playlist.channel?.avatarLocation,
+        playlist.channel?.avatarPath,
+        {
+          resize: appAvatarXs2x,
+        },
+      );
 
       return {
         id: OutgoingIdSchema.parse(playlist.id),
@@ -358,8 +365,10 @@ export const playlistProcedures = {
       const firstEntry = await db
         .select({
           overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
+          storageLocation: UploadRecord.storageLocation,
           defaultThumbnailPath: UploadRecord.defaultThumbnailPath,
           channelDefaultThumbnailPath: Channel.defaultThumbnailPath,
+          channelDefaultThumbnailLocation: Channel.defaultThumbnailLocation,
         })
         .from(UploadListEntry)
         .innerJoin(
@@ -387,9 +396,12 @@ export const playlistProcedures = {
       }
 
       return resolveThumbnailUrl({
+        storageLocation: firstEntry.storageLocation,
         overrideThumbnailPath: firstEntry.overrideThumbnailPath,
         defaultThumbnailPath: firstEntry.defaultThumbnailPath,
         channelDefaultThumbnailPath: firstEntry.channelDefaultThumbnailPath,
+        channelDefaultThumbnailLocation:
+          firstEntry.channelDefaultThumbnailLocation,
         size: 'featured',
       });
     }),
@@ -513,6 +525,7 @@ export const playlistProcedures = {
               lengthSeconds: true,
               defaultThumbnailPath: true,
               overrideThumbnailPath: true,
+              storageLocation: true,
               visibility: true,
               transcodingFinishedAt: true,
               deletedAt: true,
@@ -524,7 +537,9 @@ export const playlistProcedures = {
                   name: true,
                   slug: true,
                   avatarPath: true,
+                  avatarLocation: true,
                   defaultThumbnailPath: true,
+                  defaultThumbnailLocation: true,
                 },
               },
             },
@@ -555,6 +570,7 @@ export const playlistProcedures = {
         const {
           defaultThumbnailPath,
           overrideThumbnailPath,
+          storageLocation,
           channel,
           visibility: _visibility,
           transcodingFinishedAt: _transcodingFinishedAt,
@@ -563,17 +579,21 @@ export const playlistProcedures = {
         } = upload;
 
         const thumbnailUrl = resolveThumbnailUrl({
+          storageLocation,
           overrideThumbnailPath,
           defaultThumbnailPath,
           channelDefaultThumbnailPath: channel.defaultThumbnailPath,
+          channelDefaultThumbnailLocation: channel.defaultThumbnailLocation,
           size: 'card',
         });
 
-        const channelAvatarUrl = channel.avatarPath
-          ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
-              resize: appAvatarXs2x,
-            })
-          : null;
+        const channelAvatarUrl = imageUrl(
+          channel.avatarLocation,
+          channel.avatarPath,
+          {
+            resize: appAvatarXs2x,
+          },
+        );
 
         return {
           ...uploadRest,

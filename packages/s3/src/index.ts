@@ -66,6 +66,8 @@ export type S3Config = {
 export type LcS3ClientOptions = S3Config & {
   logger?: Logger;
   storageClass?: StorageClass;
+  /** Path-style addressing (`endpoint/bucket/key`), needed by RustFS/MinIO. */
+  forcePathStyle?: boolean;
 };
 
 export class LcS3Client {
@@ -82,6 +84,7 @@ export class LcS3Client {
     secretAccessKey,
     logger,
     storageClass,
+    forcePathStyle,
   }: LcS3ClientOptions) {
     this.bucket = bucket;
     this.logger = logger;
@@ -89,6 +92,7 @@ export class LcS3Client {
     this.client = new S3({
       region,
       endpoint,
+      ...(forcePathStyle ? { forcePathStyle: true } : {}),
       credentials: {
         accessKeyId,
         secretAccessKey,
@@ -365,10 +369,13 @@ export class LcS3Client {
     body,
     path,
     contentLength,
+    storageClass = this.storageClass,
   }: {
     key: string;
     contentType: string;
     contentLength?: number;
+    /** Overrides the client's default storage class for this object. */
+    storageClass?: StorageClass;
   } & MergeExclusive<{ body: Readable | Buffer }, { path: string }>) {
     invariant(body || path, 'Body or path must be provided to putFile');
 
@@ -378,7 +385,7 @@ export class LcS3Client {
       ContentType: contentType,
       Body: body ? body : createReadStream(path),
       ...(contentLength ? { ContentLength: contentLength } : {}),
-      ...(this.storageClass ? { StorageClass: this.storageClass } : {}),
+      ...(storageClass ? { StorageClass: storageClass } : {}),
     });
     return this.client.send(cmd);
   }

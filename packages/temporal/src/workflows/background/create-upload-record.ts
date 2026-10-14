@@ -25,5 +25,5 @@ export async function createUploadRecordWorkflow(data: UploadRecordCreateData) {
   // written after transcription + summarization, once the upload has a summary
   // embedding (see process-media / summarize-upload).
 
-  return rec.id;
+  return { id: rec.id, storageLocation: rec.storageLocation };
 }

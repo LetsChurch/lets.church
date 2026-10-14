@@ -15,7 +15,7 @@ import {
 } from '@letschurch/db';
 import { osSearch } from '@letschurch/opensearch';
 import { getPublicUrlWithFilename } from '@letschurch/s3';
-import { publicS3 } from '@letschurch/s3/public';
+import { getLocation } from '@letschurch/s3/locations';
 import { xxh64 } from '@node-rs/xxhash';
 import { getRequest } from '@tanstack/react-start/server';
 import { TRPCError } from '@trpc/server';
@@ -38,8 +38,8 @@ import { getMuxLivePlaybackUrl } from '@/util/mux';
 import { getClientIpAddress } from '@/util/request-ip';
 import { isSafeUrl } from '@/util/safe-url';
 import {
-  getPublicImageUrl,
   getPublicMediaUrl,
+  imageUrl,
   makeDownloadServiceUrl,
 } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
@@ -232,6 +232,7 @@ export const mediaProcedures = {
           lengthSeconds: true,
           defaultThumbnailPath: true,
           overrideThumbnailPath: true,
+          storageLocation: true,
           variants: true,
           probe: true,
           userCommentsEnabled: true,
@@ -261,7 +262,9 @@ export const mediaProcedures = {
               name: true,
               slug: true,
               avatarPath: true,
+              avatarLocation: true,
               defaultThumbnailPath: true,
+              defaultThumbnailLocation: true,
               visibility: true,
               approvedAt: true,
             },
@@ -317,6 +320,7 @@ export const mediaProcedures = {
       const {
         defaultThumbnailPath,
         overrideThumbnailPath,
+        storageLocation,
         channel,
         variants,
         downloadsEnabled,
@@ -327,31 +331,39 @@ export const mediaProcedures = {
       } = media;
 
       const thumbnailUrl = resolveThumbnailUrl({
+        storageLocation,
         overrideThumbnailPath,
         defaultThumbnailPath,
         channelDefaultThumbnailPath: channel.defaultThumbnailPath,
+        channelDefaultThumbnailLocation: channel.defaultThumbnailLocation,
         size: 'card',
       });
 
       const fullSizeThumbnailUrl = resolveThumbnailUrl({
+        storageLocation,
         overrideThumbnailPath,
         defaultThumbnailPath,
         channelDefaultThumbnailPath: channel.defaultThumbnailPath,
+        channelDefaultThumbnailLocation: channel.defaultThumbnailLocation,
         size: 'featured',
       });
 
       const posterThumbnailUrl = resolveThumbnailUrl({
+        storageLocation,
         overrideThumbnailPath,
         defaultThumbnailPath,
         channelDefaultThumbnailPath: channel.defaultThumbnailPath,
+        channelDefaultThumbnailLocation: channel.defaultThumbnailLocation,
         size: 'poster',
       });
 
-      const channelAvatarUrl = channel.avatarPath
-        ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
-            resize: appAvatarXs2x,
-          })
-        : null;
+      const channelAvatarUrl = imageUrl(
+        channel.avatarLocation,
+        channel.avatarPath,
+        {
+          resize: appAvatarXs2x,
+        },
+      );
 
       // Generate media source URLs based on available variants
       const hasVideo = variants.some((v) => v.startsWith('VIDEO'));
@@ -372,12 +384,12 @@ export const mediaProcedures = {
       const mediaSource = servingMux
         ? getMuxLivePlaybackUrl(muxPlaybackId as string)
         : hasVideo
-          ? getPublicMediaUrl(`${media.id}/master.m3u8`)
+          ? getPublicMediaUrl(storageLocation, `${media.id}/master.m3u8`)
           : null;
 
       const audioSource =
         !servingMux && hasAudio
-          ? getPublicMediaUrl(`${media.id}/AUDIO.m3u8`)
+          ? getPublicMediaUrl(storageLocation, `${media.id}/AUDIO.m3u8`)
           : null;
 
       // Extract video dimensions from probe data
@@ -398,8 +410,14 @@ export const mediaProcedures = {
       }
 
       // Generate peaks URLs
-      const peaksJsonUrl = getPublicMediaUrl(`${media.id}/peaks.json`);
-      const peaksDatUrl = getPublicMediaUrl(`${media.id}/peaks.dat`);
+      const peaksJsonUrl = getPublicMediaUrl(
+        storageLocation,
+        `${media.id}/peaks.json`,
+      );
+      const peaksDatUrl = getPublicMediaUrl(
+        storageLocation,
+        `${media.id}/peaks.dat`,
+      );
 
       const [
         subscription,
@@ -606,6 +624,7 @@ export const mediaProcedures = {
             label: entry.label,
             url: await makeDownloadServiceUrl(
               media.id,
+              storageLocation,
               entry.variant,
               filename,
               entry.kind !== 'AUDIO' && variants.includes('AUDIO'),
@@ -638,7 +657,7 @@ export const mediaProcedures = {
             : `${media.id}/transcript.original.txt`;
           downloadPromises.push(
             getPublicUrlWithFilename(
-              publicS3,
+              getLocation(storageLocation).public,
               `${media.id}/transcript.vtt`,
               `${baseFilename} transcript.vtt`,
             ).then((url) => {
@@ -649,7 +668,7 @@ export const mediaProcedures = {
               });
             }),
             getPublicUrlWithFilename(
-              publicS3,
+              getLocation(storageLocation).public,
               txtKey,
               `${baseFilename} transcript.txt`,
             ).then((url) => {
@@ -744,7 +763,13 @@ export const mediaProcedures = {
       const sessionUserId = ctx.session?.appUserId ?? null;
 
       const media = await db.query.UploadRecord.findFirst({
-        columns: { id: true, variants: true, probe: true, visibility: true },
+        columns: {
+          id: true,
+          variants: true,
+          probe: true,
+          visibility: true,
+          storageLocation: true,
+        },
         with: {
           channel: {
             columns: { id: true, visibility: true, approvedAt: true },
@@ -780,10 +805,10 @@ export const mediaProcedures = {
       if (!hasVideo && !hasAudio) return null;
 
       const mediaSource = hasVideo
-        ? getPublicMediaUrl(`${media.id}/master.m3u8`)
+        ? getPublicMediaUrl(media.storageLocation, `${media.id}/master.m3u8`)
         : null;
       const audioSource = hasAudio
-        ? getPublicMediaUrl(`${media.id}/AUDIO.m3u8`)
+        ? getPublicMediaUrl(media.storageLocation, `${media.id}/AUDIO.m3u8`)
         : null;
 
       let videoWidth = 1280;
@@ -1030,7 +1055,7 @@ export const mediaProcedures = {
 
       const sessionUserId = ctx.session?.appUserId ?? null;
       const media = await db.query.UploadRecord.findFirst({
-        columns: { id: true, visibility: true },
+        columns: { id: true, visibility: true, storageLocation: true },
         with: {
           channel: {
             columns: { id: true, visibility: true, approvedAt: true },
@@ -1061,7 +1086,10 @@ export const mediaProcedures = {
       }
 
       try {
-        const url = getPublicMediaUrl(`${input.mediaId}/transcript.vtt`);
+        const url = getPublicMediaUrl(
+          media.storageLocation,
+          `${input.mediaId}/transcript.vtt`,
+        );
         const res = await fetch(url);
 
         if (!res.ok) {
@@ -2026,6 +2054,7 @@ export const mediaProcedures = {
           lengthSeconds: true,
           defaultThumbnailPath: true,
           overrideThumbnailPath: true,
+          storageLocation: true,
         },
         with: {
           channel: {
@@ -2034,7 +2063,9 @@ export const mediaProcedures = {
               name: true,
               slug: true,
               avatarPath: true,
+              avatarLocation: true,
               defaultThumbnailPath: true,
+              defaultThumbnailLocation: true,
               visibility: true,
               approvedAt: true,
               deletedAt: true,
@@ -2066,18 +2097,19 @@ export const mediaProcedures = {
             const { channel } = upload;
 
             const thumbnailUrl = resolveThumbnailUrl({
+              storageLocation: upload.storageLocation,
               overrideThumbnailPath: upload.overrideThumbnailPath,
               defaultThumbnailPath: upload.defaultThumbnailPath,
               channelDefaultThumbnailPath: channel.defaultThumbnailPath,
+              channelDefaultThumbnailLocation: channel.defaultThumbnailLocation,
               size: 'card',
             });
 
-            const channelAvatarUrl = channel.avatarPath
-              ? getPublicImageUrl(
-                  publicS3.getS3ProtocolUri(channel.avatarPath),
-                  { resize: appAvatarXs2x },
-                )
-              : null;
+            const channelAvatarUrl = imageUrl(
+              channel.avatarLocation,
+              channel.avatarPath,
+              { resize: appAvatarXs2x },
+            );
 
             return {
               id: OutgoingIdSchema.parse(upload.id),

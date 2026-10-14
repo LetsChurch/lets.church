@@ -5,8 +5,8 @@ const mocks = vi.hoisted(() => ({
   headObject: vi.fn(),
 }));
 
-vi.mock('@letschurch/s3/ingest', () => ({
-  ingestS3: mocks,
+vi.mock('@letschurch/s3/locations', () => ({
+  getLocation: () => ({ ingest: mocks }),
 }));
 
 import completeMultipartUpload from './complete-multipart-upload';

@@ -1,4 +1,5 @@
 import { db, UploadRecord, UploadState } from '@letschurch/db';
+import { getLocation } from '@letschurch/s3/locations';
 import { and, count, eq, isNotNull, notExists } from 'drizzle-orm';
 
 import logger from '../../util/logger';
@@ -43,15 +44,13 @@ export async function getBackfillCount(): Promise<number> {
 /**
  * Backfill a batch of upload states for finalized media uploads.
  */
-async function backfillMediaBatch(
-  batchSize: number,
-  ingestBucket: string,
-): Promise<number> {
+async function backfillMediaBatch(batchSize: number): Promise<number> {
   const uploads = await db
     .select({
       id: UploadRecord.id,
       finalizedUploadKey: UploadRecord.finalizedUploadKey,
       uploadSizeBytes: UploadRecord.uploadSizeBytes,
+      storageLocation: UploadRecord.storageLocation,
     })
     .from(UploadRecord)
     .where(
@@ -77,7 +76,8 @@ async function backfillMediaBatch(
     .values(
       uploadsWithKeys.map((upload) => ({
         s3Key: upload.finalizedUploadKey,
-        s3Bucket: ingestBucket,
+        s3Bucket: getLocation(upload.storageLocation).ingest.getBucket(),
+        storageLocation: upload.storageLocation,
         uploadType: 'MEDIA' as const,
         sizeBytes: upload.uploadSizeBytes ?? undefined,
         uploadRecordId: upload.id,
@@ -102,10 +102,9 @@ async function backfillMediaBatch(
  */
 export async function backfillUploadStatesBatch(
   batchSize: number,
-  ingestBucket: string,
 ): Promise<BackfillBatchResult> {
   // Only process media uploads
-  const created = await backfillMediaBatch(batchSize, ingestBucket);
+  const created = await backfillMediaBatch(batchSize);
   const remaining = await getBackfillCount();
 
   logger.info(`Backfilled ${created} media uploads, ${remaining} remaining`);

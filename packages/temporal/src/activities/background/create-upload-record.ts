@@ -10,6 +10,8 @@ import { ApplicationFailure } from '@temporalio/activity';
 import { eq } from 'drizzle-orm';
 
 import type { CreateUploadRecordActivityInput } from '../../client/create-upload-record';
+import { estimatePublicBytes } from '../../storage/placement';
+import { pickLocation } from '../../storage/usage';
 
 export const UPLOAD_CREATION_DATA_INTEGRITY_ERROR =
   'UploadCreationDataIntegrityError';
@@ -63,11 +65,19 @@ export default async function createUploadRecord({
   if (!channelId)
     throw new Error('channelId is required to create upload record');
 
+  const sourceBytes = BigInt(Math.max(0, Math.floor(data.sourceBytes ?? 0)));
+  const placed = await pickLocation({ sourceBytes });
+
   return db.transaction(async (tx) => {
     const [record] = await tx
       .insert(UploadRecord)
       .values({
         creationOperationId,
+        storageLocation: placed.id,
+        publicReservedBytes:
+          sourceBytes > 0n
+            ? estimatePublicBytes(sourceBytes, placed.usage.publicRatio)
+            : null,
         creationRequestFingerprint,
         title: data.title as string | undefined,
         description: (data.description as string | undefined) ?? null,

@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto';
 
 import { db, TranscriptParagraph, UploadRecord } from '@letschurch/db';
-import { publicS3 } from '@letschurch/s3/public';
 import { eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 
+import { uploadRecordLocation } from '../../storage/locate';
 import logger from '../../util/logger';
 import {
   type TranscriptJsonSegment,
@@ -63,6 +63,7 @@ export default async function storeTranscriptParagraphs(
   uploadRecordId: string,
   s3UploadKey: string,
 ) {
+  const { public: publicS3 } = await uploadRecordLocation(uploadRecordId);
   const activityLogger = moduleLogger.child({
     temporalActivity: 'storeTranscriptParagraphs',
     context: { args: { uploadRecordId, s3UploadKey } },

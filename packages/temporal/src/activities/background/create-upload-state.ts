@@ -4,9 +4,10 @@ import {
   UploadState,
   type UploadStateType,
 } from '@letschurch/db';
-import { ingestS3 } from '@letschurch/s3/ingest';
+import { getLocation } from '@letschurch/s3/locations';
 import { count, eq } from 'drizzle-orm';
 
+import { locationFromArg } from '../../storage/legacy';
 import type { UploadPostProcessValue } from '../../util/types';
 
 type BackupStatusValue = (typeof BackupStatus.enumValues)[number];
@@ -14,6 +15,9 @@ type UploadStateTypeValue = (typeof UploadStateType.enumValues)[number];
 
 export type CreateUploadStateParams = {
   s3Key: string;
+  // Location whose ingest bucket holds s3Key. Absent only for workflows
+  // started before storage locations existed.
+  storageLocation?: string;
   uploadType: UploadPostProcessValue;
   sizeBytes?: string;
   uploadRecordId?: string;
@@ -58,13 +62,15 @@ export async function createUploadState(
   params: CreateUploadStateParams,
 ): Promise<string> {
   const uploadStateType = mapUploadTypeToStateType(params.uploadType);
-  const s3Bucket = ingestS3.getBucket();
+  const storageLocation = locationFromArg(params.storageLocation);
+  const s3Bucket = getLocation(storageLocation).ingest.getBucket();
 
   const [uploadState] = await db
     .insert(UploadState)
     .values({
       s3Key: params.s3Key,
       s3Bucket,
+      storageLocation,
       uploadType: uploadStateType,
       sizeBytes: params.sizeBytes ? BigInt(params.sizeBytes) : undefined,
       uploadRecordId: params.uploadRecordId,

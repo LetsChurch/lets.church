@@ -40,11 +40,14 @@ vi.mock('@letschurch/db', () => ({
     ],
   },
 }));
-vi.mock('@letschurch/s3/ingest', () => ({
-  ingestS3: {
-    headObjectIfExists: mocks.headObjectIfExists,
-    listObjects: mocks.listObjects,
-  },
+vi.mock('@letschurch/s3/locations', () => ({
+  getLocation: () => ({
+    ingest: {
+      getBucket: () => 'ingest',
+      headObjectIfExists: mocks.headObjectIfExists,
+      listObjects: mocks.listObjects,
+    },
+  }),
 }));
 vi.mock('drizzle-orm', () => ({ eq: vi.fn() }));
 vi.mock('../../util/logger', () => ({
@@ -84,7 +87,7 @@ describe('backfillOriginalImageUploadStatesBatch', () => {
     mocks.headObjectIfExists.mockResolvedValueOnce(null);
 
     await expect(
-      backfillOriginalImageUploadStatesBatch(10, 'ingest'),
+      backfillOriginalImageUploadStatesBatch(10, 'idrive'),
     ).resolves.toEqual({ created: 0, remaining: 0 });
     expect(mocks.insert).not.toHaveBeenCalled();
   });
@@ -94,7 +97,7 @@ describe('backfillOriginalImageUploadStatesBatch', () => {
     mocks.headObjectIfExists.mockRejectedValueOnce(error);
 
     await expect(
-      backfillOriginalImageUploadStatesBatch(10, 'ingest'),
+      backfillOriginalImageUploadStatesBatch(10, 'idrive'),
     ).rejects.toBe(error);
     expect(mocks.insert).not.toHaveBeenCalled();
   });
@@ -103,7 +106,7 @@ describe('backfillOriginalImageUploadStatesBatch', () => {
     mocks.headObjectIfExists.mockResolvedValueOnce({ ContentLength: 0 });
 
     await expect(
-      backfillOriginalImageUploadStatesBatch(10, 'ingest'),
+      backfillOriginalImageUploadStatesBatch(10, 'idrive'),
     ).resolves.toEqual({ created: 1, remaining: 0 });
     expect(mocks.headObjectIfExists).toHaveBeenCalledTimes(1);
     expect(mocks.values).toHaveBeenCalledWith(

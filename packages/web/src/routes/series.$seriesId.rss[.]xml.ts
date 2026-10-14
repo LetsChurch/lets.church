@@ -1,5 +1,4 @@
 import { db, UploadListEntry, UploadRecord } from '@letschurch/db';
-import { publicS3 } from '@letschurch/s3/public';
 import { createFileRoute } from '@tanstack/react-router';
 import { and, asc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { Feed } from 'feed';
@@ -9,7 +8,7 @@ import { rssFeedIcon } from '@/util/image-sizes';
 import { getListUploadVisibilities } from '@/util/list-visibility-rules';
 import logger from '@/util/logger';
 import { isChannelRoutable } from '@/util/media-visibility';
-import { getPublicImageUrl } from '@/util/server-env';
+import { imageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { escapeHtml } from '@/util/xss';
 
@@ -48,6 +47,7 @@ export const Route = createFileRoute('/series/$seriesId/rss.xml')({
                   name: true,
                   slug: true,
                   defaultThumbnailPath: true,
+                  defaultThumbnailLocation: true,
                   visibility: true,
                   approvedAt: true,
                   deletedAt: true,
@@ -112,12 +112,11 @@ export const Route = createFileRoute('/series/$seriesId/rss.xml')({
           const seriesUrl = `${siteUrl}/series/${seriesId}`;
           const channelUrl = `${siteUrl}/channel/${series.channel.slug}`;
 
-          const seriesImageUrl = series.channel.defaultThumbnailPath
-            ? getPublicImageUrl(
-                publicS3.getS3ProtocolUri(series.channel.defaultThumbnailPath),
-                { resize: rssFeedIcon },
-              )
-            : null;
+          const seriesImageUrl = imageUrl(
+            series.channel.defaultThumbnailLocation,
+            series.channel.defaultThumbnailPath,
+            { resize: rssFeedIcon },
+          );
 
           const feed = new Feed({
             title: `${series.title} - ${series.channel.name} on Let's Church`,
@@ -144,6 +143,7 @@ export const Route = createFileRoute('/series/$seriesId/rss.xml')({
               publishedAt: UploadRecord.publishedAt,
               defaultThumbnailPath: UploadRecord.defaultThumbnailPath,
               overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
+              storageLocation: UploadRecord.storageLocation,
             })
             .from(UploadListEntry)
             .innerJoin(
@@ -165,9 +165,12 @@ export const Route = createFileRoute('/series/$seriesId/rss.xml')({
           // Add items to feed
           for (const upload of uploads) {
             const thumbnailUrl = resolveThumbnailUrl({
+              storageLocation: upload.storageLocation,
               overrideThumbnailPath: upload.overrideThumbnailPath,
               defaultThumbnailPath: upload.defaultThumbnailPath,
               channelDefaultThumbnailPath: series.channel.defaultThumbnailPath,
+              channelDefaultThumbnailLocation:
+                series.channel.defaultThumbnailLocation,
               size: 'card',
             });
 

@@ -23,7 +23,6 @@ const { getBackfillCount, backfillUploadStatesBatch } = proxyActivities<
 export type BackfillUploadStatesWorkflowParams = {
   batchSize: number;
   delayBetweenBatchesMs: number;
-  ingestBucket: string;
   maxRows?: number;
   // For continue-as-new tracking
   totalCreated?: number;
@@ -47,7 +46,6 @@ export async function backfillUploadStatesWorkflow(
   const {
     batchSize,
     delayBetweenBatchesMs,
-    ingestBucket,
     maxRows,
     totalCreated = 0,
     batchesCompleted = 0,
@@ -75,7 +73,7 @@ export async function backfillUploadStatesWorkflow(
       break;
     }
 
-    const result = await backfillUploadStatesBatch(batchSize, ingestBucket);
+    const result = await backfillUploadStatesBatch(batchSize);
 
     currentCreated += result.created;
     remaining = result.remaining;
@@ -92,7 +90,6 @@ export async function backfillUploadStatesWorkflow(
       await continueAsNew<typeof backfillUploadStatesWorkflow>({
         batchSize,
         delayBetweenBatchesMs,
-        ingestBucket,
         maxRows,
         totalCreated: currentCreated,
         batchesCompleted: currentBatchesCompleted,

@@ -7,7 +7,7 @@ import {
   UploadState,
   type UploadStateType,
 } from '@letschurch/db';
-import { ingestS3 } from '@letschurch/s3/ingest';
+import { getLocation } from '@letschurch/s3/locations';
 import { eq } from 'drizzle-orm';
 
 import logger from '../../util/logger';
@@ -20,7 +20,7 @@ export type BackfillOriginalImageBatchResult = {
 type UploadStateTypeValue = (typeof UploadStateType.enumValues)[number];
 
 /**
- * Scans the ingest bucket for .imagemagick.json probe files to find original
+ * Scans a location's ingest bucket for .imagemagick.json probe files to find original
  * image uploads and creates UploadState records for them.
  *
  * Strategy:
@@ -31,8 +31,9 @@ type UploadStateTypeValue = (typeof UploadStateType.enumValues)[number];
  */
 export async function backfillOriginalImageUploadStatesBatch(
   batchSize: number,
-  ingestBucket: string,
+  storageLocation: string,
 ): Promise<BackfillOriginalImageBatchResult> {
+  const ingestS3 = getLocation(storageLocation).ingest;
   let created = 0;
   let processed = 0;
 
@@ -91,7 +92,8 @@ export async function backfillOriginalImageUploadStatesBatch(
     // Create UploadState
     await db.insert(UploadState).values({
       s3Key: originalKey,
-      s3Bucket: ingestBucket,
+      s3Bucket: ingestS3.getBucket(),
+      storageLocation,
       uploadType: uploadType.type,
       sizeBytes,
       uploadRecordId: uploadType.uploadRecordId,

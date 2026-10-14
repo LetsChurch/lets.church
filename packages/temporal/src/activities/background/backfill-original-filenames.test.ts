@@ -15,16 +15,19 @@ vi.mock('@letschurch/db', () => ({
     finalizedUploadKey: 'uploadRecord.finalizedUploadKey',
     id: 'uploadRecord.id',
     originalFileName: 'uploadRecord.originalFileName',
+    storageLocation: 'uploadRecord.storageLocation',
     title: 'uploadRecord.title',
     uploadFinalized: 'uploadRecord.uploadFinalized',
   },
 }));
-vi.mock('@letschurch/s3/ingest', () => ({
-  ingestS3: {
-    getBucket: vi.fn(),
-    getS3Client: vi.fn(),
-    headObject: mocks.headObject,
-  },
+vi.mock('@letschurch/s3/locations', () => ({
+  getLocation: () => ({
+    ingest: {
+      getBucket: vi.fn(),
+      getS3Client: vi.fn(),
+      headObject: mocks.headObject,
+    },
+  }),
 }));
 vi.mock('@tokenizer/s3', () => ({ makeChunkedTokenizerFromS3: vi.fn() }));
 vi.mock('drizzle-orm', () => ({

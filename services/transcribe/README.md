@@ -6,7 +6,7 @@ it as available and otherwise runs on CPU.
 
 ## Pipeline
 
-1. **Download** the source object from the S3 ingest bucket into the current
+1. **Download** the source object from the storage location's ingest bucket into the current
    Temporal attempt's working directory.
 2. **Convert** the source to 16 kHz mono WAV with ffmpeg, then remove the
    downloaded copy.
@@ -29,7 +29,7 @@ it as available and otherwise runs on CPU.
 7. **Serialize** the final segments as WebVTT, camel-case JSON, and plain text.
    WebVTT cues follow sentence boundaries and split long sentences at word
    boundaries. Plain text separates paragraphs with blank lines.
-8. **Publish** all three files to the S3 public bucket:
+8. **Publish** all three files to the same location's public bucket:
    - `{uploadRecordId}/transcript.vtt` (`text/vtt`)
    - `{uploadRecordId}/transcript.json` (`application/json`)
    - `{uploadRecordId}/transcript.txt` (`text/plain; charset=utf-8`)
@@ -94,7 +94,15 @@ Whisper timing. Speaker embedding arrays are abbreviated in this example.
 ## Environment
 
 Variables marked required are read without a default by each activity.
-Endpoint overrides are optional; leave them unset to use the AWS S3 endpoint.
+
+S3 access follows the shared storage-location contract described in
+[`packages/s3/README.md`](../../packages/s3/README.md#storage-locations). The
+`transcribe(upload_record_id, s3_upload_key, storage_location)` activity reads
+the source from that location's ingest bucket and writes transcripts to the
+same location's public bucket. `<ID>` is the uppercased location id, so
+location `idrive` reads `STORAGE_IDRIVE_*`. When a workflow started before
+multi-location storage passes no location, the activity uses `idrive`, the
+location every pre-existing upload was backfilled to.
 
 | Var                                       | Required | Default                                       | Purpose                                                        |
 | ----------------------------------------- | -------: | --------------------------------------------- | -------------------------------------------------------------- |
@@ -118,14 +126,13 @@ Endpoint overrides are optional; leave them unset to use the AWS S3 endpoint.
 | `DIARIZATION_DISTANCE_THRESHOLD`          |       No | `0.8`                                         | Agglomerative-clustering distance threshold                    |
 | `DIARIZATION_MIN_RELIABLE_SECS`           |       No | `1.5`                                         | Minimum duration for a reliable segment embedding              |
 | `DIARIZATION_MIN_TOTAL_SECS`              |       No | `3.0`                                         | Minimum total duration for a speaker cluster                   |
-| `S3_INGEST_ENDPOINT`                      |       No | unset                                         | Custom ingest S3 endpoint                                      |
-| `S3_INGEST_BUCKET`                        |      Yes | none                                          | Bucket containing the source object                            |
-| `S3_INGEST_ACCESS_KEY_ID`                 |      Yes | none                                          | Credential identifier for ingest reads                         |
-| `S3_INGEST_SECRET_ACCESS_KEY`             |      Yes | none                                          | Credential secret for ingest reads                             |
-| `S3_PUBLIC_ENDPOINT`                      |       No | unset                                         | Custom public S3 endpoint                                      |
-| `S3_PUBLIC_BUCKET`                        |      Yes | none                                          | Bucket receiving transcript artifacts                          |
-| `S3_PUBLIC_ACCESS_KEY_ID`                 |      Yes | none                                          | Credential identifier for public writes                        |
-| `S3_PUBLIC_SECRET_ACCESS_KEY`             |      Yes | none                                          | Credential secret for public writes                            |
+| `STORAGE_<ID>_INGEST_BUCKET`              |      Yes | none                                          | Bucket containing the source object                            |
+| `STORAGE_<ID>_INGEST_ENDPOINT`            |      Yes | none                                          | S3 endpoint for the ingest bucket                              |
+| `STORAGE_<ID>_INGEST_REGION`              |       No | `us-east-1`                                   | Region for the ingest bucket                                   |
+| `STORAGE_<ID>_INGEST_ACCESS_KEY_ID`       |      Yes | none                                          | Credential identifier for ingest reads                         |
+| `STORAGE_<ID>_INGEST_SECRET_ACCESS_KEY`   |      Yes | none                                          | Credential secret for ingest reads                             |
+| `STORAGE_<ID>_INGEST_FORCE_PATH_STYLE`    |       No | unset                                         | `true` or `1` uses path-style S3 addressing                    |
+| `STORAGE_<ID>_PUBLIC_*`                   |      Yes | as above                                      | Same fields for the bucket receiving transcript artifacts      |
 
 The worker uses CUDA with float16 model computation when it is available.
 Without CUDA it uses CPU, with int8 faster-whisper computation. CTC alignment,

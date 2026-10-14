@@ -1,28 +1,41 @@
 import { Channel, db } from '@letschurch/db';
-import { publicS3 } from '@letschurch/s3/public';
+import { getLocation } from '@letschurch/s3/locations';
 import { eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 
+import { locationFromArg } from '../../storage/legacy';
+
 export default async function setChannelAvatar(
-  channelid: string,
+  channelId: string,
   path: string,
   blurhash: string,
+  // Absent for workflows started before storage locations existed.
+  storageLocation?: string,
 ) {
   const row = await db
-    .select({ avatarPath: Channel.avatarPath })
+    .select({
+      oldPath: Channel.avatarPath,
+      oldLocation: Channel.avatarLocation,
+    })
     .from(Channel)
-    .where(eq(Channel.id, channelid))
+    .where(eq(Channel.id, channelId))
     .then((r) => r[0]);
 
-  invariant(row, `Channel ${channelid} not found`);
-  const { avatarPath: oldPath } = row;
-
-  if (oldPath) {
-    await publicS3.deleteFile(oldPath);
-  }
+  invariant(row, `Channel ${channelId} not found`);
 
   await db
     .update(Channel)
-    .set({ avatarPath: path, avatarBlurhash: blurhash, updatedAt: new Date() })
-    .where(eq(Channel.id, channelid));
+    .set({
+      avatarPath: path,
+      avatarLocation: locationFromArg(storageLocation),
+      avatarBlurhash: blurhash,
+      updatedAt: new Date(),
+    })
+    .where(eq(Channel.id, channelId));
+
+  if (row.oldPath && row.oldPath !== path) {
+    await getLocation(locationFromArg(row.oldLocation)).public.deleteFile(
+      row.oldPath,
+    );
+  }
 }

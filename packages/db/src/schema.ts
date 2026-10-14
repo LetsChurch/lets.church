@@ -215,6 +215,34 @@ export const StorageAuditStatus = pgEnum('storage_audit_status', [
   'FAILED',
 ]);
 
+export const StorageMoveKind = pgEnum('storage_move_kind', [
+  // Move one upload record's ingest + public objects to another location.
+  'UPLOAD_RECORD',
+  // Move one channel/org/user's image objects to another location.
+  'IMAGES',
+  // Parent of many UPLOAD_RECORD moves (admin rebalance / drain).
+  'REBALANCE',
+]);
+
+export const StorageMoveStatus = pgEnum('storage_move_status', [
+  'PENDING',
+  'COPYING',
+  // Flipped to the target; waiting out the grace period before deleting the
+  // source so open players / cached pages keep working.
+  'GRACE',
+  'CLEANING',
+  'PAUSED',
+  'COMPLETED',
+  'FAILED',
+  'CANCELLED',
+]);
+
+export const StorageImageOwner = pgEnum('storage_image_owner', [
+  'APP_USER',
+  'CHANNEL',
+  'ORGANIZATION',
+]);
+
 export const Rating = pgEnum('rating', ['LIKE', 'DISLIKE']);
 
 export const UploadViewSource = pgEnum('upload_view_source', [
@@ -286,6 +314,10 @@ export const AppUser = pgTable('app_user', {
     { precision: 3 },
   ),
   termsAcceptedAt: timestamp('terms_accepted_at', { precision: 3 }),
+  // Storage location of avatarPath (see @letschurch/s3/locations). The
+  // default backfills existing images and covers pods from before storage
+  // locations; drop it in the follow-up release (docs/storage-locations.md).
+  avatarLocation: text('avatar_location').default('idrive'),
 });
 
 export const AppUserEmail = pgTable(
@@ -841,6 +873,12 @@ export const Organization = pgTable(
     updatedAt: timestamp('updated_at', { precision: 3 })
       .notNull()
       .$onUpdate(() => new Date()),
+    // Storage locations of avatarPath / coverPath (see @letschurch/s3/locations).
+    // The default backfills existing images and covers pods from before
+    // storage locations; drop it in the follow-up release
+    // (docs/storage-locations.md).
+    avatarLocation: text('avatar_location').default('idrive'),
+    coverLocation: text('cover_location').default('idrive'),
   },
   (Organization) => ({
     organization_approvedBy_fkey: foreignKey({
@@ -1096,6 +1134,15 @@ export const Channel = pgTable(
     defaultUploadLicense: UploadLicense('default_upload_license'),
     defaultUploadCommentsEnabled: boolean('default_upload_comments_enabled'),
     defaultUploadDownloadsEnabled: boolean('default_upload_downloads_enabled'),
+    // Storage locations of the image paths (see @letschurch/s3/locations).
+    // The default backfills existing images and covers pods from before
+    // storage locations; drop it in the follow-up release
+    // (docs/storage-locations.md).
+    avatarLocation: text('avatar_location').default('idrive'),
+    coverLocation: text('cover_location').default('idrive'),
+    defaultThumbnailLocation: text('default_thumbnail_location').default(
+      'idrive',
+    ),
   },
   (Channel) => ({
     channel_approvedBy_fkey: foreignKey({
@@ -1293,6 +1340,10 @@ export const UploadState = pgTable(
     updatedAt: timestamp('updated_at', { precision: 3 })
       .notNull()
       .$onUpdate(() => new Date()),
+    // Storage location holding s3Key (see @letschurch/s3/locations). The
+    // default only covers pods from before storage locations during rollout;
+    // drop it in the follow-up release (docs/storage-locations.md).
+    storageLocation: text('storage_location').notNull().default('idrive'),
   },
   (UploadState) => ({
     upload_state_uploadRecord_fkey: foreignKey({
@@ -1329,6 +1380,9 @@ export const UploadState = pgTable(
     upload_state_upload_type_idx: index('upload_state_upload_type_idx').on(
       UploadState.uploadType,
     ),
+    upload_state_storage_location_idx: index(
+      'upload_state_storage_location_idx',
+    ).on(UploadState.storageLocation),
   }),
 );
 
@@ -1363,6 +1417,81 @@ export const StorageAudit = pgTable(
   }),
 );
 
+// Admin-editable placement policy per storage location. Locations themselves
+// (buckets, credentials, caps) come from env; a location with no row here
+// gets the column defaults.
+export const StorageLocationPolicy = pgTable('storage_location_policy', {
+  locationId: text('location_id').primaryKey(),
+  // Relative share of new uploads among eligible locations; 0 = none.
+  weight: integer('weight').notNull().default(1),
+  // False drains the location: existing objects keep serving, nothing new
+  // is placed there.
+  acceptingUploads: boolean('accepting_uploads').notNull().default(true),
+  updatedById: uuid('updated_by_id').references((): AnyPgColumn => AppUser.id, {
+    onDelete: 'set null',
+  }),
+  createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { precision: 3 })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+// One row per storage move: a single upload record, one owner's images, or a
+// rebalance (parent of many record moves). Tracks progress for the admin UI.
+export const StorageMove = pgTable(
+  'storage_move',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    kind: StorageMoveKind('kind').notNull(),
+    status: StorageMoveStatus('status').notNull().default('PENDING'),
+    parentId: uuid('parent_id').references((): AnyPgColumn => StorageMove.id, {
+      onDelete: 'cascade',
+    }),
+    sourceLocation: text('source_location').notNull(),
+    // Null for a drain whose children each pick a target via placement.
+    targetLocation: text('target_location'),
+    uploadRecordId: uuid('upload_record_id').references(
+      (): AnyPgColumn => UploadRecord.id,
+      { onDelete: 'set null' },
+    ),
+    imageOwner: StorageImageOwner('image_owner'),
+    imageOwnerId: uuid('image_owner_id'),
+    // Rebalance goal + options, e.g. { type: 'bytes', bytes, concurrency }.
+    goal: jsonb('goal'),
+    totalBytes: bigint('total_bytes', { mode: 'bigint' })
+      .notNull()
+      .default(sql`0`),
+    copiedBytes: bigint('copied_bytes', { mode: 'bigint' })
+      .notNull()
+      .default(sql`0`),
+    totalItems: integer('total_items').notNull().default(0),
+    completedItems: integer('completed_items').notNull().default(0),
+    failedItems: integer('failed_items').notNull().default(0),
+    workflowId: text('workflow_id'),
+    triggeredById: uuid('triggered_by_id').references(
+      (): AnyPgColumn => AppUser.id,
+      { onDelete: 'set null' },
+    ),
+    error: text('error'),
+    startedAt: timestamp('started_at', { precision: 3 }),
+    finishedAt: timestamp('finished_at', { precision: 3 }),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { precision: 3 })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (StorageMove) => ({
+    storage_move_parent_idx: index('storage_move_parent_idx').on(
+      StorageMove.parentId,
+    ),
+    storage_move_status_idx: index('storage_move_status_idx').on(
+      StorageMove.status,
+    ),
+  }),
+);
+
 export const UploadRecord = pgTable(
   'upload_record',
   {
@@ -1376,6 +1505,22 @@ export const UploadRecord = pgTable(
     channelId: uuid('channel_id').notNull(),
     visibility: UploadVisibility('visibility').notNull(),
     uploadSizeBytes: bigint('upload_size_bytes', { mode: 'bigint' }),
+    // Storage location of this record's ingest source and public artifacts
+    // (always paired; see @letschurch/s3/locations). Thumbnail paths live here.
+    // The default only covers pods from before storage locations during
+    // rollout; drop it in the follow-up release (docs/storage-locations.md).
+    storageLocation: text('storage_location').notNull().default('idrive'),
+    // Measured bytes under `{id}/` in the public bucket (null until measured).
+    publicSizeBytes: bigint('public_size_bytes', { mode: 'bigint' }),
+    // Estimated public bytes held against the location's cap until the
+    // processed output is measured.
+    publicReservedBytes: bigint('public_reserved_bytes', { mode: 'bigint' }),
+    // Set while a storage move is copying this record; blocks re-uploads and
+    // re-processing until the move flips or rolls back.
+    storageMoveId: uuid('storage_move_id'),
+    // Set while processing is parked because no location can fit this
+    // record's processed output; cleared once it proceeds.
+    storageWaitingSince: timestamp('storage_waiting_since', { precision: 3 }),
     uploadFinalized: boolean('upload_finalized').notNull().default(false),
     uploadFinalizedAt: timestamp('upload_finalized_at', { precision: 3 }),
     uploadFinalizedById: uuid('upload_finalized_by_id'),
@@ -1464,6 +1609,14 @@ export const UploadRecord = pgTable(
     liveEndedAt: timestamp('live_ended_at', { precision: 3 }),
   },
   (UploadRecord) => ({
+    upload_record_storageMove_fkey: foreignKey({
+      name: 'upload_record_storageMove_fkey',
+      columns: [UploadRecord.storageMoveId],
+      foreignColumns: [StorageMove.id],
+    }).onDelete('set null'),
+    upload_record_storage_location_idx: index(
+      'upload_record_storage_location_idx',
+    ).on(UploadRecord.storageLocation),
     upload_record_createdBy_fkey: foreignKey({
       name: 'upload_record_createdBy_fkey',
       columns: [UploadRecord.appUserId],

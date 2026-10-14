@@ -1,6 +1,7 @@
+import { stat } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 
-import { ingestS3 } from '@letschurch/s3/ingest';
+import { getLocation } from '@letschurch/s3/locations';
 import { Context } from '@temporalio/activity';
 import mime from 'mime';
 import { mkdirp } from 'mkdirp';
@@ -63,7 +64,14 @@ export default async function importMedia(
       heartbeat,
     });
 
-    uploadRecordId = await createUploadRecord(data, creationOperationId);
+    // Placement happens at record creation (on a DB-backed worker); the
+    // downloaded size lets it reserve capacity for source + output.
+    const created = await createUploadRecord(
+      { ...data, sourceBytes: (await stat(mediaPath)).size },
+      creationOperationId,
+    );
+    uploadRecordId = created.id;
+    const { ingest: ingestS3 } = getLocation(created.storageLocation);
     mediaUploadKey = `${uploadRecordId}/${uuid()}`;
 
     await ingestS3.putFileMultipart({

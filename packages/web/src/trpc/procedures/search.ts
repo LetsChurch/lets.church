@@ -12,7 +12,6 @@ import {
   runMediaHybridSearch,
   suggestMediaPalette,
 } from '@letschurch/opensearch';
-import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
 import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -28,7 +27,7 @@ import { isChannelRoutable } from '@/util/media-visibility';
 import { getQueryEmbeddingCached, shouldWarmEmbed } from '@/util/query-embed';
 import { enforceSearchRateLimit } from '@/util/search-rate-limit';
 import { SEARCH_RATE_LIMIT_MESSAGE } from '@/util/search-rate-limit-error';
-import { getPublicImageUrl } from '@/util/server-env';
+import { imageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { getVerseParagraphsByUpload } from '@/util/verse-paragraphs';
 
@@ -268,7 +267,13 @@ async function hydrateChannelsForDisplay(channelIds: string[]) {
         isNotNull(t.approvedAt),
         isNull(t.deletedAt),
       ),
-    columns: { id: true, name: true, slug: true, avatarPath: true },
+    columns: {
+      id: true,
+      name: true,
+      slug: true,
+      avatarPath: true,
+      avatarLocation: true,
+    },
   });
   const byId = new Map(dbChannels.map((c) => [c.id, c]));
   return channelIds
@@ -277,11 +282,9 @@ async function hydrateChannelsForDisplay(channelIds: string[]) {
     .map((channel) => ({
       ...channel,
       id: OutgoingIdSchema.parse(channel.id),
-      avatarUrl: channel.avatarPath
-        ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
-            resize: appAvatarSm2x,
-          })
-        : null,
+      avatarUrl: imageUrl(channel.avatarLocation, channel.avatarPath, {
+        resize: appAvatarSm2x,
+      }),
     }));
 }
 
@@ -305,7 +308,13 @@ async function hydrateFacetChannels(
         isNotNull(t.approvedAt),
         isNull(t.deletedAt),
       ),
-    columns: { id: true, name: true, slug: true, avatarPath: true },
+    columns: {
+      id: true,
+      name: true,
+      slug: true,
+      avatarPath: true,
+      avatarLocation: true,
+    },
   });
   const byId = new Map(dbChannels.map((c) => [c.id, c]));
   return buckets
@@ -316,11 +325,9 @@ async function hydrateFacetChannels(
         slug: c.slug,
         name: c.name,
         count: b.count,
-        avatarUrl: c.avatarPath
-          ? getPublicImageUrl(publicS3.getS3ProtocolUri(c.avatarPath), {
-              resize: appAvatarXs2x,
-            })
-          : null,
+        avatarUrl: imageUrl(c.avatarLocation, c.avatarPath, {
+          resize: appAvatarXs2x,
+        }),
       };
     })
     .filter((c): c is NonNullable<typeof c> => Boolean(c));
@@ -392,6 +399,7 @@ export const searchProcedures = {
         where: (t, { eq }) => eq(t.id, uploadId),
         columns: {
           overrideThumbnailPath: true,
+          storageLocation: true,
           defaultThumbnailPath: true,
           visibility: true,
           deletedAt: true,
@@ -400,6 +408,7 @@ export const searchProcedures = {
           channel: {
             columns: {
               defaultThumbnailPath: true,
+              defaultThumbnailLocation: true,
               visibility: true,
               approvedAt: true,
               deletedAt: true,
@@ -421,9 +430,12 @@ export const searchProcedures = {
       }
 
       return resolveThumbnailUrl({
+        storageLocation: upload.storageLocation,
         overrideThumbnailPath: upload.overrideThumbnailPath,
         defaultThumbnailPath: upload.defaultThumbnailPath,
         channelDefaultThumbnailPath: upload.channel.defaultThumbnailPath,
+        channelDefaultThumbnailLocation:
+          upload.channel.defaultThumbnailLocation,
         size: 'featured',
       });
     }),

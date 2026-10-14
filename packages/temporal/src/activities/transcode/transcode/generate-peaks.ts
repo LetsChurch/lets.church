@@ -1,12 +1,12 @@
 import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { ingestS3 } from '@letschurch/s3/ingest';
-import { publicS3 } from '@letschurch/s3/public';
+import { getLocation } from '@letschurch/s3/locations';
 import { Context } from '@temporalio/activity';
 import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
 
+import { locationFromArg } from '../../../storage/legacy';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import logger from '../../../util/logger';
 
@@ -19,7 +19,13 @@ const WORK_DIR = process.env.PEAKS_WORKING_DIRECTORY ?? '/data/peaks';
 export default async function generatePeaks(
   uploadRecordId: string,
   s3UploadKey: string,
+  // Workers on this queue have no DB access, so the workflow passes the
+  // record's location. Absent for workflows started before locations existed.
+  storageLocation?: string,
 ) {
+  const { ingest: ingestS3, public: publicS3 } = getLocation(
+    locationFromArg(storageLocation),
+  );
   const activityLogger = moduleLogger.child({
     temporalActivity: 'generatePeaks',
     context: {

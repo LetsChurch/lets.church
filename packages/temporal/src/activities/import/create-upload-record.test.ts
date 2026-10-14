@@ -12,11 +12,13 @@ const mocks = vi.hoisted(() => ({
   workflowId: 'importMedia:source:item:run-1',
 }));
 
-vi.mock('@letschurch/s3/ingest', () => ({
-  ingestS3: {
-    putFile: mocks.putFile,
-    putFileMultipart: mocks.putFileMultipart,
-  },
+vi.mock('@letschurch/s3/locations', () => ({
+  getLocation: () => ({
+    ingest: {
+      putFile: mocks.putFile,
+      putFileMultipart: mocks.putFileMultipart,
+    },
+  }),
 }));
 vi.mock('@temporalio/activity', () => ({
   Context: {
@@ -26,6 +28,7 @@ vi.mock('@temporalio/activity', () => ({
     }),
   },
 }));
+vi.mock('node:fs/promises', () => ({ stat: async () => ({ size: 1234 }) }));
 vi.mock('mkdirp', () => ({ mkdirp: mocks.mkdirp }));
 vi.mock('rimraf', () => ({ rimraf: mocks.rimraf }));
 vi.mock('uuid', () => ({ v4: mocks.uuid }));
@@ -77,7 +80,7 @@ beforeEach(() => {
         uploadId = `upload-${uploadIds.size + 1}`;
         uploadIds.set(creationOperationId, uploadId);
       }
-      return uploadId;
+      return { id: uploadId, storageLocation: 'idrive' };
     },
   );
 });
@@ -97,12 +100,12 @@ describe('importMedia upload creation retries', () => {
 
     expect(mocks.createUploadRecord).toHaveBeenNthCalledWith(
       1,
-      data,
+      { ...data, sourceBytes: 1234 },
       'importMedia:source:item:run-1',
     );
     expect(mocks.createUploadRecord).toHaveBeenNthCalledWith(
       2,
-      data,
+      { ...data, sourceBytes: 1234 },
       'importMedia:source:item:run-1',
     );
     expect(mocks.updateUploadRecord).toHaveBeenCalledWith(
@@ -118,7 +121,7 @@ describe('importMedia upload creation retries', () => {
     ).resolves.toMatchObject({ uploadRecordId: 'upload-2' });
 
     expect(mocks.createUploadRecord).toHaveBeenLastCalledWith(
-      data,
+      { ...data, sourceBytes: 1234 },
       'importMedia:source:item:run-2',
     );
     expect(mocks.updateUploadRecord).toHaveBeenLastCalledWith(

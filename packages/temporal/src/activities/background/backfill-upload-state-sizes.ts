@@ -1,5 +1,5 @@
 import { db, UploadState } from '@letschurch/db';
-import { LcS3Client } from '@letschurch/s3';
+import { getLocation } from '@letschurch/s3/locations';
 import { and, count, eq, gt, isNull, or } from 'drizzle-orm';
 
 import logger from '../../util/logger';
@@ -47,7 +47,7 @@ export async function getBackfillSizesCount(): Promise<number> {
 
 /**
  * Backfill a batch of UploadState records with file sizes from S3.
- * Queries the ingest bucket to get the actual file size.
+ * Queries each row's location's ingest bucket to get the actual file size.
  *
  * Pages forward with a keyset cursor so each batch advances past the rows it
  * examined regardless of whether they were updated or skipped. A single pass
@@ -55,11 +55,6 @@ export async function getBackfillSizesCount(): Promise<number> {
  */
 export async function backfillUploadStateSizesBatch(
   batchSize: number,
-  ingestBucket: string,
-  ingestEndpoint: string,
-  ingestRegion: string,
-  ingestAccessKeyId: string,
-  ingestSecretAccessKey: string,
   cursor: BackfillSizesCursor | null,
 ): Promise<BackfillSizesBatchResult> {
   // Keyset filter: only rows after the cursor, ordered by (createdAt, id).
@@ -78,7 +73,7 @@ export async function backfillUploadStateSizesBatch(
     .select({
       id: UploadState.id,
       s3Key: UploadState.s3Key,
-      s3Bucket: UploadState.s3Bucket,
+      storageLocation: UploadState.storageLocation,
       createdAt: UploadState.createdAt,
     })
     .from(UploadState)
@@ -99,28 +94,12 @@ export async function backfillUploadStateSizesBatch(
     };
   }
 
-  // Create S3 client for the ingest bucket
-  const s3Client = new LcS3Client({
-    endpoint: ingestEndpoint,
-    region: ingestRegion,
-    accessKeyId: ingestAccessKeyId,
-    secretAccessKey: ingestSecretAccessKey,
-    bucket: ingestBucket,
-  });
-
   let updated = 0;
   let skipped = 0;
 
   // Process each upload state
   for (const uploadState of uploadStates) {
-    // Only query if the bucket matches the ingest bucket
-    if (uploadState.s3Bucket !== ingestBucket) {
-      logger.warn(
-        `Skipping UploadState ${uploadState.id} - bucket mismatch: ${uploadState.s3Bucket} !== ${ingestBucket}`,
-      );
-      skipped++;
-      continue;
-    }
+    const s3Client = getLocation(uploadState.storageLocation).ingest;
 
     // Missing objects are an expected legacy-data case. Operational S3
     // failures must escape so Temporal retries the batch.

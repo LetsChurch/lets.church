@@ -16,21 +16,44 @@ export SENTRY_TRANSCODE_WORKER_DSN=https://foo@bar.ingest.sentry.io/baz
 export SENTRY_TRANSCRIBE_WORKER=https://foo@bar.ingest.sentry.io/baz
 export SENTRY_IMPORT_WORKER=https://foo@bar.ingest.sentry.io/baz
 
-export MEDIA_URL=https://public_media_url
-
 export MAPBOX_GEOCODING_TOKEN=
 export MAPBOX_MAP_TOKEN=
 export MAPBOX_SEARCHBOX_TOKEN=
 
-export S3_INGEST_ENDPOINT=
-export S3_INGEST_BUCKET=
-export S3_INGEST_ACCESS_KEY_ID=
-export S3_INGEST_SECRET_ACCESS_KEY=
+# Storage locations (see packages/s3/README.md#storage-locations). The
+# default location is `idrive`; ids are permanent once data is written.
+export STORAGE_IDRIVE_INGEST_ENDPOINT=
+export STORAGE_IDRIVE_INGEST_BUCKET=
+export STORAGE_IDRIVE_INGEST_ACCESS_KEY_ID=
+export STORAGE_IDRIVE_INGEST_SECRET_ACCESS_KEY=
+# export STORAGE_IDRIVE_INGEST_REGION=us-east-1
+# export STORAGE_IDRIVE_INGEST_FORCE_PATH_STYLE=true
+# export STORAGE_IDRIVE_INGEST_MAX_BYTES=20TB
 
-export S3_PUBLIC_ENDPOINT=
-export S3_PUBLIC_BUCKET=
-export S3_PUBLIC_ACCESS_KEY_ID=
-export S3_PUBLIC_SECRET_ACCESS_KEY=
+export STORAGE_IDRIVE_PUBLIC_ENDPOINT=
+export STORAGE_IDRIVE_PUBLIC_BUCKET=
+export STORAGE_IDRIVE_PUBLIC_ACCESS_KEY_ID=
+export STORAGE_IDRIVE_PUBLIC_SECRET_ACCESS_KEY=
+# Public CDN base URL for the public bucket (no trailing slash).
+export STORAGE_IDRIVE_PUBLIC_URL=https://public_media_url
+# export STORAGE_IDRIVE_PUBLIC_REGION=us-east-1
+# export STORAGE_IDRIVE_PUBLIC_FORCE_PATH_STYLE=true
+# export STORAGE_IDRIVE_PUBLIC_MAX_BYTES=20TB
+
+# Optional second location for exercising multi-location storage. Leave the
+# BUCKET vars empty (or this block commented) to keep it disabled. Its public
+# URL is appended to IMGPROXY_ALLOWED_SOURCES automatically by .envrc.
+# export STORAGE_RUSTFS_INGEST_ENDPOINT=http://rustfs.example.test:9000
+# export STORAGE_RUSTFS_INGEST_BUCKET=letschurch-dev-ingest
+# export STORAGE_RUSTFS_INGEST_ACCESS_KEY_ID=
+# export STORAGE_RUSTFS_INGEST_SECRET_ACCESS_KEY=
+# export STORAGE_RUSTFS_INGEST_FORCE_PATH_STYLE=true
+# export STORAGE_RUSTFS_PUBLIC_ENDPOINT=http://rustfs.example.test:9000
+# export STORAGE_RUSTFS_PUBLIC_BUCKET=letschurch-dev-public
+# export STORAGE_RUSTFS_PUBLIC_ACCESS_KEY_ID=
+# export STORAGE_RUSTFS_PUBLIC_SECRET_ACCESS_KEY=
+# export STORAGE_RUSTFS_PUBLIC_FORCE_PATH_STYLE=true
+# export STORAGE_RUSTFS_PUBLIC_URL=https://rustfs-media.example.test
 
 export S3_BACKUP_ENDPOINT=
 export S3_BACKUP_BUCKET=

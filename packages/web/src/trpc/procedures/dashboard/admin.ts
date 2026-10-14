@@ -18,8 +18,7 @@ import {
   UploadRecord,
   UploadState,
 } from '@letschurch/db';
-import { ingestConfig, ingestS3 } from '@letschurch/s3/ingest';
-import { publicS3 } from '@letschurch/s3/public';
+import { backupS3 } from '@letschurch/s3/backup';
 import { runAnnotation } from '@letschurch/temporal/activities/background/annotate-transcript';
 import { runAnnotationEdits } from '@letschurch/temporal/activities/background/annotate-transcript-edits';
 import type { StorageAuditSummary } from '@letschurch/temporal/activities/background/storage-audit';
@@ -126,7 +125,7 @@ import {
 } from '@/util/maintenance';
 import { escapeLikePattern } from '@/util/misc';
 import { sendPasswordResetEmail } from '@/util/password-reset';
-import { getPublicImageUrl } from '@/util/server-env';
+import { imageUrl } from '@/util/server-env';
 import {
   filterUploadsWithActiveWorkflows,
   filterUploadsWithoutActiveWorkflows,
@@ -142,6 +141,7 @@ import {
 } from '../../speaker-labeling/queue';
 import { authProcedure, router } from '../../trpc';
 import { newsletterListsRouter } from '../newsletter-lists';
+import { adminStorageRouter } from './admin-storage';
 import { deleteUserAccount } from './delete-user';
 import { getDuplicateUploads } from './duplicate-uploads';
 import {
@@ -700,6 +700,7 @@ export const adminRouter = router({
         description: true,
         createdAt: true,
         avatarPath: true,
+        avatarLocation: true,
         visibility: true,
       },
       with: {
@@ -720,12 +721,10 @@ export const adminRouter = router({
     });
 
     return channels.map((channel) => {
-      const { avatarPath, ...channelWithoutPath } = channel;
-      const avatarUrl = avatarPath
-        ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
-            resize: mantineAvatarSm2x,
-          })
-        : null;
+      const { avatarPath, avatarLocation, ...channelWithoutPath } = channel;
+      const avatarUrl = imageUrl(avatarLocation, avatarPath, {
+        resize: mantineAvatarSm2x,
+      });
 
       const adminMemberships = channel.memberships
         .filter((m) => m.isAdmin)
@@ -811,6 +810,7 @@ export const adminRouter = router({
             approvedAt: true,
             deletedAt: true,
             avatarPath: true,
+            avatarLocation: true,
             visibility: true,
           },
           where: whereCondition ? () => whereCondition : undefined,
@@ -867,12 +867,15 @@ export const adminRouter = router({
       );
 
       const channelsWithAvatarUrl = channels.map((channel) => {
-        const { avatarPath, memberships, ...channelWithoutPath } = channel;
-        const avatarUrl = avatarPath
-          ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
-              resize: mantineAvatarSm2x,
-            })
-          : null;
+        const {
+          avatarPath,
+          avatarLocation,
+          memberships,
+          ...channelWithoutPath
+        } = channel;
+        const avatarUrl = imageUrl(avatarLocation, avatarPath, {
+          resize: mantineAvatarSm2x,
+        });
 
         const adminMemberships = memberships
           .filter((m) => m.isAdmin)
@@ -919,6 +922,7 @@ export const adminRouter = router({
         type: true,
         createdAt: true,
         avatarPath: true,
+        avatarLocation: true,
       },
       with: {
         memberships: {
@@ -938,12 +942,10 @@ export const adminRouter = router({
     });
 
     return organizations.map((org) => {
-      const { avatarPath, ...orgWithoutPath } = org;
-      const avatarUrl = avatarPath
-        ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
-            resize: mantineAvatarSm2x,
-          })
-        : null;
+      const { avatarPath, avatarLocation, ...orgWithoutPath } = org;
+      const avatarUrl = imageUrl(avatarLocation, avatarPath, {
+        resize: mantineAvatarSm2x,
+      });
 
       const adminMemberships = org.memberships
         .filter((m) => m.isAdmin)
@@ -1132,6 +1134,7 @@ export const adminRouter = router({
             createdAt: true,
             approvedAt: true,
             avatarPath: true,
+            avatarLocation: true,
             primaryEmail: true,
             primaryPhoneNumber: true,
             websiteUrl: true,
@@ -1214,12 +1217,11 @@ export const adminRouter = router({
       );
 
       const organizationsWithAvatarUrl = organizations.map((org) => {
-        const { avatarPath, memberships, ...orgWithoutPath } = org;
-        const avatarUrl = avatarPath
-          ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
-              resize: mantineAvatarSm2x,
-            })
-          : null;
+        const { avatarPath, avatarLocation, memberships, ...orgWithoutPath } =
+          org;
+        const avatarUrl = imageUrl(avatarLocation, avatarPath, {
+          resize: mantineAvatarSm2x,
+        });
 
         const adminMemberships = memberships
           .filter((m) => m.isAdmin)
@@ -2375,6 +2377,7 @@ export const adminRouter = router({
             lengthSeconds: true,
             defaultThumbnailPath: true,
             overrideThumbnailPath: true,
+            storageLocation: true,
             defaultThumbnailBlurhash: true,
             overrideThumbnailBlurhash: true,
           },
@@ -2385,8 +2388,10 @@ export const adminRouter = router({
                 name: true,
                 slug: true,
                 avatarPath: true,
+                avatarLocation: true,
                 avatarBlurhash: true,
                 defaultThumbnailPath: true,
+                defaultThumbnailLocation: true,
               },
             },
           },
@@ -2397,18 +2402,20 @@ export const adminRouter = router({
 
     return featuredUploads.map(({ uploadRecord, ...rest }) => {
       const thumbnailUrl = resolveThumbnailUrl({
+        storageLocation: uploadRecord.storageLocation,
         overrideThumbnailPath: uploadRecord.overrideThumbnailPath,
         defaultThumbnailPath: uploadRecord.defaultThumbnailPath,
         channelDefaultThumbnailPath: uploadRecord.channel.defaultThumbnailPath,
+        channelDefaultThumbnailLocation:
+          uploadRecord.channel.defaultThumbnailLocation,
         size: 'table',
       });
 
-      const { avatarPath, ...channelWithoutPath } = uploadRecord.channel;
-      const channelAvatarUrl = avatarPath
-        ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
-            resize: mantineAvatarSm2x,
-          })
-        : null;
+      const { avatarPath, avatarLocation, ...channelWithoutPath } =
+        uploadRecord.channel;
+      const channelAvatarUrl = imageUrl(avatarLocation, avatarPath, {
+        resize: mantineAvatarSm2x,
+      });
 
       return {
         ...rest,
@@ -2731,7 +2738,6 @@ export const adminRouter = router({
         await startBackfillUploadStates({
           batchSize: input.batchSize,
           delayBetweenBatchesMs: input.delayBetweenBatchesMs,
-          ingestBucket: ingestConfig.bucket,
           maxRows: input.maxRows,
         });
 
@@ -2957,11 +2963,6 @@ export const adminRouter = router({
         await startBackfillUploadStateSizes({
           batchSize: input.batchSize,
           delayBetweenBatchesMs: input.delayBetweenBatchesMs,
-          ingestBucket: ingestConfig.bucket,
-          ingestEndpoint: ingestConfig.endpoint,
-          ingestRegion: ingestConfig.region,
-          ingestAccessKeyId: ingestConfig.accessKeyId,
-          ingestSecretAccessKey: ingestConfig.secretAccessKey,
           maxRows: input.maxRows,
         });
 
@@ -5032,6 +5033,7 @@ export const adminRouter = router({
     }),
 
   newsletterLists: newsletterListsRouter,
+  storage: adminStorageRouter,
 
   getReindexStatus: adminProcedure.query(async () => {
     const kinds: ReindexKind[] = [
@@ -5146,7 +5148,7 @@ export const adminRouter = router({
         let reportUrl: string | null = null;
         if (row.reportS3Key) {
           try {
-            reportUrl = await ingestS3.getSignedGetObject(row.reportS3Key, {
+            reportUrl = await backupS3.getSignedGetObject(row.reportS3Key, {
               expiresIn: 60 * 60, // 1 hour
               responseContentDisposition:
                 'attachment; filename="storage-audit.json"',

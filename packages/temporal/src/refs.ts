@@ -180,3 +180,14 @@ export const getStorageAuditProgressQuery = query<
   [],
   'getStorageAuditProgress'
 >('getStorageAuditProgress');
+
+// Admin controls for a running storage rebalance.
+export const rebalancePauseSignal = signal<[], 'rebalancePause'>(
+  'rebalancePause',
+);
+export const rebalanceResumeSignal = signal<[], 'rebalanceResume'>(
+  'rebalanceResume',
+);
+export const rebalanceCancelSignal = signal<[], 'rebalanceCancel'>(
+  'rebalanceCancel',
+);

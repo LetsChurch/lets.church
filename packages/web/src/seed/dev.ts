@@ -245,6 +245,7 @@ const [flOrg] = await db
     name: 'The Dorean Principle',
     slug: 'dorean',
     avatarPath: 'dorean-principle/avatar.png',
+    avatarLocation: 'idrive',
     approvedAt: new Date(),
     approvedById: adminUser.id,
     automaticallyApproveOrganizationAssociations: false,
@@ -267,6 +268,7 @@ const [flChannel] = await db
     name: 'The Dorean Principle',
     slug: 'dorean',
     avatarPath: 'dorean-principle/avatar.png',
+    avatarLocation: 'idrive',
     approvedAt: new Date(),
     approvedById: adminUser.id,
     updatedAt: new Date(),
@@ -1019,6 +1021,7 @@ const [sellingJesusChannel] = await db
     description:
       'Selling Jesus is a ministry that seeks to expose the commercialization of Christianity.',
     avatarPath: 'selling-jesus/avatar.jpg',
+    avatarLocation: 'idrive',
     approvedAt: new Date(),
     approvedById: adminUser.id,
     updatedAt: new Date(),
@@ -1098,6 +1101,7 @@ const doreanPrincipleChannelId = doreanPrincipleChannel.id;
 type UploadRecordInsert = typeof UploadRecord.$inferInsert;
 
 const baseUploadRecord: Omit<UploadRecordInsert, 'id'> = {
+  storageLocation: 'idrive',
   appUserId: adminUser.id,
   channelId: doreanPrincipleChannelId,
   uploadFinalized: true,
@@ -1327,6 +1331,7 @@ for (const { id } of uploadRecordData) {
 const doreanPrincipleUploadId = '00000000-0000-4000-8000-100000000000';
 
 await db.insert(UploadRecord).values({
+  storageLocation: 'idrive',
   id: doreanPrincipleUploadId,
   title: 'The Dorean Principle in Five Minutes',
   description: stripIndent`
@@ -1358,6 +1363,7 @@ await db.insert(UploadRecord).values({
 const prayerPitchUploadId = '00000000-0000-4000-8000-100000000001';
 
 await db.insert(UploadRecord).values({
+  storageLocation: 'idrive',
   id: prayerPitchUploadId,
   title: 'Prayer Pitch Meeting - 1',
   description: stripIndent`
@@ -1391,6 +1397,7 @@ await db.insert(UploadRecord).values({
 const christianBooksPitchUploadId = '00000000-0000-4000-8000-100000000002';
 
 await db.insert(UploadRecord).values({
+  storageLocation: 'idrive',
   id: christianBooksPitchUploadId,
   title: 'Christian Books Pitch Meeting - 2',
   description: stripIndent`
@@ -1424,6 +1431,7 @@ await db.insert(UploadRecord).values({
 const foreignMissionsUploadId = '00000000-0000-4000-8000-100000000003';
 
 await db.insert(UploadRecord).values({
+  storageLocation: 'idrive',
   id: foreignMissionsUploadId,
   title: 'Foreign Missions Pitch Meeting - 3',
   description: stripIndent`
@@ -1457,6 +1465,7 @@ await db.insert(UploadRecord).values({
 const copyrightUploadId = '00000000-0000-4000-8000-100000000004';
 
 await db.insert(UploadRecord).values({
+  storageLocation: 'idrive',
   id: copyrightUploadId,
   title: 'Copyright Pitch Meeting - 4',
   description: stripIndent`
@@ -1490,6 +1499,7 @@ await db.insert(UploadRecord).values({
 const biblicalCounselingUploadId = '00000000-0000-4000-8000-100000000005';
 
 await db.insert(UploadRecord).values({
+  storageLocation: 'idrive',
   id: biblicalCounselingUploadId,
   title: 'Biblical Counseling Pitch Meeting - 5',
   description: stripIndent`
@@ -1523,6 +1533,7 @@ await db.insert(UploadRecord).values({
 const lordsSupperUploadId = '00000000-0000-4000-8000-100000000006';
 
 await db.insert(UploadRecord).values({
+  storageLocation: 'idrive',
   id: lordsSupperUploadId,
   title: "The Lord's Supper Pitch Meeting - 6",
   description: stripIndent`

@@ -190,9 +190,9 @@ importers:
       '@aws-sdk/client-s3':
         specifier: 'catalog:'
         version: 3.948.0
-      zod:
-        specifier: 'catalog:'
-        version: 4.1.12
+      '@letschurch/s3':
+        specifier: workspace:*
+        version: link:packages/s3
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

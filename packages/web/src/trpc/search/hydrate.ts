@@ -1,11 +1,10 @@
 import { db, UploadView } from '@letschurch/db';
 import type { MediaSegment } from '@letschurch/opensearch';
-import { publicS3 } from '@letschurch/s3/public';
 import { count, inArray } from 'drizzle-orm';
 
 import { OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarXs2x } from '@/util/avatar-sizes';
-import { getPublicImageUrl } from '@/util/server-env';
+import { imageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 
 /**
@@ -38,6 +37,7 @@ export async function hydrateUploads(
         lengthSeconds: true,
         defaultThumbnailPath: true,
         overrideThumbnailPath: true,
+        storageLocation: true,
       },
       with: {
         channel: {
@@ -46,7 +46,9 @@ export async function hydrateUploads(
             name: true,
             slug: true,
             avatarPath: true,
+            avatarLocation: true,
             defaultThumbnailPath: true,
+            defaultThumbnailLocation: true,
             visibility: true,
             approvedAt: true,
           },
@@ -80,22 +82,30 @@ export async function hydrateUploads(
       const {
         defaultThumbnailPath,
         overrideThumbnailPath,
+        storageLocation,
         channel,
         ...uploadRest
       } = upload;
 
       const thumbnailUrl = resolveThumbnailUrl({
+        storageLocation,
         overrideThumbnailPath,
         defaultThumbnailPath,
         channelDefaultThumbnailPath: channel.defaultThumbnailPath,
+        channelDefaultThumbnailLocation: channel.defaultThumbnailLocation,
         size: 'card',
       });
 
-      const channelAvatarUrl = channel.avatarPath
-        ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
-            resize: appAvatarXs2x,
-          })
-        : null;
+      const channelAvatarUrl = imageUrl(
+        channel.avatarLocation,
+        channel.avatarPath,
+        { resize: appAvatarXs2x },
+      );
+      const {
+        avatarLocation: _avatarLocation,
+        defaultThumbnailLocation: _defaultThumbnailLocation,
+        ...publicChannel
+      } = channel;
 
       return {
         ...uploadRest,
@@ -103,7 +113,7 @@ export async function hydrateUploads(
         thumbnailUrl,
         _count: { uploadViews: viewCountMap.get(upload.id) ?? 0 },
         channel: {
-          ...channel,
+          ...publicChannel,
           id: OutgoingIdSchema.parse(channel.id),
           avatarUrl: channelAvatarUrl,
         },

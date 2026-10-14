@@ -23,13 +23,16 @@ const data = {
 
 beforeEach(() => {
   mocks.workflowId = 'createUploadRecord:operation-1';
-  mocks.activity.mockReset().mockResolvedValue({ id: 'upload-1' });
+  mocks.activity
+    .mockReset()
+    .mockResolvedValue({ id: 'upload-1', storageLocation: 'idrive' });
 });
 
 describe('createUploadRecordWorkflow', () => {
   test('uses the same operation identity and fingerprint across retries', async () => {
-    await expect(createUploadRecordWorkflow(data)).resolves.toBe('upload-1');
-    await expect(createUploadRecordWorkflow(data)).resolves.toBe('upload-1');
+    const expected = { id: 'upload-1', storageLocation: 'idrive' };
+    await expect(createUploadRecordWorkflow(data)).resolves.toEqual(expected);
+    await expect(createUploadRecordWorkflow(data)).resolves.toEqual(expected);
 
     const expectedInput = {
       data,

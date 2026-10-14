@@ -1,5 +1,6 @@
 import {
   executeChild,
+  patched,
   proxyActivities,
   setHandler,
 } from '@temporalio/workflow';
@@ -19,7 +20,11 @@ import type { StorageAuditBucket } from '../../workflow-ids';
 export { getStorageAuditProgressQuery };
 
 const HEX = '0123456789abcdef'.split('');
-const BUCKETS: Array<StorageAuditBucket> = ['INGEST', 'PUBLIC', 'BACKUP'];
+const LEGACY_BUCKETS: Array<StorageAuditBucket> = [
+  'INGEST',
+  'PUBLIC',
+  'BACKUP',
+];
 // How many shard child workflows to keep in flight at once.
 const CHILD_CONCURRENCY = 16;
 
@@ -31,6 +36,7 @@ const { auditShard } = proxyActivities<typeof activities>({
 });
 
 const {
+  listStorageAuditBuckets,
   assembleStorageAuditReport,
   deleteStorageAuditReportObjects,
   finalizeStorageAuditRecord,
@@ -94,7 +100,11 @@ export async function storageAuditWorkflow(
 ): Promise<StorageAuditSummary> {
   const { auditId, triggeredById, shardHexLen = 1 } = params;
 
-  const tasks = BUCKETS.flatMap((bucket) =>
+  // Every configured location's ingest + public bucket, plus backup.
+  const buckets = patched('storage-locations-v1')
+    ? await listStorageAuditBuckets()
+    : LEGACY_BUCKETS;
+  const tasks = buckets.flatMap((bucket) =>
     shardPrefixes(shardHexLen).map((shardPrefix) => ({ bucket, shardPrefix })),
   );
   const totalShards = tasks.length;

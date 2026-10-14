@@ -7,8 +7,8 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./ingest": "./src/ingest.ts",
-    "./public": "./src/public.ts",
+    "./locations": "./src/locations.ts",
+    "./copy": "./src/copy.ts",
     "./backup": "./src/backup.ts"
   },
   "scripts": {

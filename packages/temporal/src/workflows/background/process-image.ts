@@ -25,7 +25,7 @@ export async function processImageWorkflow(
   s3UploadKey: string,
   postProcess: UploadPostProcessValue,
 ) {
-  const { path, blurhash } = await processImage(
+  const { path, blurhash, storageLocation } = await processImage(
     postProcess,
     targetId,
     s3UploadKey,
@@ -34,16 +34,16 @@ export async function processImageWorkflow(
   if (postProcess === 'thumbnail') {
     await setUploadThumbnail(targetId, path, blurhash);
   } else if (postProcess === 'profileAvatar') {
-    await setProfileAvatar(targetId, path, blurhash);
+    await setProfileAvatar(targetId, path, blurhash, storageLocation);
   } else if (postProcess === 'channelAvatar') {
-    await setChannelAvatar(targetId, path, blurhash);
+    await setChannelAvatar(targetId, path, blurhash, storageLocation);
   } else if (postProcess === 'channelDefaultThumbnail') {
-    await setChannelDefaultThumbnail(targetId, path, blurhash);
+    await setChannelDefaultThumbnail(targetId, path, blurhash, storageLocation);
   } else if (postProcess === 'channelCover') {
-    await setChannelCover(targetId, path, blurhash);
+    await setChannelCover(targetId, path, blurhash, storageLocation);
   } else if (postProcess === 'organizationAvatar') {
-    await setOrganizationAvatar(targetId, path, blurhash);
+    await setOrganizationAvatar(targetId, path, blurhash, storageLocation);
   } else if (postProcess === 'organizationCover') {
-    await setOrganizationCover(targetId, path, blurhash);
+    await setOrganizationCover(targetId, path, blurhash, storageLocation);
   }
 }

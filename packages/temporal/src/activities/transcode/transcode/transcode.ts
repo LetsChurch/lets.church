@@ -2,8 +2,8 @@ import { stat, unlink } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { setTimeout } from 'node:timers/promises';
 
-import { ingestS3 } from '@letschurch/s3/ingest';
-import { publicS3 } from '@letschurch/s3/public';
+import type { LcS3Client } from '@letschurch/s3';
+import { getLocation } from '@letschurch/s3/locations';
 import { Context } from '@temporalio/activity';
 import { throttle } from 'es-toolkit';
 import fastGlob from 'fast-glob';
@@ -12,6 +12,7 @@ import { rimraf } from 'rimraf';
 
 import { updateUploadRecord } from '../../../client';
 import { CURRENT_PIPELINE_VERSION } from '../../../queues';
+import { locationFromArg } from '../../../storage/legacy';
 import { amaBudgetEnabled, amaDeviceBudget } from '../../../util/ama-budget';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import {
@@ -53,6 +54,7 @@ function isHlsArtifact(filename: string): boolean {
 }
 
 async function uploadSegments(
+  publicS3: LcS3Client,
   id: string,
   dir: string,
   log: typeof logger,
@@ -95,7 +97,13 @@ export default async function transcode(
   uploadRecordId: string,
   s3UploadKey: string,
   probe: Probe,
+  // Workers on this queue have no DB access, so the workflow passes the
+  // record's location. Absent for workflows started before locations existed.
+  storageLocation?: string,
 ) {
+  const { ingest: ingestS3, public: publicS3 } = getLocation(
+    locationFromArg(storageLocation),
+  );
   const activityLogger = moduleLogger.child({
     temporalActivity: 'transcode',
     context: {
@@ -235,6 +243,7 @@ export default async function transcode(
     while (encodeProc.exitCode === null) {
       Context.current().heartbeat('waiting for ffmpeg');
       await uploadSegments(
+        publicS3,
         uploadRecordId,
         workingDir,
         activityLogger,
@@ -245,6 +254,7 @@ export default async function transcode(
     }
 
     await uploadSegments(
+      publicS3,
       uploadRecordId,
       workingDir,
       activityLogger,

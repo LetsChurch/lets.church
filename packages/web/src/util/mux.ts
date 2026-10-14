@@ -10,7 +10,7 @@ export const MUX_RTMP_URL = 'rtmp://global-live.mux.com:5222/app';
 
 // Live HLS manifest for a Mux playback id. Served from Mux's CDN while a
 // broadcast is live; once the recording is imported + transcoded we switch
-// to our own CDN (see getPublicMediaUrl). Pure helper — safe to import on hot
+// to the record's storage location CDN (see getPublicMediaUrl). Pure helper — safe to import on hot
 // paths without pulling in Mux credentials.
 export function getMuxLivePlaybackUrl(playbackId: string) {
   return `https://stream.mux.com/${playbackId}.m3u8`;

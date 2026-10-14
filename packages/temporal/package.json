@@ -23,7 +23,10 @@
     "./util/llm": "./src/util/llm.ts",
     "./util/llm-pricing": "./src/util/llm-pricing.ts",
     "./workflow-ids": "./src/workflow-ids.ts",
-    "./search-attributes": "./src/search-attributes.ts"
+    "./search-attributes": "./src/search-attributes.ts",
+    "./storage/placement": "./src/storage/placement.ts",
+    "./storage/usage": "./src/storage/usage.ts",
+    "./storage/rebalance": "./src/storage/rebalance.ts"
   },
   "scripts": {
     "check": "pnpm run /^check:/",

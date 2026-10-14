@@ -5,7 +5,6 @@ import {
   db,
   UploadRecord,
 } from '@letschurch/db';
-import type { S3ClientId } from '@letschurch/s3';
 import type {
   UploadRecordCreateData,
   UploadRecordUpdateData,
@@ -37,6 +36,8 @@ import {
   makeResetPasswordWorkflowId,
   makeScrapeAndImportWorkflowId,
   makeStorageAuditWorkflowId,
+  makeStorageMoveWorkflowId,
+  makeStorageRebalanceWorkflowId,
   makeSummarizeUploadWorkflowId,
   makeUpdateUploadRecordWorkflowId,
   makeVerificationEmailWorkflowId,
@@ -84,6 +85,9 @@ import {
   getReindexProgressQuery,
   getStorageAuditProgressQuery,
   muxRenditionReadySignal,
+  rebalanceCancelSignal,
+  rebalancePauseSignal,
+  rebalanceResumeSignal,
   updateUploadRecordSignal,
   uploadDoneSignal,
 } from '@letschurch/temporal/refs';
@@ -215,6 +219,62 @@ export async function startStorageAudit(params: {
   });
 }
 
+// Storage location moves (admin). Each storage_move row is created by the
+// caller before starting so the admin UI shows it immediately.
+export async function startMoveUploadRecord(params: {
+  storageMoveId: string;
+  uploadRecordId: string;
+  graceSeconds?: number;
+}) {
+  return startBackground('moveUploadRecordWorkflow', {
+    taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_REPROCESS },
+    ...staticMeta({ summary: 'Move upload to another storage location' }),
+    workflowId: makeStorageMoveWorkflowId(params.storageMoveId),
+    args: [params],
+  });
+}
+
+export async function startMoveOwnerImages(params: bg.MoveOwnerImagesParams) {
+  return startBackground('moveOwnerImagesWorkflow', {
+    taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_REPROCESS },
+    ...staticMeta({ summary: 'Move images to another storage location' }),
+    workflowId: makeStorageMoveWorkflowId(params.storageMoveId),
+    args: [params],
+  });
+}
+
+export async function startRebalanceStorage(
+  params: Omit<bg.RebalanceStorageParams, 'state'>,
+) {
+  return startBackground('rebalanceStorageWorkflow', {
+    taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_REPROCESS },
+    ...staticMeta({
+      summary: `Rebalance storage off ${params.sourceLocation}`,
+    }),
+    workflowId: makeStorageRebalanceWorkflowId(params.storageMoveId),
+    args: [params],
+  });
+}
+
+export async function signalRebalance(
+  storageMoveId: string,
+  action: 'pause' | 'resume' | 'cancel',
+) {
+  const handle = (await client).workflow.getHandle(
+    makeStorageRebalanceWorkflowId(storageMoveId),
+  );
+  await handle.signal(
+    action === 'pause'
+      ? rebalancePauseSignal
+      : action === 'resume'
+        ? rebalanceResumeSignal
+        : rebalanceCancelSignal,
+  );
+}
+
 // Fire-and-forget S3 cleanup for a deleted audit. The DB row is removed
 // synchronously by the caller; this offloads the credentialed S3 purge to the
 // background worker so web never imports the S3 clients (or their env).
@@ -260,7 +320,7 @@ function makeMultipartMediaUploadWorkflowId(
 
 export async function handleMultipartMediaUpload(
   uploadRecordId: string,
-  clientId: S3ClientId,
+  storageLocation: string,
   s3UploadId: string,
   s3UploadKey: string,
   postProcess: UploadPostProcessValue,
@@ -301,7 +361,7 @@ export async function handleMultipartMediaUpload(
     }),
     args: [
       uploadRecordId,
-      clientId,
+      storageLocation,
       s3UploadId,
       s3UploadKey,
       postProcess,

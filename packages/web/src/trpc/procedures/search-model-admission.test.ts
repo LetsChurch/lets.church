@@ -49,7 +49,6 @@ vi.mock('@letschurch/opensearch', () => {
     suggestMediaPalette: vi.fn(),
   };
 });
-vi.mock('@letschurch/s3/public', () => ({ publicS3: {} }));
 vi.mock('@/ai/abuse-control', () => ({
   enforceAiRateLimit: mocks.enforceAiRateLimit,
 }));
@@ -69,7 +68,7 @@ vi.mock('@/util/query-embed', () => ({
 vi.mock('@/util/search-rate-limit', () => ({
   enforceSearchRateLimit: mocks.enforceSearchRateLimit,
 }));
-vi.mock('@/util/server-env', () => ({ getPublicImageUrl: vi.fn() }));
+vi.mock('@/util/server-env', () => ({ imageUrl: vi.fn() }));
 vi.mock('../search/parse-query', () => ({
   extractQuotedPhrases: vi.fn(() => []),
   parseSearchQuery: mocks.parseSearchQuery,

@@ -1,28 +1,38 @@
 import { Channel, db } from '@letschurch/db';
-import { publicS3 } from '@letschurch/s3/public';
+import { getLocation } from '@letschurch/s3/locations';
 import { eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 
+import { locationFromArg } from '../../storage/legacy';
+
 export default async function setChannelCover(
-  channelid: string,
+  channelId: string,
   path: string,
   blurhash: string,
+  // Absent for workflows started before storage locations existed.
+  storageLocation?: string,
 ) {
   const row = await db
-    .select({ coverPath: Channel.coverPath })
+    .select({ oldPath: Channel.coverPath, oldLocation: Channel.coverLocation })
     .from(Channel)
-    .where(eq(Channel.id, channelid))
+    .where(eq(Channel.id, channelId))
     .then((r) => r[0]);
 
-  invariant(row, `Channel ${channelid} not found`);
-  const { coverPath: oldPath } = row;
-
-  if (oldPath) {
-    await publicS3.deleteFile(oldPath);
-  }
+  invariant(row, `Channel ${channelId} not found`);
 
   await db
     .update(Channel)
-    .set({ coverPath: path, coverBlurhash: blurhash, updatedAt: new Date() })
-    .where(eq(Channel.id, channelid));
+    .set({
+      coverPath: path,
+      coverLocation: locationFromArg(storageLocation),
+      coverBlurhash: blurhash,
+      updatedAt: new Date(),
+    })
+    .where(eq(Channel.id, channelId));
+
+  if (row.oldPath && row.oldPath !== path) {
+    await getLocation(locationFromArg(row.oldLocation)).public.deleteFile(
+      row.oldPath,
+    );
+  }
 }

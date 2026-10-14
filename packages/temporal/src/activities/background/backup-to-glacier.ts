@@ -5,8 +5,7 @@ import { pipeline } from 'node:stream/promises';
 
 import { db, UploadState } from '@letschurch/db';
 import { backupS3 } from '@letschurch/s3/backup';
-import { ingestS3 } from '@letschurch/s3/ingest';
-import { publicS3 } from '@letschurch/s3/public';
+import { getLocation } from '@letschurch/s3/locations';
 import { heartbeat } from '@temporalio/activity';
 import { eq } from 'drizzle-orm';
 
@@ -59,10 +58,8 @@ export default async function backupToGlacier(
   const localFilePath = join(workDir, 'source');
 
   try {
-    // Determine which S3 client to use based on the bucket
-    const sourceS3 = uploadState.s3Bucket.toLowerCase().includes('ingest')
-      ? ingestS3
-      : publicS3;
+    // Tracked sources always live in their location's ingest bucket.
+    const sourceS3 = getLocation(uploadState.storageLocation).ingest;
 
     // Get the source object metadata and stream
     const sourceObject = await sourceS3.getObject(uploadState.s3Key);

@@ -1,12 +1,11 @@
 import { db } from '@letschurch/db';
-import { publicS3 } from '@letschurch/s3/public';
 import { createFileRoute } from '@tanstack/react-router';
 import { Feed } from 'feed';
 
 import { idTranslator } from '@/schemas/common';
 import { rssFeedIcon } from '@/util/image-sizes';
 import logger from '@/util/logger';
-import { getPublicImageUrl } from '@/util/server-env';
+import { imageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { escapeHtml } from '@/util/xss';
 
@@ -36,7 +35,9 @@ export const Route = createFileRoute('/channel/$slug/rss.xml')({
               slug: true,
               description: true,
               avatarPath: true,
+              avatarLocation: true,
               defaultThumbnailPath: true,
+              defaultThumbnailLocation: true,
               visibility: true,
               approvedAt: true,
               deletedAt: true,
@@ -77,17 +78,15 @@ export const Route = createFileRoute('/channel/$slug/rss.xml')({
 
           const channelUrl = `${siteUrl}/channel/${channel.slug}`;
 
-          const channelImageUrl = channel.defaultThumbnailPath
-            ? getPublicImageUrl(
-                publicS3.getS3ProtocolUri(channel.defaultThumbnailPath),
-                { resize: rssFeedIcon },
-              )
-            : channel.avatarPath
-              ? getPublicImageUrl(
-                  publicS3.getS3ProtocolUri(channel.avatarPath),
-                  { resize: rssFeedIcon },
-                )
-              : null;
+          const channelImageUrl =
+            imageUrl(
+              channel.defaultThumbnailLocation,
+              channel.defaultThumbnailPath,
+              { resize: rssFeedIcon },
+            ) ??
+            imageUrl(channel.avatarLocation, channel.avatarPath, {
+              resize: rssFeedIcon,
+            });
 
           const feed = new Feed({
             title: `New Media from ${channel.name} on Let's Church`,
@@ -122,6 +121,7 @@ export const Route = createFileRoute('/channel/$slug/rss.xml')({
               publishedAt: true,
               defaultThumbnailPath: true,
               overrideThumbnailPath: true,
+              storageLocation: true,
             },
             orderBy: (t, { desc }) => desc(t.publishedAt),
             limit: 500,
@@ -130,9 +130,11 @@ export const Route = createFileRoute('/channel/$slug/rss.xml')({
           // Add items to feed
           for (const upload of uploads) {
             const thumbnailUrl = resolveThumbnailUrl({
+              storageLocation: upload.storageLocation,
               overrideThumbnailPath: upload.overrideThumbnailPath,
               defaultThumbnailPath: upload.defaultThumbnailPath,
               channelDefaultThumbnailPath: channel.defaultThumbnailPath,
+              channelDefaultThumbnailLocation: channel.defaultThumbnailLocation,
               size: 'card',
             });
 

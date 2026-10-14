@@ -6,7 +6,11 @@ import {
   validateSendEmailConfig,
   validateSendVerificationEmailConfig,
 } from '@letschurch/temporal/activities/background';
-import { BACKGROUND_QUEUE, GLACIER_QUEUE } from '@letschurch/temporal/queues';
+import {
+  BACKGROUND_QUEUE,
+  GLACIER_QUEUE,
+  STORAGE_QUEUE,
+} from '@letschurch/temporal/queues';
 import {
   ANNOTATE_MODEL,
   EMBED_MODEL,
@@ -80,4 +84,24 @@ const glacierWorker = await Worker.create({
   maxConcurrentActivityTaskExecutions: 2,
 });
 
-await Promise.all([backgroundWorker.run(), glacierWorker.run()]);
+// Cross-location copies for storage moves. Each slot streams one record's
+// bucket at a time, so this caps concurrent transfer load per replica.
+const storageWorker = await Worker.create({
+  identity: `storage-worker ${IDENTITY}`,
+  connection,
+  activities: {
+    copyPrefixBetweenLocations: activities.copyPrefixBetweenLocations,
+    moveOwnerImages: activities.moveOwnerImages,
+  },
+  taskQueue: STORAGE_QUEUE,
+  shutdownGraceTime: TEMPORAL_SHUTDOWN_GRACE_TIME as `${number}`, // TODO: fix this
+  maxConcurrentActivityTaskExecutions: Number(
+    process.env.STORAGE_MOVE_CONCURRENCY ?? 4,
+  ),
+});
+
+await Promise.all([
+  backgroundWorker.run(),
+  glacierWorker.run(),
+  storageWorker.run(),
+]);

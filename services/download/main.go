@@ -116,9 +116,25 @@ type authResult struct {
 	variant      string
 	filename     string
 	includeAudio bool
+	mediaURL     string
 }
 
-func authenticate(r *http.Request, jwtSecret []byte) (*authResult, int, string) {
+// parseMediaURL validates the token's `mediaUrl` claim: the public CDN base of
+// the upload's storage location. The claim is signed by us, but it decides
+// which host ffmpeg fetches from, so anything that is not a plain absolute
+// http(s) base URL is rejected rather than passed through.
+func parseMediaURL(raw string) (string, bool) {
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" ||
+		u.User != nil || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || u.Opaque != "" {
+		return "", false
+	}
+	return strings.TrimRight(raw, "/"), true
+}
+
+// legacyMediaURL is the optional MEDIA_URL env: the CDN base for tokens that
+// web signed before multi-location storage, which have no mediaUrl claim.
+func authenticate(r *http.Request, jwtSecret []byte, legacyMediaURL string) (*authResult, int, string) {
 	uploadId, variant, ok := parsePath(r.URL.Path)
 	if !ok {
 		return nil, http.StatusBadRequest, "invalid path: expected /{uploadId}/{variant}"
@@ -157,11 +173,31 @@ func authenticate(r *http.Request, jwtSecret []byte) (*authResult, int, string) 
 		includeAudio = false
 	}
 
+	// The location's public CDN base. Tokens issued before multi-location
+	// storage have no claim; they use MEDIA_URL until their 15-minute lifetime
+	// expires during a rolling deployment, and fail closed without it.
+	var mediaURL string
+	if token.Has("mediaUrl") {
+		claimMediaURL, err := jwt.Get[string](token, "mediaUrl")
+		if err != nil {
+			return nil, http.StatusBadRequest, "token has invalid mediaUrl"
+		}
+		mediaURL, ok = parseMediaURL(claimMediaURL)
+		if !ok {
+			return nil, http.StatusBadRequest, "token has invalid mediaUrl"
+		}
+	} else if legacyMediaURL != "" {
+		mediaURL = legacyMediaURL
+	} else {
+		return nil, http.StatusBadRequest, "token missing mediaUrl"
+	}
+
 	return &authResult{
 		uploadId:     uploadId,
 		variant:      variant,
 		filename:     filename,
 		includeAudio: includeAudio,
+		mediaURL:     mediaURL,
 	}, http.StatusOK, ""
 }
 
@@ -170,11 +206,15 @@ func sanitizeFilename(filename string) string {
 }
 
 func main() {
-	mediaURL := mustEnv("MEDIA_URL")
 	jwtSecret := []byte(mustEnv("JWT_SECRET"))
 	addr := envOrDefault("ADDR", ":8080")
-
-	mediaURL = strings.TrimRight(mediaURL, "/")
+	legacyMediaURL := ""
+	if v := os.Getenv("MEDIA_URL"); v != "" {
+		var ok bool
+		if legacyMediaURL, ok = parseMediaURL(v); !ok {
+			log.Fatalf("MEDIA_URL is not an absolute http(s) base URL")
+		}
+	}
 
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -186,13 +226,13 @@ func main() {
 			return
 		}
 
-		auth, statusCode, msg := authenticate(r, jwtSecret)
+		auth, statusCode, msg := authenticate(r, jwtSecret, legacyMediaURL)
 		if auth == nil {
 			http.Error(w, msg, statusCode)
 			return
 		}
 
-		uploadId, variant, filename := auth.uploadId, auth.variant, auth.filename
+		uploadId, variant, filename, mediaURL := auth.uploadId, auth.variant, auth.filename, auth.mediaURL
 
 		isAudio := variant == "AUDIO"
 		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Hour)

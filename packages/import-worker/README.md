@@ -21,15 +21,14 @@ This worker processes import requests by downloading media from external URLs an
 
 ### S3 Configuration
 
-This worker requires access to the **ingest bucket** only:
+S3 access uses the shared **storage-location** contract; see
+[`packages/s3/README.md`](../s3/README.md#storage-locations) for the full description. For every
+configured location `<ID>` (e.g. `IDRIVE`) this service needs only the ingest bucket:
 
-| Variable                      | Description                |
-| ----------------------------- | -------------------------- |
-| `S3_INGEST_BUCKET`            | S3 bucket name for uploads |
-| `S3_INGEST_REGION`            | S3 region                  |
-| `S3_INGEST_ENDPOINT`          | S3 endpoint URL            |
-| `S3_INGEST_ACCESS_KEY_ID`     | S3 access key              |
-| `S3_INGEST_SECRET_ACCESS_KEY` | S3 secret key              |
+| Variable                                                                | Description                              |
+| ----------------------------------------------------------------------- | ---------------------------------------- |
+| `STORAGE_<ID>_INGEST_{BUCKET,ENDPOINT,ACCESS_KEY_ID,SECRET_ACCESS_KEY}` | Ingest bucket (uploaded originals)       |
+| `STORAGE_<ID>_INGEST_{REGION,FORCE_PATH_STYLE,MAX_BYTES}`               | Optional; region defaults to `us-east-1` |
 
 ## Task Queues
 

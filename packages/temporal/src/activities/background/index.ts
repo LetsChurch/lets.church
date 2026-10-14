@@ -116,6 +116,7 @@ export {
   type AuditFindingType,
   assembleStorageAuditReport,
   auditShard,
+  listStorageAuditBuckets,
   deleteStorageAuditReportObjects,
   finalizeStorageAuditRecord,
   getStorageAuditRecipient,
@@ -136,3 +137,25 @@ export { default as updateUploadRecord } from './update-upload-record';
 export { default as updateUploadScores } from './update-upload-scores';
 export { default as updateUser } from './update-user';
 export { default as verifyUserEmail } from './verify-user-email';
+export {
+  ensureStorageCapacity,
+  getUploadStorageLocation,
+  measurePublicUsage,
+  type StorageCapacityDecision,
+} from './storage-capacity';
+export {
+  abortRecordMove,
+  activeChildMoves,
+  beginRecordMove,
+  cleanupImageMoveSource,
+  cleanupRecordMoveSource,
+  copyPrefixBetweenLocations,
+  createRecordMove,
+  flipRecordMove,
+  moveOwnerImages,
+  nextRebalanceBatch,
+  planRebalance,
+  rebalanceGoalBytes,
+  setStorageMoveStatus,
+  updateRebalanceProgress,
+} from './storage-move';

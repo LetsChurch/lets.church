@@ -14,15 +14,15 @@ vi.mock('@letschurch/db', () => ({
   UploadState: {
     createdAt: 'uploadState.createdAt',
     id: 'uploadState.id',
-    s3Bucket: 'uploadState.s3Bucket',
     s3Key: 'uploadState.s3Key',
     sizeBytes: 'uploadState.sizeBytes',
+    storageLocation: 'uploadState.storageLocation',
   },
 }));
-vi.mock('@letschurch/s3', () => ({
-  LcS3Client: class {
-    headObjectIfExists = mocks.headObjectIfExists;
-  },
+vi.mock('@letschurch/s3/locations', () => ({
+  getLocation: () => ({
+    ingest: { headObjectIfExists: mocks.headObjectIfExists },
+  }),
 }));
 vi.mock('drizzle-orm', () => ({
   and: vi.fn(),
@@ -46,7 +46,7 @@ beforeEach(() => {
     {
       id: 'upload-state-id',
       s3Key: 'key',
-      s3Bucket: 'ingest',
+      storageLocation: 'idrive',
       createdAt,
     },
   ]);
@@ -66,15 +66,7 @@ beforeEach(() => {
 });
 
 function runBatch() {
-  return backfillUploadStateSizesBatch(
-    10,
-    'ingest',
-    'http://127.0.0.1:1',
-    'us-east-1',
-    'access-key',
-    'secret-key',
-    null,
-  );
+  return backfillUploadStateSizesBatch(10, null);
 }
 
 describe('backfillUploadStateSizesBatch', () => {

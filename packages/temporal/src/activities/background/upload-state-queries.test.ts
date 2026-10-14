@@ -37,6 +37,7 @@ describe.skipIf(!runDatabaseTests)(
           Array.from({ length: 6 }, (_, index) => ({
             s3Key: `${keyPrefix}/${index}`,
             s3Bucket: 'claim-test',
+            storageLocation: 'idrive',
             uploadType: 'MEDIA' as const,
             backupStatus: 'NOT_BACKED_UP' as const,
             createdAt: new Date(createdAt.getTime() + index),

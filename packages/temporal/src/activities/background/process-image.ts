@@ -1,13 +1,12 @@
 import { join } from 'node:path';
 
-import { ingestS3 } from '@letschurch/s3/ingest';
-import { publicS3 } from '@letschurch/s3/public';
 import { Context } from '@temporalio/activity';
 import mime from 'mime';
 import { mkdirp } from 'mkdirp';
 import { nanoid } from 'nanoid';
 import { rimraf } from 'rimraf';
 
+import { uploadStateLocationByKey } from '../../storage/locate';
 import { imageToBlurhash, imgJson, jpegOptim, oxiPng } from '../../util/images';
 import logger from '../../util/logger';
 import type { UploadPostProcessValue } from '../../util/types';
@@ -44,9 +43,17 @@ export default async function processImage(
   const dir = join(WORK_DIR, nanoid());
   const downloadPath = join(dir, 'download');
 
+  // The source's upload_state row (written before processing starts)
+  // records which location it was placed in; the processed image goes to the
+  // same location's public bucket.
+  const location = await uploadStateLocationByKey(s3UploadKey);
+  if (!location) {
+    throw new Error(`No upload state for ${s3UploadKey}`);
+  }
+
   try {
     await mkdirp(dir);
-    await ingestS3.streamObjectToFile(s3UploadKey, downloadPath);
+    await location.ingest.streamObjectToFile(s3UploadKey, downloadPath);
 
     Context.current().heartbeat();
 
@@ -56,7 +63,7 @@ export default async function processImage(
 
     activityLogger.info('Uploading probe');
 
-    await ingestS3.retryablePutFile({
+    await location.ingest.retryablePutFile({
       key: `${s3UploadKey}.imagemagick.json`,
       contentType: 'application/json',
       body: Buffer.from(JSON.stringify(json, null, 2)),
@@ -77,7 +84,7 @@ export default async function processImage(
       json.mimeType,
     )}`;
 
-    await publicS3.retryablePutFile({
+    await location.public.retryablePutFile({
       key: path,
       contentType: json.mimeType,
       path: downloadPath,
@@ -92,7 +99,7 @@ export default async function processImage(
 
     Context.current().heartbeat();
 
-    return { path, blurhash };
+    return { path, blurhash, storageLocation: location.id };
   } catch (e) {
     activityLogger.error(
       { err: e instanceof Error ? e : new Error(String(e)) },

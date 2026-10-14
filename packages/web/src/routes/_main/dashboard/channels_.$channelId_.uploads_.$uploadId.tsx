@@ -8,6 +8,7 @@ import {
   IconCheck,
   IconChevronDown,
   IconCopy,
+  IconDatabase,
   IconDownload,
   IconEye,
   IconEyeOff,
@@ -74,6 +75,7 @@ import { formatTime } from '@/util/format';
 import { doMultipartUpload } from '@/util/multipart-upload';
 import { stopMediaElement } from '@/util/stop-media-element';
 
+import { MoveStorageModal } from './-components/move-storage-modal';
 import { SpeakerLabelingModal } from './-components/speaker-labeling-modal';
 import {
   $localVideoThumbnails,
@@ -254,6 +256,7 @@ function ChannelUploadPage() {
   const [showSpeakerModal, setShowSpeakerModal] = useState(false);
   const [showDebugModal, setShowDebugModal] = useState(false);
   const [showReprocessModal, setShowReprocessModal] = useState(false);
+  const [showMoveStorageModal, setShowMoveStorageModal] = useState(false);
   const [reprocessScope, setReprocessScope] = useState<
     'transcode' | 'transcribe' | 'everything'
   >('everything');
@@ -1380,6 +1383,13 @@ function ChannelUploadPage() {
                         Debug Info
                       </MenuItemButton>
 
+                      <MenuItemButton
+                        icon={<IconDatabase size={16} />}
+                        onClick={() => setShowMoveStorageModal(true)}
+                      >
+                        Move storage location
+                      </MenuItemButton>
+
                       <LcMenu.Item
                         render={(props) => (
                           <button
@@ -1901,6 +1911,15 @@ function ChannelUploadPage() {
           </LcModal.Popup>
         </LcModal.Portal>
       </LcModal.Root>
+
+      {/* Move storage location (site admin) */}
+      {isSiteAdmin ? (
+        <MoveStorageModal
+          uploadId={uploadId}
+          open={showMoveStorageModal}
+          onClose={() => setShowMoveStorageModal(false)}
+        />
+      ) : null}
 
       {/* Reprocess Modal (site admin) */}
       <LcModal.Root

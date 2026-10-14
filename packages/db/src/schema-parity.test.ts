@@ -1522,7 +1522,8 @@ async function assertBehavior(pool: Pool) {
       channel_id,
       visibility,
       updated_at,
-      variants
+      variants,
+      storage_location
     ) VALUES (
       'Parity upload',
       $1,
@@ -1530,7 +1531,8 @@ async function assertBehavior(pool: Pool) {
       $2,
       'PUBLIC',
       '2000-01-01T00:00:00Z',
-      ARRAY[]::upload_variant[]
+      ARRAY[]::upload_variant[],
+      'idrive'
     )
     RETURNING id, upload_finalized, transcoding_progress, score
   `,
@@ -1669,6 +1671,7 @@ async function assertBehavior(pool: Pool) {
     .insert(schema.UploadRecord)
     .values({
       title: 'Relation upload',
+      storageLocation: 'idrive',
       appUserId: ormUser.id,
       channelId: relationChannel[0]!.id,
       license: 'STANDARD',

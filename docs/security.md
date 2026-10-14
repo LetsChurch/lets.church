@@ -42,6 +42,29 @@ make a bare `fetch` to a user-influenced URL. Tools that do their own networking
 (subprocesses, headless browsers) can only be input-validated — rely on egress
 network policy for the rest.
 
+Media services that fetch our own stored files follow the same idea with a
+fixed allow-list instead of a DNS check (see `docs/storage-locations.md`):
+
+- **imgproxy** fetches image originals over plain HTTP from the storage
+  locations' public CDN URLs. `IMGPROXY_ALLOWED_SOURCES` restricts it to
+  exactly those bases. (During the prod transition it also keeps its S3
+  settings and an `s3://<public bucket>/` entry so previously signed image
+  URLs keep working; both are removed in the rollout's cleanup step.) imgproxy
+  treats each comma-separated entry as an anchored **prefix**, so every entry
+  must end in `/` (`https://cdn.example.com` would also admit
+  `https://cdn.example.com.evil.test/`), and the value must never be empty or
+  contain an empty entry: either one allows every URL. Adding a location means
+  appending its `STORAGE_<ID>_PUBLIC_URL` + `/`.
+- **The download service** builds its ffmpeg input from the `mediaUrl` claim of
+  the HS256 JWT the web app signs, never from a query parameter or other
+  request input. It rejects a non-http(s) scheme, userinfo, a query or a
+  fragment with 400 before starting ffmpeg (`parseMediaURL` in
+  `services/download/main.go`). Only the web app's token signer may choose that
+  value, and it takes it from the upload's persisted storage location. A token
+  with no claim at all (signed before multi-location storage) uses the
+  operator-set `MEDIA_URL`, validated the same way at startup, and is rejected
+  when `MEDIA_URL` is unset; an invalid claim never falls back.
+
 ## 3. Neutralize untrusted data at the point of output
 
 Encode for the **exact sink**: HTML text and HTML _attribute_ contexts have
@@ -293,6 +316,9 @@ When adding or changing an endpoint or a render path, ask:
       shape), allow-list style? (principle 1)
 - [ ] Outbound request to a user-influenced URL? → vetted fetch wrapper.
       (principle 2)
+- [ ] New storage location or media-fetching service? → its public URL is in
+      `IMGPROXY_ALLOWED_SOURCES` with a trailing `/`, and any fetch base comes
+      from server config or a signed claim, never request input. (principle 2)
 - [ ] User data reaching HTML/attributes/links? → escape for the sink + allow-list
       URL schemes; avoid unsanitized `dangerouslySetInnerHTML`. (principle 3)
 - [ ] Returning or mutating a resource by id (or via a user-scoped row)? →

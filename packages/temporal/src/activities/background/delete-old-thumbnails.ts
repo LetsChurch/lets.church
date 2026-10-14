@@ -1,9 +1,9 @@
-import { publicS3 } from '@letschurch/s3/public';
 import { Context } from '@temporalio/activity';
 import { throttle } from 'es-toolkit';
 import all from 'it-all';
 import filter from 'it-filter';
 
+import { uploadRecordLocation } from '../../storage/locate';
 import logger from '../../util/logger';
 
 const moduleLogger = logger.child({
@@ -20,6 +20,7 @@ export default async function deleteOldThumbnails(id: string) {
     },
   });
 
+  const { public: publicS3 } = await uploadRecordLocation(id);
   const keys = await all(
     filter(publicS3.listKeys(id), (key) => /\d{5}\.jpg$/.test(key)),
   );

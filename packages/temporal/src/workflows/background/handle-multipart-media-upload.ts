@@ -1,4 +1,3 @@
-import type { S3ClientId } from '@letschurch/s3';
 import {
   condition,
   ParentClosePolicy,
@@ -40,7 +39,7 @@ export { uploadDoneSignal };
 
 export type HandleMultipartMediaUploadParams = {
   targetId: string;
-  clientId: S3ClientId;
+  storageLocation: string;
   s3UploadId: string;
   s3UploadKey: string;
   postProcess: UploadPostProcessValue;
@@ -55,7 +54,10 @@ export type UploadMeta = {
 
 export async function handleMultipartMediaUploadWorkflow(
   targetId: string,
-  _clientId: S3ClientId,
+  // Location whose ingest bucket received the upload. Workflows started
+  // before storage locations existed carry the old 'INGEST' client id here;
+  // the activities map that to the legacy location.
+  storageLocation: string,
   s3UploadId: string,
   s3UploadKey: string,
   postProcess: UploadPostProcessValue,
@@ -88,6 +90,7 @@ export async function handleMultipartMediaUploadWorkflow(
       s3UploadId,
       s3UploadKey,
       eTags,
+      storageLocation,
     );
 
     const meta =
@@ -109,6 +112,7 @@ export async function handleMultipartMediaUploadWorkflow(
     // Pass size as string since Temporal cannot serialize bigint
     const uploadStateId = await createUploadState({
       s3Key: s3UploadKey,
+      storageLocation,
       uploadType: postProcess,
       sizeBytes: sizeBytesStr,
       uploadRecordId:
@@ -166,6 +170,6 @@ export async function handleMultipartMediaUploadWorkflow(
     }
   } else {
     setCurrentDetails('Upload timed out — aborting');
-    await abortMultipartUpload(s3UploadId, s3UploadKey);
+    await abortMultipartUpload(s3UploadId, s3UploadKey, storageLocation);
   }
 }

@@ -4,6 +4,7 @@ import {
   patched,
   proxyActivities,
   setCurrentDetails,
+  sleep,
   workflowInfo,
 } from '@temporalio/workflow';
 import { invariant } from 'es-toolkit';
@@ -25,9 +26,10 @@ import {
   DETERMINISTIC_LLM_FALLBACK_FAILURE,
   isDeterministicLlmFallbackFailure,
 } from '../../util/llm-completion-guards';
-import { probeIsVideoFile } from '../../util/zod';
+import { type Probe, probeIsVideoFile } from '../../util/zod';
 import { annotateTranscriptWorkflow } from './annotate-transcript';
 import { indexDocumentWorkflow } from './index-document';
+import { moveUploadRecordWorkflow } from './storage-move';
 import { summarizeUploadWorkflow } from './summarize-upload';
 
 const { probe } = proxyActivities<typeof probeActivities>({
@@ -53,13 +55,76 @@ const { transcribe } = proxyActivities<typeof transcribeActivities>({
   retry: { maximumAttempts: 2 },
 });
 
-const { getFinalizedUploadKey, getStoredProbe, storeTranscriptParagraphs } =
-  proxyActivities<typeof backgroundActivities>({
-    startToCloseTimeout: '10 minute',
-    heartbeatTimeout: '1 minute',
-    taskQueue: BACKGROUND_QUEUE,
-    retry: { maximumAttempts: 5 },
-  });
+const {
+  getFinalizedUploadKey,
+  getStoredProbe,
+  storeTranscriptParagraphs,
+  ensureStorageCapacity,
+  getUploadStorageLocation,
+  createRecordMove,
+} = proxyActivities<typeof backgroundActivities>({
+  startToCloseTimeout: '10 minute',
+  heartbeatTimeout: '1 minute',
+  taskQueue: BACKGROUND_QUEUE,
+  retry: { maximumAttempts: 5 },
+});
+
+// Listing a record's public prefix can take a while for long HLS ladders.
+const { measurePublicUsage } = proxyActivities<typeof backgroundActivities>({
+  startToCloseTimeout: '30 minutes',
+  taskQueue: BACKGROUND_QUEUE,
+  retry: { maximumAttempts: 5 },
+});
+
+// How often a parked upload re-checks for storage capacity.
+const STORAGE_RECHECK_INTERVAL = '10 minutes';
+
+/**
+ * Make sure the record's location can hold the processed output before any
+ * artifact is written: proceed, relocate the record (cheap before transcode;
+ * a full move if it already has artifacts), or park and re-check until
+ * capacity frees up. Returns the location processing should use.
+ */
+async function waitForStorageCapacity(
+  targetId: string,
+  probe: Probe,
+): Promise<string> {
+  for (;;) {
+    const decision = await ensureStorageCapacity(targetId, probe);
+    if (decision.action === 'proceed') {
+      return decision.storageLocation;
+    }
+    if (decision.action === 'relocate') {
+      setCurrentDetails(
+        `Relocating to ${decision.targetLocation} for storage capacity`,
+      );
+      const storageMoveId = await createRecordMove({
+        uploadRecordId: targetId,
+        targetLocation: decision.targetLocation,
+        reason: 'capacity',
+      });
+      const moved = await executeChild(moveUploadRecordWorkflow, {
+        args: [{ storageMoveId, uploadRecordId: targetId }],
+        workflowId: `storageMove:${storageMoveId}`,
+        taskQueue: BACKGROUND_QUEUE,
+      });
+      if (!moved.ok) {
+        // e.g. the target filled up meanwhile; back off before re-deciding.
+        setCurrentDetails(`Relocation failed: ${moved.reason}`);
+        await sleep(STORAGE_RECHECK_INTERVAL);
+      }
+      continue;
+    }
+    setCurrentDetails(
+      decision.action === 'moving'
+        ? 'Waiting for a storage move to finish'
+        : 'Waiting for storage capacity',
+    );
+    await sleep(
+      decision.action === 'moving' ? '1 minute' : STORAGE_RECHECK_INTERVAL,
+    );
+  }
+}
 
 const { sendUploadErrorNotification, triggerPagerDutyAlert } = proxyActivities<
   typeof backgroundActivities
@@ -87,6 +152,7 @@ export async function processMediaWorkflow(
   const inheritChildPriority = patched(
     'inherit-process-media-child-priority-v1',
   );
+  const storageLocationsV1 = patched('storage-locations-v1');
   // Propagate UploadId to every child / grandchild so the whole tree is
   // searchable in the Temporal UI by upload. Temporal does NOT inherit
   // search attributes automatically — see handle-multipart-media-upload.ts
@@ -101,14 +167,27 @@ export async function processMediaWorkflow(
     // history. `setCurrentDetails` is overwrite-only single-line markdown.
     setCurrentDetails('Probing media');
     const s3UploadKey = await getFinalizedUploadKey(targetId);
+    // Probe/transcode/transcribe workers have no DB access; they're told
+    // which location holds the record.
+    let storageLocation = storageLocationsV1
+      ? await getUploadStorageLocation(targetId)
+      : undefined;
 
     // Skip-probe reuses the stored probe.json; a null result (missing or
     // unparseable) transparently falls back to a live probe so no upload
     // is silently left unprocessed.
     const probeRes =
       (skipProbe ? await getStoredProbe(targetId) : null) ??
-      (await probe(targetId, s3UploadKey));
+      (await probe(targetId, s3UploadKey, storageLocation));
     invariant(probeRes !== null, 'Probe is null!');
+
+    // Capacity is re-checked with a precise estimate before transcoding writes
+    // anything to public (and may relocate the record). Transcribe-only runs
+    // write a few small transcript files, so they skip the check.
+    if (storageLocationsV1 && scope !== 'transcribe') {
+      setCurrentDetails('Checking storage capacity');
+      storageLocation = await waitForStorageCapacity(targetId, probeRes);
+    }
 
     setCurrentDetails(
       scope === 'transcode'
@@ -120,19 +199,23 @@ export async function processMediaWorkflow(
 
     const transcribePromise =
       scope === 'everything' || scope === 'transcribe'
-        ? transcribe(targetId, s3UploadKey)
+        ? transcribe(targetId, s3UploadKey, storageLocation)
         : null;
 
     await Promise.all([
       transcribePromise,
       scope === 'everything' || scope === 'transcode'
-        ? transcode(targetId, s3UploadKey, probeRes)
+        ? transcode(targetId, s3UploadKey, probeRes, storageLocation)
         : null,
       ...((scope === 'everything' || scope === 'transcode') &&
       probeIsVideoFile(probeRes)
-        ? [createThumbnails(targetId, s3UploadKey, probeRes)]
+        ? [createThumbnails(targetId, s3UploadKey, probeRes, storageLocation)]
         : []),
     ]);
+
+    if (storageLocationsV1) {
+      await measurePublicUsage(targetId);
+    }
 
     if (transcribePromise) {
       const res = await transcribePromise;

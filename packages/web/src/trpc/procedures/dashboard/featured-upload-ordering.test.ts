@@ -48,6 +48,7 @@ describe.skipIf(!runDatabaseTests)('featured upload deletion', () => {
             license: 'STANDARD' as const,
             visibility: 'PUBLIC' as const,
             variants: [],
+            storageLocation: 'idrive',
             updatedAt: now,
           })),
         )

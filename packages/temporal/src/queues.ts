@@ -2,6 +2,9 @@ export const BACKGROUND_QUEUE = 'background';
 export const GLACIER_QUEUE = 'glacier';
 export const IMPORT_QUEUE = 'import';
 export const PROBE_QUEUE = 'probe';
+// Long-running cross-location object copies (storage moves/rebalances), kept
+// off BACKGROUND_QUEUE so they can't starve its small activity-slot budget.
+export const STORAGE_QUEUE = 'storage';
 export const TRANSCODE_QUEUE = 'transcode';
 export const TRANSCRIBE_QUEUE = 'transcribe';
 

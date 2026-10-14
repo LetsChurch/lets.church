@@ -128,7 +128,15 @@ export function makeReprocessUploadWorkflowId(uploadRecordId: string) {
 }
 
 // Storage audit workflows
-export type StorageAuditBucket = 'INGEST' | 'PUBLIC' | 'BACKUP';
+// `INGEST:<location>` / `PUBLIC:<location>` per storage location, plus the
+// single backup bucket. Bare 'INGEST' / 'PUBLIC' only appear in audits started
+// before storage locations existed (they mean the legacy location).
+export type StorageAuditBucket =
+  | `INGEST:${string}`
+  | `PUBLIC:${string}`
+  | 'INGEST'
+  | 'PUBLIC'
+  | 'BACKUP';
 
 export function makeStorageAuditWorkflowId(auditId: string) {
   return `storageAudit:${auditId}`;
@@ -183,4 +191,17 @@ export function makeBulkMediaImportWorkflowId(
   batchIndex: number,
 ) {
   return `bulkImportMedia:${channelSlug}:${bulkImportId}:${batchIndex}`;
+}
+
+// Storage locations
+export function makeStorageMoveWorkflowId(storageMoveId: string) {
+  return `storageMove:${storageMoveId}`;
+}
+
+export function makeStorageMoveCleanupWorkflowId(storageMoveId: string) {
+  return `storageMoveCleanup:${storageMoveId}`;
+}
+
+export function makeStorageRebalanceWorkflowId(storageMoveId: string) {
+  return `storageRebalance:${storageMoveId}`;
 }

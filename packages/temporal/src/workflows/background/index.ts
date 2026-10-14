@@ -90,3 +90,13 @@ export {
   updateUploadRecordWorkflow,
 } from './update-upload-record';
 export { updateUploadScoresWorkflow } from './update-upload-scores';
+export {
+  DEFAULT_MOVE_GRACE_SECONDS,
+  type MoveOwnerImagesParams,
+  moveOwnerImagesWorkflow,
+  type MoveUploadRecordParams,
+  moveUploadRecordWorkflow,
+  type RebalanceStorageParams,
+  rebalanceStorageWorkflow,
+  storageMoveCleanupWorkflow,
+} from './storage-move';

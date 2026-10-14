@@ -35,6 +35,7 @@ from .activity_runtime import (
 from .alignment import align_segments
 from .audio import convert_to_wav, load_audio
 from .diarization import assign_word_speakers
+from .locations import LEGACY_STORAGE_LOCATION, read_bucket_config
 from .models import get_model_manager
 from .pipeline import build_transcript_json, iter_whisper_segments
 from .segmentation import process_speaker_segments
@@ -72,9 +73,21 @@ class ThrottledProgressUpdater:
 
 
 @activity.defn
-async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any]:
-    """Transcribe + diarize + wtpsplit-segment one upload; emit VTT, JSON, plaintext."""
-    activity.logger.info(f"transcribe start: upload={upload_record_id} key={s3_upload_key}")
+async def transcribe(
+    upload_record_id: str,
+    s3_upload_key: str,
+    storage_location: str | None = None,
+) -> dict[str, Any]:
+    """Transcribe + diarize + wtpsplit-segment one upload; emit VTT, JSON, plaintext.
+
+    `storage_location` selects the location whose ingest bucket holds the
+    source and whose public bucket receives the transcripts. It is optional only
+    so workflows started before multi-location storage (two args) still run.
+    """
+    location_id = storage_location or LEGACY_STORAGE_LOCATION
+    activity.logger.info(
+        f"transcribe start: upload={upload_record_id} key={s3_upload_key} location={location_id}"
+    )
 
     work_dir_base = os.environ.get("TRANSCRIBE_WORKING_DIRECTORY", "/data/transcribe")
 
@@ -90,18 +103,13 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
     paragraph_threshold = float(os.getenv("WTPSPLIT_PARAGRAPH_THRESHOLD", "0.5"))
     paragraph_target_chars = int(os.getenv("PARAGRAPH_TARGET_CHARS", "200"))
 
-    s3_ingest_endpoint = os.environ.get("S3_INGEST_ENDPOINT")
-    s3_ingest_bucket = os.environ["S3_INGEST_BUCKET"]
-    s3_ingest_key = os.environ["S3_INGEST_ACCESS_KEY_ID"]
-    s3_ingest_secret = os.environ["S3_INGEST_SECRET_ACCESS_KEY"]
+    ingest_config = read_bucket_config(location_id, "INGEST")
+    public_config = read_bucket_config(location_id, "PUBLIC")
+    s3_ingest_bucket = ingest_config.bucket
+    s3_public_bucket = public_config.bucket
 
-    s3_public_endpoint = os.environ.get("S3_PUBLIC_ENDPOINT")
-    s3_public_bucket = os.environ["S3_PUBLIC_BUCKET"]
-    s3_public_key = os.environ["S3_PUBLIC_ACCESS_KEY_ID"]
-    s3_public_secret = os.environ["S3_PUBLIC_SECRET_ACCESS_KEY"]
-
-    ingest_s3 = get_s3_client(s3_ingest_endpoint, s3_ingest_key, s3_ingest_secret)
-    public_s3 = get_s3_client(s3_public_endpoint, s3_public_key, s3_public_secret)
+    ingest_s3 = get_s3_client(ingest_config)
+    public_s3 = get_s3_client(public_config)
     progress = ThrottledProgressUpdater(upload_record_id)
 
     models = get_model_manager()

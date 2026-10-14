@@ -1,12 +1,11 @@
 import { db } from '@letschurch/db';
-import { publicS3 } from '@letschurch/s3/public';
 import { createFileRoute } from '@tanstack/react-router';
 import { Podcast } from 'podcast';
 
 import { idTranslator } from '@/schemas/common';
 import { podcastImage } from '@/util/image-sizes';
 import logger from '@/util/logger';
-import { getPublicImageUrl, makeDownloadServiceUrl } from '@/util/server-env';
+import { imageUrl, makeDownloadServiceUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { escapeHtml } from '@/util/xss';
 
@@ -36,6 +35,7 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
               slug: true,
               description: true,
               defaultThumbnailPath: true,
+              defaultThumbnailLocation: true,
               visibility: true,
               approvedAt: true,
               deletedAt: true,
@@ -74,12 +74,12 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
             });
           }
 
-          const channelImageUrl = channel.defaultThumbnailPath
-            ? getPublicImageUrl(
-                publicS3.getS3ProtocolUri(channel.defaultThumbnailPath),
-                { resize: podcastImage },
-              )
-            : `${siteUrl}/favicon.svg`;
+          const channelImageUrl =
+            imageUrl(
+              channel.defaultThumbnailLocation,
+              channel.defaultThumbnailPath,
+              { resize: podcastImage },
+            ) ?? `${siteUrl}/favicon.svg`;
 
           const feed = new Podcast({
             title: channel.name,
@@ -125,6 +125,7 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
               publishedAt: true,
               defaultThumbnailPath: true,
               overrideThumbnailPath: true,
+              storageLocation: true,
               variants: true,
               lengthSeconds: true,
             },
@@ -141,9 +142,11 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
           // Add items to feed
           for (const upload of audioUploads) {
             const thumbnailUrl = resolveThumbnailUrl({
+              storageLocation: upload.storageLocation,
               overrideThumbnailPath: upload.overrideThumbnailPath,
               defaultThumbnailPath: upload.defaultThumbnailPath,
               channelDefaultThumbnailPath: channel.defaultThumbnailPath,
+              channelDefaultThumbnailLocation: channel.defaultThumbnailLocation,
               size: 'card',
             });
 
@@ -158,6 +161,7 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
             );
             const audioDownloadUrl = await makeDownloadServiceUrl(
               upload.id,
+              upload.storageLocation,
               'AUDIO',
               `${baseFilename}.m4a`,
             );

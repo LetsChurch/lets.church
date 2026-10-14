@@ -14,7 +14,7 @@ import {
   UploadLicense,
   UploadRecord,
 } from '@letschurch/db';
-import { ingestS3 } from '@letschurch/s3/ingest';
+import { getLocation } from '@letschurch/s3/locations';
 import { TRPCError } from '@trpc/server';
 import { and, asc, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 
@@ -38,6 +38,11 @@ import {
   normalizeMirrorFileName,
 } from '@/util/mirror-duplicates';
 import { consumeTokenBucketWithFallback } from '@/util/rate-limit';
+import {
+  initialRecordLocation,
+  placeMediaUpload,
+  recordLocation,
+} from '@/util/storage';
 
 import { authProcedure, router } from '../../trpc';
 import { channelUploadProcedure } from './channels';
@@ -81,7 +86,7 @@ async function findOwnPendingUpload({
   appUserId: string;
 }) {
   const upload = await db.query.UploadRecord.findFirst({
-    columns: { id: true },
+    columns: { id: true, storageLocation: true },
     where: (t, { and, eq, isNull }) =>
       and(
         eq(t.id, uploadId),
@@ -130,14 +135,17 @@ async function findPendingMirrorUpload({
 
 /** Stop a multipart upload's waiting workflow and discard its S3 parts. */
 async function cancelMirrorMultipart(
-  upload: { id: string },
+  upload: { id: string; storageLocation: string },
   s3UploadId: string,
   s3UploadKey: string,
 ) {
   await cancelMultipartMediaUpload(s3UploadId, s3UploadKey);
 
   try {
-    await ingestS3.abortMultipartUpload(s3UploadId, s3UploadKey);
+    await getLocation(upload.storageLocation).ingest.abortMultipartUpload(
+      s3UploadId,
+      s3UploadKey,
+    );
   } catch (err) {
     // Already aborted/completed upstream; nothing left to discard.
     moduleLogger.warn(
@@ -264,6 +272,7 @@ export const mirrorRouter = router({
           updatedAt: new Date(),
           score: 0,
           transcodingProgress: 0,
+          storageLocation: await initialRecordLocation(),
         })
         .returning({ id: UploadRecord.id });
 
@@ -282,6 +291,7 @@ export const mirrorRouter = router({
       try {
         const multipart = await startMultipartUpload({
           targetId: record.id,
+          location: await placeMediaUpload(record.id, input.bytes),
           uploadMimeType: input.uploadMimeType,
           bytes: input.bytes,
           postProcess: 'media',
@@ -289,8 +299,9 @@ export const mirrorRouter = router({
 
         return { uploadId: record.id, ...multipart };
       } catch (err) {
-        // S3 or Temporal unavailable, …: don't leave an empty record behind.
-        // The client never got the id, so it can't clean up itself.
+        // Storage full, S3 or Temporal unavailable, …: don't leave an empty
+        // record (and its storage reservation) behind. The client never got
+        // the id, so it can't clean up itself.
         await deleteUpload(record.id).catch((cleanupErr: unknown) => {
           moduleLogger.error(
             {
@@ -343,7 +354,8 @@ export const mirrorRouter = router({
 
       await cancelMirrorMultipart(upload, input.s3UploadId, input.s3UploadKey);
 
-      // The standard delete workflow also cleans up search and any objects.
+      // The standard delete workflow also releases the record's storage
+      // reservation and cleans up any objects.
       await deleteUpload(upload.id);
 
       return { uploadId: upload.id };
@@ -368,6 +380,7 @@ export const mirrorRouter = router({
 
       return startMultipartUpload({
         targetId: upload.id,
+        location: await recordLocation(upload.id),
         uploadMimeType: input.uploadMimeType,
         bytes: input.bytes,
         postProcess: 'thumbnail',

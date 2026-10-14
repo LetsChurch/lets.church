@@ -93,6 +93,7 @@ import { Route as MainDashboardChannelsChannelIdRouteImport } from './routes/_ma
 import { Route as MainDashboardAdminUsersRouteImport } from './routes/_main/dashboard/admin_.users'
 import { Route as MainDashboardAdminUploadBackupsRouteImport } from './routes/_main/dashboard/admin_.upload-backups'
 import { Route as MainDashboardAdminStorageAuditRouteImport } from './routes/_main/dashboard/admin_.storage-audit'
+import { Route as MainDashboardAdminStorageRouteImport } from './routes/_main/dashboard/admin_.storage'
 import { Route as MainDashboardAdminSpeakersRouteImport } from './routes/_main/dashboard/admin_.speakers'
 import { Route as MainDashboardAdminSpeakerQueueRouteImport } from './routes/_main/dashboard/admin_.speaker-queue'
 import { Route as MainDashboardAdminSearchesRouteImport } from './routes/_main/dashboard/admin_/searches'
@@ -573,6 +574,12 @@ const MainDashboardAdminStorageAuditRoute =
     path: '/admin/storage-audit',
     getParentRoute: () => MainDashboardRoute,
   } as any)
+const MainDashboardAdminStorageRoute =
+  MainDashboardAdminStorageRouteImport.update({
+    id: '/admin_/storage',
+    path: '/admin/storage',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
 const MainDashboardAdminSpeakersRoute =
   MainDashboardAdminSpeakersRouteImport.update({
     id: '/admin_/speakers',
@@ -939,6 +946,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin/searches': typeof MainDashboardAdminSearchesRoute
   '/dashboard/admin/speaker-queue': typeof MainDashboardAdminSpeakerQueueRoute
   '/dashboard/admin/speakers': typeof MainDashboardAdminSpeakersRoute
+  '/dashboard/admin/storage': typeof MainDashboardAdminStorageRoute
   '/dashboard/admin/storage-audit': typeof MainDashboardAdminStorageAuditRoute
   '/dashboard/admin/upload-backups': typeof MainDashboardAdminUploadBackupsRoute
   '/dashboard/admin/users': typeof MainDashboardAdminUsersRoute
@@ -1066,6 +1074,7 @@ export interface FileRoutesByTo {
   '/dashboard/admin/searches': typeof MainDashboardAdminSearchesRoute
   '/dashboard/admin/speaker-queue': typeof MainDashboardAdminSpeakerQueueRoute
   '/dashboard/admin/speakers': typeof MainDashboardAdminSpeakersRoute
+  '/dashboard/admin/storage': typeof MainDashboardAdminStorageRoute
   '/dashboard/admin/storage-audit': typeof MainDashboardAdminStorageAuditRoute
   '/dashboard/admin/upload-backups': typeof MainDashboardAdminUploadBackupsRoute
   '/dashboard/admin/users': typeof MainDashboardAdminUsersRoute
@@ -1197,6 +1206,7 @@ export interface FileRoutesById {
   '/_main/dashboard/admin_/searches': typeof MainDashboardAdminSearchesRoute
   '/_main/dashboard/admin_/speaker-queue': typeof MainDashboardAdminSpeakerQueueRoute
   '/_main/dashboard/admin_/speakers': typeof MainDashboardAdminSpeakersRoute
+  '/_main/dashboard/admin_/storage': typeof MainDashboardAdminStorageRoute
   '/_main/dashboard/admin_/storage-audit': typeof MainDashboardAdminStorageAuditRoute
   '/_main/dashboard/admin_/upload-backups': typeof MainDashboardAdminUploadBackupsRoute
   '/_main/dashboard/admin_/users': typeof MainDashboardAdminUsersRoute
@@ -1328,6 +1338,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/searches'
     | '/dashboard/admin/speaker-queue'
     | '/dashboard/admin/speakers'
+    | '/dashboard/admin/storage'
     | '/dashboard/admin/storage-audit'
     | '/dashboard/admin/upload-backups'
     | '/dashboard/admin/users'
@@ -1455,6 +1466,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/searches'
     | '/dashboard/admin/speaker-queue'
     | '/dashboard/admin/speakers'
+    | '/dashboard/admin/storage'
     | '/dashboard/admin/storage-audit'
     | '/dashboard/admin/upload-backups'
     | '/dashboard/admin/users'
@@ -1585,6 +1597,7 @@ export interface FileRouteTypes {
     | '/_main/dashboard/admin_/searches'
     | '/_main/dashboard/admin_/speaker-queue'
     | '/_main/dashboard/admin_/speakers'
+    | '/_main/dashboard/admin_/storage'
     | '/_main/dashboard/admin_/storage-audit'
     | '/_main/dashboard/admin_/upload-backups'
     | '/_main/dashboard/admin_/users'
@@ -2239,6 +2252,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainDashboardAdminStorageAuditRouteImport
       parentRoute: typeof MainDashboardRoute
     }
+    '/_main/dashboard/admin_/storage': {
+      id: '/_main/dashboard/admin_/storage'
+      path: '/admin/storage'
+      fullPath: '/dashboard/admin/storage'
+      preLoaderRoute: typeof MainDashboardAdminStorageRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
     '/_main/dashboard/admin_/speakers': {
       id: '/_main/dashboard/admin_/speakers'
       path: '/admin/speakers'
@@ -2612,6 +2632,7 @@ interface MainDashboardRouteChildren {
   MainDashboardAdminSearchesRoute: typeof MainDashboardAdminSearchesRoute
   MainDashboardAdminSpeakerQueueRoute: typeof MainDashboardAdminSpeakerQueueRoute
   MainDashboardAdminSpeakersRoute: typeof MainDashboardAdminSpeakersRoute
+  MainDashboardAdminStorageRoute: typeof MainDashboardAdminStorageRoute
   MainDashboardAdminStorageAuditRoute: typeof MainDashboardAdminStorageAuditRoute
   MainDashboardAdminUploadBackupsRoute: typeof MainDashboardAdminUploadBackupsRoute
   MainDashboardAdminUsersRoute: typeof MainDashboardAdminUsersRoute
@@ -2683,6 +2704,7 @@ const MainDashboardRouteChildren: MainDashboardRouteChildren = {
   MainDashboardAdminSearchesRoute: MainDashboardAdminSearchesRoute,
   MainDashboardAdminSpeakerQueueRoute: MainDashboardAdminSpeakerQueueRoute,
   MainDashboardAdminSpeakersRoute: MainDashboardAdminSpeakersRoute,
+  MainDashboardAdminStorageRoute: MainDashboardAdminStorageRoute,
   MainDashboardAdminStorageAuditRoute: MainDashboardAdminStorageAuditRoute,
   MainDashboardAdminUploadBackupsRoute: MainDashboardAdminUploadBackupsRoute,
   MainDashboardAdminUsersRoute: MainDashboardAdminUsersRoute,

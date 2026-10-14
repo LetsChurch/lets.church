@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -369,6 +370,8 @@ func TestSanitizeFilename(t *testing.T) {
 	}
 }
 
+const testMediaURL = "https://media.example.com"
+
 func makeToken(t *testing.T, secret []byte, uploadId, variant, filename string, includeAudio ...bool) string {
 	t.Helper()
 	hasAudio := len(includeAudio) > 0 && includeAudio[0]
@@ -378,6 +381,7 @@ func makeToken(t *testing.T, secret []byte, uploadId, variant, filename string, 
 		Claim("variant", variant).
 		Claim("filename", filename).
 		Claim("includeAudio", hasAudio).
+		Claim("mediaUrl", testMediaURL).
 		Build()
 	if err != nil {
 		t.Fatalf("build token: %v", err)
@@ -413,11 +417,11 @@ func TestAuthenticate(t *testing.T) {
 	t.Run("valid token", func(t *testing.T) {
 		tok := makeToken(t, secret, "upload123", "VIDEO_720P", "sermon.mp4", true)
 		req := httptest.NewRequest("GET", "/upload123/VIDEO_720P?token="+tok, nil)
-		result, code, _ := authenticate(req, secret)
+		result, code, _ := authenticate(req, secret, "")
 		if code != http.StatusOK || result == nil {
 			t.Errorf("expected 200 and result, got code=%d result=%v", code, result)
 		}
-		if result != nil && (result.uploadId != "upload123" || result.variant != "VIDEO_720P" || result.filename != "sermon.mp4" || !result.includeAudio) {
+		if result != nil && (result.uploadId != "upload123" || result.variant != "VIDEO_720P" || result.filename != "sermon.mp4" || !result.includeAudio || result.mediaURL != testMediaURL) {
 			t.Errorf("unexpected result: %+v", result)
 		}
 	})
@@ -428,6 +432,7 @@ func TestAuthenticate(t *testing.T) {
 			Claim("uploadId", "upload123").
 			Claim("variant", "VIDEO_720P").
 			Claim("filename", "sermon.mp4").
+			Claim("mediaUrl", testMediaURL).
 			Build()
 		if err != nil {
 			t.Fatalf("build token: %v", err)
@@ -437,7 +442,7 @@ func TestAuthenticate(t *testing.T) {
 			t.Fatalf("sign token: %v", err)
 		}
 		req := httptest.NewRequest("GET", "/upload123/VIDEO_720P?token="+string(signed), nil)
-		result, code, _ := authenticate(req, secret)
+		result, code, _ := authenticate(req, secret, "")
 		if code != http.StatusOK || result == nil {
 			t.Fatalf("expected legacy token to remain valid, got code=%d result=%v", code, result)
 		}
@@ -448,7 +453,7 @@ func TestAuthenticate(t *testing.T) {
 
 	t.Run("missing token", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/upload123/VIDEO_720P", nil)
-		_, code, _ := authenticate(req, secret)
+		_, code, _ := authenticate(req, secret, "")
 		if code != http.StatusBadRequest {
 			t.Errorf("expected 400, got %d", code)
 		}
@@ -457,7 +462,7 @@ func TestAuthenticate(t *testing.T) {
 	t.Run("invalid token signature", func(t *testing.T) {
 		tok := makeToken(t, []byte("wrong-secret"), "upload123", "VIDEO_720P", "sermon.mp4")
 		req := httptest.NewRequest("GET", "/upload123/VIDEO_720P?token="+tok, nil)
-		_, code, _ := authenticate(req, secret)
+		_, code, _ := authenticate(req, secret, "")
 		if code != http.StatusUnauthorized {
 			t.Errorf("expected 401, got %d", code)
 		}
@@ -466,7 +471,7 @@ func TestAuthenticate(t *testing.T) {
 	t.Run("expired token", func(t *testing.T) {
 		tok := makeExpiredToken(t, secret, "upload123", "VIDEO_720P", "sermon.mp4")
 		req := httptest.NewRequest("GET", "/upload123/VIDEO_720P?token="+tok, nil)
-		_, code, _ := authenticate(req, secret)
+		_, code, _ := authenticate(req, secret, "")
 		if code != http.StatusUnauthorized {
 			t.Errorf("expected 401 for expired token, got %d", code)
 		}
@@ -475,7 +480,7 @@ func TestAuthenticate(t *testing.T) {
 	t.Run("uploadId mismatch", func(t *testing.T) {
 		tok := makeToken(t, secret, "other-upload", "VIDEO_720P", "sermon.mp4")
 		req := httptest.NewRequest("GET", "/upload123/VIDEO_720P?token="+tok, nil)
-		_, code, _ := authenticate(req, secret)
+		_, code, _ := authenticate(req, secret, "")
 		if code != http.StatusUnauthorized {
 			t.Errorf("expected 401, got %d", code)
 		}
@@ -484,11 +489,111 @@ func TestAuthenticate(t *testing.T) {
 	t.Run("variant mismatch", func(t *testing.T) {
 		tok := makeToken(t, secret, "upload123", "AUDIO", "sermon.mp4")
 		req := httptest.NewRequest("GET", "/upload123/VIDEO_720P?token="+tok, nil)
-		_, code, _ := authenticate(req, secret)
+		_, code, _ := authenticate(req, secret, "")
 		if code != http.StatusUnauthorized {
 			t.Errorf("expected 401, got %d", code)
 		}
 	})
+}
+
+func makeTokenWithClaims(t *testing.T, secret []byte, claims map[string]any) string {
+	t.Helper()
+	b := jwt.NewBuilder().Expiration(time.Now().Add(time.Hour))
+	for k, v := range claims {
+		b = b.Claim(k, v)
+	}
+	tok, err := b.Build()
+	if err != nil {
+		t.Fatalf("build token: %v", err)
+	}
+	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256(), secret))
+	if err != nil {
+		t.Fatalf("sign token: %v", err)
+	}
+	return string(signed)
+}
+
+func TestAuthenticateMediaURL(t *testing.T) {
+	secret := []byte("test-secret")
+	base := func() map[string]any {
+		return map[string]any{
+			"uploadId": "upload123",
+			"variant":  "VIDEO_720P",
+			"filename": "sermon.mp4",
+		}
+	}
+
+	t.Run("trailing slash is trimmed", func(t *testing.T) {
+		claims := base()
+		claims["mediaUrl"] = "https://cdn.example.com/media/"
+		req := httptest.NewRequest("GET", "/upload123/VIDEO_720P?token="+makeTokenWithClaims(t, secret, claims), nil)
+		result, code, _ := authenticate(req, secret, "")
+		if code != http.StatusOK || result == nil || result.mediaURL != "https://cdn.example.com/media" {
+			t.Fatalf("expected trimmed mediaUrl, got code=%d result=%+v", code, result)
+		}
+	})
+
+	t.Run("http is accepted", func(t *testing.T) {
+		claims := base()
+		claims["mediaUrl"] = "http://localhost:9000/bucket"
+		req := httptest.NewRequest("GET", "/upload123/VIDEO_720P?token="+makeTokenWithClaims(t, secret, claims), nil)
+		result, code, _ := authenticate(req, secret, "")
+		if code != http.StatusOK || result == nil || result.mediaURL != "http://localhost:9000/bucket" {
+			t.Fatalf("expected http mediaUrl to be accepted, got code=%d result=%+v", code, result)
+		}
+	})
+
+	t.Run("missing claim", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/upload123/VIDEO_720P?token="+makeTokenWithClaims(t, secret, base()), nil)
+		_, code, _ := authenticate(req, secret, "")
+		if code != http.StatusBadRequest {
+			t.Errorf("expected 400, got %d", code)
+		}
+	})
+
+	t.Run("missing claim falls back to MEDIA_URL", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/upload123/VIDEO_720P?token="+makeTokenWithClaims(t, secret, base()), nil)
+		result, code, _ := authenticate(req, secret, "https://legacy.example.com")
+		if code != http.StatusOK || result == nil || result.mediaURL != "https://legacy.example.com" {
+			t.Fatalf("expected MEDIA_URL fallback, got code=%d result=%+v", code, result)
+		}
+	})
+
+	t.Run("claim wins over MEDIA_URL", func(t *testing.T) {
+		claims := base()
+		claims["mediaUrl"] = "https://cdn.example.com"
+		req := httptest.NewRequest("GET", "/upload123/VIDEO_720P?token="+makeTokenWithClaims(t, secret, claims), nil)
+		result, code, _ := authenticate(req, secret, "https://legacy.example.com")
+		if code != http.StatusOK || result == nil || result.mediaURL != "https://cdn.example.com" {
+			t.Fatalf("expected claim mediaUrl, got code=%d result=%+v", code, result)
+		}
+	})
+
+	for _, bad := range []any{
+		"",
+		"cdn.example.com",
+		"/relative/path",
+		"file:///etc/passwd",
+		"ftp://cdn.example.com",
+		"https://",
+		"https://user:pass@cdn.example.com",
+		"https://cdn.example.com?x=1",
+		"https://cdn.example.com#frag",
+		"https://cdn.example.com?",
+		"javascript:alert(1)",
+		42,
+	} {
+		t.Run(fmt.Sprintf("invalid %v", bad), func(t *testing.T) {
+			claims := base()
+			claims["mediaUrl"] = bad
+			req := httptest.NewRequest("GET", "/upload123/VIDEO_720P?token="+makeTokenWithClaims(t, secret, claims), nil)
+			// An invalid claim never falls back to MEDIA_URL.
+			_, code, _ := authenticate(req, secret, "https://legacy.example.com")
+			if code != http.StatusBadRequest {
+				t.Errorf("mediaUrl %v: expected 400, got %d", bad, code)
+			}
+		})
+	}
 }
 
 func TestHandlerMethodNotAllowed(t *testing.T) {
@@ -500,7 +605,7 @@ func TestHandlerMethodNotAllowed(t *testing.T) {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		auth, code, msg := authenticate(r, secret)
+		auth, code, msg := authenticate(r, secret, "")
 		if auth == nil {
 			http.Error(w, msg, code)
 			return

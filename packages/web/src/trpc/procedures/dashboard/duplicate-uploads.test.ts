@@ -71,6 +71,7 @@ describe.skipIf(!runDatabaseTests)('duplicate upload grouping behavior', () => {
         channelId,
         visibility: 'PUBLIC' as const,
         variants: [],
+        storageLocation: 'idrive',
         publishedAt: group.publishedAt,
         createdAt: new Date(now.getTime() + groupIndex * 100 + rowIndex),
         updatedAt: now,

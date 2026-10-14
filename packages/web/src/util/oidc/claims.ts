@@ -1,7 +1,7 @@
 import { AppUser, AppUserEmail, db } from '@letschurch/db';
 import { eq, sql } from 'drizzle-orm';
 
-import { getPublicImageUrl } from '@/util/server-env';
+import { imageUrl } from '@/util/server-env';
 
 // Resolve the OIDC claims for a user, gated by the granted scopes. `sub` is the
 // stable AppUser id and is always present; callers set it as the token subject.
@@ -18,6 +18,7 @@ export async function buildUserClaims(
       username: true,
       fullName: true,
       avatarPath: true,
+      avatarLocation: true,
     },
   });
 
@@ -32,8 +33,9 @@ export async function buildUserClaims(
     if (user.fullName) {
       claims.name = user.fullName;
     }
-    if (user.avatarPath) {
-      claims.picture = getPublicImageUrl(user.avatarPath);
+    const picture = imageUrl(user.avatarLocation, user.avatarPath);
+    if (picture) {
+      claims.picture = picture;
     }
   }
 

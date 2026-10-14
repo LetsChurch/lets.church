@@ -1,5 +1,4 @@
 import { Channel, db, UploadListEntry, UploadRecord } from '@letschurch/db';
-import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
 import {
   and,
@@ -21,7 +20,7 @@ import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarXs2x } from '@/util/avatar-sizes';
 import { getListUploadVisibilities } from '@/util/list-visibility-rules';
 import logger from '@/util/logger';
-import { getPublicImageUrl } from '@/util/server-env';
+import { imageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 
 import { publicProcedure } from '../trpc';
@@ -162,25 +161,32 @@ type HydratedRow = {
   lengthSeconds: number | null;
   defaultThumbnailPath: string | null;
   overrideThumbnailPath: string | null;
+  storageLocation: string;
   channelId: string;
   channelName: string;
   channelSlug: string;
   channelAvatarPath: string | null;
+  channelAvatarLocation: string | null;
   channelDefaultThumbnailPath: string | null;
+  channelDefaultThumbnailLocation: string | null;
 };
 
 function hydrateItem(row: HydratedRow) {
   const thumbnailUrl = resolveThumbnailUrl({
+    storageLocation: row.storageLocation,
     overrideThumbnailPath: row.overrideThumbnailPath,
     defaultThumbnailPath: row.defaultThumbnailPath,
     channelDefaultThumbnailPath: row.channelDefaultThumbnailPath,
+    channelDefaultThumbnailLocation: row.channelDefaultThumbnailLocation,
     size: 'card',
   });
-  const channelAvatarUrl = row.channelAvatarPath
-    ? getPublicImageUrl(publicS3.getS3ProtocolUri(row.channelAvatarPath), {
-        resize: appAvatarXs2x,
-      })
-    : null;
+  const channelAvatarUrl = imageUrl(
+    row.channelAvatarLocation,
+    row.channelAvatarPath,
+    {
+      resize: appAvatarXs2x,
+    },
+  );
 
   return {
     id: OutgoingIdSchema.parse(row.id),
@@ -338,11 +344,14 @@ export const listProcedures = {
           lengthSeconds: UploadRecord.lengthSeconds,
           defaultThumbnailPath: UploadRecord.defaultThumbnailPath,
           overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
+          storageLocation: UploadRecord.storageLocation,
           channelId: Channel.id,
           channelName: Channel.name,
           channelSlug: Channel.slug,
           channelAvatarPath: Channel.avatarPath,
+          channelAvatarLocation: Channel.avatarLocation,
           channelDefaultThumbnailPath: Channel.defaultThumbnailPath,
+          channelDefaultThumbnailLocation: Channel.defaultThumbnailLocation,
         })
         .from(selectedEntries)
         .innerJoin(

@@ -9,8 +9,6 @@ import {
   OrganizationTagInstance,
 } from '@letschurch/db';
 import { PART_SIZE } from '@letschurch/s3';
-import { ingestS3 } from '@letschurch/s3/ingest';
-import { publicS3 } from '@letschurch/s3/public';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
 import { staticMeta } from '@letschurch/temporal/util/dashboard-links';
 import { emailHtml, sanitizeForHtml } from '@letschurch/temporal/util/email';
@@ -56,8 +54,9 @@ import {
   mantineAvatarXl2x,
 } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
-import { getPublicImageUrl } from '@/util/server-env';
+import { imageUrl } from '@/util/server-env';
 import { slugify } from '@/util/slugify';
+import { placeImageUpload } from '@/util/storage';
 
 import { authProcedure, participationProcedure, router } from '../../trpc';
 
@@ -496,6 +495,7 @@ export const churchRouter = router({
                 username: true,
                 fullName: true,
                 avatarPath: true,
+                avatarLocation: true,
               },
             },
           },
@@ -556,23 +556,22 @@ export const churchRouter = router({
       return a.createdAt.getTime() - b.createdAt.getTime();
     });
 
-    const { avatarPath, ...churchWithoutPath } = church;
-    const avatarUrl = avatarPath
-      ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
-          resize: mantineAvatarXl2x,
-        })
-      : null;
+    const { avatarPath, avatarLocation, ...churchWithoutPath } = church;
+    const avatarUrl = imageUrl(avatarLocation, avatarPath, {
+      resize: mantineAvatarXl2x,
+    });
 
     // Member email addresses are admin-only; ordinary members can call this too.
     const canSeeMemberEmails = ctx.isSiteAdmin || !!ctx.membership?.isAdmin;
     const membershipsWithAvatarUrl = sortedMemberships.map((membership) => {
-      const { avatarPath: userAvatarPath, ...userWithoutPath } =
-        membership.appUser;
-      const userAvatarUrl = userAvatarPath
-        ? getPublicImageUrl(publicS3.getS3ProtocolUri(userAvatarPath), {
-            resize: mantineAvatarSm2x,
-          })
-        : null;
+      const {
+        avatarPath: userAvatarPath,
+        avatarLocation: userAvatarLocation,
+        ...userWithoutPath
+      } = membership.appUser;
+      const userAvatarUrl = imageUrl(userAvatarLocation, userAvatarPath, {
+        resize: mantineAvatarSm2x,
+      });
 
       return {
         ...membership,
@@ -615,6 +614,7 @@ export const churchRouter = router({
                 username: true,
                 fullName: true,
                 avatarPath: true,
+                avatarLocation: true,
               },
             },
           },
@@ -635,12 +635,11 @@ export const churchRouter = router({
     });
 
     const membershipsWithAvatarUrl = sortedMemberships.map((membership) => {
-      const { avatarPath, ...userWithoutPath } = membership.appUser;
-      const avatarUrl = avatarPath
-        ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
-            resize: mantineAvatarSm2x,
-          })
-        : null;
+      const { avatarPath, avatarLocation, ...userWithoutPath } =
+        membership.appUser;
+      const avatarUrl = imageUrl(avatarLocation, avatarPath, {
+        resize: mantineAvatarSm2x,
+      });
 
       return {
         ...membership,
@@ -1303,6 +1302,7 @@ export const churchRouter = router({
         primaryEmail: true,
         primaryPhoneNumber: true,
         avatarPath: true,
+        avatarLocation: true,
         facebookUrl: true,
         instagramUrl: true,
         xUrl: true,
@@ -1352,12 +1352,10 @@ export const churchRouter = router({
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
 
-    const { avatarPath, ...restChurch } = church;
-    const avatarUrl = avatarPath
-      ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
-          resize: mantineAvatarLg2x,
-        })
-      : null;
+    const { avatarPath, avatarLocation, ...restChurch } = church;
+    const avatarUrl = imageUrl(avatarLocation, avatarPath, {
+      resize: mantineAvatarLg2x,
+    });
 
     // Transform tags to a flat array of strings and associated organizations
     return {
@@ -1600,20 +1598,20 @@ export const churchRouter = router({
       // overwrite another organization's avatar by passing its id.
       const targetId = churchId;
 
-      const { uploadKey, uploadId } = await ingestS3.createMultipartUpload(
-        targetId,
-        uploadMimeType,
-      );
+      const location = await placeImageUpload(bytes);
+
+      const { uploadKey, uploadId } =
+        await location.ingest.createMultipartUpload(targetId, uploadMimeType);
 
       await handleMultipartMediaUpload(
         targetId,
-        'INGEST',
+        location.id,
         uploadId,
         uploadKey,
         'organizationAvatar',
       );
 
-      const urls = await ingestS3.createPresignedPartUploadUrls(
+      const urls = await location.ingest.createPresignedPartUploadUrls(
         uploadId,
         uploadKey,
         bytes,

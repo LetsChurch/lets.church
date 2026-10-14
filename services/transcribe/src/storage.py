@@ -11,7 +11,10 @@ from __future__ import annotations
 import logging
 
 import boto3
+from botocore.config import Config
 from temporalio.client import Client
+
+from .locations import BucketConfig
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +23,15 @@ UPDATE_UPLOAD_RECORD_WORKFLOW = "updateUploadRecordWorkflow"
 UPDATE_RECORD_SIGNAL = "updateRecord"
 
 
-def get_s3_client(endpoint: str | None, access_key: str, secret_key: str):
+def get_s3_client(config: BucketConfig):
+    """Build a boto3 S3 client for one storage-location bucket."""
     return boto3.client(
         "s3",
-        endpoint_url=endpoint,
-        aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key,
+        endpoint_url=config.endpoint,
+        region_name=config.region,
+        aws_access_key_id=config.access_key_id,
+        aws_secret_access_key=config.secret_access_key,
+        config=Config(s3={"addressing_style": "path"}) if config.force_path_style else None,
     )
 
 

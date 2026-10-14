@@ -9,8 +9,7 @@ import {
   MEDIA_INDEX,
   SPEAKER_VECTOR_INDEX,
 } from '@letschurch/opensearch';
-import { ingestS3 } from '@letschurch/s3/ingest';
-import { publicS3 } from '@letschurch/s3/public';
+import { listLocations } from '@letschurch/s3/locations';
 import { Context } from '@temporalio/activity';
 import { eq } from 'drizzle-orm';
 
@@ -85,16 +84,29 @@ export async function deleteUploadRecordS3Objects(id: string) {
     context: { id },
   });
 
-  const ingestCount = await ingestS3.deletePrefix(id, () => {
-    Context.current().heartbeat('deleteUploadRecordS3Objects: INGEST');
-  });
-  activityLogger.info(`Done deleting prefix ${id} from ingest bucket`);
-
-  activityLogger.info(`Deleting prefix ${id} from public bucket`);
-  const publicCount = await publicS3.deletePrefix(id, () =>
-    Context.current().heartbeat('deleteUploadRecordS3Objects: PUBLIC'),
-  );
-  activityLogger.info(`Done deleting prefix ${id} from public bucket`);
+  // Sweep the record's prefix at every location rather than only its
+  // current one: a move in progress, a relocation, or a grace-period source
+  // copy can leave objects at another location, and the prefix is the
+  // record's UUID so nothing else can match it.
+  let ingestCount = 0;
+  let publicCount = 0;
+  for (const location of listLocations()) {
+    if (location.configured.INGEST) {
+      ingestCount += await location.ingest.deletePrefix(id, () => {
+        Context.current().heartbeat(
+          `deleteUploadRecordS3Objects: ${location.id} INGEST`,
+        );
+      });
+    }
+    if (location.configured.PUBLIC) {
+      publicCount += await location.public.deletePrefix(id, () =>
+        Context.current().heartbeat(
+          `deleteUploadRecordS3Objects: ${location.id} PUBLIC`,
+        ),
+      );
+    }
+    activityLogger.info(`Done deleting prefix ${id} at ${location.id}`);
+  }
 
   return [ingestCount, publicCount];
 }

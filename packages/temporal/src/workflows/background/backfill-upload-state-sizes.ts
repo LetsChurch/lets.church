@@ -23,11 +23,6 @@ const { getBackfillSizesCount, backfillUploadStateSizesBatch } =
 export type BackfillUploadStateSizesWorkflowParams = {
   batchSize: number;
   delayBetweenBatchesMs: number;
-  ingestBucket: string;
-  ingestEndpoint: string;
-  ingestRegion: string;
-  ingestAccessKeyId: string;
-  ingestSecretAccessKey: string;
   maxRows?: number;
   // For continue-as-new tracking
   totalUpdated?: number;
@@ -61,11 +56,6 @@ export async function backfillUploadStateSizesWorkflow(
   const {
     batchSize,
     delayBetweenBatchesMs,
-    ingestBucket,
-    ingestEndpoint,
-    ingestRegion,
-    ingestAccessKeyId,
-    ingestSecretAccessKey,
     maxRows,
     totalUpdated = 0,
     totalSkipped = 0,
@@ -102,11 +92,6 @@ export async function backfillUploadStateSizesWorkflow(
 
     const result = await backfillUploadStateSizesBatch(
       batchSize,
-      ingestBucket,
-      ingestEndpoint,
-      ingestRegion,
-      ingestAccessKeyId,
-      ingestSecretAccessKey,
       currentCursor,
     );
 
@@ -132,11 +117,6 @@ export async function backfillUploadStateSizesWorkflow(
       await continueAsNew<typeof backfillUploadStateSizesWorkflow>({
         batchSize,
         delayBetweenBatchesMs,
-        ingestBucket,
-        ingestEndpoint,
-        ingestRegion,
-        ingestAccessKeyId,
-        ingestSecretAccessKey,
         maxRows,
         totalUpdated: currentUpdated,
         totalSkipped: currentSkipped,

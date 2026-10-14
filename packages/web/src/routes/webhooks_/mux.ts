@@ -12,6 +12,7 @@ import { eq } from 'drizzle-orm';
 import { signalMuxRenditionReady, startMuxImportRecording } from '@/temporal';
 import logger from '@/util/logger';
 import { getMux, getMuxWebhookSecret } from '@/util/mux';
+import { initialRecordLocation } from '@/util/storage';
 
 const moduleLogger = logger.child({ module: 'routes/webhooks/mux' });
 
@@ -98,6 +99,7 @@ export async function handleLiveStreamActive(data: {
       uploadFinalized: false,
       transcodingProgress: 0,
       variants: [],
+      storageLocation: await initialRecordLocation(),
       score: 0,
       updatedAt: new Date(),
     })

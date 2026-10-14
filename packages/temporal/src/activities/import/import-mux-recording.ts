@@ -1,6 +1,6 @@
 import { extname, join } from 'node:path';
 
-import { ingestS3 } from '@letschurch/s3/ingest';
+import { getLocation } from '@letschurch/s3/locations';
 import { Context } from '@temporalio/activity';
 import mime from 'mime';
 import { mkdirp } from 'mkdirp';
@@ -9,6 +9,7 @@ import sanitizeFilename from 'sanitize-filename';
 import { v4 as uuid } from 'uuid';
 
 import { updateUploadRecord } from '../../client';
+import { locationFromArg } from '../../storage/legacy';
 import { downloadFromUrl } from '../../util/import';
 import logger from '../../util/logger';
 import { getMuxRecordingMp4Url } from '../../util/mux';
@@ -27,6 +28,8 @@ export default async function importMuxRecording(
   uploadRecordId: string,
   muxAssetId: string,
   title?: string | null,
+  // Absent for workflows started before storage locations existed.
+  storageLocation?: string,
 ) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'importMuxRecording',
@@ -57,14 +60,16 @@ export default async function importMuxRecording(
     // overwrites the same object instead of orphaning a new one each attempt.
     mediaUploadKey = `${uploadRecordId}/mux-${muxAssetId}`;
 
-    await ingestS3.putFileMultipart({
-      key: mediaUploadKey,
-      contentType:
-        mime.getType(extname(mediaPath)) ?? 'application/octet-stream',
-      path: mediaPath,
-      onProgress: (progress: number) =>
-        heartbeat(`uploading ${Math.round(progress * 1000) / 10}%`),
-    });
+    await getLocation(locationFromArg(storageLocation)).ingest.putFileMultipart(
+      {
+        key: mediaUploadKey,
+        contentType:
+          mime.getType(extname(mediaPath)) ?? 'application/octet-stream',
+        path: mediaPath,
+        onProgress: (progress: number) =>
+          heartbeat(`uploading ${Math.round(progress * 1000) / 10}%`),
+      },
+    );
 
     const extension = extname(mediaPath).slice(1);
     const sanitizedTitle = sanitizeFilename(title || 'broadcast');

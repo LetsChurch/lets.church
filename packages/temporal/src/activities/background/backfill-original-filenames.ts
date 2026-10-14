@@ -1,5 +1,5 @@
 import { db, UploadRecord } from '@letschurch/db';
-import { ingestS3 } from '@letschurch/s3/ingest';
+import { getLocation } from '@letschurch/s3/locations';
 import { makeChunkedTokenizerFromS3 } from '@tokenizer/s3';
 import { and, count, eq, isNotNull, isNull } from 'drizzle-orm';
 import { fileTypeFromTokenizer } from 'file-type';
@@ -46,6 +46,7 @@ export async function backfillFilenamesBatch(
       id: UploadRecord.id,
       finalizedUploadKey: UploadRecord.finalizedUploadKey,
       title: UploadRecord.title,
+      storageLocation: UploadRecord.storageLocation,
     })
     .from(UploadRecord)
     .where(
@@ -68,6 +69,8 @@ export async function backfillFilenamesBatch(
     if (!record.finalizedUploadKey) {
       continue;
     }
+
+    const ingestS3 = getLocation(record.storageLocation).ingest;
 
     // A finalized upload is expected to exist. Let S3 lookup failures fail
     // the batch so Temporal can retry instead of treating an outage as

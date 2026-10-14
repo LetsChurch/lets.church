@@ -102,27 +102,17 @@ the AMA decoder tops out at 4K.
 
 ### S3 Configuration
 
-This worker requires access to **both ingest and public buckets**:
+S3 access uses the shared **storage-location** contract; see
+[`packages/s3/README.md`](../s3/README.md#storage-locations) for the full description. For every
+configured location `<ID>` (e.g. `IDRIVE`) this service needs both buckets:
 
-#### Ingest Bucket (source files)
-
-| Variable                      | Description                     |
-| ----------------------------- | ------------------------------- |
-| `S3_INGEST_BUCKET`            | S3 bucket name for source media |
-| `S3_INGEST_REGION`            | S3 region                       |
-| `S3_INGEST_ENDPOINT`          | S3 endpoint URL                 |
-| `S3_INGEST_ACCESS_KEY_ID`     | S3 access key                   |
-| `S3_INGEST_SECRET_ACCESS_KEY` | S3 secret key                   |
-
-#### Public Bucket (transcoded output)
-
-| Variable                      | Description                     |
-| ----------------------------- | ------------------------------- |
-| `S3_PUBLIC_BUCKET`            | S3 bucket name for public media |
-| `S3_PUBLIC_REGION`            | S3 region                       |
-| `S3_PUBLIC_ENDPOINT`          | S3 endpoint URL                 |
-| `S3_PUBLIC_ACCESS_KEY_ID`     | S3 access key                   |
-| `S3_PUBLIC_SECRET_ACCESS_KEY` | S3 secret key                   |
+| Variable                                                                | Description                               |
+| ----------------------------------------------------------------------- | ----------------------------------------- |
+| `STORAGE_<ID>_INGEST_{BUCKET,ENDPOINT,ACCESS_KEY_ID,SECRET_ACCESS_KEY}` | Ingest bucket (uploaded originals)        |
+| `STORAGE_<ID>_INGEST_{REGION,FORCE_PATH_STYLE,MAX_BYTES}`               | Optional; region defaults to `us-east-1`  |
+| `STORAGE_<ID>_PUBLIC_{BUCKET,ENDPOINT,ACCESS_KEY_ID,SECRET_ACCESS_KEY}` | Public bucket (processed output)          |
+| `STORAGE_<ID>_PUBLIC_{REGION,FORCE_PATH_STYLE,MAX_BYTES}`               | Optional; region defaults to `us-east-1`  |
+| `STORAGE_<ID>_PUBLIC_URL`                                               | Public CDN base URL for the public bucket |
 
 ### System Requirements
 

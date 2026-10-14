@@ -4,35 +4,66 @@
 
 ### Prereqs
 
-1. Setup two S3 (or S3-compatible) buckets on your provider of choice for
-   `ingest` and `public`
-2. Ensure the `ingest` bucket has the following CORS configuration. Browsers
-   (including the YouTube Studio mirror extension,
-   [`packages/browser-extension`](packages/browser-extension/README.md), whose
-   `chrome-extension://` / `moz-extension://` origins can't be listed
-   individually) upload parts directly and must be able to read each `ETag`:
+Media is stored in one or more **storage locations**. Each location has a
+permanent id (e.g. `idrive`) and pairs one `ingest` bucket (uploaded
+originals) with one `public` bucket (processed output, served through a CDN).
+Locations are discovered from `STORAGE_<ID>_*` env vars; see
+[`packages/s3/README.md`](packages/s3/README.md#storage-locations) for the env
+contract and [`docs/storage-locations.md`](docs/storage-locations.md) for the
+model and runbooks.
+
+For **every** location:
+
+1. Create two S3 (or S3-compatible) buckets, `ingest` and `public`.
+2. Give the `ingest` bucket this CORS configuration. Browsers upload directly
+   with presigned multipart `PUT`s and must be able to read each part's `ETag`.
+   This includes the YouTube Studio mirror extension
+   ([`packages/browser-extension`](packages/browser-extension/README.md)),
+   whose `chrome-extension://` / `moz-extension://` origins can't be listed
+   individually, so keep `AllowedOrigins` at `*`:
 
 ```json
 [
   {
-    "AllowedOrigins": ["*"],
-    "AllowedMethods": ["PUT"],
-    "AllowedHeaders": ["*"],
-    "ExposeHeaders": ["ETag"]
+    "AllowedOrigins": [
+      "*"
+    ],
+    "AllowedMethods": [
+      "PUT"
+    ],
+    "AllowedHeaders": [
+      "*"
+    ],
+    "ExposeHeaders": [
+      "ETag"
+    ]
   }
 ]
 ```
 
-3. Ensure the `public` bucket has the following CORS configuration:
+3. Give the `public` bucket this CORS configuration:
 
 ```json
 [
   {
-    "AllowedOrigins": ["*"],
-    "AllowedMethods": ["GET"]
+    "AllowedOrigins": [
+      "*"
+    ],
+    "AllowedMethods": [
+      "GET"
+    ]
   }
 ]
 ```
+
+4. Put a CDN in front of the `public` bucket and set its base URL as
+   `STORAGE_<ID>_PUBLIC_URL`.
+
+To add a location, repeat the steps above, set `STORAGE_<NEWID>_INGEST_*`,
+`STORAGE_<NEWID>_PUBLIC_*` and `STORAGE_<NEWID>_PUBLIC_URL` for every service
+that mounts the storage env, append `${STORAGE_<NEWID>_PUBLIC_URL}/` to
+`IMGPROXY_ALLOWED_SOURCES`, and restart. Ids are written to the database, so
+pick one you will never need to rename.
 
 ### Development Environment
 

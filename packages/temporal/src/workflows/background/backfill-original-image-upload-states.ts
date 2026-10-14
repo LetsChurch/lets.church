@@ -23,7 +23,8 @@ const { backfillOriginalImageUploadStatesBatch } = proxyActivities<
 export type BackfillOriginalImageUploadStatesWorkflowParams = {
   batchSize: number;
   delayBetweenBatchesMs: number;
-  ingestBucket: string;
+  // Location whose ingest bucket to scan.
+  storageLocation: string;
   // For continue-as-new tracking
   totalCreated?: number;
   batchesCompleted?: number;
@@ -48,7 +49,7 @@ export async function backfillOriginalImageUploadStatesWorkflow(
   const {
     batchSize,
     delayBetweenBatchesMs,
-    ingestBucket,
+    storageLocation,
     totalCreated = 0,
     batchesCompleted = 0,
   } = params;
@@ -71,7 +72,7 @@ export async function backfillOriginalImageUploadStatesWorkflow(
   while (remaining > 0) {
     const result = await backfillOriginalImageUploadStatesBatch(
       batchSize,
-      ingestBucket,
+      storageLocation,
     );
 
     currentCreated += result.created;
@@ -84,7 +85,7 @@ export async function backfillOriginalImageUploadStatesWorkflow(
       await continueAsNew<typeof backfillOriginalImageUploadStatesWorkflow>({
         batchSize,
         delayBetweenBatchesMs,
-        ingestBucket,
+        storageLocation,
         totalCreated: currentCreated,
         batchesCompleted: currentBatchesCompleted,
       });

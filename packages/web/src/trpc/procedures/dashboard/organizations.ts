@@ -3,7 +3,6 @@ import {
   Organization,
   OrganizationOrganizationAssociation,
 } from '@letschurch/db';
-import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
 import { and, count, eq } from 'drizzle-orm';
 
@@ -27,7 +26,7 @@ import {
 } from '@/schemas/dashboard';
 import { mantineAvatarSm2x, mantineAvatarXl2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
-import { getPublicImageUrl } from '@/util/server-env';
+import { imageUrl } from '@/util/server-env';
 
 import { authProcedure, router } from '../../trpc';
 
@@ -253,6 +252,7 @@ export const organizationRouter = router({
           description: true,
           type: true,
           avatarPath: true,
+          avatarLocation: true,
           primaryEmail: true,
           primaryPhoneNumber: true,
           websiteUrl: true,
@@ -277,6 +277,7 @@ export const organizationRouter = router({
                   username: true,
                   fullName: true,
                   avatarPath: true,
+                  avatarLocation: true,
                 },
               },
             },
@@ -331,23 +332,23 @@ export const organizationRouter = router({
         return a.createdAt.getTime() - b.createdAt.getTime();
       });
 
-      const { avatarPath, ...organizationWithoutPath } = organization;
+      const { avatarPath, avatarLocation, ...organizationWithoutPath } =
+        organization;
 
-      const avatarUrl = avatarPath
-        ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
-            resize: mantineAvatarXl2x,
-          })
-        : null;
+      const avatarUrl = imageUrl(avatarLocation, avatarPath, {
+        resize: mantineAvatarXl2x,
+      });
 
       // Member email addresses are admin-only; ordinary members can call this too.
       const membershipsWithAvatarUrl = sortedMemberships.map((membership) => {
-        const { avatarPath: userAvatarPath, ...userWithoutPath } =
-          membership.appUser;
-        const userAvatarUrl = userAvatarPath
-          ? getPublicImageUrl(publicS3.getS3ProtocolUri(userAvatarPath), {
-              resize: mantineAvatarSm2x,
-            })
-          : null;
+        const {
+          avatarPath: userAvatarPath,
+          avatarLocation: userAvatarLocation,
+          ...userWithoutPath
+        } = membership.appUser;
+        const userAvatarUrl = imageUrl(userAvatarLocation, userAvatarPath, {
+          resize: mantineAvatarSm2x,
+        });
 
         return {
           ...membership,
@@ -393,6 +394,7 @@ export const organizationRouter = router({
                   username: true,
                   fullName: true,
                   avatarPath: true,
+                  avatarLocation: true,
                 },
               },
             },
@@ -413,12 +415,11 @@ export const organizationRouter = router({
       });
 
       const membershipsWithAvatarUrl = sortedMemberships.map((membership) => {
-        const { avatarPath, ...userWithoutPath } = membership.appUser;
-        const avatarUrl = avatarPath
-          ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
-              resize: mantineAvatarSm2x,
-            })
-          : null;
+        const { avatarPath, avatarLocation, ...userWithoutPath } =
+          membership.appUser;
+        const avatarUrl = imageUrl(avatarLocation, avatarPath, {
+          resize: mantineAvatarSm2x,
+        });
 
         return {
           ...membership,
@@ -945,6 +946,7 @@ export const organizationRouter = router({
                 slug: true,
                 description: true,
                 avatarPath: true,
+                avatarLocation: true,
               },
             },
           },
@@ -952,13 +954,11 @@ export const organizationRouter = router({
         });
 
       return pendingApprovals.map((approval) => {
-        const { avatarPath, ...orgWithoutPath } =
+        const { avatarPath, avatarLocation, ...orgWithoutPath } =
           approval.downstreamOrganization;
-        const avatarUrl = avatarPath
-          ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
-              resize: mantineAvatarSm2x,
-            })
-          : null;
+        const avatarUrl = imageUrl(avatarLocation, avatarPath, {
+          resize: mantineAvatarSm2x,
+        });
 
         return {
           ...approval,
@@ -1130,6 +1130,7 @@ export const organizationRouter = router({
                 slug: true,
                 description: true,
                 avatarPath: true,
+                avatarLocation: true,
               },
             },
           },
@@ -1137,13 +1138,11 @@ export const organizationRouter = router({
         });
 
       return upstreamAssociations.map((association) => {
-        const { avatarPath, ...orgWithoutPath } =
+        const { avatarPath, avatarLocation, ...orgWithoutPath } =
           association.downstreamOrganization;
-        const avatarUrl = avatarPath
-          ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
-              resize: mantineAvatarSm2x,
-            })
-          : null;
+        const avatarUrl = imageUrl(avatarLocation, avatarPath, {
+          resize: mantineAvatarSm2x,
+        });
 
         return {
           ...association,

@@ -1,7 +1,5 @@
 import { AppUser, AppUserEmail, db } from '@letschurch/db';
 import { PART_SIZE } from '@letschurch/s3';
-import { ingestS3 } from '@letschurch/s3/ingest';
-import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
 import { eq } from 'drizzle-orm';
@@ -22,7 +20,8 @@ import { normalizeAuthEmail } from '@/util/auth-token';
 import { mantineAvatarLg2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { hasAcceptedParticipationAgreements } from '@/util/participation';
-import { getPublicImageUrl } from '@/util/server-env';
+import { imageUrl } from '@/util/server-env';
+import { placeImageUpload } from '@/util/storage';
 import testPassword from '@/util/zxcvbn';
 
 import { authProcedure } from '../trpc';
@@ -83,6 +82,7 @@ export const accountProcedures = {
         username: true,
         fullName: true,
         avatarPath: true,
+        avatarLocation: true,
       },
       with: {
         emails: {
@@ -98,13 +98,9 @@ export const accountProcedures = {
     }
 
     const primaryEmail = user.emails[0]?.email || '';
-    const avatarPath = user.avatarPath;
-
-    const avatarUrl = avatarPath
-      ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
-          resize: mantineAvatarLg2x,
-        })
-      : null;
+    const avatarUrl = imageUrl(user.avatarLocation, user.avatarPath, {
+      resize: mantineAvatarLg2x,
+    });
 
     return {
       id: user.id,
@@ -344,20 +340,20 @@ export const accountProcedures = {
       const targetId = ctx.session?.appUserId;
       invariant(targetId, 'No user found');
 
-      const { uploadKey, uploadId } = await ingestS3.createMultipartUpload(
-        targetId,
-        uploadMimeType,
-      );
+      const location = await placeImageUpload(bytes);
+
+      const { uploadKey, uploadId } =
+        await location.ingest.createMultipartUpload(targetId, uploadMimeType);
 
       await handleMultipartMediaUpload(
         targetId,
-        'INGEST',
+        location.id,
         uploadId,
         uploadKey,
         'profileAvatar',
       );
 
-      const urls = await ingestS3.createPresignedPartUploadUrls(
+      const urls = await location.ingest.createPresignedPartUploadUrls(
         uploadId,
         uploadKey,
         bytes,

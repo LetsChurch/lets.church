@@ -1,28 +1,41 @@
 import { AppUser, db } from '@letschurch/db';
-import { publicS3 } from '@letschurch/s3/public';
+import { getLocation } from '@letschurch/s3/locations';
 import { eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
+
+import { locationFromArg } from '../../storage/legacy';
 
 export default async function setProfileAvatar(
   userId: string,
   path: string,
   blurhash: string,
+  // Absent for workflows started before storage locations existed.
+  storageLocation?: string,
 ) {
   const row = await db
-    .select({ avatarPath: AppUser.avatarPath })
+    .select({
+      oldPath: AppUser.avatarPath,
+      oldLocation: AppUser.avatarLocation,
+    })
     .from(AppUser)
     .where(eq(AppUser.id, userId))
     .then((r) => r[0]);
 
   invariant(row, `User ${userId} not found`);
-  const { avatarPath: oldPath } = row;
 
   await db
     .update(AppUser)
-    .set({ avatarPath: path, avatarBlurhash: blurhash, updatedAt: new Date() })
+    .set({
+      avatarPath: path,
+      avatarLocation: locationFromArg(storageLocation),
+      avatarBlurhash: blurhash,
+      updatedAt: new Date(),
+    })
     .where(eq(AppUser.id, userId));
 
-  if (oldPath) {
-    await publicS3.deleteFile(oldPath);
+  if (row.oldPath && row.oldPath !== path) {
+    await getLocation(locationFromArg(row.oldLocation)).public.deleteFile(
+      row.oldPath,
+    );
   }
 }

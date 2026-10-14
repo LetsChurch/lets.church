@@ -23,7 +23,9 @@ vi.mock('@letschurch/db', () => ({
 }));
 
 vi.mock('@letschurch/s3/backup', () => ({ backupS3: {} }));
-vi.mock('@letschurch/s3/public', () => ({ publicS3: {} }));
+vi.mock('@letschurch/s3/locations', () => ({
+  getLocation: () => ({ public: {} }),
+}));
 vi.mock('@temporalio/activity', () => ({
   Context: { current: () => ({ heartbeat: vi.fn() }) },
 }));

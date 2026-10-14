@@ -10,11 +10,11 @@ import {
 } from '@letschurch/db';
 import type { LcS3Client } from '@letschurch/s3';
 import { backupS3 } from '@letschurch/s3/backup';
-import { ingestS3 } from '@letschurch/s3/ingest';
-import { publicS3 } from '@letschurch/s3/public';
+import { getLocation, listLocations } from '@letschurch/s3/locations';
 import { heartbeat } from '@temporalio/activity';
 import { eq, sql } from 'drizzle-orm';
 
+import { LEGACY_STORAGE_LOCATION } from '../../storage/legacy';
 import { emailHtml, sanitizeForHtml } from '../../util/email';
 import { collectReferencedHlsKeys } from '../../util/hls';
 import logger from '../../util/logger';
@@ -25,8 +25,8 @@ const moduleLogger = logger.child({
   module: 'temporal/activities/background/storage-audit',
 });
 
-// Reserved top-level prefix where audit reports are written (in the ingest
-// bucket). Excluded from orphan classification. Note: hex shard prefixes never
+// Reserved top-level prefix where audit reports are written (in the backup
+// bucket, with the STANDARD storage class so they're immediately readable). Excluded from orphan classification. Note: hex shard prefixes never
 // match a leading underscore, so sharded scans skip it anyway — this is a belt.
 export const AUDIT_REPORT_PREFIX = '_audits';
 
@@ -72,7 +72,7 @@ export type StorageAuditSummary = {
   generatedAt: string;
   shardHexLen: number;
   buckets: Record<
-    StorageAuditBucket,
+    string,
     {
       objectCount: number;
       totalBytes: string;
@@ -94,15 +94,46 @@ export type StorageAuditSummary = {
   reportKey: string;
 };
 
+type ParsedAuditBucket =
+  | { kind: 'INGEST' | 'PUBLIC'; location: string }
+  | { kind: 'BACKUP'; location: null };
+
+function parseAuditBucket(bucket: StorageAuditBucket): ParsedAuditBucket {
+  if (bucket === 'BACKUP') return { kind: 'BACKUP', location: null };
+  const [kind, location = LEGACY_STORAGE_LOCATION] = bucket.split(':') as [
+    'INGEST' | 'PUBLIC',
+    string | undefined,
+  ];
+  return { kind, location };
+}
+
 function bucketClient(bucket: StorageAuditBucket): LcS3Client {
-  switch (bucket) {
-    case 'INGEST':
-      return ingestS3;
-    case 'PUBLIC':
-      return publicS3;
-    case 'BACKUP':
-      return backupS3;
+  const parsed = parseAuditBucket(bucket);
+  return parsed.kind === 'BACKUP'
+    ? backupS3
+    : getLocation(parsed.location).bucket(parsed.kind);
+}
+
+/** Buckets a storage audit scans: each location's ingest + public, and backup. */
+export async function listStorageAuditBuckets(): Promise<
+  Array<StorageAuditBucket>
+> {
+  const buckets: Array<StorageAuditBucket> = [];
+  for (const location of listLocations()) {
+    if (location.configured.INGEST) buckets.push(`INGEST:${location.id}`);
+    if (location.configured.PUBLIC) buckets.push(`PUBLIC:${location.id}`);
   }
+  buckets.push('BACKUP');
+  return buckets;
+}
+
+function putReport(key: string, body: Buffer) {
+  return backupS3.putFile({
+    key,
+    contentType: 'application/json',
+    body,
+    storageClass: 'STANDARD',
+  });
 }
 
 // Sidecar artifacts written *next to* a base object as `{baseKey}.<suffix>`
@@ -171,8 +202,12 @@ type Expectations = {
   expectedUploadPrefixes: Set<string>;
 };
 
+// `location` limits upload entities to records stored there: another
+// location's copy of an upload prefix (e.g. a moved record's grace-period
+// source) is then reported as an orphan in this bucket.
 async function loadEntities(
   shardPrefix: string,
+  location: string | null,
 ): Promise<Map<string, EntityInfo>> {
   const len = shardPrefix.length;
   const entities = new Map<string, EntityInfo>();
@@ -184,10 +219,12 @@ async function loadEntities(
       finalized: UploadRecord.uploadFinalized,
       transcodingFinishedAt: UploadRecord.transcodingFinishedAt,
       variants: UploadRecord.variants,
+      storageLocation: UploadRecord.storageLocation,
     })
     .from(UploadRecord)
     .where(sql`left(${UploadRecord.id}::text, ${len}) = ${shardPrefix}`);
   for (const u of uploads) {
+    if (location !== null && u.storageLocation !== location) continue;
     entities.set(u.id, {
       kind: 'upload',
       deleted: u.deletedAt !== null,
@@ -242,6 +279,7 @@ function addExpectedKey(
 async function loadIngestExpectations(
   shardPrefix: string,
   entities: Map<string, EntityInfo>,
+  location: string,
 ): Promise<Expectations> {
   const len = shardPrefix.length;
   const expectedKeysByPrefix = new Map<string, Array<ExpectedKey>>();
@@ -252,7 +290,7 @@ async function loadIngestExpectations(
     .select({ s3Key: UploadState.s3Key })
     .from(UploadState)
     .where(
-      sql`${UploadState.s3Bucket} = ${ingestS3.getBucket()} and left(${UploadState.s3Key}, ${len}) = ${shardPrefix}`,
+      sql`${UploadState.storageLocation} = ${location} and left(${UploadState.s3Key}, ${len}) = ${shardPrefix}`,
     );
   for (const s of states) {
     addExpectedKey(expectedKeysByPrefix, s.s3Key, 'original');
@@ -271,6 +309,7 @@ async function loadIngestExpectations(
 async function loadPublicExpectations(
   shardPrefix: string,
   entities: Map<string, EntityInfo>,
+  location: string,
 ): Promise<Expectations> {
   const len = shardPrefix.length;
   const expectedKeysByPrefix = new Map<string, Array<ExpectedKey>>();
@@ -280,8 +319,10 @@ async function loadPublicExpectations(
   // where only some columns fall in this shard.
   const inShard = (k: string | null): k is string =>
     !!k && k.slice(0, len) === shardPrefix;
-  const addImage = (k: string | null) => {
-    if (inShard(k)) addExpectedKey(expectedKeysByPrefix, k, 'image');
+  // Each image is expected only in the location its sibling column names.
+  const addImage = (k: string | null, imageLocation: string | null) => {
+    if (inShard(k) && imageLocation === location)
+      addExpectedKey(expectedKeysByPrefix, k, 'image');
   };
 
   // upload_state rows that physically live in the public bucket (rare).
@@ -289,7 +330,7 @@ async function loadPublicExpectations(
     .select({ s3Key: UploadState.s3Key })
     .from(UploadState)
     .where(
-      sql`${UploadState.s3Bucket} = ${publicS3.getBucket()} and left(${UploadState.s3Key}, ${len}) = ${shardPrefix}`,
+      sql`${UploadState.s3Bucket} = ${getLocation(location).public.getBucket()} and left(${UploadState.s3Key}, ${len}) = ${shardPrefix}`,
     );
   for (const s of states)
     addExpectedKey(expectedKeysByPrefix, s.s3Key, 'original');
@@ -298,41 +339,49 @@ async function loadPublicExpectations(
   const channels = await db
     .select({
       avatarPath: Channel.avatarPath,
+      avatarLocation: Channel.avatarLocation,
       coverPath: Channel.coverPath,
+      coverLocation: Channel.coverLocation,
       defaultThumbnailPath: Channel.defaultThumbnailPath,
+      defaultThumbnailLocation: Channel.defaultThumbnailLocation,
     })
     .from(Channel)
     .where(
       sql`${Channel.deletedAt} is null and (left(${Channel.avatarPath}, ${len}) = ${shardPrefix} or left(${Channel.coverPath}, ${len}) = ${shardPrefix} or left(${Channel.defaultThumbnailPath}, ${len}) = ${shardPrefix})`,
     );
   for (const c of channels) {
-    addImage(c.avatarPath);
-    addImage(c.coverPath);
-    addImage(c.defaultThumbnailPath);
+    addImage(c.avatarPath, c.avatarLocation);
+    addImage(c.coverPath, c.coverLocation);
+    addImage(c.defaultThumbnailPath, c.defaultThumbnailLocation);
   }
 
   // User avatars.
   const users = await db
-    .select({ avatarPath: AppUser.avatarPath })
+    .select({
+      avatarPath: AppUser.avatarPath,
+      avatarLocation: AppUser.avatarLocation,
+    })
     .from(AppUser)
     .where(
       sql`${AppUser.deletedAt} is null and left(${AppUser.avatarPath}, ${len}) = ${shardPrefix}`,
     );
-  for (const u of users) addImage(u.avatarPath);
+  for (const u of users) addImage(u.avatarPath, u.avatarLocation);
 
   // Organization images.
   const orgs = await db
     .select({
       avatarPath: Organization.avatarPath,
+      avatarLocation: Organization.avatarLocation,
       coverPath: Organization.coverPath,
+      coverLocation: Organization.coverLocation,
     })
     .from(Organization)
     .where(
       sql`left(${Organization.avatarPath}, ${len}) = ${shardPrefix} or left(${Organization.coverPath}, ${len}) = ${shardPrefix}`,
     );
   for (const o of orgs) {
-    addImage(o.avatarPath);
-    addImage(o.coverPath);
+    addImage(o.avatarPath, o.avatarLocation);
+    addImage(o.coverPath, o.coverLocation);
   }
 
   // Upload thumbnails — sharded by the thumbnail PATH.
@@ -340,14 +389,15 @@ async function loadPublicExpectations(
     .select({
       defaultThumbnailPath: UploadRecord.defaultThumbnailPath,
       overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
+      storageLocation: UploadRecord.storageLocation,
     })
     .from(UploadRecord)
     .where(
       sql`${UploadRecord.deletedAt} is null and (left(${UploadRecord.defaultThumbnailPath}, ${len}) = ${shardPrefix} or left(${UploadRecord.overrideThumbnailPath}, ${len}) = ${shardPrefix})`,
     );
   for (const u of uploadThumbs) {
-    addImage(u.defaultThumbnailPath);
-    addImage(u.overrideThumbnailPath);
+    addImage(u.defaultThumbnailPath, u.storageLocation);
+    addImage(u.overrideThumbnailPath, u.storageLocation);
   }
 
   // HLS root playlist for each finalized, transcoded, live upload. Keyed under
@@ -383,15 +433,19 @@ async function loadPublicExpectations(
 
 async function auditPrefixBucket(
   auditId: string,
-  bucket: 'INGEST' | 'PUBLIC',
+  bucket: StorageAuditBucket,
   shardPrefix: string,
 ): Promise<ShardSummary> {
+  const parsed = parseAuditBucket(bucket);
+  if (parsed.kind === 'BACKUP') {
+    throw new Error('auditPrefixBucket does not handle the backup bucket');
+  }
   const client = bucketClient(bucket);
-  const entities = await loadEntities(shardPrefix);
+  const entities = await loadEntities(shardPrefix, parsed.location);
   const expectations =
-    bucket === 'INGEST'
-      ? await loadIngestExpectations(shardPrefix, entities)
-      : await loadPublicExpectations(shardPrefix, entities);
+    parsed.kind === 'INGEST'
+      ? await loadIngestExpectations(shardPrefix, entities, parsed.location)
+      : await loadPublicExpectations(shardPrefix, entities, parsed.location);
 
   const findings: Array<AuditFinding> = [];
   const counts: Record<string, number> = {};
@@ -644,13 +698,10 @@ async function finalizeShard(
   orphanBytes: bigint,
 ): Promise<ShardSummary> {
   const detailKey = `${AUDIT_REPORT_PREFIX}/${auditId}/${bucket}/${shardPrefix}.json`;
-  await ingestS3.putFile({
-    key: detailKey,
-    contentType: 'application/json',
-    body: Buffer.from(
-      JSON.stringify({ bucket, shardPrefix, objectCount, findings }),
-    ),
-  });
+  await putReport(
+    detailKey,
+    Buffer.from(JSON.stringify({ bucket, shardPrefix, objectCount, findings })),
+  );
 
   moduleLogger.info(
     `Audited ${bucket} shard ${shardPrefix}: ${objectCount} objects, ${findings.length} findings`,
@@ -703,17 +754,13 @@ export async function assembleStorageAuditReport(
   auditId: string,
   shardSummaries: Array<ShardSummary>,
 ): Promise<{ reportKey: string; summary: StorageAuditSummary }> {
-  const buckets: StorageAuditSummary['buckets'] = {
-    INGEST: { ...EMPTY_BUCKET_ROLLUP },
-    PUBLIC: { ...EMPTY_BUCKET_ROLLUP },
-    BACKUP: { ...EMPTY_BUCKET_ROLLUP },
-  };
+  const buckets: StorageAuditSummary['buckets'] = {};
   const findingCounts: Record<string, number> = {};
   const sampleFindings: Record<string, Array<AuditFinding>> = {};
   const allFindings: Array<AuditFinding> = [];
 
   for (const shard of shardSummaries) {
-    const b = buckets[shard.bucket];
+    const b = (buckets[shard.bucket] ??= { ...EMPTY_BUCKET_ROLLUP });
     b.objectCount += shard.objectCount;
     b.totalBytes = (BigInt(b.totalBytes) + BigInt(shard.totalBytes)).toString();
     b.prefixCount += shard.prefixCount;
@@ -727,7 +774,7 @@ export async function assembleStorageAuditReport(
 
     // Pull the full per-shard findings back for the combined report.
     try {
-      const text = await ingestS3.getObjectText(shard.detailKey);
+      const text = await backupS3.getObjectText(shard.detailKey);
       const parsed = JSON.parse(text) as { findings?: Array<AuditFinding> };
       for (const f of parsed.findings ?? []) allFindings.push(f);
     } catch (err) {
@@ -769,11 +816,10 @@ export async function assembleStorageAuditReport(
     reportKey: `${AUDIT_REPORT_PREFIX}/${auditId}/report.json`,
   };
 
-  await ingestS3.putFile({
-    key: summary.reportKey,
-    contentType: 'application/json',
-    body: Buffer.from(JSON.stringify({ summary, findings: allFindings })),
-  });
+  await putReport(
+    summary.reportKey,
+    Buffer.from(JSON.stringify({ summary, findings: allFindings })),
+  );
 
   return { reportKey: summary.reportKey, summary };
 }
@@ -809,7 +855,7 @@ export async function finalizeStorageAuditRecord(
 export async function deleteStorageAuditReportObjects(
   auditId: string,
 ): Promise<void> {
-  await ingestS3.deletePrefix(`${AUDIT_REPORT_PREFIX}/${auditId}/`);
+  await backupS3.deletePrefix(`${AUDIT_REPORT_PREFIX}/${auditId}/`);
 }
 
 /**
@@ -841,7 +887,7 @@ export async function sendStorageAuditEmail(
   summary: StorageAuditSummary,
   reportKey: string,
 ): Promise<void> {
-  const downloadUrl = await ingestS3.getSignedGetObject(reportKey, {
+  const downloadUrl = await backupS3.getSignedGetObject(reportKey, {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     responseContentDisposition: 'attachment; filename="storage-audit.json"',
   });
@@ -855,9 +901,10 @@ export async function sendStorageAuditEmail(
     totals.missingHlsSegments +
     totals.brokenHls;
 
-  const bucketLines = (Object.keys(summary.buckets) as StorageAuditBucket[])
+  const bucketLines = Object.keys(summary.buckets)
     .map((b) => {
       const r = summary.buckets[b];
+      if (!r) return '';
       return `${b}: ${r.objectCount.toLocaleString()} objects, ${formatBytes(r.totalBytes)} (${r.orphanPrefixCount.toLocaleString()} orphans, ${formatBytes(r.orphanBytes)})`;
     })
     .join('\n');

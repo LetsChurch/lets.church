@@ -245,7 +245,7 @@ temporal-schedule-delete:
 init: db-migrate os-push-mappings temporal-schedule
 
 s3-prune-multipart-uploads:
-  S3_BUCKET=${S3_INGEST_BUCKET} pnpm --filter @letschurch/web run s3:prune-multipart-uploads
+  pnpm run s3:prune-multipart-uploads
 
 seed-db:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run seed'
@@ -292,6 +292,12 @@ generate-seed-summaries:
 backfill-diarization-merge:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run backfill-diarization-merge'
 
+# One-time: measure every processed upload's public-bucket bytes so storage
+# location caps and the admin storage page reflect existing artifacts. Safe to
+# re-run; only unmeasured uploads are visited.
+backfill-public-sizes:
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run backfill-public-sizes'
+
 # Re-index the LLM-seeded uploads into lc_media_v1 so the new doc-level
 # `bibleRefs` field (the Bible-verse facet source) is populated from existing
 # BIBLE annotations. Run after `just os-push-mappings` adds the field. No LLM
@@ -301,9 +307,9 @@ generate-seed-bible-refs:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run generate-seed-bible-refs'
 
 seed-s3-ingest:
-  rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-ingest lcdevs3:${S3_INGEST_BUCKET}
+  rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-ingest lcdevs3:${STORAGE_IDRIVE_INGEST_BUCKET}
 seed-s3-public:
-  rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-public lcdevs3:${S3_PUBLIC_BUCKET}
+  rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-public lcdevs3:${STORAGE_IDRIVE_PUBLIC_BUCKET}
 seed-s3-backup:
   rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-backup lcdevs3backup:${S3_BACKUP_BUCKET}
 seed-s3: seed-s3-ingest seed-s3-public seed-s3-backup

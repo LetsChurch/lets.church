@@ -9,10 +9,11 @@ import {
   withFeaturedUploadOrderingLock,
 } from '@letschurch/db';
 import { backupS3 } from '@letschurch/s3/backup';
-import { publicS3 } from '@letschurch/s3/public';
+import { getLocation } from '@letschurch/s3/locations';
 import { Context } from '@temporalio/activity';
 import { and, eq, inArray } from 'drizzle-orm';
 
+import { locationFromArg } from '../../storage/legacy';
 import logger from '../../util/logger';
 
 const moduleLogger = logger.child({
@@ -91,7 +92,9 @@ export async function deleteChannelFiles(channelId: string): Promise<number> {
     const channel = await db
       .select({
         avatarPath: Channel.avatarPath,
+        avatarLocation: Channel.avatarLocation,
         defaultThumbnailPath: Channel.defaultThumbnailPath,
+        defaultThumbnailLocation: Channel.defaultThumbnailLocation,
       })
       .from(Channel)
       .where(eq(Channel.id, channelId))
@@ -107,7 +110,9 @@ export async function deleteChannelFiles(channelId: string): Promise<number> {
     // the object behind after the channel row is gone.
     if (channel.avatarPath) {
       Context.current().heartbeat('Deleting channel avatar');
-      await publicS3.deleteFile(channel.avatarPath);
+      await getLocation(
+        locationFromArg(channel.avatarLocation),
+      ).public.deleteFile(channel.avatarPath);
       activityLogger.info(`Deleted avatar: ${channel.avatarPath}`);
       deletedCount += 1;
     }
@@ -115,7 +120,9 @@ export async function deleteChannelFiles(channelId: string): Promise<number> {
     // Delete default thumbnail from S3
     if (channel.defaultThumbnailPath) {
       Context.current().heartbeat('Deleting channel default thumbnail');
-      await publicS3.deleteFile(channel.defaultThumbnailPath);
+      await getLocation(
+        locationFromArg(channel.defaultThumbnailLocation),
+      ).public.deleteFile(channel.defaultThumbnailPath);
       activityLogger.info(
         `Deleted default thumbnail: ${channel.defaultThumbnailPath}`,
       );

@@ -1,6 +1,7 @@
 import {
   condition,
   ParentClosePolicy,
+  patched,
   proxyActivities,
   setHandler,
   startChild,
@@ -22,6 +23,7 @@ const { importMuxRecording, deleteMuxAsset } = proxyActivities<{
     uploadRecordId: string,
     muxAssetId: string,
     title?: string | null,
+    storageLocation?: string,
   ) => Promise<{ mediaUploadKey: string }>;
   deleteMuxAsset: (muxAssetId: string) => Promise<void>;
 }>({
@@ -39,13 +41,12 @@ const { importMuxRecording, deleteMuxAsset } = proxyActivities<{
   },
 });
 
-const { triggerPagerDutyAlert, isUploadFinalized } = proxyActivities<
-  typeof backgroundActivities
->({
-  startToCloseTimeout: '1 minute',
-  taskQueue: BACKGROUND_QUEUE,
-  retry: { maximumAttempts: 3 },
-});
+const { triggerPagerDutyAlert, isUploadFinalized, getUploadStorageLocation } =
+  proxyActivities<typeof backgroundActivities>({
+    startToCloseTimeout: '1 minute',
+    taskQueue: BACKGROUND_QUEUE,
+    retry: { maximumAttempts: 3 },
+  });
 
 export type MuxImportRecordingWorkflowParams = {
   uploadRecordId: string;
@@ -95,10 +96,16 @@ export async function muxImportRecordingWorkflow({
       await condition(() => renditionReady, RENDITION_READY_FALLBACK);
     }
 
+    // The import worker has no DB access, so it's told which location the
+    // live record was placed in.
+    const storageLocation = patched('storage-locations-v1')
+      ? await getUploadStorageLocation(uploadRecordId)
+      : undefined;
     const { mediaUploadKey } = await importMuxRecording(
       uploadRecordId,
       muxAssetId,
       title,
+      storageLocation,
     );
 
     // Wait for our own pipeline (probe/transcode/transcribe) to finish before

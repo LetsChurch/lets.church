@@ -1,8 +1,7 @@
 import { stat } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 
-import { ingestS3 } from '@letschurch/s3/ingest';
-import { publicS3 } from '@letschurch/s3/public';
+import { getLocation } from '@letschurch/s3/locations';
 import { Context } from '@temporalio/activity';
 import { invariant } from 'es-toolkit';
 import mime from 'mime';
@@ -10,6 +9,7 @@ import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
 
 import { updateUploadRecord } from '../../client';
+import { locationFromArg } from '../../storage/legacy';
 import logger from '../../util/logger';
 import {
   readWhisperJsonFile,
@@ -27,7 +27,13 @@ const WORK_DIR = process.env.TRANSCRIBE_WORKING_DIRECTORY ?? '/data/transcribe';
 export default async function transcribe(
   uploadRecordId: string,
   s3UploadKey: string,
+  // Workers on this queue have no DB access, so the workflow passes the
+  // record's location. Absent for workflows started before locations existed.
+  storageLocation?: string,
 ) {
+  const { ingest: ingestS3, public: publicS3 } = getLocation(
+    locationFromArg(storageLocation),
+  );
   const activityLogger = moduleLogger.child({
     temporalActivity: 'transcribe',
     context: {

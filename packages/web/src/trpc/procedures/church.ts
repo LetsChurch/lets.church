@@ -4,7 +4,6 @@ import {
   msearchOrganizations,
   osMsearch,
 } from '@letschurch/opensearch';
-import { publicS3 } from '@letschurch/s3/public';
 import { and, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -18,7 +17,7 @@ import {
 import logger from '@/util/logger';
 import { isChannelRoutable } from '@/util/media-visibility';
 import { formatPhoneNumber } from '@/util/phone';
-import { getPublicImageUrl } from '@/util/server-env';
+import { imageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 
 import { publicProcedure } from '../trpc';
@@ -123,6 +122,7 @@ export const churchProcedures = {
                 name: true,
                 description: true,
                 avatarPath: true,
+                avatarLocation: true,
                 primaryEmail: true,
                 primaryPhoneNumber: true,
                 websiteUrl: true,
@@ -175,11 +175,9 @@ export const churchProcedures = {
         .map((org) => ({
           ...org,
           id: OutgoingIdSchema.parse(org.id),
-          avatarUrl: org.avatarPath
-            ? getPublicImageUrl(publicS3.getS3ProtocolUri(org.avatarPath), {
-                resize: organizationAvatarMedium,
-              })
-            : null,
+          avatarUrl: imageUrl(org.avatarLocation, org.avatarPath, {
+            resize: organizationAvatarMedium,
+          }),
           // Filter to only MEETING addresses
           addresses: org.addresses.filter((a) => a.type === 'MEETING'),
           tags: org.tags.map((t) => t.tag),
@@ -340,7 +338,9 @@ export const churchProcedures = {
           type: true,
           description: true,
           avatarPath: true,
+          avatarLocation: true,
           coverPath: true,
+          coverLocation: true,
           primaryPhoneNumber: true,
           primaryEmail: true,
           websiteUrl: true,
@@ -392,6 +392,7 @@ export const churchProcedures = {
                   slug: true,
                   name: true,
                   avatarPath: true,
+                  avatarLocation: true,
                   visibility: true,
                   approvedAt: true,
                   deletedAt: true,
@@ -412,18 +413,18 @@ export const churchProcedures = {
       }
 
       // Process image URLs
-      const avatarUrl = organization.avatarPath
-        ? getPublicImageUrl(
-            publicS3.getS3ProtocolUri(organization.avatarPath),
-            {
-              resize: organizationAvatarLarge,
-            },
-          )
-        : null;
+      const avatarUrl = imageUrl(
+        organization.avatarLocation,
+        organization.avatarPath,
+        {
+          resize: organizationAvatarLarge,
+        },
+      );
 
-      const coverUrl = organization.coverPath
-        ? getPublicImageUrl(publicS3.getS3ProtocolUri(organization.coverPath))
-        : null;
+      const coverUrl = imageUrl(
+        organization.coverLocation,
+        organization.coverPath,
+      );
 
       // Only surface associated channels that are themselves publicly viewable;
       // a church admin can associate any channel id, so filter out private/
@@ -435,14 +436,13 @@ export const churchProcedures = {
       const officialChannels = visibleAssociations
         .filter((assoc) => assoc.officialChannel)
         .map((assoc) => {
-          const channelAvatarUrl = assoc.channel.avatarPath
-            ? getPublicImageUrl(
-                publicS3.getS3ProtocolUri(assoc.channel.avatarPath),
-                {
-                  resize: organizationAvatarSmall,
-                },
-              )
-            : null;
+          const channelAvatarUrl = imageUrl(
+            assoc.channel.avatarLocation,
+            assoc.channel.avatarPath,
+            {
+              resize: organizationAvatarSmall,
+            },
+          );
 
           return {
             slug: assoc.channel.slug,
@@ -454,14 +454,13 @@ export const churchProcedures = {
       const endorsedChannels = visibleAssociations
         .filter((assoc) => !assoc.officialChannel)
         .map((assoc) => {
-          const channelAvatarUrl = assoc.channel.avatarPath
-            ? getPublicImageUrl(
-                publicS3.getS3ProtocolUri(assoc.channel.avatarPath),
-                {
-                  resize: organizationAvatarSmall,
-                },
-              )
-            : null;
+          const channelAvatarUrl = imageUrl(
+            assoc.channel.avatarLocation,
+            assoc.channel.avatarPath,
+            {
+              resize: organizationAvatarSmall,
+            },
+          );
 
           return {
             slug: assoc.channel.slug,
@@ -539,6 +538,7 @@ export const churchProcedures = {
                   slug: true,
                   name: true,
                   avatarPath: true,
+                  avatarLocation: true,
                 },
               },
             },
@@ -569,12 +569,15 @@ export const churchProcedures = {
           publishedAt: UploadRecord.publishedAt,
           defaultThumbnailPath: UploadRecord.defaultThumbnailPath,
           overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
+          storageLocation: UploadRecord.storageLocation,
           channel: {
             id: Channel.id,
             name: Channel.name,
             slug: Channel.slug,
             avatarPath: Channel.avatarPath,
+            avatarLocation: Channel.avatarLocation,
             defaultThumbnailPath: Channel.defaultThumbnailPath,
+            defaultThumbnailLocation: Channel.defaultThumbnailLocation,
           },
         })
         .from(UploadRecord)
@@ -601,20 +604,22 @@ export const churchProcedures = {
       // Transform uploads to include thumbnail URLs
       return uploads.map((upload) => {
         const thumbnailUrl = resolveThumbnailUrl({
+          storageLocation: upload.storageLocation,
           overrideThumbnailPath: upload.overrideThumbnailPath,
           defaultThumbnailPath: upload.defaultThumbnailPath,
           channelDefaultThumbnailPath: upload.channel.defaultThumbnailPath,
+          channelDefaultThumbnailLocation:
+            upload.channel.defaultThumbnailLocation,
           size: 'card',
         });
 
-        const channelAvatarUrl = upload.channel.avatarPath
-          ? getPublicImageUrl(
-              publicS3.getS3ProtocolUri(upload.channel.avatarPath),
-              {
-                resize: organizationAvatarTiny,
-              },
-            )
-          : null;
+        const channelAvatarUrl = imageUrl(
+          upload.channel.avatarLocation,
+          upload.channel.avatarPath,
+          {
+            resize: organizationAvatarTiny,
+          },
+        );
 
         return {
           id: OutgoingIdSchema.parse(upload.id),

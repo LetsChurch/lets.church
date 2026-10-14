@@ -19,8 +19,7 @@ import {
   UploadView,
 } from '@letschurch/db';
 import { suggestSpeakersByEmbedding } from '@letschurch/opensearch';
-import { ingestS3 } from '@letschurch/s3/ingest';
-import { publicS3 } from '@letschurch/s3/public';
+import { getLocation } from '@letschurch/s3/locations';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
 import { staticMeta } from '@letschurch/temporal/util/dashboard-links';
 import { emailHtml, sanitizeForHtml } from '@letschurch/temporal/util/email';
@@ -115,8 +114,18 @@ import { coverImageFull, thumbnailMedium } from '@/util/image-sizes';
 import logger from '@/util/logger';
 import { startMultipartUpload } from '@/util/media-multipart';
 import { escapeLikePattern } from '@/util/misc';
-import { getPublicImageUrl, getPublicMediaUrl } from '@/util/server-env';
+import {
+  getPublicImageUrl,
+  getPublicMediaUrl,
+  imageUrl,
+} from '@/util/server-env';
 import { slugify } from '@/util/slugify';
+import {
+  initialRecordLocation,
+  placeImageUpload,
+  placeMediaUpload,
+  recordLocation,
+} from '@/util/storage';
 import { titleFromFileName } from '@/util/upload-title';
 import { uuidTranslator } from '@/util/uuid';
 
@@ -518,8 +527,10 @@ export const channelRouter = router({
         description: true,
         visibility: true,
         avatarPath: true,
+        avatarLocation: true,
         avatarBlurhash: true,
         defaultThumbnailPath: true,
+        defaultThumbnailLocation: true,
         defaultThumbnailBlurhash: true,
         createdAt: true,
         updatedAt: true,
@@ -663,12 +674,10 @@ export const channelRouter = router({
     const speakerCount = Number(speakerCountResult?.count ?? 0);
     const unlabeledVoiceCount = Number(unlabeledCountResult?.count ?? 0);
 
-    const { avatarPath, ...channelWithoutPath } = channel;
-    const avatarUrl = avatarPath
-      ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
-          resize: mantineAvatarXl2x,
-        })
-      : null;
+    const { avatarPath, avatarLocation, ...channelWithoutPath } = channel;
+    const avatarUrl = imageUrl(avatarLocation, avatarPath, {
+      resize: mantineAvatarXl2x,
+    });
 
     // Member email addresses are admin-only. Ordinary members (canUpload/
     // canDownload-only) can call this endpoint too, so strip co-members' emails
@@ -719,8 +728,11 @@ export const channelRouter = router({
         spotifyUrl: true,
         rssUrl: true,
         avatarPath: true,
+        avatarLocation: true,
         coverPath: true,
+        coverLocation: true,
         defaultThumbnailPath: true,
+        defaultThumbnailLocation: true,
         defaultUploadVisibility: true,
         defaultUploadLicense: true,
         defaultUploadCommentsEnabled: true,
@@ -755,29 +767,30 @@ export const channelRouter = router({
 
     const {
       avatarPath,
+      avatarLocation,
       coverPath,
+      coverLocation,
       defaultThumbnailPath,
+      defaultThumbnailLocation,
       memberships: _,
       ...restChannel
     } = channel;
 
-    const avatarUrl = avatarPath
-      ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
-          resize: mantineAvatarLg2x,
-        })
-      : null;
+    const avatarUrl = imageUrl(avatarLocation, avatarPath, {
+      resize: mantineAvatarLg2x,
+    });
 
-    const coverUrl = coverPath
-      ? getPublicImageUrl(publicS3.getS3ProtocolUri(coverPath), {
-          resize: coverImageFull,
-        })
-      : null;
+    const coverUrl = imageUrl(coverLocation, coverPath, {
+      resize: coverImageFull,
+    });
 
-    const defaultThumbnailUrl = defaultThumbnailPath
-      ? getPublicImageUrl(publicS3.getS3ProtocolUri(defaultThumbnailPath), {
-          resize: thumbnailMedium,
-        })
-      : null;
+    const defaultThumbnailUrl = imageUrl(
+      defaultThumbnailLocation,
+      defaultThumbnailPath,
+      {
+        resize: thumbnailMedium,
+      },
+    );
 
     return { ...restChannel, avatarUrl, coverUrl, defaultThumbnailUrl };
   }),
@@ -851,6 +864,7 @@ export const channelRouter = router({
                 username: true,
                 fullName: true,
                 avatarPath: true,
+                avatarLocation: true,
               },
             },
           },
@@ -872,12 +886,11 @@ export const channelRouter = router({
     });
 
     const membershipsWithAvatarUrl = sortedMemberships.map((membership) => {
-      const { avatarPath, ...userWithoutPath } = membership.appUser;
-      const avatarUrl = avatarPath
-        ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
-            resize: mantineAvatarSm2x,
-          })
-        : null;
+      const { avatarPath, avatarLocation, ...userWithoutPath } =
+        membership.appUser;
+      const avatarUrl = imageUrl(avatarLocation, avatarPath, {
+        resize: mantineAvatarSm2x,
+      });
 
       return {
         ...membership,
@@ -2313,6 +2326,7 @@ export const channelRouter = router({
             finalizedUploadKey: UploadRecord.finalizedUploadKey,
             defaultThumbnailPath: UploadRecord.defaultThumbnailPath,
             overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
+            storageLocation: UploadRecord.storageLocation,
             isFeatured: isNotNull(FeaturedUpload.uploadRecordId).mapWith(
               Boolean,
             ),
@@ -2354,14 +2368,11 @@ export const channelRouter = router({
       const totalPages = Math.ceil(totalCount / input.limit);
 
       const uploadsWithThumbnails = uploads.map((upload) => {
-        const thumbnailPath =
-          upload.overrideThumbnailPath ?? upload.defaultThumbnailPath;
-        const thumbnailUrl = thumbnailPath
-          ? getPublicImageUrl(
-              publicS3.getS3ProtocolUri(thumbnailPath),
-              getThumbnailResize('table'),
-            )
-          : null;
+        const thumbnailUrl = imageUrl(
+          upload.storageLocation,
+          upload.overrideThumbnailPath ?? upload.defaultThumbnailPath,
+          getThumbnailResize('table'),
+        );
 
         return {
           id: upload.id,
@@ -2432,6 +2443,7 @@ export const channelRouter = router({
           updatedAt: new Date(),
           score: 0,
           transcodingProgress: 0,
+          storageLocation: await initialRecordLocation(),
         })
         .returning({ id: UploadRecord.id });
 
@@ -2534,6 +2546,7 @@ export const channelRouter = router({
           downloadsEnabled: true,
           defaultThumbnailPath: true,
           overrideThumbnailPath: true,
+          storageLocation: true,
           thumbnailCount: true,
           uploadFinalized: true,
           finalizedUploadKey: true,
@@ -2617,6 +2630,7 @@ export const channelRouter = router({
       const {
         defaultThumbnailPath,
         overrideThumbnailPath,
+        storageLocation,
         thumbnailCount,
         featuredUpload,
         variants,
@@ -2636,23 +2650,22 @@ export const channelRouter = router({
       } = upload;
       const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
 
-      const thumbnailUrl = thumbnailPath
-        ? getPublicImageUrl(publicS3.getS3ProtocolUri(thumbnailPath))
-        : null;
-      const overrideThumbnailUrl = overrideThumbnailPath
-        ? getPublicImageUrl(publicS3.getS3ProtocolUri(overrideThumbnailPath))
-        : null;
+      const thumbnailUrl = imageUrl(storageLocation, thumbnailPath);
+      const overrideThumbnailUrl = imageUrl(
+        storageLocation,
+        overrideThumbnailPath,
+      );
 
       // Generate media source URLs based on available variants
       const hasVideo = variants.some((v) => v.startsWith('VIDEO'));
       const hasAudio = variants.includes('AUDIO');
 
       const mediaSource = hasVideo
-        ? getPublicMediaUrl(`${upload.id}/master.m3u8`)
+        ? getPublicMediaUrl(storageLocation, `${upload.id}/master.m3u8`)
         : null;
 
       const audioSource = hasAudio
-        ? getPublicMediaUrl(`${upload.id}/AUDIO.m3u8`)
+        ? getPublicMediaUrl(storageLocation, `${upload.id}/AUDIO.m3u8`)
         : null;
 
       const generatedThumbnailCount =
@@ -2668,7 +2681,7 @@ export const channelRouter = router({
 
           return {
             index,
-            url: getPublicImageUrl(publicS3.getS3ProtocolUri(path), {
+            url: getPublicImageUrl(getPublicMediaUrl(storageLocation, path), {
               resize: { width: 320 },
             }),
             isSelected: path === thumbnailPath,
@@ -2764,6 +2777,7 @@ export const channelRouter = router({
           id: true,
           thumbnailCount: true,
           variants: true,
+          storageLocation: true,
         },
         where: (t, { and, eq }) =>
           and(eq(t.id, input.uploadId), eq(t.channelId, input.channelId)),
@@ -2803,7 +2817,7 @@ export const channelRouter = router({
         .where(eq(UploadRecord.id, upload.id));
 
       return {
-        thumbnailUrl: getPublicImageUrl(publicS3.getS3ProtocolUri(path)),
+        thumbnailUrl: imageUrl(upload.storageLocation, path),
       };
     }),
 
@@ -2898,8 +2912,16 @@ export const channelRouter = router({
           resolvedTargetId = channelId;
         }
 
+        const location =
+          postProcess === 'media'
+            ? await placeMediaUpload(resolvedTargetId, bytes)
+            : postProcess === 'thumbnail'
+              ? await recordLocation(resolvedTargetId)
+              : await placeImageUpload(bytes);
+
         return startMultipartUpload({
           targetId: resolvedTargetId,
+          location,
           uploadMimeType,
           bytes,
           postProcess,
@@ -2939,6 +2961,7 @@ export const channelRouter = router({
           originalFileName: true,
           title: true,
           channelId: true,
+          storageLocation: true,
         },
         where: (t, { and, eq }) =>
           and(eq(t.id, input.uploadId), eq(t.channelId, input.channelId)),
@@ -2971,8 +2994,10 @@ export const channelRouter = router({
         upload.originalFileName ||
         `${sanitizeFilename(upload.title || 'media')}.bin`;
 
-      // Generate signed URL using ingest bucket
-      const url = await ingestS3.getSignedGetObject(upload.finalizedUploadKey, {
+      // Generate signed URL using the record's ingest bucket
+      const url = await getLocation(
+        upload.storageLocation,
+      ).ingest.getSignedGetObject(upload.finalizedUploadKey, {
         responseContentDisposition: `attachment; filename="${sanitizeFilename(filename)}"`,
         expiresIn: 3600, // 1 hour
       });
@@ -3106,6 +3131,7 @@ export const channelRouter = router({
                   lengthSeconds: true,
                   defaultThumbnailPath: true,
                   overrideThumbnailPath: true,
+                  storageLocation: true,
                 },
               },
             },

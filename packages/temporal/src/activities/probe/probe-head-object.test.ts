@@ -17,11 +17,13 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock('@letschurch/s3/ingest', () => ({
-  ingestS3: {
-    headObject: mocks.headObject,
-    streamObjectToFile: mocks.streamObjectToFile,
-  },
+vi.mock('@letschurch/s3/locations', () => ({
+  getLocation: () => ({
+    ingest: {
+      headObject: mocks.headObject,
+      streamObjectToFile: mocks.streamObjectToFile,
+    },
+  }),
 }));
 vi.mock('@temporalio/activity', () => ({
   Context: {

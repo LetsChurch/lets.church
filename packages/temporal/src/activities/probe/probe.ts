@@ -1,11 +1,12 @@
 import { join } from 'node:path';
 
-import { ingestS3 } from '@letschurch/s3/ingest';
+import { getLocation } from '@letschurch/s3/locations';
 import { Context } from '@temporalio/activity';
 import { invariant } from 'es-toolkit';
 import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
 
+import { locationFromArg } from '../../storage/legacy';
 import { runFfprobe } from '../../util/ffmpeg';
 import logger from '../../util/logger';
 import { updateUploadRecord } from '../../util/temporal';
@@ -20,7 +21,11 @@ const moduleLogger = logger.child({
 export default async function probe(
   uploadRecordId: string,
   s3UploadKey: string,
+  // Workers on this queue have no DB access, so the workflow passes the
+  // record's location. Absent for workflows started before locations existed.
+  storageLocation?: string,
 ) {
+  const { ingest: ingestS3 } = getLocation(locationFromArg(storageLocation));
   const activityLogger = moduleLogger.child({
     temporalActivity: 'probe',
     context: {

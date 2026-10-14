@@ -14,6 +14,9 @@ export type UploadRecordCreateData = {
   createdByUsername?: string;
   channelId?: string;
   channelSlug?: string;
+  // Source size when already known (imports), so placement can reserve
+  // capacity. Not part of the fingerprint.
+  sourceBytes?: number;
   [key: string]: unknown;
 };
 

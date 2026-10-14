@@ -1,5 +1,4 @@
-import { ingestS3 } from '@letschurch/s3/ingest';
-
+import { uploadRecordLocation } from '../../storage/locate';
 import logger from '../../util/logger';
 import { ffprobeSchema, type Probe } from '../../util/zod';
 
@@ -23,6 +22,7 @@ const moduleLogger = logger.child({
 export async function getStoredProbe(
   uploadRecordId: string,
 ): Promise<Probe | null> {
+  const { ingest: ingestS3 } = await uploadRecordLocation(uploadRecordId);
   let body: string | undefined;
   try {
     const file = await ingestS3.getObject(`${uploadRecordId}/probe.json`);
