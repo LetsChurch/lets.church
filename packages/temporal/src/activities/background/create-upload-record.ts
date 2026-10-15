@@ -68,7 +68,9 @@ export default async function createUploadRecord({
   const sourceBytes = BigInt(Math.max(0, Math.floor(data.sourceBytes ?? 0)));
   const placed = await pickLocation({ sourceBytes });
 
-  return db.transaction(async (tx) => {
+  // Return only JSON-safe fields: the row has bigint columns, which Temporal's
+  // payload converter can't serialize.
+  const rec = await db.transaction(async (tx) => {
     const [record] = await tx
       .insert(UploadRecord)
       .values({
@@ -132,4 +134,6 @@ export default async function createUploadRecord({
 
     return existing;
   });
+
+  return { id: rec.id, storageLocation: rec.storageLocation };
 }
