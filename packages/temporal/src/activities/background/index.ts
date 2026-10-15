@@ -128,6 +128,10 @@ export { default as storeTranscriptParagraphs } from './store-transcript-paragra
 export { default as subscribeNewsletter } from './subscribe-newsletter';
 export { default as summarizeUpload } from './summarize-upload';
 export {
+  deleteSearchDocument,
+  syncChannelDocuments,
+} from './sync-channel-documents';
+export {
   type TriggerPagerDutyAlertArgs,
   triggerPagerDutyAlert,
 } from './trigger-pagerduty-alert';

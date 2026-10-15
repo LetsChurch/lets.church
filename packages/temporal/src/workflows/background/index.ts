@@ -83,6 +83,10 @@ export {
   storageAuditWorkflow,
 } from './storage-audit';
 export { summarizeUploadWorkflow } from './summarize-upload';
+export {
+  deleteSearchDocumentWorkflow,
+  syncChannelDocumentsWorkflow,
+} from './sync-channel-documents';
 export { updateCommentScoresWorkflow } from './update-comment-scores';
 export { updateDailySaltWorkflow } from './update-daily-salt';
 export {

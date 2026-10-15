@@ -33,14 +33,13 @@ const { deleteChannelFiles } = proxyActivities<typeof activities>({
   retry: { maximumAttempts: 5 },
 });
 
-const { deleteChannelAssociations, deleteChannelDb } = proxyActivities<
-  typeof activities
->({
-  startToCloseTimeout: '2 minutes',
-  heartbeatTimeout: '1 minute',
-  taskQueue: BACKGROUND_QUEUE,
-  retry: { maximumAttempts: 5 },
-});
+const { deleteChannelAssociations, deleteChannelDb, deleteSearchDocument } =
+  proxyActivities<typeof activities>({
+    startToCloseTimeout: '2 minutes',
+    heartbeatTimeout: '1 minute',
+    taskQueue: BACKGROUND_QUEUE,
+    retry: { maximumAttempts: 5 },
+  });
 
 export async function deleteChannelWorkflow(
   channelId: string,
@@ -114,6 +113,10 @@ export async function deleteChannelWorkflow(
   progressState.currentStep = 'deleting_channel_db';
   await deleteChannelDb(channelId);
   progressState.channelDeleted = true;
+
+  // The lc_channels doc outlives the row otherwise (media docs are removed by
+  // the per-upload children above).
+  await deleteSearchDocument('channel', channelId);
 
   // Mark as completed
   progressState.currentStep = 'completed';
