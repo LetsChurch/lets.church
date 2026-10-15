@@ -117,7 +117,9 @@ export function buildLetsBibleUrl(meta: BibleMetadata): string | null {
   if (!entry) return null;
   const slug = entry.name.toLowerCase().replace(/\s+/g, '-');
   const base = `${LETS_BIBLE_URL}/bible/${slug}`;
-  if (meta.chapter == null) return base;
+  // lets.bible only routes /bible/<book>/<chapter> — a bare /bible/<book>
+  // 404s — so a whole-book reference ("3 John") opens at chapter 1.
+  if (meta.chapter == null) return `${base}/1`;
   if (meta.verse == null) return `${base}/${meta.chapter}`;
   // lets.bible focuses a verse with `?v=`; ranges link to the start verse.
   return `${base}/${meta.chapter}?v=${meta.verse}`;

@@ -16,4 +16,14 @@ describe('buildLetsBibleUrl', () => {
       'https://lets.bible/bible/john/3?v=16',
     );
   });
+
+  test('opens whole-book references at chapter 1', async () => {
+    vi.stubEnv('VITE_LETS_BIBLE_URL', 'https://lets.bible');
+    vi.resetModules();
+    const { buildLetsBibleUrl } = await import('./bible-url');
+
+    expect(buildLetsBibleUrl({ book: '3John' })).toBe(
+      'https://lets.bible/bible/3-john/1',
+    );
+  });
 });
