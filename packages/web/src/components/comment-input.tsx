@@ -1,4 +1,4 @@
-import { IconArrowUpRight } from '@tabler/icons-react';
+import { IconSend } from '@tabler/icons-react';
 import { useRef, useState } from 'react';
 
 import { cn } from '@/util/cn';
@@ -75,12 +75,12 @@ export function CommentInput({
           type="submit"
           onClick={handleSubmit}
           disabled={isPending || disabled}
-          className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full backdrop-blur-sm transition-all hover:bg-[rgba(9,9,11,0.1)] disabled:cursor-not-allowed disabled:opacity-30"
+          className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full backdrop-blur-sm transition-all hover:bg-gray-950/10 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-white/10"
           aria-label="Send comment"
         >
-          <IconArrowUpRight
-            size={24}
-            className="text-primary opacity-50"
+          <IconSend
+            size={20}
+            className="text-primary opacity-60"
             strokeWidth={1.5}
           />
         </button>
