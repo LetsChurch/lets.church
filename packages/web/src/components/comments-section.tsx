@@ -8,6 +8,7 @@ import { useState } from 'react';
 
 import { Comment } from '@/components/comment';
 import { CommentInput } from '@/components/comment-input';
+import LcButton from '@/components/lc-button';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
@@ -137,29 +138,34 @@ export function CommentsSection({
                 : 'bg-white dark:bg-zinc-900',
             )}
           >
-            <CommentInput
-              onSubmit={handleSubmitComment}
-              placeholder={
-                !isLoggedIn
-                  ? 'Sign in to comment'
-                  : canParticipate
-                    ? 'Add a comment'
-                    : 'Accept the participation policies to comment'
-              }
-              disabled={!isLoggedIn || !canParticipate}
-              isPending={createCommentMutation.isPending}
-              errorMessage={errorMessage}
-              onErrorDismiss={() => setErrorMessage(null)}
-            />
             {isLoggedIn && !canParticipate ? (
-              <button
-                type="button"
-                className="text-brand mt-3 text-sm font-medium underline underline-offset-2"
-                onClick={onParticipationRequired}
-              >
-                Review participation policies
-              </button>
-            ) : null}
+              // Signed in but hasn't accepted the participation policies: one
+              // composer-shaped prompt with a real button, instead of a
+              // disabled input plus a stray underlined link.
+              <div className="flex items-center gap-3 rounded-[24px] border border-gray-950/10 bg-gray-950/5 py-1.5 pr-1.5 pl-4 dark:border-white/10 dark:bg-white/5">
+                <p className="text-primary/60 flex-1 text-sm">
+                  Accept the participation policies to join the conversation.
+                </p>
+                <LcButton
+                  type="button"
+                  className="shrink-0"
+                  onClick={onParticipationRequired}
+                >
+                  Review policies
+                </LcButton>
+              </div>
+            ) : (
+              <CommentInput
+                onSubmit={handleSubmitComment}
+                placeholder={
+                  isLoggedIn ? 'Add a comment' : 'Sign in to comment'
+                }
+                disabled={!isLoggedIn}
+                isPending={createCommentMutation.isPending}
+                errorMessage={errorMessage}
+                onErrorDismiss={() => setErrorMessage(null)}
+              />
+            )}
           </div>
         </>
       ) : (
