@@ -114,7 +114,7 @@ import { coverImageFull, thumbnailMedium } from '@/util/image-sizes';
 import logger from '@/util/logger';
 import { startMultipartUpload } from '@/util/media-multipart';
 import { escapeLikePattern } from '@/util/misc';
-import { reindexUploads } from '@/util/search-sync';
+import { reindexUploads, syncChannelSearch } from '@/util/search-sync';
 import {
   getPublicImageUrl,
   getPublicMediaUrl,
@@ -366,6 +366,8 @@ export const channelRouter = router({
           },
           'Channel created successfully',
         );
+
+        await syncChannelSearch(channel.id);
 
         // Send admin notification email
         try {
@@ -799,6 +801,11 @@ export const channelRouter = router({
   updateChannel: channelAdminProcedure
     .input(updateChannelSchema)
     .mutation(async ({ input }) => {
+      const previous = await db.query.Channel.findFirst({
+        columns: { name: true, visibility: true },
+        where: (t, { eq }) => eq(t.id, input.channelId),
+      });
+
       const [updatedChannel] = await db
         .update(Channel)
         .set({
@@ -838,6 +845,16 @@ export const channelRouter = router({
       if (!updatedChannel) {
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
       }
+
+      // Name and visibility are copied into lc_channels and every upload's
+      // media doc; skip the sync when a save didn't touch them.
+      if (
+        previous?.name !== updatedChannel.name ||
+        previous?.visibility !== updatedChannel.visibility
+      ) {
+        await syncChannelSearch(updatedChannel.id);
+      }
+
       return { success: true, channel: updatedChannel };
     }),
 
@@ -3759,6 +3776,10 @@ export const channelRouter = router({
           'Channel approved successfully',
         );
 
+        // channelApprovedAt is copied onto every upload's media doc and the
+        // media access filter reads it.
+        await syncChannelSearch(input.channelId);
+
         return { success: true };
       } catch (error) {
         moduleLogger.error(
@@ -3823,6 +3844,10 @@ export const channelRouter = router({
           },
           'Channel unapproved successfully',
         );
+
+        // channelApprovedAt is copied onto every upload's media doc and the
+        // media access filter reads it.
+        await syncChannelSearch(input.channelId);
 
         return { success: true };
       } catch (error) {

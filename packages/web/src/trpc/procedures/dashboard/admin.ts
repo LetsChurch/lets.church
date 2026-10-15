@@ -125,6 +125,7 @@ import {
 } from '@/util/maintenance';
 import { escapeLikePattern } from '@/util/misc';
 import { sendPasswordResetEmail } from '@/util/password-reset';
+import { syncChannelSearch } from '@/util/search-sync';
 import { imageUrl } from '@/util/server-env';
 import {
   filterUploadsWithActiveWorkflows,
@@ -996,6 +997,10 @@ export const adminRouter = router({
           },
           'Channel approved successfully',
         );
+
+        // channelApprovedAt is copied onto every upload's media doc and the
+        // media access filter reads it.
+        await syncChannelSearch(input.channelId);
 
         return { success: true };
       } catch (error) {
