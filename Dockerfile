@@ -155,11 +155,6 @@ COPY --from=build-audiowaveform /home/build/audiowaveform/build/audiowaveform /u
 USER nodeapp
 CMD ["pnpm", "--filter", "@letschurch/transcode-worker", "run", "start"]
 
-# AMD documents anonymous AMA 1.5.0 APT access, but the feed can become
-# unavailable or reject anonymous requests. Preserve the vendor runtime from
-# the immutable, production-proven image instead of depending on it per build.
-FROM registry.gitlab.com/letschurch/lets.church/transcode-worker-ama@sha256:09b65fe5f8f68c5cb43607a91b248ebf4409b48ff55df1ee3dfc67e47129d73f AS ama-sdk-1-5-0
-
 FROM ubuntu:22.04 AS transcode-worker-ama
 ARG DEBIAN_FRONTEND=noninteractive
 # AMA SDK version must match the amd-ama-driver installed on the host (e.g. tnw-worker-01).
@@ -174,13 +169,27 @@ RUN ln -s /usr/local/lib/node_modules/corepack/dist/corepack.js /usr/local/bin/c
   corepack enable
 # System tools + ffmpeg fallback (Prisma needs openssl/libssl-dev)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates curl openssl libssl-dev wget pciutils ffmpeg imagemagick jpegoptim \
-    libaprutil1 libfontconfig1 libfreetype6 libgssapi-krb5-2 libminizip1 libpci3 \
-    libsdl2-2.0-0 libsndio7.0 libxinerama1 libxxf86vm1 && \
+    ca-certificates curl openssl libssl-dev wget pciutils ffmpeg imagemagick jpegoptim && \
   rm -rf /var/lib/apt/lists/*
-# The SDK packages install their runtime beneath /opt/amd/ama. The remaining
-# package-owned files are documentation plus host-only systemd/udev integration.
-COPY --from=ama-sdk-1-5-0 /opt/amd/ama /opt/amd/ama
+# AMA SDK packages, from our mirror of AMD's ma35d_ama_sdk_1.5.0.zip (AMD's APT
+# feed rejects anonymous requests; support case 00917625). Also mirrored at
+# https://github.com/LetsChurch/amd-ama-sdk/releases. The checksums pin the
+# exact vendor files; apt resolves their dependencies from the Ubuntu archive.
+ARG AMA_SDK_BUILD=${AMA_SDK_VERSION}-20260424092403
+ARG AMA_SDK_MIRROR=https://gitlab.com/api/v4/projects/41727954/packages/generic/amd-ama-sdk
+RUN cd /tmp && \
+  for pkg in core xma ffmpeg; do \
+    curl -fsSLO "${AMA_SDK_MIRROR}/${AMA_SDK_BUILD}/amd-ama-${pkg}_${AMA_SDK_BUILD}.x86_64.deb"; \
+  done && \
+  printf '%s  %s\n' \
+    4e638a269bb17a241a70a2c90736faf5b70748d0acadb6d2d19da1651983c54d "amd-ama-core_${AMA_SDK_BUILD}.x86_64.deb" \
+    566526a2ced201c66a5096fd54f21130a75e5bfb935f6157f6f0d8cee6e63ec0 "amd-ama-xma_${AMA_SDK_BUILD}.x86_64.deb" \
+    36433c33dc11e66b7ad3f6effc883ef010bbf7f6cc0bb560e0f1b391bdfd1055 "amd-ama-ffmpeg_${AMA_SDK_BUILD}.x86_64.deb" \
+    | sha256sum -c - && \
+  apt-get update && apt-get install -y --no-install-recommends \
+    ./amd-ama-core_*.deb ./amd-ama-xma_*.deb ./amd-ama-ffmpeg_*.deb && \
+  apt-mark hold amd-ama-core amd-ama-xma amd-ama-ffmpeg && \
+  rm -f /tmp/amd-ama-*.deb && rm -rf /var/lib/apt/lists/*
 RUN grep -q "^${AMA_SDK_VERSION}-" /opt/amd/ama/ma35/version && \
   /opt/amd/ama/ma35/bin/ffmpeg -version
 COPY --from=oxipng /usr/local/bin/oxipng /usr/local/bin/oxipng
