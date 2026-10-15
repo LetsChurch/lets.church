@@ -83,25 +83,60 @@ export function CommentsSection({
   return (
     <div
       className={cn(
-        'relative isolate flex flex-col overflow-hidden',
+        // overflow-clip (not hidden) so the composer below can stick to the
+        // viewport/drawer scroller instead of this box.
+        'relative isolate flex flex-col overflow-clip',
         showContainer &&
           'mt-6 rounded-2xl border-fancy-pants bg-zinc-100 dark:bg-zinc-900',
       )}
     >
       {/* Comments Header */}
-      <div className="flex items-center gap-1 border-b border-zinc-200 px-5 pt-1.5 pb-2 dark:border-zinc-800">
+      <div className="flex items-center gap-1 border-b border-zinc-200 px-5 py-3 dark:border-zinc-800">
         <span className="text-primary text-sm font-medium">Comments</span>
-        <div className="flex h-[18px] min-w-6 items-center justify-center rounded-[9px] bg-gray-950/10 px-1.5 dark:bg-white/10">
-          <span className="text-primary/70 text-[10px] leading-none font-bold">
-            {comments.length}
-          </span>
-        </div>
+        {comments.length > 0 ? (
+          <div className="flex h-[18px] min-w-6 items-center justify-center rounded-[9px] bg-gray-950/10 px-1.5 dark:bg-white/10">
+            <span className="text-primary/70 text-[10px] leading-none font-bold">
+              {comments.length}
+            </span>
+          </div>
+        ) : null}
       </div>
 
       {commentsEnabled ? (
         <>
-          {/* Comment Input */}
-          <div className="border-b border-zinc-200 p-5 dark:border-zinc-800">
+          {/* Comments List */}
+          <div className="px-5 pt-5">
+            {comments.length === 0 ? (
+              <div className="text-primary/50 py-8 text-center text-sm">
+                No comments yet. Be the first to comment!
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {comments.map((comment) => (
+                  <Comment
+                    key={comment.id}
+                    comment={comment}
+                    mediaId={mediaId}
+                    lengthSeconds={lengthSeconds}
+                    onLoginRequired={onLoginRequired}
+                    canParticipate={canParticipate}
+                    onParticipationRequired={onParticipationRequired}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Comment Input — pinned to the bottom of the scroller while the
+              list scrolls past, so it's always reachable. */}
+          <div
+            className={cn(
+              'sticky bottom-0 z-10 p-5',
+              showContainer
+                ? 'bg-zinc-100 dark:bg-zinc-900'
+                : 'bg-white dark:bg-zinc-900',
+            )}
+          >
             <CommentInput
               onSubmit={handleSubmitComment}
               placeholder={
@@ -125,29 +160,6 @@ export function CommentsSection({
                 Review participation policies
               </button>
             ) : null}
-          </div>
-
-          {/* Comments List */}
-          <div className="p-5">
-            {comments.length === 0 ? (
-              <div className="text-primary/50 py-8 text-center text-sm">
-                No comments yet. Be the first to comment!
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {comments.map((comment) => (
-                  <Comment
-                    key={comment.id}
-                    comment={comment}
-                    mediaId={mediaId}
-                    lengthSeconds={lengthSeconds}
-                    onLoginRequired={onLoginRequired}
-                    canParticipate={canParticipate}
-                    onParticipationRequired={onParticipationRequired}
-                  />
-                ))}
-              </div>
-            )}
           </div>
         </>
       ) : (

@@ -105,13 +105,13 @@ export function MediaInfoTabs({
     >
       {/* Tabs */}
       <Tabs.List className="relative top-0 flex gap-4 border-b border-zinc-200 px-5 dark:border-zinc-800">
-        <Tabs.Tab value="details" className="group relative pt-1.5 pb-2">
+        <Tabs.Tab value="details" className="group relative py-3">
           <span className="text-primary/70 group-data-[active]:text-primary text-sm font-medium group-data-[active]:opacity-100">
             Details
           </span>
         </Tabs.Tab>
         {summary ? (
-          <Tabs.Tab value="summary" className="group relative pt-1.5 pb-2">
+          <Tabs.Tab value="summary" className="group relative py-3">
             <span className="text-primary/70 group-data-[active]:text-primary inline-flex items-center gap-1 text-sm font-medium group-data-[active]:opacity-100">
               <IconSparkles size={14} aria-hidden="true" />
               Overview
@@ -126,7 +126,7 @@ export function MediaInfoTabs({
             render={
               <Tabs.Tab
                 value="summary"
-                className="group relative pt-1.5 pb-2"
+                className="group relative py-3"
                 disabled
               />
             }
@@ -141,7 +141,7 @@ export function MediaInfoTabs({
           <button
             type="button"
             onClick={onTranscriptClick}
-            className="relative pt-1.5 pb-2"
+            className="relative py-3"
           >
             <span className="text-primary/70 hover:text-primary text-sm font-medium">
               Transcript
@@ -152,7 +152,7 @@ export function MediaInfoTabs({
           <button
             type="button"
             onClick={onPlaylistClick}
-            className="relative pt-1.5 pb-2"
+            className="relative py-3"
           >
             <span className="text-primary/70 hover:text-primary text-sm font-medium">
               {playlistTabLabel}
@@ -164,7 +164,7 @@ export function MediaInfoTabs({
             type="button"
             onClick={onCommentsClick}
             disabled={!commentsEnabled}
-            className="relative pt-1.5 pb-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="relative py-3 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span className="text-primary/70 hover:text-primary text-sm font-medium">
               Comments
