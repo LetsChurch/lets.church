@@ -25,7 +25,7 @@ export default function LcButtonGroup({
             <button
               {...btn}
               className={cn(
-                'inline-flex items-center gap-0.5 px-3 py-1.5 pt-1.25',
+                'inline-flex items-center gap-0.5 px-3 py-1.5 pt-1.25 transition-colors enabled:hover:bg-gray-950/5 enabled:hover:text-primary dark:enabled:hover:bg-white/10',
                 i > 0 &&
                   '-ml-px border-gray-950/5 border-l dark:border-white/10',
                 btn.className,

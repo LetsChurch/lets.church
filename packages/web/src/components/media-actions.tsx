@@ -561,7 +561,7 @@ export function MediaActions({
                 <button
                   type="button"
                   onClick={openVideoAsk}
-                  className="inline-flex items-center gap-1 px-3 py-1.5"
+                  className="hover:text-primary inline-flex items-center gap-1 px-3 py-1.5 transition-colors hover:bg-gray-950/5 dark:hover:bg-white/10"
                 >
                   <IconSparkles size={16} />
                   Ask
@@ -572,7 +572,7 @@ export function MediaActions({
                       {...props}
                       type="button"
                       aria-label="Suggested questions"
-                      className="-ml-px inline-flex items-center border-l border-gray-950/5 px-1.5 py-1.5 dark:border-white/10"
+                      className="hover:text-primary data-[popup-open]:text-primary -ml-px inline-flex items-center border-l border-gray-950/5 px-1.5 py-1.5 transition-colors hover:bg-gray-950/5 data-[popup-open]:bg-gray-950/5 dark:border-white/10 dark:hover:bg-white/10 dark:data-[popup-open]:bg-white/10"
                     >
                       <IconChevronDown size={16} />
                     </button>
@@ -635,7 +635,7 @@ export function MediaActions({
             <Link
               to="/dashboard/channels/$channelId/uploads/$uploadId"
               params={{ channelId: channelData.id, uploadId }}
-              className="border-fancy-pants text-primary/80 inline-flex items-center gap-0.5 rounded-full bg-gray-950/10 px-3 py-1.5 text-sm font-semibold active:scale-[0.97] dark:bg-white/15"
+              className="border-fancy-pants text-primary/80 hover:text-primary inline-flex items-center gap-0.5 rounded-full bg-gray-950/10 px-3 py-1.5 text-sm font-semibold transition-colors hover:bg-gray-950/15 active:scale-[0.97] dark:bg-white/15 dark:hover:bg-white/20"
             >
               <IconEdit size={16} />
               Edit
