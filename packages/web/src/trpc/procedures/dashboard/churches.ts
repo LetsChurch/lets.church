@@ -1392,8 +1392,8 @@ export const churchRouter = router({
         'Updating church',
       );
 
-      // Upstream partners whose approved link is replaced below drop this church
-      // from their indexed association arrays, so they need re-indexing too.
+      // Upstream partners removed below drop this church from their indexed
+      // association arrays, so they need re-indexing too.
       const previousUpstreamIds =
         input.associatedOrganizations !== undefined
           ? (
@@ -1429,22 +1429,44 @@ export const churchRouter = router({
             }
           }
 
-          // Handle organization associations if provided
+          // Handle organization associations if provided. Diff against the
+          // existing links rather than replacing them: a partner the church
+          // keeps must keep its approval, and only newly added partners start
+          // out pending.
           if (input.associatedOrganizations !== undefined) {
-            // First, delete all existing upstream associations (church is downstream)
-            await tx
-              .delete(OrganizationOrganizationAssociation)
-              .where(
-                eq(
-                  OrganizationOrganizationAssociation.downstreamOrganizationId,
-                  input.churchId,
-                ),
-              );
+            const desired = new Set(input.associatedOrganizations);
+            const existing = new Set(
+              (
+                await tx.query.OrganizationOrganizationAssociation.findMany({
+                  columns: { upstreamOrganizationId: true },
+                  where: (t, { eq }) =>
+                    eq(t.downstreamOrganizationId, input.churchId),
+                })
+              ).map((a) => a.upstreamOrganizationId),
+            );
 
-            // Then, create new associations if provided
-            if (input.associatedOrganizations.length > 0) {
+            const removed = [...existing].filter((id) => !desired.has(id));
+            if (removed.length > 0) {
+              await tx
+                .delete(OrganizationOrganizationAssociation)
+                .where(
+                  and(
+                    eq(
+                      OrganizationOrganizationAssociation.downstreamOrganizationId,
+                      input.churchId,
+                    ),
+                    inArray(
+                      OrganizationOrganizationAssociation.upstreamOrganizationId,
+                      removed,
+                    ),
+                  ),
+                );
+            }
+
+            const added = [...desired].filter((id) => !existing.has(id));
+            if (added.length > 0) {
               await tx.insert(OrganizationOrganizationAssociation).values(
-                input.associatedOrganizations.map((upstreamOrgId) => ({
+                added.map((upstreamOrgId) => ({
                   upstreamOrganizationId: upstreamOrgId,
                   downstreamOrganizationId: input.churchId,
                   downstreamApproved: true, // Church automatically approves being downstream
