@@ -24,6 +24,14 @@ const moduleLogger = logger.child({ module: 'temporal/util/windows' });
 export const WINDOW_SIZE = 4;
 export const WINDOW_STRIDE = 2;
 
+// Character cap on a window's text sent for embedding. The model rejects any
+// input over 8,192 tokens, and one over-long window fails its whole batch, which
+// left the doc with no windows at all. ~20k characters stays under the limit
+// even for token-dense text; windows of normal paragraphs are a few thousand.
+// Truncating only shortens what's embedded — the stored window text and its
+// cache hash are unchanged.
+const MAX_EMBED_INPUT_CHARS = 20_000;
+
 export type InParagraph = {
   order: number;
   start: number;
@@ -298,7 +306,7 @@ export async function embedWindows(
     const res = await createEmbeddingsTracked({
       tracking: { activity: 'indexWindowsEmbed', uploadRecordId },
       model: EMBED_MODEL,
-      input: slice.map((w) => w.text),
+      input: slice.map((w) => w.text.slice(0, MAX_EMBED_INPUT_CHARS)),
     });
     invariant(
       res.data.length === slice.length,
