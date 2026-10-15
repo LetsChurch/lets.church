@@ -6,6 +6,7 @@ import { invariant } from 'es-toolkit';
 
 import { uploadRecordLocation } from '../../storage/locate';
 import logger from '../../util/logger';
+import { splitOversizedParagraphs } from '../../util/paragraphs';
 import {
   type TranscriptJsonSegment,
   transcriptJsonSchema,
@@ -87,14 +88,17 @@ export default async function storeTranscriptParagraphs(
   // Group consecutive segments into paragraphs: start a new paragraph when a
   // non-first segment is flagged isParagraphStart (mirrors the worker's
   // group_paragraphs in services/transcribe/src/vtt.py).
-  const groups: TranscriptJsonSegment[][] = [];
+  const markerGroups: TranscriptJsonSegment[][] = [];
   for (const [i, seg] of parsed.segments.entries()) {
-    if (groups.length === 0 || (i > 0 && seg.isParagraphStart)) {
-      groups.push([seg]);
+    if (markerGroups.length === 0 || (i > 0 && seg.isParagraphStart)) {
+      markerGroups.push([seg]);
     } else {
-      groups[groups.length - 1]?.push(seg);
+      markerGroups[markerGroups.length - 1]?.push(seg);
     }
   }
+  // A stretch with no markers would otherwise become one enormous paragraph
+  // that search can't index; cap it at sentence boundaries.
+  const groups = splitOversizedParagraphs(markerGroups);
 
   const embeddings = parsed.speakerEmbeddings ?? {};
   const rows = groups.map((segs, order) => {
