@@ -58,6 +58,7 @@ export {
 export { postUserRegistrationWorkflow } from './post-user-registration';
 export { processImageWorkflow } from './process-image';
 export { processMediaWorkflow } from './process-media';
+export { rebuildTranscriptParagraphsWorkflow } from './rebuild-transcript-paragraphs';
 export {
   getReindexProgressQuery,
   type ReindexWorkflowParams,

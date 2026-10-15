@@ -82,7 +82,7 @@ export default async function storeTranscriptParagraphs(
     activityLogger.info(
       'No paragraph markers; skipping (legacy transcript stays on VTT rendering)',
     );
-    return { paragraphs: 0 };
+    return { paragraphs: 0, changed: false };
   }
 
   // Group consecutive segments into paragraphs: start a new paragraph when a
