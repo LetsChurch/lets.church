@@ -54,6 +54,7 @@ import {
   mantineAvatarXl2x,
 } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
+import { reindexOrganizations } from '@/util/search-sync';
 import { imageUrl } from '@/util/server-env';
 import { slugify } from '@/util/slugify';
 import { placeImageUpload } from '@/util/storage';
@@ -374,6 +375,11 @@ export const churchRouter = router({
         },
         'Church created successfully',
       );
+
+      // Index now rather than relying on the geocode workflow, which only
+      // indexes when it geocoded an address (so an address-less church would
+      // never reach lc_organizations).
+      await reindexOrganizations([church.id]);
 
       try {
         await sendOrganizationApprovalRequestEmail(
@@ -1386,6 +1392,19 @@ export const churchRouter = router({
         'Updating church',
       );
 
+      // Upstream partners whose approved link is replaced below drop this church
+      // from their indexed association arrays, so they need re-indexing too.
+      const previousUpstreamIds =
+        input.associatedOrganizations !== undefined
+          ? (
+              await db.query.OrganizationOrganizationAssociation.findMany({
+                columns: { upstreamOrganizationId: true },
+                where: (t, { eq }) =>
+                  eq(t.downstreamOrganizationId, input.churchId),
+              })
+            ).map((a) => a.upstreamOrganizationId)
+          : [];
+
       let hasNewAddresses: boolean;
       try {
         hasNewAddresses = await db.transaction(async (tx) => {
@@ -1560,6 +1579,10 @@ export const churchRouter = router({
         },
         'Church updated successfully',
       );
+
+      // Name, description, tags, addresses, and associations are all indexed;
+      // the geocode workflow below only re-indexes when it geocodes something.
+      await reindexOrganizations([input.churchId, ...previousUpstreamIds]);
 
       if (hasNewAddresses) {
         try {

@@ -26,6 +26,7 @@ import {
 } from '@/schemas/dashboard';
 import { mantineAvatarSm2x, mantineAvatarXl2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
+import { reindexOrganizations } from '@/util/search-sync';
 import { imageUrl } from '@/util/server-env';
 
 import { authProcedure, router } from '../../trpc';
@@ -746,6 +747,9 @@ export const organizationRouter = router({
           'Organization updated successfully',
         );
 
+        // Name and description are indexed in lc_organizations.
+        await reindexOrganizations([input.orgId]);
+
         return { error: false };
       } catch (e) {
         moduleLogger.error(
@@ -1008,6 +1012,13 @@ export const organizationRouter = router({
           'Downstream relationship approved successfully',
         );
 
+        // Approved links are indexed on both sides (upstream / downstream
+        // association arrays).
+        await reindexOrganizations([
+          input.orgId,
+          input.downstreamOrganizationId,
+        ]);
+
         return { success: true };
       } catch (error) {
         moduleLogger.error(
@@ -1082,6 +1093,13 @@ export const organizationRouter = router({
           },
           'Downstream relationship rejected successfully',
         );
+
+        // Approved links are indexed on both sides (upstream / downstream
+        // association arrays).
+        await reindexOrganizations([
+          input.orgId,
+          input.downstreamOrganizationId,
+        ]);
 
         return { success: true };
       } catch (error) {
@@ -1192,6 +1210,13 @@ export const organizationRouter = router({
           'Upstream association approved successfully',
         );
 
+        // Approved links are indexed on both sides (upstream / downstream
+        // association arrays).
+        await reindexOrganizations([
+          input.orgId,
+          input.downstreamOrganizationId,
+        ]);
+
         return { success: true };
       } catch (error) {
         moduleLogger.error(
@@ -1247,6 +1272,13 @@ export const organizationRouter = router({
           },
           'Upstream association unapproved successfully',
         );
+
+        // Approved links are indexed on both sides (upstream / downstream
+        // association arrays).
+        await reindexOrganizations([
+          input.orgId,
+          input.downstreamOrganizationId,
+        ]);
 
         return { success: true };
       } catch (error) {
@@ -1322,6 +1354,13 @@ export const organizationRouter = router({
           },
           'Upstream association deleted successfully',
         );
+
+        // Approved links are indexed on both sides (upstream / downstream
+        // association arrays).
+        await reindexOrganizations([
+          input.orgId,
+          input.downstreamOrganizationId,
+        ]);
 
         return { success: true };
       } catch (error) {

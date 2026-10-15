@@ -125,7 +125,11 @@ import {
 } from '@/util/maintenance';
 import { escapeLikePattern } from '@/util/misc';
 import { sendPasswordResetEmail } from '@/util/password-reset';
-import { syncChannelSearch } from '@/util/search-sync';
+import {
+  reindexOrganizations,
+  removeOrganizationFromSearch,
+  syncChannelSearch,
+} from '@/util/search-sync';
 import { imageUrl } from '@/util/server-env';
 import {
   filterUploadsWithActiveWorkflows,
@@ -1424,6 +1428,22 @@ export const adminRouter = router({
       );
 
       try {
+        // Related organizations list this one in their (approved) upstream /
+        // downstream association arrays; the delete cascades those links, so
+        // capture the partners first and re-index them afterwards.
+        const links =
+          await db.query.OrganizationOrganizationAssociation.findMany({
+            columns: {
+              upstreamOrganizationId: true,
+              downstreamOrganizationId: true,
+            },
+            where: (t, { eq, or }) =>
+              or(
+                eq(t.upstreamOrganizationId, input.organizationId),
+                eq(t.downstreamOrganizationId, input.organizationId),
+              ),
+          });
+
         await db
           .delete(Organization)
           .where(eq(Organization.id, input.organizationId));
@@ -1434,6 +1454,16 @@ export const adminRouter = router({
             appUserId: ctx.session.appUserId,
           },
           'Organization deleted successfully',
+        );
+
+        await removeOrganizationFromSearch(input.organizationId);
+        await reindexOrganizations(
+          links
+            .flatMap((l) => [
+              l.upstreamOrganizationId,
+              l.downstreamOrganizationId,
+            ])
+            .filter((id) => id !== input.organizationId),
         );
 
         return { success: true };
