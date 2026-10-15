@@ -70,7 +70,7 @@ type CommentProps = {
       id: string;
       username: string;
       fullName: string | null;
-      avatarPath: string | null;
+      avatarUrl: string | null;
     };
     likeCount: number;
     replyCount?: number;
@@ -220,10 +220,6 @@ export function Comment({
     });
   };
 
-  const avatarUrl = comment.author.avatarPath
-    ? `/api/media/${comment.author.avatarPath}`
-    : null;
-
   const timeAgo = new Date(comment.createdAt).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -233,7 +229,7 @@ export function Comment({
   return (
     <div className="flex gap-3">
       <Avatar
-        src={avatarUrl}
+        src={comment.author.avatarUrl}
         alt={comment.author.username}
         className="size-8 shrink-0"
         fallbackClassName="text-xs"

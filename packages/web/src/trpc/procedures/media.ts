@@ -52,6 +52,25 @@ const moduleLogger = logger.child({
   module: 'trpc/procedures/media',
 });
 
+// Comment authors go out with a signed avatar URL, never the raw storage
+// path/location (the client has no route that can resolve a bare path).
+function commentAuthor(author: {
+  id: string;
+  username: string;
+  fullName: string | null;
+  avatarPath: string | null;
+  avatarLocation: string | null;
+}) {
+  return {
+    id: OutgoingIdSchema.parse(author.id),
+    username: author.username,
+    fullName: author.fullName,
+    avatarUrl: imageUrl(author.avatarLocation, author.avatarPath, {
+      resize: appAvatarXs2x,
+    }),
+  };
+}
+
 const TIMESTAMP_RE = /\b(\d{1,2}):(\d{2})(?::(\d{2}))?\b/g;
 
 function timestampToSeconds(ts: string): number {
@@ -1495,6 +1514,7 @@ export const mediaProcedures = {
               username: true,
               fullName: true,
               avatarPath: true,
+              avatarLocation: true,
             },
           },
           userRatings: {
@@ -1541,10 +1561,7 @@ export const mediaProcedures = {
           text: comment.text,
           createdAt: comment.createdAt,
           score: comment.score,
-          author: {
-            ...comment.author,
-            id: OutgoingIdSchema.parse(comment.author.id),
-          },
+          author: commentAuthor(comment.author),
           userRating,
           likeCount,
           replyCount,
@@ -1620,6 +1637,7 @@ export const mediaProcedures = {
               username: true,
               fullName: true,
               avatarPath: true,
+              avatarLocation: true,
             },
           },
           userRatings: {
@@ -1645,10 +1663,7 @@ export const mediaProcedures = {
           text: reply.text,
           createdAt: reply.createdAt,
           score: reply.score,
-          author: {
-            ...reply.author,
-            id: OutgoingIdSchema.parse(reply.author.id),
-          },
+          author: commentAuthor(reply.author),
           userRating,
           likeCount,
         };
@@ -1770,6 +1785,7 @@ export const mediaProcedures = {
           username: true,
           fullName: true,
           avatarPath: true,
+          avatarLocation: true,
         },
         where: (t, { eq }) => eq(t.id, userId),
       });
@@ -1794,7 +1810,9 @@ export const mediaProcedures = {
           id: OutgoingIdSchema.parse(author?.id),
           username: author?.username,
           fullName: author?.fullName,
-          avatarPath: author?.avatarPath,
+          avatarUrl: imageUrl(author?.avatarLocation, author?.avatarPath, {
+            resize: appAvatarXs2x,
+          }),
         },
       };
     }),
