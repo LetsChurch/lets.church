@@ -247,13 +247,14 @@ export function Comment({
           {renderWithTimestamps(comment.text, lengthSeconds)}
         </p>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => handleRate('LIKE')}
             className={cn(
-              'flex min-w-12 items-center gap-1 rounded-lg px-2 py-1 transition-colors hover:bg-white/5',
-              comment.userRating === 'LIKE' && 'bg-white/10',
+              'flex items-center gap-1 rounded-lg px-2 py-1 transition-colors hover:bg-gray-950/5 dark:hover:bg-white/5',
+              comment.userRating === 'LIKE' &&
+                'bg-gray-950/10 dark:bg-white/10',
             )}
           >
             <IconThumbUp size={14} className="text-primary/70" />
@@ -264,8 +265,9 @@ export function Comment({
             type="button"
             onClick={() => handleRate('DISLIKE')}
             className={cn(
-              'flex items-center gap-1 rounded-lg px-2 py-1 transition-colors hover:bg-white/5',
-              comment.userRating === 'DISLIKE' && 'bg-white/10',
+              'flex items-center gap-1 rounded-lg px-2 py-1 transition-colors hover:bg-gray-950/5 dark:hover:bg-white/5',
+              comment.userRating === 'DISLIKE' &&
+                'bg-gray-950/10 dark:bg-white/10',
             )}
           >
             <IconThumbDown size={14} className="text-primary/70" />
@@ -275,7 +277,7 @@ export function Comment({
             <button
               type="button"
               onClick={handleReplyClick}
-              className="text-primary/70 rounded-lg px-2 py-1 text-xs transition-colors hover:bg-white/10"
+              className="text-primary/70 hover:text-primary rounded-lg px-2 py-1 text-xs transition-colors hover:bg-gray-950/5 dark:hover:bg-white/5"
             >
               Reply
             </button>
@@ -285,7 +287,7 @@ export function Comment({
             <button
               type="button"
               onClick={() => setShowReplies(!showReplies)}
-              className="rounded-lg px-2 py-1 text-xs text-indigo-400 transition-colors hover:bg-white/10"
+              className="rounded-lg px-2 py-1 text-xs text-indigo-400 transition-colors hover:bg-gray-950/5 dark:hover:bg-white/5"
             >
               {showReplies ? 'Hide' : 'View'} {comment.replyCount}{' '}
               {comment.replyCount === 1 ? 'reply' : 'replies'}
