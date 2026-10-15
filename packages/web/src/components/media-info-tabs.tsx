@@ -2,7 +2,7 @@ import { Tabs } from '@base-ui/react/tabs';
 import type { UploadLicense } from '@letschurch/db/types';
 import {
   IconClock,
-  IconExternalLink,
+  IconArrowUpRight,
   IconSearch,
   IconSparkles,
 } from '@tabler/icons-react';
@@ -299,7 +299,7 @@ export function MediaInfoTabs({
                     className="text-primary inline-flex items-center gap-1 font-medium hover:underline"
                   >
                     {group.ref}
-                    <IconExternalLink
+                    <IconArrowUpRight
                       size={12}
                       aria-hidden="true"
                       className="text-primary/50"

@@ -1,7 +1,7 @@
 import {
   IconCalendarCancel,
   IconEdit,
-  IconExternalLink,
+  IconArrowUpRight,
   IconFileText,
   IconRefresh,
 } from '@tabler/icons-react';
@@ -169,7 +169,7 @@ function DonationsPage() {
                   <Button
                     variant="light"
                     size="sm"
-                    leftSection={<IconExternalLink size={16} />}
+                    leftSection={<IconArrowUpRight size={16} />}
                     loading={
                       portalMutation.isPending &&
                       portalMutation.variables?.subscriptionId ===

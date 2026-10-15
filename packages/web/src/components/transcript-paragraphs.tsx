@@ -3,7 +3,7 @@ import {
   IconBible,
   IconCheck,
   IconChevronDown,
-  IconExternalLink,
+  IconArrowUpRight,
   IconLink,
   IconSearch,
 } from '@tabler/icons-react';
@@ -627,7 +627,7 @@ const ParagraphView = memo(function ParagraphView({
                   >
                     <IconBible size={12} aria-hidden="true" />
                     {pill.ref}
-                    <IconExternalLink
+                    <IconArrowUpRight
                       size={12}
                       aria-hidden="true"
                       className="opacity-60"

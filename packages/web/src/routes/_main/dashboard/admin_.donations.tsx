@@ -1,6 +1,6 @@
 import {
   IconDownload,
-  IconExternalLink,
+  IconArrowUpRight,
   IconRefresh,
   IconUpload,
 } from '@tabler/icons-react';
@@ -603,7 +603,7 @@ function AdminDonationsPage() {
                         <Button
                           size="xs"
                           variant="light"
-                          leftSection={<IconExternalLink size={14} />}
+                          leftSection={<IconArrowUpRight size={14} />}
                           loading={
                             portalMutation.isPending &&
                             portalMutation.variables?.subscriptionId ===
