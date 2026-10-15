@@ -20,6 +20,14 @@ const ORGANIZATION_INDEX = 'lc_organizations';
 // How often to poll the update-by-query task (and heartbeat while waiting).
 const TASK_POLL_MS = 2_000;
 
+// Media docs are large (~2.4 MB average _source: nested paragraph and window
+// vectors), and update-by-query holds a whole scroll batch of sources in heap.
+// Its default batch of 1,000 docs is ~2.4 GB, which OOM-killed the 4 GB-heap
+// node when syncing Sermon Index (36k docs). Keep batches small and throttle
+// the rewrite rate so a channel-wide change trickles through.
+const UPDATE_BATCH_SIZE = 25;
+const UPDATE_DOCS_PER_SECOND = 25;
+
 /**
  * Bring a channel's search documents in line with its DB row: the standalone
  * lc_channels doc, plus the channel fields every lc_media_v1 doc denormalizes
@@ -59,13 +67,49 @@ export async function syncChannelDocuments(channelId: string): Promise<number> {
 
   await indexDocument('channel', channelId);
 
+  // Same escaping index-document applies to these fields.
+  const fields = escapeDocument({
+    name: channel.name,
+    visibility: channel.visibility,
+    approvedAt: channel.approvedAt?.toISOString() ?? null,
+  });
+
   const started = await esClient.updateByQuery({
     index: MEDIA_INDEX,
     conflicts: 'proceed',
     refresh: true,
     wait_for_completion: false,
+    scroll_size: UPDATE_BATCH_SIZE,
+    requests_per_second: UPDATE_DOCS_PER_SECOND,
     body: {
-      query: { term: { channelId } },
+      // Only docs whose copy differs. Matching docs are never loaded, so a
+      // no-op sync over a large channel is a cheap query, not a full scan of
+      // its sources. The script's noop check still covers anything the query
+      // can't express (e.g. a name over the keyword field's ignore_above).
+      query: {
+        bool: {
+          filter: [{ term: { channelId } }],
+          must_not: [
+            {
+              bool: {
+                filter: [
+                  { term: { 'channelName.keyword': fields.name } },
+                  { term: { channelVisibility: fields.visibility } },
+                  fields.approvedAt
+                    ? { term: { channelApprovedAt: fields.approvedAt } }
+                    : {
+                        bool: {
+                          must_not: [
+                            { exists: { field: 'channelApprovedAt' } },
+                          ],
+                        },
+                      },
+                ],
+              },
+            },
+          ],
+        },
+      },
       script: {
         lang: 'painless',
         source: `
@@ -79,12 +123,7 @@ export async function syncChannelDocuments(channelId: string): Promise<number> {
             ctx._source.channelApprovedAt = params.approvedAt;
           }
         `,
-        // Same escaping index-document applies to these fields.
-        params: escapeDocument({
-          name: channel.name,
-          visibility: channel.visibility,
-          approvedAt: channel.approvedAt?.toISOString() ?? null,
-        }),
+        params: fields,
       },
     },
   });

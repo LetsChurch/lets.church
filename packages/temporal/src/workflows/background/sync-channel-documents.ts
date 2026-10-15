@@ -5,9 +5,10 @@ import { BACKGROUND_QUEUE } from '../../queues';
 import { emptySignal } from '../../refs';
 
 const { syncChannelDocuments } = proxyActivities<typeof activities>({
-  // One update-by-query over the channel's media docs; a large channel can take
-  // a few minutes. The activity heartbeats while it polls the task.
-  startToCloseTimeout: '1 hour',
+  // One throttled update-by-query over the channel's out-of-date media docs; a
+  // channel-wide change on the largest channel (~37k docs at 25 docs/s) takes
+  // ~25 minutes. The activity heartbeats while it polls the task.
+  startToCloseTimeout: '2 hours',
   heartbeatTimeout: '1 minute',
   taskQueue: BACKGROUND_QUEUE,
   retry: { maximumAttempts: 5 },
