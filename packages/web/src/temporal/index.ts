@@ -77,6 +77,7 @@ import { createRequire } from 'node:module';
 // Runtime signal/query refs (plain { type, name } objects — no @temporalio/workflow dep).
 import {
   completeResetPasswordSignal,
+  emptySignal,
   getBackfillFilenamesProgressQuery,
   getBackfillProgressQuery,
   getBackfillSizesProgressQuery,
@@ -1409,18 +1410,57 @@ export async function triggerHistoricalImport(
   });
 }
 
-// Re-index a single upload's lc_media_v1 document (e.g. after a speaker
-// attribution/label change). Same `indexDocumentWorkflow` the media pipeline
-// runs at the end of processing; the workflow id dedupes concurrent requests
-// for the same upload (an in-flight run picks up the change via its signal
-// loop, but a fresh start is fine when none is running).
-export async function startIndexMediaDocument(uploadRecordId: string) {
-  return startBackground('indexDocumentWorkflow', {
+// (Re-)index one search document — an upload's lc_media_v1 doc, or an
+// lc_organizations / lc_channels doc. Signal-with-start on a stable id: if an
+// index run for the same document is already in flight, it's signalled and
+// runs once more, so the final pass always reads the row as of this call
+// (a plain start would either fail on the duplicate id or let the in-flight run
+// finish with pre-edit data).
+export async function startIndexDocument(
+  kind: 'media' | 'organization' | 'channel',
+  id: string,
+) {
+  return signalWithStartBackground('indexDocumentWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_USER },
-    workflowId: `indexDocument:media:${uploadRecordId}`,
-    args: ['media', uploadRecordId],
+    workflowId: `indexDocument:${kind}:${id}`,
+    args: [kind, id],
+    signal: emptySignal,
+    signalArgs: [],
+  });
+}
+
+export async function startIndexMediaDocument(uploadRecordId: string) {
+  return startIndexDocument('media', uploadRecordId);
+}
+
+// Sync a channel's lc_channels doc and the channel fields denormalized onto its
+// uploads' lc_media_v1 docs (name, visibility, approval). Same signal-with-start
+// coalescing as startIndexDocument.
+export async function startSyncChannelDocuments(channelId: string) {
+  return signalWithStartBackground('syncChannelDocumentsWorkflow', {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_USER },
+    workflowId: `syncChannelDocuments:${channelId}`,
+    args: [channelId],
+    signal: emptySignal,
+    signalArgs: [],
+  });
+}
+
+// Remove a standalone channel/organization search doc after its row is gone.
+export async function startDeleteSearchDocument(
+  kind: 'channel' | 'organization',
+  id: string,
+) {
+  return startBackground('deleteSearchDocumentWorkflow', {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_USER },
+    workflowId: `deleteSearchDocument:${kind}:${id}:${randomUUID()}`,
+    args: [kind, id],
   });
 }
 

@@ -114,6 +114,7 @@ import { coverImageFull, thumbnailMedium } from '@/util/image-sizes';
 import logger from '@/util/logger';
 import { startMultipartUpload } from '@/util/media-multipart';
 import { escapeLikePattern } from '@/util/misc';
+import { reindexUploads } from '@/util/search-sync';
 import {
   getPublicImageUrl,
   getPublicMediaUrl,
@@ -275,36 +276,6 @@ async function reindexSpeakerUploads(speakerId: string): Promise<void> {
   await Promise.all(
     uploads.map((u) => startIndexMediaDocument(u.uploadRecordId)),
   );
-}
-
-// Re-index uploads after a dashboard edit that changes indexed fields
-// (visibility, title, description, publishedAt, …). lc_media_v1 denormalizes
-// these and its access filter reads `visibility`, so skipping this leaves a
-// published upload invisible to search/ask until something else reindexes it.
-// Best-effort: the DB write already succeeded, so a Temporal hiccup is logged
-// rather than failing the save. An already-running index run for the same
-// upload is fine to skip — it reads the row fresh.
-async function reindexEditedUploads(uploadRecordIds: string[]): Promise<void> {
-  const results = await Promise.allSettled(
-    uploadRecordIds.map((id) => startIndexMediaDocument(id)),
-  );
-  for (const [i, r] of results.entries()) {
-    if (r.status === 'fulfilled') continue;
-    const err = r.reason;
-    if (
-      err instanceof Error &&
-      err.name === 'WorkflowExecutionAlreadyStartedError'
-    ) {
-      continue;
-    }
-    moduleLogger.warn(
-      {
-        uploadRecordId: uploadRecordIds[i],
-        err: err instanceof Error ? err : new Error(String(err)),
-      },
-      'Failed to start media reindex after upload edit',
-    );
-  }
 }
 
 // Site admins may act on any channel's links/requests regardless of ownership.
@@ -2554,7 +2525,7 @@ export const channelRouter = router({
           ),
         );
 
-      await reindexEditedUploads(input.uploadIds);
+      await reindexUploads(input.uploadIds);
 
       return {
         success: true,
@@ -2897,7 +2868,7 @@ export const channelRouter = router({
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
       }
 
-      await reindexEditedUploads([updatedUpload.id]);
+      await reindexUploads([updatedUpload.id]);
 
       return { success: true, upload: updatedUpload };
     }),
