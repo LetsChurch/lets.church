@@ -158,7 +158,7 @@ CMD ["pnpm", "--filter", "@letschurch/transcode-worker", "run", "start"]
 # AMD documents anonymous AMA 1.5.0 APT access, but the feed can become
 # unavailable or reject anonymous requests. Preserve the vendor runtime from
 # the immutable, production-proven image instead of depending on it per build.
-FROM registry.gitlab.com/letschurch/lets.church/transcode-worker-ama@sha256:f61772649d198da2447c273207069180304fc401420b34aae5afebe81af164bd AS ama-sdk-1-5-0
+FROM registry.gitlab.com/letschurch/lets.church/transcode-worker-ama@sha256:09b65fe5f8f68c5cb43607a91b248ebf4409b48ff55df1ee3dfc67e47129d73f AS ama-sdk-1-5-0
 
 FROM ubuntu:22.04 AS transcode-worker-ama
 ARG DEBIAN_FRONTEND=noninteractive
