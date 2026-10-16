@@ -1,4 +1,6 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { AnswerStreamEvent } from '@/trpc/answer-relay';
 
 import {
   channelChunk,
@@ -7,64 +9,49 @@ import {
 } from './answer-stream';
 import {
   DigDeeperRateLimitError,
+  readDigDeeperTurn,
   requestDigDeeperTurn,
 } from './dig-deeper-client';
 
-afterEach(() => {
-  vi.unstubAllGlobals();
+const { mutate } = vi.hoisted(() => ({ mutate: vi.fn() }));
+vi.mock('@/trpc/react', () => ({
+  trpcClient: { search: { digDeeper: { mutate } } },
+}));
+
+beforeEach(() => {
+  mutate.mockReset();
 });
 
-function chunkedResponse(text: string, chunkSize = 1): Response {
-  const bytes = new TextEncoder().encode(text);
-  return new Response(
-    new ReadableStream<Uint8Array>({
-      start(controller) {
-        for (let i = 0; i < bytes.length; i += chunkSize) {
-          controller.enqueue(bytes.slice(i, i + chunkSize));
-        }
-        controller.close();
-      },
-    }),
-  );
+// Emit `raw` as text events of `chunkSize` characters, like the relayed stream.
+async function* textEvents(
+  raw: string,
+  chunkSize = 1,
+): AsyncGenerator<AnswerStreamEvent> {
+  for (let i = 0; i < raw.length; i += chunkSize) {
+    yield { type: 'text', text: raw.slice(i, i + chunkSize) };
+  }
 }
 
-function run(onText = vi.fn()) {
-  return requestDigDeeperTurn({
-    messages: [{ role: 'user', content: 'Who is Clementine?' }],
-    threadId: 'thread',
-    resourceId: 'resource',
-    signal: new AbortController().signal,
-    onText,
-  });
-}
-
-describe('requestDigDeeperTurn', () => {
-  it('decodes arbitrary byte boundaries and requires a done terminal', async () => {
+describe('readDigDeeperTurn', () => {
+  it('accumulates text events and requires a done terminal', async () => {
     const raw =
       `[]${SOURCES_DELIMITER}` +
       channelChunk('a', 'Clementine’s answer is grounded.') +
       terminalChunk({ status: 'done' });
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => chunkedResponse(raw)),
-    );
     const onText = vi.fn();
 
-    await expect(run(onText)).resolves.toEqual({ status: 'done' });
+    await expect(readDigDeeperTurn(textEvents(raw), onText)).resolves.toEqual({
+      status: 'done',
+    });
     expect(onText).toHaveBeenLastCalledWith(raw);
   });
 
-  it('treats a bare EOF as a stream error', async () => {
+  it('treats a stream without a terminal as a stream error', async () => {
     const raw = `[]${SOURCES_DELIMITER}${channelChunk('a', 'Partial answer.')}`;
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => chunkedResponse(raw, 8)),
-    );
 
-    await expect(run()).resolves.toEqual({
-      status: 'error',
-      reason: 'stream-error',
-    });
+    await expect(
+      readDigDeeperTurn(textEvents(raw, 8), vi.fn()),
+    ).resolves.toEqual({ status: 'error', reason: 'stream-error' });
   });
 
   it('returns an explicit server error terminal', async () => {
@@ -72,57 +59,47 @@ describe('requestDigDeeperTurn', () => {
       `[]${SOURCES_DELIMITER}` +
       channelChunk('a', 'Partial answer.') +
       terminalChunk({ status: 'error', reason: 'timeout' });
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => chunkedResponse(raw, 5)),
-    );
 
-    await expect(run()).resolves.toEqual({
-      status: 'error',
-      reason: 'timeout',
-    });
+    await expect(
+      readDigDeeperTurn(textEvents(raw, 5), vi.fn()),
+    ).resolves.toEqual({ status: 'error', reason: 'timeout' });
   });
 
   it('surfaces rate limits with the server retry delay', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(
-        async () =>
-          new Response('Slow down', {
-            status: 429,
-            headers: { 'Retry-After': '23' },
-          }),
-      ),
-    );
+    async function* limited(): AsyncGenerator<AnswerStreamEvent> {
+      yield { type: 'rate-limited', retryAfterSeconds: 23 };
+    }
 
-    const error = await run().catch((caught: unknown) => caught);
+    const error = await readDigDeeperTurn(limited(), vi.fn()).catch(
+      (caught: unknown) => caught,
+    );
     expect(error).toBeInstanceOf(DigDeeperRateLimitError);
     expect(error).toMatchObject({ retryAfterSeconds: 23 });
   });
+});
 
-  it('passes cancellation through to fetch', async () => {
+describe('requestDigDeeperTurn', () => {
+  it('calls the streaming procedure and passes cancellation through', async () => {
+    const raw = `[]${SOURCES_DELIMITER}` + terminalChunk({ status: 'done' });
+    mutate.mockResolvedValue(textEvents(raw));
     const controller = new AbortController();
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(
-        (_input: RequestInfo | URL, init?: RequestInit) =>
-          new Promise<Response>((_resolve, reject) => {
-            init?.signal?.addEventListener('abort', () => {
-              reject(new DOMException('Aborted', 'AbortError'));
-            });
-          }),
-      ),
+
+    await expect(
+      requestDigDeeperTurn({
+        messages: [{ role: 'user', content: 'Question' }],
+        threadId: 'thread',
+        resourceId: 'resource',
+        signal: controller.signal,
+        onText: vi.fn(),
+      }),
+    ).resolves.toEqual({ status: 'done' });
+    expect(mutate).toHaveBeenCalledWith(
+      {
+        messages: [{ role: 'user', content: 'Question' }],
+        threadId: 'thread',
+        resourceId: 'resource',
+      },
+      { signal: controller.signal },
     );
-
-    const pending = requestDigDeeperTurn({
-      messages: [{ role: 'user', content: 'Question' }],
-      threadId: 'thread',
-      resourceId: 'resource',
-      signal: controller.signal,
-      onText: vi.fn(),
-    });
-    controller.abort();
-
-    await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
   });
 });

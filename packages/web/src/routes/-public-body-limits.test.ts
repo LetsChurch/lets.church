@@ -1,14 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { enforceAiRateLimit, unwrapMuxWebhook } = vi.hoisted(() => ({
-  enforceAiRateLimit: vi.fn(),
+const { unwrapMuxWebhook } = vi.hoisted(() => ({
   unwrapMuxWebhook: vi.fn(),
 }));
 
-vi.mock('@/ai/abuse-control', () => ({
-  aiRateLimitResponse: () => new Response('limited', { status: 429 }),
-  enforceAiRateLimit,
-}));
 vi.mock('@/util/logger', () => ({
   default: {
     child: () => ({
@@ -34,14 +29,6 @@ vi.mock('@letschurch/db', () => ({
   db: {},
 }));
 
-import {
-  DIG_DEEPER_MAX_BODY_BYTES,
-  Route as DigDeeperRoute,
-} from './api/dig-deeper';
-import {
-  Route as SearchAnswerRoute,
-  SEARCH_ANSWER_MAX_BODY_BYTES,
-} from './api/search-answer';
 import { MUX_WEBHOOK_MAX_BODY_BYTES, Route as MuxRoute } from './webhooks_/mux';
 type PostHandler = (context: { request: Request }) => Promise<Response>;
 
@@ -78,87 +65,11 @@ function streamedOverflowRequest(body: string): Request {
   } as RequestInit & { duplex: 'half' });
 }
 
-const validSearchBody = JSON.stringify({
-  query: 'grace',
-  threadId: 'thread',
-  resourceId: 'browser',
-});
-const validDigBody = JSON.stringify({
-  messages: [{ role: 'user', content: 'Tell me more' }],
-  threadId: 'thread',
-  resourceId: 'browser',
-});
-
 beforeEach(() => {
-  enforceAiRateLimit.mockReset().mockResolvedValue({
-    allowed: false,
-    limitedBy: 'resource',
-    retryAfterSeconds: 10,
-  });
   unwrapMuxWebhook.mockReset().mockResolvedValue({ type: 'ignored', data: {} });
 });
 
 describe('public route request body limits', () => {
-  it.each([
-    [
-      'search answer',
-      SearchAnswerRoute,
-      validSearchBody,
-      SEARCH_ANSWER_MAX_BODY_BYTES,
-    ],
-    ['dig deeper', DigDeeperRoute, validDigBody, DIG_DEEPER_MAX_BODY_BYTES],
-  ] as const)(
-    'rejects declared overflow before expensive work for %s',
-    async (_name, route, body, limit) => {
-      const response = await postHandler(route)({
-        request: declaredOverflowRequest(body, limit),
-      });
-
-      expect(response.status).toBe(413);
-      expect(enforceAiRateLimit).not.toHaveBeenCalled();
-    },
-  );
-
-  it.each([
-    [
-      'search answer',
-      SearchAnswerRoute,
-      validSearchBody,
-      SEARCH_ANSWER_MAX_BODY_BYTES,
-    ],
-    ['dig deeper', DigDeeperRoute, validDigBody, DIG_DEEPER_MAX_BODY_BYTES],
-  ] as const)(
-    'rejects streamed overflow before expensive work for %s',
-    async (_name, route, body, limit) => {
-      const oversized =
-        body.slice(0, -1) + `,"padding":"${'x'.repeat(limit)}"}`;
-      const response = await postHandler(route)({
-        request: streamedOverflowRequest(oversized),
-      });
-
-      expect(response.status).toBe(413);
-      expect(enforceAiRateLimit).not.toHaveBeenCalled();
-    },
-  );
-
-  it.each([
-    ['search answer', SearchAnswerRoute],
-    ['dig deeper', DigDeeperRoute],
-  ] as const)(
-    'preserves malformed under-limit JSON as 400 for %s',
-    async (_name, route) => {
-      const response = await postHandler(route)({
-        request: new Request('https://example.com', {
-          method: 'POST',
-          body: '{',
-        }),
-      });
-
-      expect(response.status).toBe(400);
-      expect(enforceAiRateLimit).not.toHaveBeenCalled();
-    },
-  );
-
   it('rejects declared Mux overflow before loading the signature verifier', async () => {
     const response = await postHandler(MuxRoute)({
       request: declaredOverflowRequest('{}', MUX_WEBHOOK_MAX_BODY_BYTES),

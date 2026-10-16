@@ -68,6 +68,8 @@ vi.mock('@/schemas/common', () => ({
   IncomingIdSchema: { parse: (value: unknown) => value },
 }));
 
+import { DIG_DEEPER_MAX_BODY_BYTES } from '@/trpc/body-limits';
+
 import {
   MEDIA_FOR_VERSE_MAX_BODY_BYTES,
   Route as MediaForVerseRoute,
@@ -241,6 +243,25 @@ describe('web tRPC body boundary', () => {
       expect(fetchRequestHandler).not.toHaveBeenCalled();
     },
   );
+
+  it('caps the streaming AI procedures far below the bulk-import ceiling', async () => {
+    const url = 'https://example.com/trpc/search.digDeeper?batch=1';
+    const atCap = await handlers(TrpcRoute).POST({
+      request: requestWithDeclaredLength('{}', DIG_DEEPER_MAX_BODY_BYTES, url),
+    });
+    expect(atCap.status).toBe(204);
+
+    fetchRequestHandler.mockClear();
+    const over = await handlers(TrpcRoute).POST({
+      request: requestWithDeclaredLength(
+        '{}',
+        DIG_DEEPER_MAX_BODY_BYTES + 1,
+        url,
+      ),
+    });
+    expect(over.status).toBe(413);
+    expect(fetchRequestHandler).not.toHaveBeenCalled();
+  });
 
   it.each([
     ['malformed JSON', '{'],

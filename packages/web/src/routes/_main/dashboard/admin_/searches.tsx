@@ -15,7 +15,7 @@ import { useTRPC } from '@/trpc/react';
 
 // The search_log_entry `params` jsonb. hybridSearch creates the row; searchMeta
 // merges the structured LLM parse under `parsed`, and the answer route appends
-// the final answer under `answer` (see routes/api/search-answer.ts).
+// the final answer under `answer` (see ai/search-answer.server.ts).
 type ParsedQuery = {
   questions?: string[];
   keywords?: string[];

@@ -1,10 +1,6 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { shouldOfferDigDeeper, streamAnswerWithRetry } from './answer-panel';
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
 
 describe('shouldOfferDigDeeper', () => {
   it('offers chat continuation for every settled non-facet answer', () => {
@@ -23,22 +19,20 @@ describe('shouldOfferDigDeeper', () => {
   });
 
   it('does not retry an intentional rate-limit response', async () => {
-    const fetchMock = vi.fn(
-      async () =>
-        new Response('Slow down', {
-          status: 429,
-          headers: { 'Retry-After': '10' },
-        }),
+    const request = vi.fn(async () =>
+      (async function* () {
+        yield { type: 'rate-limited' as const, retryAfterSeconds: 10 };
+      })(),
     );
-    vi.stubGlobal('fetch', fetchMock);
 
     await expect(
       streamAnswerWithRetry(
-        { query: 'Question' },
+        { query: 'Question', threadId: 'thread', resourceId: 'browser' },
         new AbortController().signal,
         vi.fn(),
+        request,
       ),
     ).resolves.toBe('rate-limited');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(request).toHaveBeenCalledTimes(1);
   });
 });

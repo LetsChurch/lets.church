@@ -33,8 +33,6 @@ import { Route as AuthLogoutRouteImport } from './routes/auth_/logout'
 import { Route as AuthLoginRouteImport } from './routes/auth_/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth_/forgot-password'
 import { Route as AuthEmailSignInRouteImport } from './routes/auth_/email-sign-in'
-import { Route as ApiSearchAnswerRouteImport } from './routes/api/search-answer'
-import { Route as ApiDigDeeperRouteImport } from './routes/api/dig-deeper'
 import { Route as MainSearchRouteImport } from './routes/_main/search'
 import { Route as MainLibraryRouteImport } from './routes/_main/library'
 import { Route as MainHistoryRouteImport } from './routes/_main/history'
@@ -257,16 +255,6 @@ const AuthEmailSignInRoute = AuthEmailSignInRouteImport.update({
   id: '/email-sign-in',
   path: '/email-sign-in',
   getParentRoute: () => AuthRoute,
-} as any)
-const ApiSearchAnswerRoute = ApiSearchAnswerRouteImport.update({
-  id: '/api/search-answer',
-  path: '/api/search-answer',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiDigDeeperRoute = ApiDigDeeperRouteImport.update({
-  id: '/api/dig-deeper',
-  path: '/api/dig-deeper',
-  getParentRoute: () => rootRouteImport,
 } as any)
 const MainSearchRoute = MainSearchRouteImport.update({
   id: '/search',
@@ -863,8 +851,6 @@ export interface FileRoutesByFullPath {
   '/history': typeof MainHistoryRoute
   '/library': typeof MainLibraryRoute
   '/search': typeof MainSearchRoute
-  '/api/dig-deeper': typeof ApiDigDeeperRoute
-  '/api/search-answer': typeof ApiSearchAnswerRoute
   '/auth/email-sign-in': typeof AuthEmailSignInRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
@@ -990,8 +976,6 @@ export interface FileRoutesByTo {
   '/history': typeof MainHistoryRoute
   '/library': typeof MainLibraryRoute
   '/search': typeof MainSearchRoute
-  '/api/dig-deeper': typeof ApiDigDeeperRoute
-  '/api/search-answer': typeof ApiSearchAnswerRoute
   '/auth/email-sign-in': typeof AuthEmailSignInRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
@@ -1122,8 +1106,6 @@ export interface FileRoutesById {
   '/_main/history': typeof MainHistoryRoute
   '/_main/library': typeof MainLibraryRoute
   '/_main/search': typeof MainSearchRoute
-  '/api/dig-deeper': typeof ApiDigDeeperRoute
-  '/api/search-answer': typeof ApiSearchAnswerRoute
   '/auth_/email-sign-in': typeof AuthEmailSignInRoute
   '/auth_/forgot-password': typeof AuthForgotPasswordRoute
   '/auth_/login': typeof AuthLoginRoute
@@ -1255,8 +1237,6 @@ export interface FileRouteTypes {
     | '/history'
     | '/library'
     | '/search'
-    | '/api/dig-deeper'
-    | '/api/search-answer'
     | '/auth/email-sign-in'
     | '/auth/forgot-password'
     | '/auth/login'
@@ -1382,8 +1362,6 @@ export interface FileRouteTypes {
     | '/history'
     | '/library'
     | '/search'
-    | '/api/dig-deeper'
-    | '/api/search-answer'
     | '/auth/email-sign-in'
     | '/auth/forgot-password'
     | '/auth/login'
@@ -1513,8 +1491,6 @@ export interface FileRouteTypes {
     | '/_main/history'
     | '/_main/library'
     | '/_main/search'
-    | '/api/dig-deeper'
-    | '/api/search-answer'
     | '/auth_/email-sign-in'
     | '/auth_/forgot-password'
     | '/auth_/login'
@@ -1634,8 +1610,6 @@ export interface RootRouteChildren {
   DotwellKnownJwksDotjsonRoute: typeof DotwellKnownJwksDotjsonRoute
   DotwellKnownOpenaiAppsChallengeRoute: typeof DotwellKnownOpenaiAppsChallengeRoute
   DotwellKnownOpenidConfigurationRoute: typeof DotwellKnownOpenidConfigurationRoute
-  ApiDigDeeperRoute: typeof ApiDigDeeperRoute
-  ApiSearchAnswerRoute: typeof ApiSearchAnswerRoute
   EmbedChurchesRoute: typeof EmbedChurchesRoute
   InvitationsAcceptRoute: typeof InvitationsAcceptRoute
   InvitationsExpiredRoute: typeof InvitationsExpiredRoute
@@ -1831,20 +1805,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth/email-sign-in'
       preLoaderRoute: typeof AuthEmailSignInRouteImport
       parentRoute: typeof AuthRoute
-    }
-    '/api/search-answer': {
-      id: '/api/search-answer'
-      path: '/api/search-answer'
-      fullPath: '/api/search-answer'
-      preLoaderRoute: typeof ApiSearchAnswerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/dig-deeper': {
-      id: '/api/dig-deeper'
-      path: '/api/dig-deeper'
-      fullPath: '/api/dig-deeper'
-      preLoaderRoute: typeof ApiDigDeeperRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/_main/search': {
       id: '/_main/search'
@@ -2832,8 +2792,6 @@ const rootRouteChildren: RootRouteChildren = {
   DotwellKnownJwksDotjsonRoute: DotwellKnownJwksDotjsonRoute,
   DotwellKnownOpenaiAppsChallengeRoute: DotwellKnownOpenaiAppsChallengeRoute,
   DotwellKnownOpenidConfigurationRoute: DotwellKnownOpenidConfigurationRoute,
-  ApiDigDeeperRoute: ApiDigDeeperRoute,
-  ApiSearchAnswerRoute: ApiSearchAnswerRoute,
   EmbedChurchesRoute: EmbedChurchesRoute,
   InvitationsAcceptRoute: InvitationsAcceptRoute,
   InvitationsExpiredRoute: InvitationsExpiredRoute,

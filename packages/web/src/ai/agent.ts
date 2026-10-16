@@ -66,8 +66,8 @@ export const detectiveTools = {
   recallWindows: recallWindowsTool,
 };
 
-// System prompt for the "Dig Deeper" conversational search (the /api/dig-deeper
-// route + the /dig-deeper chat). Multi-turn, and it ALWAYS digs — every turn has
+// System prompt for the "Dig Deeper" conversational search (the
+// `search.digDeeper` procedure + the /dig-deeper chat). Multi-turn, and it ALWAYS digs — every turn has
 // the full detective tool set and is told to search hard, so there's no manual
 // "dig deeper" step. The base grounding / worldview / citation / injection rules
 // in INSTRUCTIONS still apply (incl. the [upload:…] cite-token format, which the

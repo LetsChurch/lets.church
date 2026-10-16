@@ -1,4 +1,5 @@
-// Shared protocol between the /api/search-answer route and the AnswerPanel.
+// Shared protocol between the streaming answer procedures (`search.answer`,
+// `search.digDeeper`) and the AnswerPanel / Dig Deeper chat.
 // The streamed response is: <JSON AnswerSource[]><DELIMITER><body>. The delimiter
 // is an ASCII Record Separator (0x1e) — it can't appear in the model's markdown,
 // so the client can split the sources block from the body cleanly. Kept

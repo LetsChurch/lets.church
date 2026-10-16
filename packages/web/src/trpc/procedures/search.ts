@@ -39,6 +39,7 @@ import {
 } from '../search/query-suggestions';
 import { generateRelatedSearches } from '../search/related-searches';
 import { authProcedure, publicProcedure } from '../trpc';
+import { searchAiProcedures } from './search-ai';
 
 const moduleLogger = logger.child({
   module: 'trpc/procedures/search',
@@ -390,6 +391,7 @@ async function channelSlugsToIds(slugs: string[]): Promise<string[]> {
 }
 
 export const searchProcedures = {
+  ...searchAiProcedures,
   getUploadThumbnail: publicProcedure
     .input(uploadThumbnailSchema)
     .query(async ({ input }) => {
@@ -741,7 +743,7 @@ export const searchProcedures = {
 
       // Log the search (initial page only, skip for admins inspecting logs).
       // The row id is handed back so the answer route can append the final
-      // answer to this same row's params (see /api/search-answer).
+      // answer to this same row's params (see ai/search-answer.server.ts).
       let searchLogId: string | null = null;
       try {
         const isAdmin = ctx.session?.appUser?.role === 'ADMIN';

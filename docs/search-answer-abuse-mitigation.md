@@ -1,7 +1,9 @@
 # Abuse mitigation for the AI answer endpoints
 
-Status: **token-bucket rate limiting implemented** for `/api/search-answer` and
-`/api/dig-deeper`; proof-of-work and a global spend cap remain future layers.
+Status: **token-bucket rate limiting implemented** for the streaming
+`search.answer` and `search.digDeeper` tRPC procedures (formerly
+`/api/search-answer` and `/api/dig-deeper`); proof-of-work and a global spend
+cap remain future layers.
 
 ## Threat
 

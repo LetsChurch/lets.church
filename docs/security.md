@@ -97,7 +97,10 @@ Every anonymous paid-model entry point must call `enforceAiRateLimit` before
 provider work or a cache lookup that can miss into provider work. This includes
 deep `search.hybridSearch` calls plus `search.searchMeta`, `search.warmEmbed`,
 and `search.suggestQueries`; their bounded tRPC schemas are the allocation and
-downstream-quota boundary.
+downstream-quota boundary. The streaming `search.answer` and `search.digDeeper`
+procedures charge the limiter for every caller, and `trpcMaxBodyBytes`
+(`trpc/body-limits.ts`) caps their request bodies at 96 KiB and 1.25 MiB per
+batched call instead of the 129 MiB tRPC default.
 
 Per-client limiters key on the trusted client IP. A caller may pass a finer
 `RateLimitSubject` (via `ctx.rateLimitSubject` → `clientBuckets`) only when it

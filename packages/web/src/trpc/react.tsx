@@ -10,6 +10,7 @@ import { getRequest } from '@tanstack/react-start/server';
 import {
   createTRPCClient,
   httpBatchLink,
+  httpBatchStreamLink,
   httpLink,
   splitLink,
 } from '@trpc/client';
@@ -66,6 +67,13 @@ const sharedLinkOpts = {
   },
 };
 
+// Procedures that stream their output (async generators yielding answer
+// chunks). Only `httpBatchStreamLink` can deliver an AsyncIterable to the
+// caller (used here with one call per request); every other call keeps the
+// plain batching link. Must match the
+// procedure names in trpc/procedures/search-ai.ts.
+const STREAMING_PATHS = new Set(['search.answer', 'search.digDeeper']);
+
 export const trpcClient = createTRPCClient<AppRouter>({
   links: [
     // Route long-running LLM-eval calls through the non-batching httpLink
@@ -84,11 +92,18 @@ export const trpcClient = createTRPCClient<AppRouter>({
     // regresses to "blocks until the slowest model finishes". Update
     // both sides together.
     splitLink({
-      condition: (op) =>
-        op.type === 'mutation' &&
-        op.path === 'dashboard.admin.evaluateLlmModel',
-      true: httpLink(sharedLinkOpts),
-      false: httpBatchLink(sharedLinkOpts),
+      condition: (op) => STREAMING_PATHS.has(op.path),
+      // One call per request: a batch shares a single HTTP request, so
+      // aborting one answer (a new query, StrictMode's remount) couldn't stop
+      // it server-side.
+      true: httpBatchStreamLink({ ...sharedLinkOpts, maxItems: 1 }),
+      false: splitLink({
+        condition: (op) =>
+          op.type === 'mutation' &&
+          op.path === 'dashboard.admin.evaluateLlmModel',
+        true: httpLink(sharedLinkOpts),
+        false: httpBatchLink(sharedLinkOpts),
+      }),
     }),
   ],
 });

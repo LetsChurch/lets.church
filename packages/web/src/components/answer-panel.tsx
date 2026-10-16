@@ -23,11 +23,13 @@ import {
   answerSourceKey,
   parseAnswerStream,
 } from '@/ai/answer-stream';
+import type { SearchAnswerInput } from '@/ai/search-answer.server';
 import { Avatar } from '@/components/avatar';
 import {
   MediaPreviewScope,
   MediaPreviewTarget,
 } from '@/components/media-preview-link';
+import type { AnswerStreamEvent } from '@/trpc/answer-relay';
 import { formatTime } from '@/util/format';
 
 // useLayoutEffect warns during SSR; fall back to useEffect on the server.
@@ -435,39 +437,40 @@ export type AnswerStatus =
 const ANSWER_MAX_ATTEMPTS = 3;
 const ANSWER_RETRY_MS = 1500;
 
-// POST the answer request and stream the response into `onText`, retrying on a
-// dropped/failed stream. Returns the final UI status; deliberate throttles do
-// not retry. `onText` is reset to '' at the start of each attempt.
+export type SearchAnswerRequest = (
+  input: SearchAnswerInput,
+  signal: AbortSignal,
+) => Promise<AsyncIterable<AnswerStreamEvent>>;
+
+// The streaming `search.answer` procedure. The tRPC client is loaded on demand
+// so this module (and its tests) don't pull in the app's tRPC client setup.
+const requestSearchAnswer: SearchAnswerRequest = async (input, signal) => {
+  const { trpcClient } = await import('@/trpc/react');
+  return trpcClient.search.answer.mutate(input, { signal });
+};
+
+// Request the answer and stream it into `onText`, retrying on a dropped/failed
+// stream. Returns the final UI status; deliberate throttles do not retry.
+// `onText` is reset to '' at the start of each attempt.
 export async function streamAnswerWithRetry(
-  body: unknown,
+  input: SearchAnswerInput,
   signal: AbortSignal,
   onText: (text: string) => void,
+  request: SearchAnswerRequest = requestSearchAnswer,
 ): Promise<'done' | 'error' | 'rate-limited'> {
   for (let attempt = 0; attempt < ANSWER_MAX_ATTEMPTS; attempt++) {
     if (signal.aborted) return 'error';
     onText('');
     try {
-      const res = await fetch('/api/search-answer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        signal,
-      });
-      // A deliberate throttle is not a flaky stream. Retrying it would create
-      // more load and make the user wait through pointless backoff cycles.
-      if (res.status === 429) return 'rate-limited';
-      if (res.ok && res.body) {
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let acc = '';
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          acc += decoder.decode(value, { stream: true });
-          onText(acc);
-        }
-        return 'done';
+      let acc = '';
+      for await (const event of await request(input, signal)) {
+        // A deliberate throttle is not a flaky stream. Retrying it would
+        // create more load and make the user wait through pointless backoff.
+        if (event.type === 'rate-limited') return 'rate-limited';
+        acc += event.text;
+        onText(acc);
       }
+      return 'done';
     } catch {
       if (signal.aborted) return 'error';
     }
@@ -758,6 +761,38 @@ export type AnswerFilters = {
   dateEnd?: string;
 };
 
+type AnswerInputFilters = NonNullable<SearchAnswerInput['filters']>;
+type AnswerDateRange = NonNullable<AnswerInputFilters['dateRange']>;
+
+// Date buckets `search.answer` scopes retrieval to (its input enum).
+const ANSWER_DATE_RANGES: ReadonlySet<string> = new Set<AnswerDateRange>([
+  'all-time',
+  'today',
+  'this-week',
+  'this-month',
+  'this-year',
+]);
+
+// The URL's pre-filled filters as `search.answer` input: arrays copied (the
+// route params are readonly) and an unrecognized date bucket dropped rather
+// than failing the whole request.
+function answerInputFilters(filters: AnswerFilters): AnswerInputFilters {
+  const copy = (values?: ReadonlyArray<string>) =>
+    values ? [...values] : undefined;
+  return {
+    channelSlugs: copy(filters.channelSlugs),
+    speakers: copy(filters.speakers),
+    bibleRefs: copy(filters.bibleRefs),
+    bibleBooks: copy(filters.bibleBooks),
+    dateRange:
+      filters.dateRange && ANSWER_DATE_RANGES.has(filters.dateRange)
+        ? (filters.dateRange as AnswerDateRange)
+        : undefined,
+    dateStart: filters.dateStart,
+    dateEnd: filters.dateEnd,
+  };
+}
+
 export function AnswerPanel({
   q,
   searchLogId,
@@ -811,7 +846,9 @@ export function AnswerPanel({
           threadId: getThreadId(),
           resourceId: getResourceId(),
           searchLogId: searchLogIdRef.current ?? null,
-          filters: filtersRef.current ?? null,
+          filters: filtersRef.current
+            ? answerInputFilters(filtersRef.current)
+            : null,
           facetOnly,
         },
         controller.signal,
@@ -897,7 +934,7 @@ function getVideoThreadId(mediaId: string): string {
 
 /**
  * The "ask about this video" answer view, shown inside the media transcript
- * sidebar (replacing the transcript list). Streams `/api/search-answer` with the
+ * sidebar (replacing the transcript list). Streams `search.answer` with the
  * `uploadId` set so retrieval is scoped to this one video, and wires citations to
  * seek the page's player via `onCite`. Re-streams whenever `question` changes.
  */
