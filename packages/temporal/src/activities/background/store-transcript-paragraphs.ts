@@ -6,7 +6,10 @@ import { invariant } from 'es-toolkit';
 
 import { uploadRecordLocation } from '../../storage/locate';
 import logger from '../../util/logger';
-import { splitOversizedParagraphs } from '../../util/paragraphs';
+import {
+  splitOversizedParagraphs,
+  splitOversizedSegments,
+} from '../../util/paragraphs';
 import {
   type TranscriptJsonSegment,
   transcriptJsonSchema,
@@ -89,7 +92,10 @@ export default async function storeTranscriptParagraphs(
   // non-first segment is flagged isParagraphStart (mirrors the worker's
   // group_paragraphs in services/transcribe/src/vtt.py).
   const markerGroups: TranscriptJsonSegment[][] = [];
-  for (const [i, seg] of parsed.segments.entries()) {
+  // A runaway "sentence" (thousands of unpunctuated words) is split at word
+  // boundaries first, so the paragraph cap below can divide it.
+  const segments = splitOversizedSegments(parsed.segments);
+  for (const [i, seg] of segments.entries()) {
     if (markerGroups.length === 0 || (i > 0 && seg.isParagraphStart)) {
       markerGroups.push([seg]);
     } else {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { splitOversizedParagraphs } from './paragraphs';
+import { splitOversizedParagraphs, splitOversizedSegments } from './paragraphs';
 
 const seg = (n: number, len = 99) => ({ id: n, text: 'x'.repeat(len) });
 const lengths = (groups: { text: string }[][]) =>
@@ -41,5 +41,52 @@ describe('splitOversizedParagraphs', () => {
     expect(out[0]).toEqual(before);
     expect(out.at(-1)).toEqual(after);
     expect(out.slice(1, -1).flat()).toEqual(long);
+  });
+});
+
+describe('splitOversizedSegments', () => {
+  const word = (i: number) => ({ word: `w${i}`, start: i, end: i + 0.5 });
+  const segment = (n: number, isParagraphStart = true) => {
+    const words = Array.from({ length: n }, (_, i) => word(i));
+    return {
+      text: words.map((w) => w.word).join(' '),
+      start: 0,
+      end: n,
+      speaker: 'A',
+      isParagraphStart,
+      words,
+    };
+  };
+
+  test('leaves segments at or under the cap untouched', () => {
+    const seg = segment(5);
+    expect(splitOversizedSegments([seg], 100)).toEqual([seg]);
+  });
+
+  test('splits a runaway segment at word boundaries', () => {
+    // 100 words of 2-3 chars → ~290 chars against a 60 cap.
+    const seg = segment(100);
+    const out = splitOversizedSegments([seg], 60);
+
+    expect(out.length).toBeGreaterThan(1);
+    expect(out.flatMap((s) => s.words)).toEqual(seg.words);
+    expect(out.map((s) => s.text).join(' ')).toBe(seg.text);
+    for (const s of out) {
+      expect(s.text.length).toBeLessThanOrEqual(60);
+      expect(s.start).toBe(s.words[0]?.start);
+      expect(s.end).toBe(s.words.at(-1)?.end);
+      expect(s.speaker).toBe('A');
+    }
+    expect(out[0]?.isParagraphStart).toBe(true);
+    expect(out.slice(1).every((s) => s.isParagraphStart === false)).toBe(true);
+  });
+
+  test('pieces then group-split into capped paragraphs', () => {
+    const out = splitOversizedParagraphs(
+      [splitOversizedSegments([segment(100)], 60)],
+      60,
+    );
+    expect(out.length).toBeGreaterThan(1);
+    for (const len of lengths(out)) expect(len).toBeLessThanOrEqual(61);
   });
 });

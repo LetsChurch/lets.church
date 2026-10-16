@@ -45,3 +45,55 @@ export function splitOversizedParagraphs<T extends { text: string }>(
     return out;
   });
 }
+
+/**
+ * Split any segment longer than `max` characters into roughly equal runs of
+ * its words. Segments are normally single sentences, but the sentence
+ * splitter occasionally returns a whole unpunctuated stretch (35k+ characters,
+ * thousands of words) as one, which `splitOversizedParagraphs` can't divide.
+ * Each piece keeps the segment's speaker and paragraph fields, takes its
+ * timing from its words, and only the first piece keeps `isParagraphStart`.
+ * Piece text is rebuilt from the words, which carry no surrounding whitespace.
+ */
+export function splitOversizedSegments<
+  T extends {
+    text: string;
+    start: number;
+    end: number;
+    isParagraphStart?: boolean | null;
+    words: ReadonlyArray<{ word: string; start: number; end: number }>;
+  },
+>(segments: T[], max = MAX_PARAGRAPH_CHARS): T[] {
+  return segments.flatMap((seg) => {
+    const total = seg.text.trim().length;
+    if (total <= max || seg.words.length < 2) return [seg];
+
+    const target = total / Math.ceil(total / max);
+    const pieces: T['words'][number][][] = [];
+    let current: T['words'][number][] = [];
+    let currentLength = 0;
+    for (const word of seg.words) {
+      const len = word.word.length + 1;
+      if (
+        current.length > 0 &&
+        (currentLength + len > max || currentLength >= target)
+      ) {
+        pieces.push(current);
+        current = [];
+        currentLength = 0;
+      }
+      current.push(word);
+      currentLength += len;
+    }
+    if (current.length > 0) pieces.push(current);
+
+    return pieces.map((words, i) => ({
+      ...seg,
+      text: words.map((w) => w.word).join(' '),
+      start: words[0]?.start ?? seg.start,
+      end: words.at(-1)?.end ?? seg.end,
+      isParagraphStart: i === 0 ? seg.isParagraphStart : false,
+      words,
+    }));
+  });
+}
