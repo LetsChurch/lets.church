@@ -34,6 +34,7 @@ import {
 } from '@/ai/dig-deeper-seed';
 import {
   AnswerCard,
+  type AnswerRating,
   getResourceId,
   getThreadId,
 } from '@/components/answer-panel';
@@ -52,6 +53,8 @@ import { formatTime } from '@/util/format';
 type Turn = DigDeeperHistoryTurn & {
   id: string;
   errorMessage?: string;
+  // A rating the viewer already gave (the handed-over search overview).
+  initialRating?: AnswerRating | null;
 };
 
 export const Route = createFileRoute('/_main/dig-deeper')({
@@ -327,6 +330,7 @@ export function DigDeeperChat({
             id: 'overview',
             question: initialTurn.question,
             raw: initialTurn.raw,
+            initialRating: initialTurn.rating ?? null,
             status: 'done',
           },
         ]
@@ -498,58 +502,67 @@ export function DigDeeperChat({
             </div>
           ) : null}
 
-          {parsedTurns.map(({ turn, answer, reasoning, sources }, i) => (
-            <div
-              key={turn.id}
-              ref={(el) => {
-                turnEls.current[i] = el;
-              }}
-              data-testid={`dig-deeper-turn-${turn.id}`}
-              className="lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-8"
-            >
+          {parsedTurns.map(
+            ({ turn, answer, reasoning, sources, terminal }, i) => (
               <div
+                key={turn.id}
                 ref={(el) => {
-                  if (el) answerEls.current.set(turn.id, el);
-                  else answerEls.current.delete(turn.id);
+                  turnEls.current[i] = el;
                 }}
-                className="min-w-0 space-y-3"
+                data-testid={`dig-deeper-turn-${turn.id}`}
+                className="lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-8"
               >
-                {/* User question */}
-                <div className="flex justify-end">
-                  <p className="text-primary max-w-[80%] rounded-2xl rounded-br-md bg-zinc-100 px-4 py-2 text-sm dark:bg-white/10">
-                    {turn.question}
-                  </p>
+                <div
+                  ref={(el) => {
+                    if (el) answerEls.current.set(turn.id, el);
+                    else answerEls.current.delete(turn.id);
+                  }}
+                  className="min-w-0 space-y-3"
+                >
+                  {/* User question */}
+                  <div className="flex justify-end">
+                    <p className="text-primary max-w-[80%] rounded-2xl rounded-br-md bg-zinc-100 px-4 py-2 text-sm dark:bg-white/10">
+                      {turn.question}
+                    </p>
+                  </div>
+
+                  {/* Assistant answer — its sources sit beside this message on
+                    desktop and directly underneath it on mobile. */}
+                  <AnswerCard
+                    status={turn.status}
+                    answer={answer}
+                    reasoning={reasoning}
+                    sources={sources}
+                    hideSourceChips
+                    errorMessage={turn.errorMessage}
+                    variant="plain"
+                    showActions
+                    initialRating={turn.initialRating}
+                    answerId={
+                      terminal?.status === 'done'
+                        ? terminal.answerId
+                        : undefined
+                    }
+                  />
                 </div>
 
-                {/* Assistant answer — its sources sit beside this message on
-                    desktop and directly underneath it on mobile. */}
-                <AnswerCard
-                  status={turn.status}
-                  answer={answer}
-                  reasoning={reasoning}
-                  sources={sources}
-                  hideSourceChips
-                  errorMessage={turn.errorMessage}
-                  variant="plain"
-                />
+                {sources.length > 0 ? (
+                  <aside
+                    data-testid={`dig-deeper-sources-${turn.id}`}
+                    className="mt-3 lg:sticky lg:top-4 lg:mt-0 lg:max-h-[calc(100dvh-2rem)] lg:self-start lg:overflow-y-auto"
+                  >
+                    <p className="text-muted mb-3 px-1 text-[11px] font-medium tracking-wide uppercase">
+                      Sources
+                    </p>
+                    <SourceRail
+                      sources={sources}
+                      getAnchor={() => answerEls.current.get(turn.id) ?? null}
+                    />
+                  </aside>
+                ) : null}
               </div>
-
-              {sources.length > 0 ? (
-                <aside
-                  data-testid={`dig-deeper-sources-${turn.id}`}
-                  className="mt-3 lg:sticky lg:top-4 lg:mt-0 lg:max-h-[calc(100dvh-2rem)] lg:self-start lg:overflow-y-auto"
-                >
-                  <p className="text-muted mb-3 px-1 text-[11px] font-medium tracking-wide uppercase">
-                    Sources
-                  </p>
-                  <SourceRail
-                    sources={sources}
-                    getAnchor={() => answerEls.current.get(turn.id) ?? null}
-                  />
-                </aside>
-              ) : null}
-            </div>
-          ))}
+            ),
+          )}
         </div>
 
         {/* Composer follows the conversation and shares its desktop grid, so it

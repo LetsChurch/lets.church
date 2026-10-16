@@ -3,8 +3,15 @@ import {
   IconClockHour3,
   IconMessageCircle2,
   IconSearch,
+  IconCheck,
+  IconCopy,
   IconSparkles,
+  IconThumbDown,
+  IconThumbDownFilled,
+  IconThumbUp,
+  IconThumbUpFilled,
 } from '@tabler/icons-react';
+import { useMutation } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import {
   Component,
@@ -25,11 +32,14 @@ import {
 } from '@/ai/answer-stream';
 import type { SearchAnswerInput } from '@/ai/search-answer.server';
 import { Avatar } from '@/components/avatar';
+import { LcTooltip } from '@/components/lc-tooltip';
 import {
   MediaPreviewScope,
   MediaPreviewTarget,
 } from '@/components/media-preview-link';
+import { useCopied } from '@/hooks/use-copied';
 import type { AnswerStreamEvent } from '@/trpc/answer-relay';
+import { useTRPC } from '@/trpc/react';
 import { formatTime } from '@/util/format';
 
 // useLayoutEffect warns during SSR; fall back to useEffect on the server.
@@ -555,6 +565,137 @@ function useShimmerWord(seeking: boolean): string {
   return word;
 }
 
+export type AnswerRating = 'LIKE' | 'DISLIKE';
+
+// The answer as plain prose for the clipboard: drop the [upload:id@sec] citation
+// tokens the cards and badges are built from.
+function answerForClipboard(answer: string): string {
+  return answer
+    .replace(/\s*\[upload:[^\]]*\]/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .trim();
+}
+
+// Colors follow the card's --answer-ink, so the same buttons read on the
+// indigo card and on plain Dig Deeper replies.
+const ACTION_BUTTON =
+  'flex size-8 cursor-pointer items-center justify-center rounded-full text-(--answer-ink)/60 transition-colors hover:bg-(--answer-ink)/10 hover:text-(--answer-ink) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:cursor-not-allowed disabled:opacity-50';
+
+/**
+ * Copy + thumbs up/down under a finished answer, as in Google's AI Mode.
+ * Rating needs the saved answer's id from the stream's terminal frame; an
+ * answer without one (a failed save) only offers copy.
+ */
+function AnswerActions({
+  answer,
+  answerId,
+  initialRating = null,
+  onRatingChange,
+}: {
+  answer: string;
+  answerId?: string;
+  // A rating already given elsewhere (the search overview handed to Dig
+  // Deeper), and a callback so a parent can hand the current one on.
+  initialRating?: AnswerRating | null;
+  onRatingChange?: (rating: AnswerRating | null) => void;
+}) {
+  const trpc = useTRPC();
+  const { copied, copy } = useCopied();
+  const [rating, setRatingState] = useState<AnswerRating | null>(initialRating);
+  const setRating = (next: AnswerRating | null) => {
+    setRatingState(next);
+    onRatingChange?.(next);
+  };
+  const rate = useMutation({
+    mutationFn: trpc.search.rateAnswer.mutationOptions().mutationFn,
+    onMutate: (variables) => {
+      const previous = rating;
+      setRating(variables.rating);
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      setRating(context?.previous ?? null);
+    },
+  });
+
+  const toggle = (next: AnswerRating) => {
+    if (!answerId) return;
+    rate.mutate({ answerId, rating: rating === next ? null : next });
+  };
+
+  return (
+    <LcTooltip.Provider>
+      <div
+        data-testid="answer-actions"
+        className="-ml-2 flex items-center gap-0.5"
+      >
+        <LcTooltip
+          content={copied ? 'Copied' : 'Copy'}
+          render={(props) => (
+            <button
+              {...props}
+              type="button"
+              aria-label="Copy answer"
+              className={ACTION_BUTTON}
+              onClick={() => void copy(answerForClipboard(answer))}
+            >
+              {copied ? (
+                <IconCheck size={18} aria-hidden="true" />
+              ) : (
+                <IconCopy size={18} aria-hidden="true" />
+              )}
+            </button>
+          )}
+        />
+        {answerId ? (
+          <>
+            <LcTooltip
+              content="Good response"
+              render={(props) => (
+                <button
+                  {...props}
+                  type="button"
+                  aria-label="Good response"
+                  aria-pressed={rating === 'LIKE'}
+                  disabled={rate.isPending}
+                  className={ACTION_BUTTON}
+                  onClick={() => toggle('LIKE')}
+                >
+                  {rating === 'LIKE' ? (
+                    <IconThumbUpFilled size={18} aria-hidden="true" />
+                  ) : (
+                    <IconThumbUp size={18} aria-hidden="true" />
+                  )}
+                </button>
+              )}
+            />
+            <LcTooltip
+              content="Bad response"
+              render={(props) => (
+                <button
+                  {...props}
+                  type="button"
+                  aria-label="Bad response"
+                  aria-pressed={rating === 'DISLIKE'}
+                  disabled={rate.isPending}
+                  className={ACTION_BUTTON}
+                  onClick={() => toggle('DISLIKE')}
+                >
+                  {rating === 'DISLIKE' ? (
+                    <IconThumbDownFilled size={18} aria-hidden="true" />
+                  ) : (
+                    <IconThumbDown size={18} aria-hidden="true" />
+                  )}
+                </button>
+              )}
+            />
+          </>
+        ) : null}
+      </div>
+    </LcTooltip.Provider>
+  );
+}
+
 /**
  * The presentational indigo answer card. Pure: given the answer's `status` and
  * the parsed `answer` + `sources`, it renders the right state — shimmering
@@ -573,6 +714,10 @@ export function AnswerCard({
   hideSourceChips = false,
   errorMessage,
   variant = 'card',
+  showActions = false,
+  answerId,
+  initialRating,
+  onRatingChange,
 }: {
   status: AnswerStatus;
   answer: string;
@@ -598,6 +743,12 @@ export function AnswerCard({
   // Dig Deeper conversation, where only the user's messages are bubbles (as in
   // Google's AI Mode). A plain reply is never collapsed behind "See more".
   variant?: 'card' | 'plain';
+  // Copy + thumbs up/down under a finished answer. Rating also needs
+  // `answerId`, the saved answer's id from the stream's terminal frame.
+  showActions?: boolean;
+  answerId?: string;
+  initialRating?: AnswerRating | null;
+  onRatingChange?: (rating: AnswerRating | null) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
@@ -745,6 +896,19 @@ export function AnswerCard({
           Beta
         </span>
       </p>
+      {showActions && status === 'done' && answer ? (
+        <div className="mt-2">
+          {/* Keyed by the saved answer so a different answer never inherits
+              the previous one's rating state. */}
+          <AnswerActions
+            key={answerId ?? 'unsaved'}
+            answer={answer}
+            answerId={answerId}
+            initialRating={initialRating}
+            onRatingChange={onRatingChange}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -820,6 +984,8 @@ export function AnswerPanel({
   facetOnly?: boolean;
 }) {
   const [text, setText] = useState('');
+  // The viewer's rating of this answer, handed on to Dig Deeper.
+  const [rating, setRating] = useState<AnswerRating | null>(null);
   const [status, setStatus] = useState<AnswerStatus>('streaming');
   const abortRef = useRef<AbortController | null>(null);
   // Read via ref so the fetch effect (keyed on q) picks up the id without
@@ -837,6 +1003,7 @@ export function AnswerPanel({
     abortRef.current?.abort();
     abortRef.current = controller;
     setText('');
+    setRating(null);
     setStatus('streaming');
 
     (async () => {
@@ -860,7 +1027,7 @@ export function AnswerPanel({
     return () => controller.abort();
   }, [q, ready, facetOnly]);
 
-  const { answer, reasoning, sources } = parseStream(text);
+  const { answer, reasoning, sources, terminal } = parseStream(text);
 
   // Once an answer has settled (and this isn't a facet browse), offer to continue
   // in the Dig Deeper chat — a multi-turn conversation that searches the whole
@@ -877,6 +1044,9 @@ export function AnswerPanel({
         answer={answer}
         sources={sources}
         reasoning={reasoning}
+        showActions
+        answerId={terminal?.status === 'done' ? terminal.answerId : undefined}
+        onRatingChange={setRating}
       />
       {canDeepen ? (
         <Link
@@ -884,7 +1054,7 @@ export function AnswerPanel({
           search={{ q }}
           state={(previous) => ({
             ...previous,
-            digDeeperSeed: { question: q, raw: text },
+            digDeeperSeed: { question: q, raw: text, rating },
           })}
           className="lc-continue-in group mt-3 flex w-full items-center gap-3 rounded-2xl border border-indigo-500/15 bg-indigo-500/5 px-4 py-3 text-left transition-colors hover:border-indigo-500/30 hover:bg-indigo-500/10 dark:border-indigo-400/15 dark:bg-indigo-400/5 dark:hover:border-indigo-400/30 dark:hover:bg-indigo-400/10"
         >
@@ -972,7 +1142,7 @@ export function VideoAnswerPanel({
     return () => controller.abort();
   }, [mediaId, question]);
 
-  const { answer, sources } = parseStream(text);
+  const { answer, sources, terminal } = parseStream(text);
 
   return (
     <AnswerCard
@@ -981,6 +1151,8 @@ export function VideoAnswerPanel({
       sources={sources}
       heading={question}
       onCite={onCite}
+      showActions
+      answerId={terminal?.status === 'done' ? terminal.answerId : undefined}
     />
   );
 }

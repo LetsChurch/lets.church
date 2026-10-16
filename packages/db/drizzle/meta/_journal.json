@@ -232,6 +232,13 @@
       "when": 1792114303457,
       "tag": "0032_drop-storage-location-defaults",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1792167667442,
+      "tag": "0033_add-ai-answer",
+      "breakpoints": true
     }
   ]
 }

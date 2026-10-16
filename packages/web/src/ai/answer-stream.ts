@@ -54,7 +54,9 @@ export type AnswerStreamTerminalReason =
   | 'truncated';
 
 export type AnswerStreamTerminal =
-  | { status: 'done' }
+  // `answerId`: the persisted Dig Deeper answer this turn produced — what a
+  // rating targets. Absent when the answer wasn't saved (or on other paths).
+  | { status: 'done'; answerId?: string }
   | {
       status: 'cancelled' | 'error';
       reason: AnswerStreamTerminalReason;
@@ -79,10 +81,20 @@ export function terminalChunk(terminal: AnswerStreamTerminal): string {
   return channelChunk('t', JSON.stringify(terminal));
 }
 
+const ANSWER_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+function isAnswerId(value: unknown): value is string {
+  return typeof value === 'string' && ANSWER_ID_RE.test(value);
+}
+
 function isAnswerStreamTerminal(value: unknown): value is AnswerStreamTerminal {
   if (!value || typeof value !== 'object' || !('status' in value)) return false;
   const status = (value as { status?: unknown }).status;
-  if (status === 'done') return true;
+  if (status === 'done') {
+    const answerId = (value as { answerId?: unknown }).answerId;
+    return answerId === undefined || isAnswerId(answerId);
+  }
   if (status !== 'cancelled' && status !== 'error') return false;
   const reason = (value as { reason?: unknown }).reason;
   return (
@@ -131,10 +143,14 @@ export function parseAnswerStream(raw: string): ParsedAnswerStream {
     };
   }
 
+  // A plain (untagged) answer may be followed by tagged frames — the search
+  // answer appends its terminal frame — so text before the first tag is answer
+  // text. The dig path starts with a tag, so this is empty there.
+  const firstTag = body.indexOf(CHANNEL_MARK);
   let reasoning = '';
-  let answer = '';
+  let answer = body.slice(0, firstTag);
   let terminal: AnswerStreamTerminal | null = null;
-  for (const seg of body.split(CHANNEL_MARK)) {
+  for (const seg of body.slice(firstTag).split(CHANNEL_MARK)) {
     if (!seg) continue;
     const channel = seg[0];
     const text = seg.slice(1);

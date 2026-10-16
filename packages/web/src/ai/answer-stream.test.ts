@@ -56,6 +56,40 @@ describe('parseAnswerStream', () => {
     });
   });
 
+  it('carries the saved answer id on a done terminal', () => {
+    const answerId = '0f8e2b1c-3d4a-4b5c-8d6e-7f8091a2b3c4';
+    const raw =
+      `[]${SOURCES_DELIMITER}` +
+      channelChunk('a', 'Answer.') +
+      terminalChunk({ status: 'done', answerId });
+
+    expect(parseAnswerStream(raw).terminal).toEqual({
+      status: 'done',
+      answerId,
+    });
+  });
+
+  it('rejects a done terminal whose answer id is not a uuid', () => {
+    const raw =
+      `[]${SOURCES_DELIMITER}` +
+      channelChunk('a', 'Answer.') +
+      channelChunk('t', JSON.stringify({ status: 'done', answerId: '../x' }));
+
+    expect(parseAnswerStream(raw).terminal).toBeNull();
+  });
+
+  it('reads a plain answer followed by a terminal frame', () => {
+    const answerId = '0f8e2b1c-3d4a-4b5c-8d6e-7f8091a2b3c4';
+    const parsed = parseAnswerStream(
+      `[]${SOURCES_DELIMITER}A plain answer [upload:AbC123@12].` +
+        terminalChunk({ status: 'done', answerId }),
+    );
+
+    expect(parsed.answer).toBe('A plain answer [upload:AbC123@12].');
+    expect(parsed.reasoning).toBe('');
+    expect(parsed.terminal).toEqual({ status: 'done', answerId });
+  });
+
   it('continues to parse legacy plain answer streams', () => {
     expect(parseAnswerStream(`[]${SOURCES_DELIMITER}A plain answer.`)).toEqual({
       answer: 'A plain answer.',

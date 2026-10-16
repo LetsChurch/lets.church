@@ -4,6 +4,7 @@ import {
   type AnswerSource,
   answerSourceKey,
   SOURCES_DELIMITER,
+  terminalChunk,
 } from '@/ai/answer-stream';
 import { IncomingIdSchema } from '@/schemas/common';
 import logger from '@/util/logger';
@@ -207,10 +208,23 @@ export type SearchAnswerInput = z.infer<typeof searchAnswerInputSchema>;
  * the detective loop's reasoning + answer. Served by the `search.answer` tRPC
  * procedure, which relays this Response: 429 when rate limited, 500 on
  * failure, or the streamed body (cache hits and declines are a complete body).
+ * Every answer the viewer is shown is saved to `ai_answer` and ends with a
+ * terminal frame carrying its id, which is what a rating targets.
  */
 export async function runSearchAnswer(
   parsed: SearchAnswerInput,
-  { headers }: { headers: Headers },
+  {
+    headers,
+    signal,
+    appUserId,
+  }: {
+    headers: Headers;
+    // Aborted when the viewer leaves; an abandoned answer is not saved.
+    signal: AbortSignal;
+    // The signed-in viewer (from the tRPC session), who owns the saved answer:
+    // only they may rate it.
+    appUserId: string | null;
+  },
 ): Promise<Response> {
   // Charge the shared IP + browser token buckets before loading any DB,
   // retrieval, or model dependencies. Manual deep searches cost more than
@@ -284,7 +298,7 @@ export async function runSearchAnswer(
     { runMediaKnnProbe },
     { completeLlmCall, startLlmCall },
     { hydrateUploads },
-    { db, SearchLogEntry, UploadRecord },
+    { AiAnswer, db, SearchLogEntry, UploadRecord },
     { eq, sql },
     { cacheGetJson, cacheSetJson },
     { parseSearchQuery },
@@ -382,20 +396,63 @@ export async function runSearchAnswer(
     }
   };
 
+  // Save the answer this viewer is shown (including cache replays and
+  // declines, one row per showing) so it can be rated. Best-effort: a failed
+  // insert — or a scoped upload that doesn't exist — just means no rating.
+  const saveAnswer = async (
+    answer: string,
+    answerSources: AnswerSource[],
+  ): Promise<string | null> => {
+    // The viewer left (a new query, navigation): nobody saw this answer.
+    if (signal.aborted) return null;
+    try {
+      const [saved] = await db
+        .insert(AiAnswer)
+        .values({
+          source: 'SEARCH',
+          question: parsed.query,
+          answer,
+          sources: answerSources,
+          model: SEARCH_AGENT_MODEL,
+          uploadRecordId: internalUploadId,
+          appUserId,
+          resourceId: parsed.resourceId,
+          threadId: parsed.threadId,
+        })
+        .returning({ id: AiAnswer.id });
+      return saved?.id ?? null;
+    } catch (err) {
+      moduleLogger.warn(
+        {
+          context: {
+            error: err instanceof Error ? err.message : String(err),
+          },
+        },
+        'Failed to save search answer',
+      );
+      return null;
+    }
+  };
+
+  // The terminal frame carrying a saved answer's id (nothing when unsaved).
+  const savedFrame = (answerId: string | null) =>
+    answerId ? terminalChunk({ status: 'done', answerId }) : '';
+
   const encoder = new TextEncoder();
   // The wire format is `<sources JSON><DELIMITER><body>`, where <body> is
   // plain answer markdown, or — when `reasoning` is present (a cached dig
   // answer) — the channel-tagged form `<r-chunk><a-chunk>` the live dig
   // path streams. Used for cache hits and declines (the live agent path
   // streams it instead).
-  const payloadResponse = (
+  const payloadResponse = async (
     answerSources: AnswerSource[],
     answer: string,
     reasoning?: string | null,
   ) => {
-    const body = reasoning
-      ? channelChunk('r', reasoning) + channelChunk('a', answer)
-      : answer;
+    const body =
+      (reasoning
+        ? channelChunk('r', reasoning) + channelChunk('a', answer)
+        : answer) + savedFrame(await saveAnswer(answer, answerSources));
     return new Response(
       encoder.encode(JSON.stringify(answerSources) + SOURCES_DELIMITER + body),
       { headers: STREAM_HEADERS },
@@ -890,6 +947,15 @@ Cite every claim with the tool-provided [upload:...] tokens. If the library genu
           await Promise.allSettled(flushes);
           await flushNewSources();
 
+          if (
+            digError === null &&
+            !digTimedOut &&
+            !digCancelled &&
+            answerText.trim().length > 0
+          ) {
+            const frame = savedFrame(await saveAnswer(answerText, digSources));
+            if (frame) out.enqueue(encoder.encode(frame));
+          }
           out.close();
           void reader.cancel();
 
@@ -1237,6 +1303,16 @@ ${sourcesBlock}`;
             },
             'Error reading agent stream; closing with partial answer',
           );
+        }
+        if (
+          streamError === null &&
+          generationError === null &&
+          !timedOut &&
+          !streamCancelled &&
+          answerText.trim().length > 0
+        ) {
+          const frame = savedFrame(await saveAnswer(answerText, sources));
+          if (frame) out.enqueue(encoder.encode(frame));
         }
         out.close();
         void reader.cancel();

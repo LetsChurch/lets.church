@@ -207,6 +207,22 @@ with host permissions for the site; there is no separate token or OIDC client.
 
 ---
 
+## AI answer ratings
+
+The streaming `search.answer` (search overviews and single-video asks) and
+`search.digDeeper` procedures save every answer a viewer is shown to
+`ai_answer` (question, answer, cited sources, and the signed-in viewer from the
+tRPC session, if any) and return the row's random UUID only in that response's
+terminal frame. An answer the viewer abandoned (request aborted) is not saved.
+`search.rateAnswer` takes that id plus `LIKE`/`DISLIKE`/null and targets
+nothing else: holding the id is the capability for an anonymous answer, and an
+answer saved for a signed-in user can only be rated by that user's session.
+Unknown ids and owner mismatches both return the same `NOT_FOUND`, so ids can't
+be probed. The mutation goes through tRPC's Origin gate; its input is a UUID
+and an enum.
+
+---
+
 ## MCP server (`/mcp`)
 
 `packages/web/src/mcp/` serves a stateless Streamable HTTP Model Context

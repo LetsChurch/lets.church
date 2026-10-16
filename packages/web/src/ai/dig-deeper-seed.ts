@@ -4,6 +4,8 @@
 export type DigDeeperSeed = {
   question: string;
   raw: string;
+  // The viewer's rating of the overview, so the handed-over turn shows it.
+  rating?: 'LIKE' | 'DISLIKE' | null;
 };
 
 export function parseDigDeeperSeed(value: unknown): DigDeeperSeed | undefined {
@@ -17,7 +19,9 @@ export function parseDigDeeperSeed(value: unknown): DigDeeperSeed | undefined {
   ) {
     return undefined;
   }
-  return { question: seed.question, raw: seed.raw };
+  const rating =
+    seed.rating === 'LIKE' || seed.rating === 'DISLIKE' ? seed.rating : null;
+  return { question: seed.question, raw: seed.raw, rating };
 }
 
 export function digDeeperSeedFromHistoryState(

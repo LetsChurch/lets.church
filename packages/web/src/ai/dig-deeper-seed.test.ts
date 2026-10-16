@@ -18,7 +18,18 @@ describe('Dig Deeper overview handoff', () => {
     ).toEqual({
       question: 'What is covenant theology?',
       raw: '[]\u001eA cited overview.',
+      rating: null,
     });
+  });
+
+  it('carries a valid overview rating and drops anything else', () => {
+    const seed = (rating: unknown) =>
+      parseDigDeeperSeed({ question: 'Question', raw: 'answer', rating });
+
+    expect(seed('LIKE')?.rating).toBe('LIKE');
+    expect(seed('DISLIKE')?.rating).toBe('DISLIKE');
+    expect(seed('SUPER')?.rating).toBeNull();
+    expect(seed(undefined)?.rating).toBeNull();
   });
 
   it('rejects incomplete or unrelated history state', () => {

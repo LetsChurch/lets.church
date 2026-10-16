@@ -2331,6 +2331,64 @@ export const SearchLogEntry = pgTable(
   }),
 );
 
+// Which AI answer surface produced an `ai_answer` row.
+export const AiAnswerSource = pgEnum('ai_answer_source', [
+  'SEARCH',
+  'DIG_DEEPER',
+]);
+
+// One AI answer a user was shown: a search overview (or a single-video ask on
+// the media page) or a Dig Deeper turn. Holds the question, the answer as
+// streamed (with its [upload:…] citation tokens), and the cited sources. The
+// row's random id is handed to the viewing browser in the stream's terminal
+// frame and is what a rating targets, so feedback always refers to an answer
+// the server produced. Cached search answers get a row per showing.
+export const AiAnswer = pgTable(
+  'ai_answer',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    source: AiAnswerSource('source').notNull(),
+    question: text('question').notNull(),
+    answer: text('answer').notNull(),
+    sources: jsonb('sources').notNull().default('[]'),
+    model: text('model').notNull(),
+    // The video a single-video ask was scoped to, if any.
+    uploadRecordId: uuid('upload_record_id'),
+    // Signed-in viewer, if any. Only they may rate it; anonymous answers are
+    // rated by whoever holds the id.
+    appUserId: uuid('app_user_id'),
+    // Caller-supplied browser/tab ids, kept for correlation only (never trusted
+    // as identity).
+    resourceId: text('resource_id').notNull(),
+    threadId: text('thread_id').notNull(),
+    rating: Rating('rating'),
+    ratedAt: timestamp('rated_at', { precision: 3 }),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+  },
+  (AiAnswer) => ({
+    ai_answer_appUser_fkey: foreignKey({
+      name: 'ai_answer_appUser_fkey',
+      columns: [AiAnswer.appUserId],
+      foreignColumns: [AppUser.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+    ai_answer_uploadRecord_fkey: foreignKey({
+      name: 'ai_answer_uploadRecord_fkey',
+      columns: [AiAnswer.uploadRecordId],
+      foreignColumns: [UploadRecord.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+    ai_answer_created_at_idx: index('ai_answer_created_at_idx').on(
+      AiAnswer.createdAt.desc(),
+    ),
+    ai_answer_source_rating_rated_at_idx: index(
+      'ai_answer_source_rating_rated_at_idx',
+    ).on(AiAnswer.source, AiAnswer.rating, AiAnswer.ratedAt.desc()),
+  }),
+);
+
 export const SavedMedia = pgTable(
   'saved_media',
   {

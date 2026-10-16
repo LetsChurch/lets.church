@@ -60,11 +60,17 @@ const STREAM_HEADERS = {
  * infants?" is only meaningful with its history.
  *
  * Returns a Response the procedure relays: 429 when rate limited, 400 for a
- * malformed conversation, 500 on failure, or the streamed body.
+ * malformed conversation, 500 on failure, or the streamed body. `appUserId`
+ * (the signed-in asker, from the tRPC session) owns the saved answer: only
+ * they may rate it.
  */
 export async function runDigDeeperTurn(
   parsed: DigDeeperInput,
-  { headers, signal }: { headers: Headers; signal: AbortSignal },
+  {
+    headers,
+    signal,
+    appUserId,
+  }: { headers: Headers; signal: AbortSignal; appUserId: string | null },
 ): Promise<Response> {
   // The last message must be the current user turn.
   const last = parsed.messages[parsed.messages.length - 1];
@@ -105,6 +111,7 @@ export async function runDigDeeperTurn(
     { hydrateUploads },
     { streamText, isStepCount },
     { aiTelemetry },
+    { db, AiAnswer },
   ] = await Promise.all([
     import('@/ai/agent'),
     import('@/ai/model'),
@@ -112,6 +119,7 @@ export async function runDigDeeperTurn(
     import('@/trpc/search/hydrate'),
     import('ai'),
     import('@letschurch/util/server/ai-telemetry'),
+    import('@letschurch/db'),
   ]);
 
   const telemetryContext = {
@@ -314,6 +322,37 @@ export async function runDigDeeperTurn(
         // lands on a closed controller.
         await Promise.allSettled(flushes);
         if (terminal.status !== 'cancelled') await flushNewSources();
+
+        // Save a completed turn so it can be rated; its id rides on the
+        // terminal frame. Best-effort: a failed insert just means this
+        // answer can't be rated.
+        if (terminal.status === 'done') {
+          try {
+            const [saved] = await db
+              .insert(AiAnswer)
+              .values({
+                source: 'DIG_DEEPER',
+                question: last.content,
+                answer: answerText,
+                sources: digSources,
+                model: SEARCH_AGENT_MODEL,
+                appUserId,
+                resourceId: parsed.resourceId,
+                threadId: parsed.threadId,
+              })
+              .returning({ id: AiAnswer.id });
+            if (saved) terminal.answerId = saved.id;
+          } catch (err) {
+            moduleLogger.warn(
+              {
+                context: {
+                  error: err instanceof Error ? err.message : String(err),
+                },
+              },
+              'Failed to save dig-deeper answer',
+            );
+          }
+        }
 
         if (!consumerCancelled && !signal.aborted) {
           controller.enqueue(encoder.encode(terminalChunk(terminal)));
