@@ -135,21 +135,26 @@ export const SeededFollowUpAndSourceRail: Story = {
     expect(overviewTurn).toContainElement(overviewSourceSection);
     expect(getComputedStyle(overviewSourceSection).position).toBe('sticky');
     const overviewSources = within(overviewSourceSection);
-    expect(overviewSources.getByText('0:12')).toBeInTheDocument();
-    expect(overviewSources.getByText('1:38')).toBeInTheDocument();
-    expect(
-      within(
-        overviewSources.getByTestId('dig-deeper-visible-sources'),
-      ).getAllByText(/source/i),
-    ).toHaveLength(3);
+    // (getAll: the rail also keeps an invisible, inert copy of every card to
+    // measure heights.)
+    expect(overviewSources.getAllByText('0:12')[0]).toBeInTheDocument();
+    expect(overviewSources.getAllByText('1:38')[0]).toBeInTheDocument();
+    // The rail fits as many whole cards as the answer is tall (at least one);
+    // the rest sit behind the toggle with a faded peek of the next card.
+    const visibleCount = within(
+      overviewSources.getByTestId('dig-deeper-visible-sources'),
+    ).getAllByText(/source/i).length;
+    expect(visibleCount).toBeGreaterThanOrEqual(1);
+    expect(visibleCount).toBeLessThan(5);
     expect(overviewSources.queryByTestId('dig-deeper-source-panel')).toBeNull();
     expect(
       getComputedStyle(overviewSources.getByTestId('dig-deeper-source-fade'))
         .maskImage,
     ).not.toBe('none');
 
+    const hiddenCount = 5 - visibleCount;
     const sourceToggle = overviewSources.getByRole('button', {
-      name: 'Show 2 more sources',
+      name: `Show ${hiddenCount} more ${hiddenCount === 1 ? 'source' : 'sources'}`,
     });
     expect(sourceToggle).toHaveAttribute('aria-expanded', 'false');
     await userEvent.click(sourceToggle);
@@ -177,7 +182,13 @@ export const SeededFollowUpAndSourceRail: Story = {
 
     // Both source sections remain rendered and attached to their own turns.
     expect(canvas.getAllByTestId(/^dig-deeper-sources-/)).toHaveLength(2);
-    expect(overviewSources.getAllByText('Seeded source')).toHaveLength(2);
-    expect(canvas.getByText('Follow-up source')).toBeInTheDocument();
+    const rendered = (els: HTMLElement[]) =>
+      els.filter(
+        (el) => !el.closest('[data-testid="dig-deeper-source-measure"]'),
+      );
+    expect(
+      rendered(overviewSources.getAllByText('Seeded source')),
+    ).toHaveLength(2);
+    expect(rendered(canvas.getAllByText('Follow-up source'))).toHaveLength(1);
   },
 };

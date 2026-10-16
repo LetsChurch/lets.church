@@ -5,7 +5,13 @@ import {
   IconSparkles,
 } from '@tabler/icons-react';
 import { createFileRoute, useLocation } from '@tanstack/react-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { z } from 'zod';
 
 import {
@@ -131,67 +137,176 @@ function SourceCard({ source }: { source: AnswerSource }) {
   );
 }
 
-function SourceRail({ sources }: { sources: AnswerSource[] }) {
+// Cards shown before "Show N more" when the rail can't be fitted to the answer
+// (mobile, where the rail sits below the answer, or before measuring).
+const DEFAULT_VISIBLE_SOURCES = 3;
+// The rail sits beside the answer from Tailwind's `lg` breakpoint up.
+const RAIL_BESIDE_ANSWER_QUERY = '(min-width: 1024px)';
+// Vertical gap between cards (`gap-2` / `pt-2`), and the space the faded peek
+// (`mt-2` + `max-h-16`) and the "Show N more" trigger (`mt-2` + ~32px) take.
+const CARD_GAP = 8;
+const MORE_RESERVE = CARD_GAP + 64 + CARD_GAP + 32;
+
+/**
+ * How many whole source cards fit beside the answer: the answer column's height
+ * (from the rail's own top, so the "Sources" label is accounted for), minus the
+ * peek + trigger whenever some cards stay hidden. Card heights are measured
+ * from `measureEl` (an invisible copy of the full list), since titles wrap to
+ * one or two lines. Always at least one card; the default count on mobile.
+ */
+function useFittedSourceCount(
+  getAnchor: (() => HTMLElement | null) | undefined,
+  railEl: HTMLElement | null,
+  measureEl: HTMLElement | null,
+  total: number,
+): number {
+  const [count, setCount] = useState(DEFAULT_VISIBLE_SOURCES);
+  // The caller passes a fresh closure each render; read it through a ref so the
+  // observers aren't torn down on every streamed chunk.
+  const getAnchorRef = useRef(getAnchor);
+  getAnchorRef.current = getAnchor;
+
+  useLayoutEffect(() => {
+    const anchor = getAnchorRef.current?.();
+    if (!anchor || !railEl || !measureEl) return;
+    const media = window.matchMedia(RAIL_BESIDE_ANSWER_QUERY);
+
+    const compute = () => {
+      if (!media.matches) {
+        setCount(DEFAULT_VISIBLE_SOURCES);
+        return;
+      }
+      // Rail top relative to the turn row. Both sit in the sticky aside, so the
+      // difference is stable while the page scrolls.
+      const aside = railEl.parentElement ?? railEl;
+      const railOffset =
+        railEl.getBoundingClientRect().top - aside.getBoundingClientRect().top;
+      const budget = anchor.offsetHeight - railOffset;
+      const heights = Array.from(
+        measureEl.children,
+        (el) => (el as HTMLElement).offsetHeight,
+      );
+
+      let fitted = 0;
+      let used = 0;
+      for (const [i, h] of heights.entries()) {
+        const next = used + (i > 0 ? CARD_GAP : 0) + h;
+        const reserve = i + 1 < heights.length ? MORE_RESERVE : 0;
+        if (next + reserve > budget) break;
+        used = next;
+        fitted = i + 1;
+      }
+      setCount(Math.max(1, fitted));
+    };
+
+    compute();
+    const observer = new ResizeObserver(compute);
+    observer.observe(anchor);
+    // The measuring wrapper is zero-height, so watch the cards themselves
+    // (e.g. a title re-wrapping once fonts load).
+    for (const card of measureEl.children) observer.observe(card);
+    media.addEventListener('change', compute);
+    return () => {
+      observer.disconnect();
+      media.removeEventListener('change', compute);
+    };
+  }, [railEl, measureEl, total]);
+
+  return count;
+}
+
+function SourceRail({
+  sources,
+  getAnchor,
+}: {
+  sources: AnswerSource[];
+  // The answer column this rail sits beside; its height sets how many cards
+  // show before "Show N more" (desktop only).
+  getAnchor?: () => HTMLElement | null;
+}) {
   const [expanded, setExpanded] = useState(false);
-  const visibleSources = sources.slice(0, 3);
-  const additionalSources = sources.slice(3);
+  const [railEl, setRailEl] = useState<HTMLDivElement | null>(null);
+  const [measureEl, setMeasureEl] = useState<HTMLDivElement | null>(null);
+  const fitted = useFittedSourceCount(
+    getAnchor,
+    railEl,
+    measureEl,
+    sources.length,
+  );
+  const visibleSources = sources.slice(0, fitted);
+  const additionalSources = sources.slice(fitted);
 
   return (
     <MediaPreviewScope side="left">
-      <Collapsible.Root open={expanded} onOpenChange={setExpanded}>
+      <div ref={setRailEl} className="relative">
+        {/* Invisible full-width copy of every card, measured to fit the rail
+            to the answer. Out of flow, hidden from assistive tech, inert, and
+            zero-height with clipped overflow so it can't extend the rail's
+            scroll area. Block layout (not flex) so the clip doesn't shrink the
+            cards being measured; the gap is added in the fitting math. */}
         <div
-          data-testid="dig-deeper-visible-sources"
-          className="flex flex-col gap-2"
+          ref={setMeasureEl}
+          data-testid="dig-deeper-source-measure"
+          aria-hidden="true"
+          inert
+          className="pointer-events-none invisible absolute inset-x-0 top-0 h-0 overflow-hidden"
         >
-          {visibleSources.map((source) => (
+          {sources.map((source) => (
             <SourceCard key={answerSourceKey(source)} source={source} />
           ))}
         </div>
 
-        {additionalSources.length > 0 ? (
-          <>
-            {!expanded ? (
-              <div
-                data-testid="dig-deeper-source-fade"
-                aria-hidden="true"
-                inert
-                className="pointer-events-none mt-2 max-h-28 overflow-hidden [mask-image:linear-gradient(to_bottom,black_0%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_0%,transparent_100%)]"
+        <Collapsible.Root open={expanded} onOpenChange={setExpanded}>
+          <div
+            data-testid="dig-deeper-visible-sources"
+            className="flex flex-col gap-2"
+          >
+            {visibleSources.map((source) => (
+              <SourceCard key={answerSourceKey(source)} source={source} />
+            ))}
+          </div>
+
+          {additionalSources.length > 0 ? (
+            <>
+              {!expanded ? (
+                <div
+                  data-testid="dig-deeper-source-fade"
+                  aria-hidden="true"
+                  inert
+                  className="pointer-events-none mt-2 max-h-16 overflow-hidden [mask-image:linear-gradient(to_bottom,black_0%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_0%,transparent_100%)]"
+                >
+                  <SourceCard source={additionalSources[0]} />
+                </div>
+              ) : null}
+
+              <Collapsible.Panel
+                data-testid="dig-deeper-source-panel"
+                className="h-[var(--collapsible-panel-height)] overflow-hidden opacity-100 transition-[height,opacity] duration-300 ease-out data-[ending-style]:h-0 data-[ending-style]:opacity-0 data-[starting-style]:h-0 data-[starting-style]:opacity-0"
               >
-                <div className="flex flex-col gap-2">
-                  {additionalSources.slice(0, 2).map((source) => (
+                <div className="flex flex-col gap-2 pt-2">
+                  {additionalSources.map((source) => (
                     <SourceCard key={answerSourceKey(source)} source={source} />
                   ))}
                 </div>
-              </div>
-            ) : null}
+              </Collapsible.Panel>
 
-            <Collapsible.Panel
-              data-testid="dig-deeper-source-panel"
-              className="h-[var(--collapsible-panel-height)] overflow-hidden opacity-100 transition-[height,opacity] duration-300 ease-out data-[ending-style]:h-0 data-[ending-style]:opacity-0 data-[starting-style]:h-0 data-[starting-style]:opacity-0"
-            >
-              <div className="flex flex-col gap-2 pt-2">
-                {additionalSources.map((source) => (
-                  <SourceCard key={answerSourceKey(source)} source={source} />
-                ))}
-              </div>
-            </Collapsible.Panel>
-
-            <Collapsible.Trigger
-              type="button"
-              className="text-muted hover:text-primary group mt-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
-            >
-              {expanded
-                ? 'Show fewer sources'
-                : `Show ${additionalSources.length} more ${additionalSources.length === 1 ? 'source' : 'sources'}`}
-              <IconChevronDown
-                size={14}
-                aria-hidden="true"
-                className="transition-transform duration-200 group-data-[panel-open]:rotate-180"
-              />
-            </Collapsible.Trigger>
-          </>
-        ) : null}
-      </Collapsible.Root>
+              <Collapsible.Trigger
+                type="button"
+                className="text-muted hover:text-primary group mt-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+              >
+                {expanded
+                  ? 'Show fewer sources'
+                  : `Show ${additionalSources.length} more ${additionalSources.length === 1 ? 'source' : 'sources'}`}
+                <IconChevronDown
+                  size={14}
+                  aria-hidden="true"
+                  className="transition-transform duration-200 group-data-[panel-open]:rotate-180"
+                />
+              </Collapsible.Trigger>
+            </>
+          ) : null}
+        </Collapsible.Root>
+      </div>
     </MediaPreviewScope>
   );
 }
@@ -226,6 +341,9 @@ export function DigDeeperChat({
   const turnsRef = useRef<Turn[]>(turns);
   turnsRef.current = turns;
   const turnEls = useRef<Array<HTMLDivElement | null>>([]);
+  // Each turn's answer column, keyed by turn id, so its source rail can fit
+  // itself to the answer's height.
+  const answerEls = useRef(new Map<string, HTMLDivElement>());
   // A handed-off overview is already turn one. Only direct ?q= visits need to
   // generate it; clicking the overview action must not repeat that work.
   const startedRef = useRef(Boolean(initialTurn));
@@ -389,7 +507,13 @@ export function DigDeeperChat({
               data-testid={`dig-deeper-turn-${turn.id}`}
               className="lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-8"
             >
-              <div className="min-w-0 space-y-3">
+              <div
+                ref={(el) => {
+                  if (el) answerEls.current.set(turn.id, el);
+                  else answerEls.current.delete(turn.id);
+                }}
+                className="min-w-0 space-y-3"
+              >
                 {/* User question */}
                 <div className="flex justify-end">
                   <p className="text-primary max-w-[80%] rounded-2xl rounded-br-md bg-zinc-100 px-4 py-2 text-sm dark:bg-white/10">
@@ -418,7 +542,10 @@ export function DigDeeperChat({
                   <p className="text-muted mb-3 px-1 text-[11px] font-medium tracking-wide uppercase">
                     Sources
                   </p>
-                  <SourceRail sources={sources} />
+                  <SourceRail
+                    sources={sources}
+                    getAnchor={() => answerEls.current.get(turn.id) ?? null}
+                  />
                 </aside>
               ) : null}
             </div>
