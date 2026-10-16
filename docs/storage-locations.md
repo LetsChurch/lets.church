@@ -27,8 +27,8 @@ defined once, in [`packages/s3/README.md`](../packages/s3/README.md#storage-loca
   variable. A location needs both buckets configured to accept uploads.
 - **Public URLs come from the location.** `STORAGE_<ID>_PUBLIC_URL` replaces
   the old global `MEDIA_URL`. The download service receives it as the signed
-  `mediaUrl` JWT claim (falling back to `MEDIA_URL` for tokens from before
-  this change, until cleanup); imgproxy only fetches from the URLs listed in
+  `mediaUrl` JWT claim and rejects tokens without one; imgproxy only fetches
+  from the URLs listed in
   `IMGPROXY_ALLOWED_SOURCES` (see [`security.md`](security.md#2-treat-any-outbound-request-to-a-user-influenced-destination-as-ssrf)).
 
 ### Placement policy
@@ -210,10 +210,9 @@ ahead of the deploy. Nothing is removed until step 8.
    call site fails loudly instead of silently landing on `idrive`.
 8. **Clean up (weeks later).**
    - Remove `S3_INGEST_*` and `S3_PUBLIC_*` from Infisical.
-   - Remove the download service's `MEDIA_URL` fallback
-     (`services/download/main.go`) and `MEDIA_URL` from the `web-config`
-     ConfigMap in the manifests (`prod/kustomization.yml`). Either order is
-     safe: without `MEDIA_URL` the fallback is simply off.
+   - Done: the download service's `MEDIA_URL` fallback and `MEDIA_URL` in the
+     `web-config` ConfigMap are gone. Download tokens live 15 minutes, so the
+     fallback was dead once the release had been out that long.
    - Once old `s3://` image URLs have aged out of caches, feeds and stored
      emails, remove the `s3://` entry from `IMGPROXY_ALLOWED_SOURCES` and
      imgproxy's S3 settings (`IMGPROXY_USE_S3`, `IMGPROXY_S3_*`, `AWS_*`).

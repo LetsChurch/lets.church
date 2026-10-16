@@ -132,9 +132,7 @@ func parseMediaURL(raw string) (string, bool) {
 	return strings.TrimRight(raw, "/"), true
 }
 
-// legacyMediaURL is the optional MEDIA_URL env: the CDN base for tokens that
-// web signed before multi-location storage, which have no mediaUrl claim.
-func authenticate(r *http.Request, jwtSecret []byte, legacyMediaURL string) (*authResult, int, string) {
+func authenticate(r *http.Request, jwtSecret []byte) (*authResult, int, string) {
 	uploadId, variant, ok := parsePath(r.URL.Path)
 	if !ok {
 		return nil, http.StatusBadRequest, "invalid path: expected /{uploadId}/{variant}"
@@ -173,23 +171,17 @@ func authenticate(r *http.Request, jwtSecret []byte, legacyMediaURL string) (*au
 		includeAudio = false
 	}
 
-	// The location's public CDN base. Tokens issued before multi-location
-	// storage have no claim; they use MEDIA_URL until their 15-minute lifetime
-	// expires during a rolling deployment, and fail closed without it.
-	var mediaURL string
-	if token.Has("mediaUrl") {
-		claimMediaURL, err := jwt.Get[string](token, "mediaUrl")
-		if err != nil {
-			return nil, http.StatusBadRequest, "token has invalid mediaUrl"
-		}
-		mediaURL, ok = parseMediaURL(claimMediaURL)
-		if !ok {
-			return nil, http.StatusBadRequest, "token has invalid mediaUrl"
-		}
-	} else if legacyMediaURL != "" {
-		mediaURL = legacyMediaURL
-	} else {
+	// The public CDN base of the location holding the upload.
+	if !token.Has("mediaUrl") {
 		return nil, http.StatusBadRequest, "token missing mediaUrl"
+	}
+	claimMediaURL, err := jwt.Get[string](token, "mediaUrl")
+	if err != nil {
+		return nil, http.StatusBadRequest, "token has invalid mediaUrl"
+	}
+	mediaURL, ok := parseMediaURL(claimMediaURL)
+	if !ok {
+		return nil, http.StatusBadRequest, "token has invalid mediaUrl"
 	}
 
 	return &authResult{
@@ -208,13 +200,6 @@ func sanitizeFilename(filename string) string {
 func main() {
 	jwtSecret := []byte(mustEnv("JWT_SECRET"))
 	addr := envOrDefault("ADDR", ":8080")
-	legacyMediaURL := ""
-	if v := os.Getenv("MEDIA_URL"); v != "" {
-		var ok bool
-		if legacyMediaURL, ok = parseMediaURL(v); !ok {
-			log.Fatalf("MEDIA_URL is not an absolute http(s) base URL")
-		}
-	}
 
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -226,7 +211,7 @@ func main() {
 			return
 		}
 
-		auth, statusCode, msg := authenticate(r, jwtSecret, legacyMediaURL)
+		auth, statusCode, msg := authenticate(r, jwtSecret)
 		if auth == nil {
 			http.Error(w, msg, statusCode)
 			return

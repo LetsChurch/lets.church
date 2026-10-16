@@ -61,9 +61,7 @@ fixed allow-list instead of a DNS check (see `docs/storage-locations.md`):
   fragment with 400 before starting ffmpeg (`parseMediaURL` in
   `services/download/main.go`). Only the web app's token signer may choose that
   value, and it takes it from the upload's persisted storage location. A token
-  with no claim at all (signed before multi-location storage) uses the
-  operator-set `MEDIA_URL`, validated the same way at startup, and is rejected
-  when `MEDIA_URL` is unset; an invalid claim never falls back.
+  without the claim is rejected.
 
 ## 3. Neutralize untrusted data at the point of output
 
