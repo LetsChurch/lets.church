@@ -406,6 +406,7 @@ export function DigDeeperChat({
                   sources={sources}
                   hideSourceChips
                   errorMessage={turn.errorMessage}
+                  variant="plain"
                 />
               </div>
 

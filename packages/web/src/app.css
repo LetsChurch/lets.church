@@ -161,13 +161,17 @@
    deeper indigo) keeps the lower base for more shimmer contrast (overridden
    below). */
 @utility text-shimmer {
+  /* Follows the answer card's ink (white on the indigo card, the page text
+     color for plain Dig Deeper replies); white when used elsewhere. */
+  --shimmer-ink: var(--answer-ink, var(--color-white));
+  --shimmer-dim: color-mix(in srgb, var(--shimmer-ink) 60%, transparent);
   background: linear-gradient(
     100deg,
-    rgba(255, 255, 255, 0.7) 0%,
-    rgba(255, 255, 255, 0.7) 40%,
-    rgba(255, 255, 255, 1) 50%,
-    rgba(255, 255, 255, 0.7) 60%,
-    rgba(255, 255, 255, 0.7) 100%
+    var(--shimmer-dim) 0%,
+    var(--shimmer-dim) 40%,
+    var(--shimmer-ink) 50%,
+    var(--shimmer-dim) 60%,
+    var(--shimmer-dim) 100%
   );
   background-size: 200% 100%;
   background-clip: text;

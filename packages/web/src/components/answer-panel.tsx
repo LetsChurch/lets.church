@@ -147,7 +147,7 @@ function sourceLabel(s: AnswerSource): string {
 }
 
 const CITATION_BADGE_CLASS =
-  'ml-0.5 inline-flex items-center rounded bg-white/15 px-1 align-super font-medium text-[10px] text-white/80 no-underline transition-colors hover:bg-white/25 hover:text-white';
+  'ml-0.5 inline-flex items-center rounded bg-(--answer-ink)/15 px-1 align-super font-medium text-[10px] text-(--answer-ink)/80 no-underline transition-colors hover:bg-(--answer-ink)/25 hover:text-(--answer-ink)';
 
 // An inline citation badge: a superscript number. In `onCite` mode (a single
 // video page) it's a button that seeks that page's player to the cited moment;
@@ -191,18 +191,24 @@ function CitationBadge({
 // the answer reads like the rest of the app rather than a spaced-out article.
 const MARKDOWN_BLOCKS = {
   h1: ({ children }: ComponentProps<'h1'>) => (
-    <h1 className="mt-4 mb-1 text-base font-semibold text-white">{children}</h1>
+    <h1 className="mt-4 mb-1 text-base font-semibold text-(--answer-ink)">
+      {children}
+    </h1>
   ),
   h2: ({ children }: ComponentProps<'h2'>) => (
-    <h2 className="mt-4 mb-1 text-[15px] font-semibold text-white">
+    <h2 className="mt-4 mb-1 text-[15px] font-semibold text-(--answer-ink)">
       {children}
     </h2>
   ),
   h3: ({ children }: ComponentProps<'h3'>) => (
-    <h3 className="mt-3 mb-1 text-sm font-semibold text-white">{children}</h3>
+    <h3 className="mt-3 mb-1 text-sm font-semibold text-(--answer-ink)">
+      {children}
+    </h3>
   ),
   h4: ({ children }: ComponentProps<'h4'>) => (
-    <h4 className="mt-3 mb-1 text-sm font-semibold text-white">{children}</h4>
+    <h4 className="mt-3 mb-1 text-sm font-semibold text-(--answer-ink)">
+      {children}
+    </h4>
   ),
   p: ({ children }: ComponentProps<'p'>) => (
     <p className="my-2 text-sm leading-relaxed">{children}</p>
@@ -214,23 +220,23 @@ const MARKDOWN_BLOCKS = {
     <ol className="my-2 list-decimal space-y-1 pl-5">{children}</ol>
   ),
   li: ({ children }: ComponentProps<'li'>) => (
-    <li className="text-sm leading-relaxed marker:text-white/50 [&>p]:my-0 [&>p]:inline">
+    <li className="text-sm leading-relaxed marker:text-(--answer-ink)/50 [&>p]:my-0 [&>p]:inline">
       {children}
     </li>
   ),
   strong: ({ children }: ComponentProps<'strong'>) => (
-    <strong className="font-semibold text-white">{children}</strong>
+    <strong className="font-semibold text-(--answer-ink)">{children}</strong>
   ),
   blockquote: ({ children }: ComponentProps<'blockquote'>) => (
-    <blockquote className="my-2 border-l-2 border-white/30 pl-3 text-white/80 italic">
+    <blockquote className="my-2 border-l-2 border-(--answer-ink)/30 pl-3 text-(--answer-ink)/80 italic">
       {children}
     </blockquote>
   ),
-  hr: () => <hr className="my-3 border-white/20" />,
+  hr: () => <hr className="my-3 border-(--answer-ink)/20" />,
 };
 
 const SOURCE_CHIP_CLASS =
-  'inline-flex max-w-[14rem] items-center gap-1.5 rounded-full bg-white/15 py-1 pr-3 pl-1 font-medium text-white/80 text-xs no-underline transition-colors hover:bg-white/25';
+  'inline-flex max-w-[14rem] items-center gap-1.5 rounded-full bg-(--answer-ink)/15 py-1 pr-3 pl-1 font-medium text-(--answer-ink)/80 text-xs no-underline transition-colors hover:bg-(--answer-ink)/25';
 
 // A compact citation chip. In `onCite` mode (a single-video page) every source
 // is the same video, so the chip shows just the cited timestamp and seeks this
@@ -248,7 +254,7 @@ function SourceChip({
       <button
         type="button"
         onClick={() => onCite(s.startSeconds)}
-        className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium text-white/80 tabular-nums transition-colors hover:bg-white/25"
+        className="inline-flex items-center gap-1 rounded-full bg-(--answer-ink)/15 px-2.5 py-1 text-xs font-medium text-(--answer-ink)/80 tabular-nums transition-colors hover:bg-(--answer-ink)/25"
       >
         <IconClockHour3 size={12} className="shrink-0" aria-hidden="true" />
         {formatTime(s.startSeconds * 1000)}
@@ -295,7 +301,7 @@ function SourceChips({
         <button
           type="button"
           onClick={() => setExpanded((e) => !e)}
-          className="inline-flex items-center gap-1.5 rounded-full bg-white/15 py-1 pr-3 pl-1 text-xs font-medium text-white/80 transition-colors hover:bg-white/25"
+          className="inline-flex items-center gap-1.5 rounded-full bg-(--answer-ink)/15 py-1 pr-3 pl-1 text-xs font-medium text-(--answer-ink)/80 transition-colors hover:bg-(--answer-ink)/25"
         >
           {expanded ? (
             <span className="px-1.5">Show less</span>
@@ -307,7 +313,7 @@ function SourceChips({
                     key={answerSourceKey(s)}
                     src={s.avatarUrl}
                     alt=""
-                    className="size-4 shrink-0 ring-1 ring-white/25"
+                    className="size-4 shrink-0 ring-1 ring-(--answer-ink)/25"
                     fallbackClassName="text-[9px]"
                   />
                 ))}
@@ -356,12 +362,12 @@ function ReasoningTrail({
     const tail = lines.slice(-2);
     return (
       <div className="mb-3">
-        <div className="mb-1 inline-flex items-center gap-1.5 text-xs font-medium text-white/70">
+        <div className="mb-1 inline-flex items-center gap-1.5 text-xs font-medium text-(--answer-ink)/70">
           <IconSearch size={12} aria-hidden="true" className="shrink-0" />
           <span className="text-shimmer">Searching…</span>
         </div>
         <div
-          className="relative overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_45%)] text-xs leading-relaxed text-white/70"
+          className="relative overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_45%)] text-xs leading-relaxed text-(--answer-ink)/70"
           style={{ maxHeight: '2.75rem' }}
           aria-live="polite"
         >
@@ -397,13 +403,13 @@ function ReasoningTrail({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-1 text-[11px] font-normal text-white/50 transition-colors hover:text-white/80"
+        className="inline-flex items-center gap-1 text-[11px] font-normal text-(--answer-ink)/50 transition-colors hover:text-(--answer-ink)/80"
       >
         <IconSearch size={10} aria-hidden="true" className="shrink-0" />
         {open ? 'Hide reasoning' : 'Show reasoning'}
       </button>
       {open ? (
-        <div className="mt-2 space-y-0.5 border-l-2 border-white/25 pl-3 text-xs leading-relaxed text-white/70">
+        <div className="mt-2 space-y-0.5 border-l-2 border-(--answer-ink)/25 pl-3 text-xs leading-relaxed text-(--answer-ink)/70">
           {lines.map((line, i) => (
             <div key={`${i}:${line}`}>{line}</div>
           ))}
@@ -563,6 +569,7 @@ export function AnswerCard({
   reasoning = '',
   hideSourceChips = false,
   errorMessage,
+  variant = 'card',
 }: {
   status: AnswerStatus;
   answer: string;
@@ -583,6 +590,11 @@ export function AnswerCard({
   // Optional endpoint-specific error copy, such as the retry delay supplied by
   // the Dig Deeper rate limiter.
   errorMessage?: string;
+  // `card`: the indigo box used where the answer sits among search results or
+  // on the media page. `plain`: no box and page-colored text, for replies in the
+  // Dig Deeper conversation, where only the user's messages are bubbles (as in
+  // Google's AI Mode). A plain reply is never collapsed behind "See more".
+  variant?: 'card' | 'plain';
 }) {
   const [expanded, setExpanded] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
@@ -607,7 +619,10 @@ export function AnswerCard({
         if (match) {
           const n = Number(match[1]);
           const s = sourcesRef.current[n - 1];
-          if (!s) return <sup className="text-[10px] text-white/50">{n}</sup>;
+          if (!s)
+            return (
+              <sup className="text-[10px] text-(--answer-ink)/50">{n}</sup>
+            );
           return <CitationBadge s={s} n={n} onCite={onCiteRef.current} />;
         }
         return (
@@ -632,7 +647,9 @@ export function AnswerCard({
     setOverflowing(el ? el.scrollHeight > COLLAPSED_HEIGHT + 24 : false);
   }, [answer]);
 
-  const collapsed = overflowing && !expanded;
+  const plain = variant === 'plain';
+  const collapsible = overflowing && !plain;
+  const collapsed = collapsible && !expanded;
 
   // Defensive: the server always sends either a real answer or a concise
   // decline message, so a done-but-empty stream only happens on a truncated
@@ -641,25 +658,33 @@ export function AnswerCard({
   if (status === 'done' && !answer && !reasoning) return null;
 
   return (
-    <div className="border-fancy-pants rounded-2xl bg-indigo-500/90 p-5 text-white shadow-sm dark:bg-indigo-500/40">
+    // Every color inside derives from --answer-ink: white on the indigo card,
+    // the page's text color when plain.
+    <div
+      className={
+        plain
+          ? 'text-(--answer-ink) [--answer-ink:var(--color-primary)]'
+          : 'border-fancy-pants rounded-2xl bg-indigo-500/90 p-5 text-(--answer-ink) shadow-sm [--answer-ink:var(--color-white)] dark:bg-indigo-500/40'
+      }
+    >
       {heading ? (
-        <h2 className="mb-2 pr-6 text-base leading-snug font-semibold text-white">
+        <h2 className="mb-2 pr-6 text-base leading-snug font-semibold text-(--answer-ink)">
           {heading}
         </h2>
       ) : null}
       <ReasoningTrail reasoning={reasoning} answerPresent={Boolean(answer)} />
       {status === 'error' ? (
-        <p className="text-sm text-white/80">
+        <p className="text-sm text-(--answer-ink)/80">
           {errorMessage ??
             "Sorry — we couldn't generate an answer for this query."}
         </p>
       ) : status === 'rate-limited' ? (
-        <p className="text-sm text-white/80">
+        <p className="text-sm text-(--answer-ink)/80">
           You're asking a little too quickly. Please wait a moment and try
           again.
         </p>
       ) : status === 'cancelled' ? (
-        <p className="text-sm text-white/80">Search stopped.</p>
+        <p className="text-sm text-(--answer-ink)/80">Search stopped.</p>
       ) : answer ? (
         // One preview card for the whole answer — references re-anchor + swap
         // media instantly as you move between citations and chips.
@@ -675,7 +700,7 @@ export function AnswerCard({
           >
             <MarkdownBoundary
               fallback={
-                <p className="max-w-none text-sm leading-relaxed whitespace-pre-wrap text-white">
+                <p className="max-w-none text-sm leading-relaxed whitespace-pre-wrap text-(--answer-ink)">
                   {renderedAnswer}
                 </p>
               }
@@ -683,17 +708,17 @@ export function AnswerCard({
               <Streamdown
                 parseIncompleteMarkdown
                 components={components}
-                className="max-w-none text-sm leading-relaxed text-white [&>*+*]:mt-2.5!"
+                className="max-w-none text-sm leading-relaxed text-(--answer-ink) [&>*+*]:mt-2.5!"
               >
                 {renderedAnswer}
               </Streamdown>
             </MarkdownBoundary>
           </div>
-          {overflowing ? (
+          {collapsible ? (
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
-              className="mt-1 text-xs font-medium text-white/80 transition-colors hover:text-white"
+              className="mt-1 text-xs font-medium text-(--answer-ink)/80 transition-colors hover:text-(--answer-ink)"
             >
               {expanded ? 'See less' : 'See more'}
             </button>
@@ -710,10 +735,10 @@ export function AnswerCard({
         // only shimmer on the cheap path while waiting for the first token.
         <p className="text-shimmer text-sm">{shimmerWord}…</p>
       )}
-      <p className="mt-3 flex items-center gap-1.5 text-xs text-white/75">
+      <p className="mt-3 flex items-center gap-1.5 text-xs text-(--answer-ink)/75">
         <IconSparkles size={12} aria-hidden="true" className="shrink-0" />
         Generated by AI. Please verify important details.
-        <span className="rounded bg-white/15 px-1 py-px text-[10px] font-semibold tracking-wide text-white/90 uppercase">
+        <span className="rounded bg-(--answer-ink)/15 px-1 py-px text-[10px] font-semibold tracking-wide text-(--answer-ink)/90 uppercase">
           Beta
         </span>
       </p>
