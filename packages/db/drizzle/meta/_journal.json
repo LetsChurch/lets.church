@@ -225,6 +225,13 @@
       "when": 1792003270105,
       "tag": "0031_add-storage-locations",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1792114303457,
+      "tag": "0032_drop-storage-location-defaults",
+      "breakpoints": true
     }
   ]
 }

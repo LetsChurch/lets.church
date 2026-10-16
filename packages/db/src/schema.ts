@@ -314,10 +314,8 @@ export const AppUser = pgTable('app_user', {
     { precision: 3 },
   ),
   termsAcceptedAt: timestamp('terms_accepted_at', { precision: 3 }),
-  // Storage location of avatarPath (see @letschurch/s3/locations). The
-  // default backfills existing images and covers pods from before storage
-  // locations; drop it in the follow-up release (docs/storage-locations.md).
-  avatarLocation: text('avatar_location').default('idrive'),
+  // Storage location of avatarPath (see @letschurch/s3/locations).
+  avatarLocation: text('avatar_location'),
 });
 
 export const AppUserEmail = pgTable(
@@ -874,11 +872,8 @@ export const Organization = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
     // Storage locations of avatarPath / coverPath (see @letschurch/s3/locations).
-    // The default backfills existing images and covers pods from before
-    // storage locations; drop it in the follow-up release
-    // (docs/storage-locations.md).
-    avatarLocation: text('avatar_location').default('idrive'),
-    coverLocation: text('cover_location').default('idrive'),
+    avatarLocation: text('avatar_location'),
+    coverLocation: text('cover_location'),
   },
   (Organization) => ({
     organization_approvedBy_fkey: foreignKey({
@@ -1135,14 +1130,9 @@ export const Channel = pgTable(
     defaultUploadCommentsEnabled: boolean('default_upload_comments_enabled'),
     defaultUploadDownloadsEnabled: boolean('default_upload_downloads_enabled'),
     // Storage locations of the image paths (see @letschurch/s3/locations).
-    // The default backfills existing images and covers pods from before
-    // storage locations; drop it in the follow-up release
-    // (docs/storage-locations.md).
-    avatarLocation: text('avatar_location').default('idrive'),
-    coverLocation: text('cover_location').default('idrive'),
-    defaultThumbnailLocation: text('default_thumbnail_location').default(
-      'idrive',
-    ),
+    avatarLocation: text('avatar_location'),
+    coverLocation: text('cover_location'),
+    defaultThumbnailLocation: text('default_thumbnail_location'),
   },
   (Channel) => ({
     channel_approvedBy_fkey: foreignKey({
@@ -1340,10 +1330,8 @@ export const UploadState = pgTable(
     updatedAt: timestamp('updated_at', { precision: 3 })
       .notNull()
       .$onUpdate(() => new Date()),
-    // Storage location holding s3Key (see @letschurch/s3/locations). The
-    // default only covers pods from before storage locations during rollout;
-    // drop it in the follow-up release (docs/storage-locations.md).
-    storageLocation: text('storage_location').notNull().default('idrive'),
+    // Storage location holding s3Key (see @letschurch/s3/locations).
+    storageLocation: text('storage_location').notNull(),
   },
   (UploadState) => ({
     upload_state_uploadRecord_fkey: foreignKey({
@@ -1507,9 +1495,7 @@ export const UploadRecord = pgTable(
     uploadSizeBytes: bigint('upload_size_bytes', { mode: 'bigint' }),
     // Storage location of this record's ingest source and public artifacts
     // (always paired; see @letschurch/s3/locations). Thumbnail paths live here.
-    // The default only covers pods from before storage locations during
-    // rollout; drop it in the follow-up release (docs/storage-locations.md).
-    storageLocation: text('storage_location').notNull().default('idrive'),
+    storageLocation: text('storage_location').notNull(),
     // Measured bytes under `{id}/` in the public bucket (null until measured).
     publicSizeBytes: bigint('public_size_bytes', { mode: 'bigint' }),
     // Estimated public bytes held against the location's cap until the
