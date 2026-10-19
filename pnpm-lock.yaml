@@ -179,6 +179,9 @@ catalogs:
       version: 4.1.12
 
 patchedDependencies:
+  ce-la-react@0.3.2:
+    hash: 588bfe0fa3e1ce446a1de6367a656f8c3f69a3bf1fcfb9d6d0c177b8fb0eef60
+    path: patches/ce-la-react@0.3.2.patch
   mdast-util-gfm-autolink-literal@2.0.1:
     hash: b6c92ec682456ca4b035718f71ee2b4a77d00da4c08cbc5e235e99eaabd96c45
     path: patches/mdast-util-gfm-autolink-literal@2.0.1.patch
@@ -17586,7 +17589,7 @@ snapshots:
 
   ccount@2.0.1: {}
 
-  ce-la-react@0.3.2(react@19.2.0):
+  ce-la-react@0.3.2(patch_hash=588bfe0fa3e1ce446a1de6367a656f8c3f69a3bf1fcfb9d6d0c177b8fb0eef60)(react@19.2.0):
     dependencies:
       react: 19.2.0
 
@@ -19897,7 +19900,7 @@ snapshots:
 
   media-chrome@4.19.0(react@19.2.0):
     dependencies:
-      ce-la-react: 0.3.2(react@19.2.0)
+      ce-la-react: 0.3.2(patch_hash=588bfe0fa3e1ce446a1de6367a656f8c3f69a3bf1fcfb9d6d0c177b8fb0eef60)(react@19.2.0)
     transitivePeerDependencies:
       - react
 

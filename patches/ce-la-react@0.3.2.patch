@@ -1,0 +1,41 @@
+diff --git a/dist/ce-la-react.js b/dist/ce-la-react.js
+index 2c0f15a..ba5aeb7 100644
+--- a/dist/ce-la-react.js
++++ b/dist/ce-la-react.js
+@@ -106,17 +106,25 @@ function createComponent({
+         prevElemPropsRef.current = newElemProps;
+       });
+     }
+-    if (typeof window === "undefined" && elementClass?.getTemplateHTML && elementClass?.shadowRootOptions) {
+-      const { mode, delegatesFocus } = elementClass.shadowRootOptions;
+-      const templateShadowRoot = React.createElement("template", {
+-        shadowrootmode: mode,
+-        shadowrootdelegatesfocus: delegatesFocus,
+-        dangerouslySetInnerHTML: {
+-          __html: elementClass.getTemplateHTML(attrs, props)
+-        },
+-        key: "ce-la-react-ssr-template-shadow-root"
+-      });
+-      reactProps.children = [templateShadowRoot, reactProps.children];
++    if (elementClass?.getTemplateHTML && elementClass?.shadowRootOptions) {
++      if (typeof window === "undefined") {
++        const { mode, delegatesFocus } = elementClass.shadowRootOptions;
++        const templateShadowRoot = React.createElement("template", {
++          shadowrootmode: mode,
++          shadowrootdelegatesfocus: delegatesFocus,
++          dangerouslySetInnerHTML: {
++            __html: elementClass.getTemplateHTML(attrs, props)
++          },
++          key: "ce-la-react-ssr-template-shadow-root"
++        });
++        reactProps.children = [templateShadowRoot, reactProps.children];
++      } else {
++        // Patched (lets.church): mirror the server's [template, children] shape
++        // so children keep the same tree position. Otherwise every useId()
++        // below this element differs between SSR and hydration. The parser
++        // consumes the declarative shadow-root <template>, so `null` matches.
++        reactProps.children = [null, reactProps.children];
++      }
+     }
+     return React.createElement(tagName, {
+       ...defaultProps,
