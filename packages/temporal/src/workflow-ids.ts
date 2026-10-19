@@ -40,6 +40,12 @@ export function makeUpdateUploadRecordWorkflowId(uploadRecordId: string) {
   return `updateUploadRecord:${uploadRecordId}`;
 }
 
+// One durable scheduled-publish timer per upload (no timestamp suffix), so
+// signal-with-start wakes the existing run instead of starting a second.
+export function makeScheduledPublishWorkflowId(uploadRecordId: string) {
+  return `scheduledPublish:${uploadRecordId}`;
+}
+
 // Per-upload run of the LLM summary + embeddings + lc_media_v1 indexer
 // pipeline (`summarizeUploadWorkflow`). No timestamp suffix: we want
 // Temporal to refuse a second concurrent run for the same upload (the admin

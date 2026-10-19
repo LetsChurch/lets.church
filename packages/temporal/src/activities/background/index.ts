@@ -124,6 +124,10 @@ export {
   type StorageAuditSummary,
   sendStorageAuditEmail,
 } from './storage-audit';
+export {
+  getScheduledPublish,
+  publishScheduledUpload,
+} from './scheduled-publish';
 export { default as storeTranscriptParagraphs } from './store-transcript-paragraphs';
 export { default as subscribeNewsletter } from './subscribe-newsletter';
 export { default as summarizeUpload } from './summarize-upload';

@@ -3,6 +3,7 @@ import { useStore } from '@nanostores/react';
 import {
   IconChevronDown,
   IconChevronUp,
+  IconClock,
   IconCube3dSphere,
   IconDownload,
   IconEdit,
@@ -20,7 +21,12 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
+import {
+  ClientOnly,
+  createFileRoute,
+  redirect,
+  useNavigate,
+} from '@tanstack/react-router';
 import { invariant } from 'es-toolkit';
 import { map } from 'nanostores';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -1501,6 +1507,24 @@ function ChannelUploadsPage() {
                       >
                         {upload.visibility}
                       </Badge>
+                      {upload.scheduledPublishAt ? (
+                        <Badge
+                          color="blue"
+                          size="sm"
+                          className="mt-1"
+                          leftSection={<IconClock size={16} />}
+                        >
+                          {/* Local time only exists on the client. */}
+                          <ClientOnly fallback="Scheduled">
+                            {`Scheduled ${new Date(
+                              upload.scheduledPublishAt,
+                            ).toLocaleString(undefined, {
+                              dateStyle: 'medium',
+                              timeStyle: 'short',
+                            })}`}
+                          </ClientOnly>
+                        </Badge>
+                      ) : null}
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm">{upload._count.uploadViews}</Text>

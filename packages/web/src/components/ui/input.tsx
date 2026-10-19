@@ -504,7 +504,13 @@ export function Radio({
 }: RadioProps) {
   const id = useId();
   return (
-    <div className={cn('flex items-start gap-2', className)}>
+    <div
+      className={cn(
+        'flex items-start gap-2',
+        disabled && 'cursor-not-allowed opacity-50',
+        className,
+      )}
+    >
       <BaseRadio.Root
         id={id}
         value={value}

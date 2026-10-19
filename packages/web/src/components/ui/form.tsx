@@ -1,6 +1,6 @@
 import HCaptcha from '@hcaptcha/react-hcaptcha';
 import { createFormHook, createFormHookContexts } from '@tanstack/react-form';
-import { useEffect, useRef, type ComponentProps } from 'react';
+import { useEffect, useId, useRef, useState, type ComponentProps } from 'react';
 
 import { Button } from './button';
 import { LoadingOverlay } from './feedback';
@@ -181,6 +181,7 @@ function DatePickerField(props: {
   weekendDays?: number[];
 }) {
   const field = useFieldContext<Date>();
+  const id = useId();
 
   const toInputValue = (date: Date | null | undefined): string => {
     if (!date) return '';
@@ -194,8 +195,10 @@ function DatePickerField(props: {
       label={props.label}
       description={props.description}
       error={fieldError(field.state.meta.errors)}
+      htmlFor={id}
     >
       <input
+        id={id}
         type="date"
         name={field.name}
         value={toInputValue(field.state.value)}
@@ -208,6 +211,64 @@ function DatePickerField(props: {
         className="text-primary focus:border-brand focus:ring-brand/25 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm transition-colors outline-none focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900"
       />
     </InputWrapper>
+  );
+}
+
+// The viewer's timezone as a readable name ("Eastern Daylight Time") for the
+// given instant, so DST matches the date being picked.
+function localTimeZoneName(date: Date | null | undefined): string | null {
+  return (
+    new Intl.DateTimeFormat(undefined, { timeZoneName: 'long' })
+      .formatToParts(date ?? new Date())
+      .find((part) => part.type === 'timeZoneName')?.value ?? null
+  );
+}
+
+// Local date + time picker (native datetime-local) for a nullable Date. The
+// value is shown in the viewer's timezone, which the server doesn't know, so
+// the input stays empty until mount to keep SSR and hydration in agreement.
+function DateTimePickerField(props: {
+  label?: string;
+  description?: string;
+  required?: boolean;
+}) {
+  const field = useFieldContext<Date | null>();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const toInputValue = (date: Date | null | undefined): string => {
+    if (!mounted || !date) return '';
+    const d = date instanceof Date ? date : new Date(date);
+    if (Number.isNaN(d.getTime())) return '';
+    // Shift into local time, then format as YYYY-MM-DDTHH:mm.
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60_000)
+      .toISOString()
+      .slice(0, 16);
+  };
+  const timeZone = mounted ? localTimeZoneName(field.state.value) : null;
+
+  return (
+    <TextInput
+      label={props.label}
+      required={props.required}
+      description={
+        [
+          props.description,
+          timeZone ? `Times are in your local time (${timeZone}).` : null,
+        ]
+          .filter(Boolean)
+          .join(' ') || undefined
+      }
+      type="datetime-local"
+      name={field.name}
+      value={toInputValue(field.state.value)}
+      onBlur={field.handleBlur}
+      // A datetime-local string has no zone, so Date parses it as local time.
+      onChange={(e) =>
+        field.handleChange(e.target.value ? new Date(e.target.value) : null)
+      }
+      error={fieldError(field.state.meta.errors)}
+    />
   );
 }
 
@@ -278,6 +339,7 @@ export const { useAppForm } = createFormHook({
     MultiSelectField,
     RadioGroupField,
     DatePickerField,
+    DateTimePickerField,
     HCaptchaField,
   },
   formComponents: {

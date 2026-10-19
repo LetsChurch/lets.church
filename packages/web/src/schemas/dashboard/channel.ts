@@ -103,22 +103,65 @@ export const updateChannelSchema = channelFormSchema.extend({
   channelId: channelIdSchema,
 });
 
+// How far ahead an upload may be scheduled to publish.
+export const MAX_SCHEDULE_AHEAD_DAYS = 365;
+
 // Upload schemas
-export const uploadFormSchema = z.object({
+const uploadFormFields = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string(),
   license: z.nativeEnum(UploadLicense),
   publishedAt: z.date(),
   visibility: z.nativeEnum(UploadVisibility),
+  // Scheduled publishing. When set, `visibility` is the visibility the upload
+  // goes live with at this time; until then it is stored as PRIVATE. Null
+  // publishes per `visibility` immediately.
+  scheduledPublishAt: z.date().nullable(),
   userCommentsEnabled: z.boolean(),
   downloadsEnabled: z.boolean(),
   seriesId: z.string().nullable(),
 });
 
-export const updateUploadSchema = uploadFormSchema.extend({
-  channelId: channelIdSchema,
-  uploadId: uploadIdSchema,
-});
+function checkSchedule(
+  value: Pick<
+    z.infer<typeof uploadFormFields>,
+    'visibility' | 'scheduledPublishAt'
+  >,
+  ctx: z.RefinementCtx,
+) {
+  const at = value.scheduledPublishAt;
+  if (!at) return;
+  if (value.visibility === 'PRIVATE') {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['visibility'],
+      message: 'A scheduled upload goes live as Public or Unlisted',
+    });
+  }
+  const now = Date.now();
+  if (at.getTime() <= now) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['scheduledPublishAt'],
+      message: 'Choose a time in the future',
+    });
+  } else if (at.getTime() > now + MAX_SCHEDULE_AHEAD_DAYS * 86_400_000) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['scheduledPublishAt'],
+      message: `Schedule at most ${MAX_SCHEDULE_AHEAD_DAYS} days ahead`,
+    });
+  }
+}
+
+export const uploadFormSchema = uploadFormFields.superRefine(checkSchedule);
+
+export const updateUploadSchema = uploadFormFields
+  .extend({
+    channelId: channelIdSchema,
+    uploadId: uploadIdSchema,
+  })
+  .superRefine(checkSchedule);
 
 // Member management schemas
 export const memberPermissionsSchema = z.object({

@@ -34,6 +34,7 @@ import {
   makeProcessMediaWorkflowId,
   makeReprocessAllWorkflowId,
   makeResetPasswordWorkflowId,
+  makeScheduledPublishWorkflowId,
   makeScrapeAndImportWorkflowId,
   makeStorageAuditWorkflowId,
   makeStorageMoveWorkflowId,
@@ -454,6 +455,31 @@ export async function updateUploadRecord(
     retry: {
       maximumAttempts: 8,
     },
+  });
+}
+
+// Arm, move, or cancel an upload's scheduled publish. The schedule lives in
+// upload_record.scheduled_publish_at; this starts the per-upload timer
+// workflow, or wakes the running one so it re-reads the column (and exits if
+// the schedule was cleared).
+export async function syncScheduledPublish(
+  uploadRecordId: string,
+  channelId: string,
+) {
+  return signalWithStartBackground('scheduledPublishUploadWorkflow', {
+    taskQueue: BACKGROUND_QUEUE,
+    ...staticMeta({
+      summary: 'Scheduled publish',
+      links: uploadDashboardLinks(channelId, uploadRecordId),
+    }),
+    workflowId: makeScheduledPublishWorkflowId(uploadRecordId),
+    args: [uploadRecordId],
+    signal: emptySignal,
+    signalArgs: [],
+    typedSearchAttributes: [
+      { key: UPLOAD_ID_KEY, value: uploadRecordId },
+      { key: CHANNEL_ID_KEY, value: channelId },
+    ],
   });
 }
 

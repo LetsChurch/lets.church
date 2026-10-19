@@ -83,6 +83,7 @@ export {
   type StorageAuditWorkflowParams,
   storageAuditWorkflow,
 } from './storage-audit';
+export { scheduledPublishUploadWorkflow } from './scheduled-publish';
 export { summarizeUploadWorkflow } from './summarize-upload';
 export {
   deleteSearchDocumentWorkflow,

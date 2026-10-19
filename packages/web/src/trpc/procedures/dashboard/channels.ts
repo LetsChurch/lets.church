@@ -103,6 +103,7 @@ import {
   sendInvitationEmail,
   startBackground,
   startIndexMediaDocument,
+  syncScheduledPublish,
   triggerBulkMediaImport,
 } from '@/temporal';
 import {
@@ -2339,6 +2340,7 @@ export const channelRouter = router({
             title: UploadRecord.title,
             description: UploadRecord.description,
             visibility: UploadRecord.visibility,
+            scheduledPublishAt: UploadRecord.scheduledPublishAt,
             createdAt: UploadRecord.createdAt,
             lengthSeconds: UploadRecord.lengthSeconds,
             finalizedUploadKey: UploadRecord.finalizedUploadKey,
@@ -2397,6 +2399,7 @@ export const channelRouter = router({
           title: upload.title,
           description: upload.description,
           visibility: upload.visibility,
+          scheduledPublishAt: upload.scheduledPublishAt,
           createdAt: upload.createdAt,
           lengthSeconds: upload.lengthSeconds,
           finalizedUploadKey: upload.finalizedUploadKey,
@@ -2533,6 +2536,10 @@ export const channelRouter = router({
         .update(UploadRecord)
         .set({
           visibility: input.visibility,
+          // An explicit visibility change replaces any pending schedule; the
+          // stale timer finds the schedule gone when it wakes and exits.
+          scheduledPublishAt: null,
+          scheduledVisibility: null,
           updatedAt: new Date(),
         })
         .where(
@@ -2562,6 +2569,8 @@ export const channelRouter = router({
           license: true,
           visibility: true,
           publishedAt: true,
+          scheduledPublishAt: true,
+          scheduledVisibility: true,
           userCommentsEnabled: true,
           downloadsEnabled: true,
           defaultThumbnailPath: true,
@@ -2845,7 +2854,7 @@ export const channelRouter = router({
     .input(updateUploadSchema)
     .mutation(async ({ input }) => {
       const upload = await db.query.UploadRecord.findFirst({
-        columns: { id: true },
+        columns: { id: true, scheduledPublishAt: true },
         where: (t, { and, eq }) =>
           and(eq(t.id, input.uploadId), eq(t.channelId, input.channelId)),
       });
@@ -2857,14 +2866,33 @@ export const channelRouter = router({
         });
       }
 
+      // With a schedule, `visibility` is what the upload goes live as: hold it
+      // PRIVATE until then and publish it dated at the go-live time. (The
+      // schema rejects scheduling a PRIVATE upload.)
+      const schedule = input.scheduledPublishAt
+        ? {
+            visibility: 'PRIVATE' as const,
+            publishedAt: input.scheduledPublishAt,
+            scheduledPublishAt: input.scheduledPublishAt,
+            scheduledVisibility: input.visibility,
+          }
+        : {
+            visibility: input.visibility,
+            publishedAt: input.publishedAt,
+            scheduledPublishAt: null,
+            scheduledVisibility: null,
+          };
+      const scheduleChanged =
+        (upload.scheduledPublishAt?.getTime() ?? null) !==
+        (schedule.scheduledPublishAt?.getTime() ?? null);
+
       const [updatedUpload] = await db
         .update(UploadRecord)
         .set({
           title: input.title,
           description: input.description,
           license: input.license,
-          publishedAt: input.publishedAt,
-          visibility: input.visibility,
+          ...schedule,
           userCommentsEnabled: input.userCommentsEnabled,
           downloadsEnabled: input.downloadsEnabled,
           updatedAt: new Date(),
@@ -2877,12 +2905,53 @@ export const channelRouter = router({
           license: UploadRecord.license,
           visibility: UploadRecord.visibility,
           publishedAt: UploadRecord.publishedAt,
+          scheduledPublishAt: UploadRecord.scheduledPublishAt,
+          scheduledVisibility: UploadRecord.scheduledVisibility,
           userCommentsEnabled: UploadRecord.userCommentsEnabled,
           downloadsEnabled: UploadRecord.downloadsEnabled,
         });
 
       if (!updatedUpload) {
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      }
+
+      if (scheduleChanged) {
+        try {
+          await syncScheduledPublish(updatedUpload.id, input.channelId);
+        } catch (err) {
+          // Without a running timer a new schedule would never fire, so don't
+          // leave one saved that looks armed. (A cleared schedule needs no
+          // timer: a stale run re-reads the row at wake and exits.)
+          if (schedule.scheduledPublishAt) {
+            await db
+              .update(UploadRecord)
+              .set({ scheduledPublishAt: null, scheduledVisibility: null })
+              .where(eq(UploadRecord.id, updatedUpload.id));
+            moduleLogger.error(
+              {
+                uploadId: updatedUpload.id,
+                context: {
+                  error: err instanceof Error ? err.message : String(err),
+                },
+              },
+              'Failed to arm scheduled publish',
+            );
+            throw new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message:
+                'Saved your changes, but scheduling failed. Please try scheduling again.',
+            });
+          }
+          moduleLogger.warn(
+            {
+              uploadId: updatedUpload.id,
+              context: {
+                error: err instanceof Error ? err.message : String(err),
+              },
+            },
+            'Failed to wake scheduled publish after clearing it',
+          );
+        }
       }
 
       await reindexUploads([updatedUpload.id]);

@@ -7,6 +7,7 @@ import {
   IconBug,
   IconCheck,
   IconChevronDown,
+  IconClock,
   IconCopy,
   IconDatabase,
   IconDownload,
@@ -32,6 +33,7 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import {
+  ClientOnly,
   createFileRoute,
   Link,
   redirect,
@@ -83,6 +85,34 @@ import {
   $uploadProgress,
   retainLocalVideoThumbnails,
 } from './channels_.$channelId_.uploads';
+
+// The next whole hour, a day from now: a sensible starting point the user
+// will usually adjust.
+function defaultScheduleTime(): Date {
+  const d = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  d.setMinutes(0, 0, 0);
+  d.setHours(d.getHours() + 1);
+  return d;
+}
+
+// The published-date picker is date-only and stores the picked day as UTC
+// midnight. If that day is after today (in the viewer's timezone), return
+// 9:00 AM local on that day as the go-live time; otherwise null.
+function scheduleForPickedDate(picked: Date): Date | null {
+  const [y, m, d] = picked.toISOString().slice(0, 10).split('-').map(Number);
+  const now = new Date();
+  const pickedDay = new Date(y, m - 1, d);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (pickedDay <= today) return null;
+  return new Date(y, m - 1, d, 9, 0, 0, 0);
+}
+
+function formatScheduledAt(date: Date): string {
+  return date.toLocaleString(undefined, {
+    dateStyle: 'full',
+    timeStyle: 'short',
+  });
+}
 
 export const Route = createFileRoute(
   '/_main/dashboard/channels_/$channelId_/uploads_/$uploadId',
@@ -638,7 +668,11 @@ function ChannelUploadPage() {
       description: upload.description || '',
       license: upload.license,
       publishedAt: new Date(upload.publishedAt),
-      visibility: upload.visibility,
+      // While scheduled, the form edits the visibility it goes live with.
+      visibility: upload.scheduledVisibility ?? upload.visibility,
+      scheduledPublishAt: upload.scheduledPublishAt
+        ? new Date(upload.scheduledPublishAt)
+        : null,
       userCommentsEnabled: upload.userCommentsEnabled,
       downloadsEnabled: upload.downloadsEnabled,
       seriesId: upload.series?.id ?? null,
@@ -786,9 +820,28 @@ function ChannelUploadPage() {
       </form.Subscribe>
 
       {/* Private Upload Warning Banner */}
-      <form.Subscribe selector={(state) => state.values.visibility}>
-        {(visibility) =>
-          visibility === 'PRIVATE' ? (
+      <form.Subscribe
+        selector={(state) =>
+          [state.values.visibility, state.values.scheduledPublishAt] as const
+        }
+      >
+        {([visibility, scheduledPublishAt]) =>
+          scheduledPublishAt ? (
+            <Alert
+              variant="light"
+              color="blue"
+              title="Scheduled"
+              icon={<IconClock size={16} />}
+              className="mb-5"
+            >
+              This upload is private until{' '}
+              <ClientOnly fallback="the scheduled time">
+                {formatScheduledAt(scheduledPublishAt)}
+              </ClientOnly>
+              , when it becomes{' '}
+              {visibility === 'UNLISTED' ? 'unlisted' : 'public'}.
+            </Alert>
+          ) : visibility === 'PRIVATE' ? (
             <Alert
               variant="light"
               color="yellow"
@@ -1138,16 +1191,103 @@ function ChannelUploadPage() {
                   )}
                 </form.AppField>
 
-                <form.AppField name="publishedAt">
-                  {(field) => (
-                    <field.DatePickerField
-                      label="Published Date"
-                      valueFormat="MM/DD/YYYY"
-                      firstDayOfWeek={0}
-                      weekendDays={[0, 6]}
-                    />
+                {/* Publish timing: immediately (with an editable, possibly
+                    backdated, published date) or scheduled for later. */}
+                <form.Subscribe
+                  selector={(state) => state.values.scheduledPublishAt !== null}
+                >
+                  {(isScheduled) => (
+                    <div className="flex flex-col gap-3">
+                      <InputWrapper label="Publish">
+                        <ToggleGroup
+                          aria-label="Publish"
+                          value={[isScheduled ? 'schedule' : 'now']}
+                          onValueChange={(value) => {
+                            if (value[0] === 'schedule' && !isScheduled) {
+                              form.setFieldValue(
+                                'scheduledPublishAt',
+                                defaultScheduleTime(),
+                              );
+                              // Scheduling publishes the upload, so it can't
+                              // stay private.
+                              if (
+                                form.getFieldValue('visibility') === 'PRIVATE'
+                              ) {
+                                form.setFieldValue('visibility', 'PUBLIC');
+                              }
+                            } else if (value[0] === 'now' && isScheduled) {
+                              form.setFieldValue('scheduledPublishAt', null);
+                              // Publishing now shouldn't keep the future
+                              // go-live time as its published date.
+                              if (
+                                form.getFieldValue('publishedAt').getTime() >
+                                Date.now()
+                              ) {
+                                form.setFieldValue('publishedAt', new Date());
+                              }
+                            }
+                          }}
+                          className="grid w-full max-w-sm grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1 dark:bg-zinc-800"
+                        >
+                          <Toggle
+                            value="now"
+                            className="text-primary rounded-md px-3 py-1.5 text-center text-sm transition-colors data-[pressed]:bg-white data-[pressed]:shadow-sm dark:data-[pressed]:bg-zinc-900"
+                          >
+                            Now
+                          </Toggle>
+                          <Toggle
+                            value="schedule"
+                            className="text-primary rounded-md px-3 py-1.5 text-center text-sm transition-colors data-[pressed]:bg-white data-[pressed]:shadow-sm dark:data-[pressed]:bg-zinc-900"
+                          >
+                            Schedule
+                          </Toggle>
+                        </ToggleGroup>
+                      </InputWrapper>
+                      {isScheduled ? (
+                        <form.AppField name="scheduledPublishAt">
+                          {(field) => (
+                            <field.DateTimePickerField
+                              label="Goes live at"
+                              description="Stays private until then, and its published date is set to this time."
+                              required
+                            />
+                          )}
+                        </form.AppField>
+                      ) : (
+                        <form.AppField
+                          name="publishedAt"
+                          listeners={{
+                            // A future date means "go live then": switch to
+                            // Schedule at that date (the time can be adjusted
+                            // in the field that appears).
+                            onChange: ({ value }) => {
+                              const scheduled = scheduleForPickedDate(value);
+                              if (!scheduled) return;
+                              form.setFieldValue(
+                                'scheduledPublishAt',
+                                scheduled,
+                              );
+                              if (
+                                form.getFieldValue('visibility') === 'PRIVATE'
+                              ) {
+                                form.setFieldValue('visibility', 'PUBLIC');
+                              }
+                            },
+                          }}
+                        >
+                          {(field) => (
+                            <field.DatePickerField
+                              label="Published Date"
+                              valueFormat="MM/DD/YYYY"
+                              firstDayOfWeek={0}
+                              weekendDays={[0, 6]}
+                            />
+                          )}
+                        </form.AppField>
+                      )}
+                    </div>
                   )}
-                </form.AppField>
+                </form.Subscribe>
 
                 {/* Series Selection */}
                 <form.AppField name="seriesId">
@@ -1654,6 +1794,21 @@ function ChannelUploadPage() {
               <Text fw={500} size="sm">
                 Visibility
               </Text>
+              <form.Subscribe
+                selector={(state) => state.values.scheduledPublishAt}
+              >
+                {(scheduledPublishAt) =>
+                  scheduledPublishAt ? (
+                    <Text size="xs" c="dimmed">
+                      Applies when the upload goes live on{' '}
+                      <ClientOnly fallback="the scheduled date">
+                        {formatScheduledAt(scheduledPublishAt)}
+                      </ClientOnly>
+                      .
+                    </Text>
+                  ) : null
+                }
+              </form.Subscribe>
               <form.AppField name="visibility">
                 {(field) => (
                   <field.RadioGroupField>
@@ -1669,17 +1824,26 @@ function ChannelUploadPage() {
                           </div>
                         }
                       />
-                      <Radio
-                        value="PRIVATE"
-                        label={
-                          <div>
-                            <Text fw={500}>Private</Text>
-                            <Text size="xs" c="dimmed">
-                              Visible only to members of {channel.name}
-                            </Text>
-                          </div>
+                      <form.Subscribe
+                        selector={(state) =>
+                          state.values.scheduledPublishAt !== null
                         }
-                      />
+                      >
+                        {(isScheduled) => (
+                          <Radio
+                            value="PRIVATE"
+                            disabled={isScheduled}
+                            label={
+                              <div>
+                                <Text fw={500}>Private</Text>
+                                <Text size="xs" c="dimmed">
+                                  Visible only to members of {channel.name}
+                                </Text>
+                              </div>
+                            }
+                          />
+                        )}
+                      </form.Subscribe>
                       <Radio
                         value="UNLISTED"
                         label={

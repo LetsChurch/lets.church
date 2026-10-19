@@ -1526,6 +1526,13 @@ export const UploadRecord = pgTable(
     publishedAt: timestamp('published_at', { precision: 3 })
       .notNull()
       .defaultNow(),
+    // Scheduled publishing: while set, the upload stays PRIVATE and
+    // scheduledPublishUploadWorkflow flips `visibility` to
+    // `scheduledVisibility` at this time, then clears both columns. These
+    // columns are the source of truth; the workflow is only the timer and
+    // re-reads them before acting.
+    scheduledPublishAt: timestamp('scheduled_publish_at', { precision: 3 }),
+    scheduledVisibility: UploadVisibility('scheduled_visibility'),
     transcodingStartedAt: timestamp('transcoding_started_at', { precision: 3 }),
     transcodingFinishedAt: timestamp('transcoding_finished_at', {
       precision: 3,
