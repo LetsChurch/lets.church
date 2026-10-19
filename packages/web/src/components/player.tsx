@@ -731,7 +731,9 @@ export function Player({
                       <MediaLiveButton
                         className={cn(
                           'bg-transparent text-xs group-[[mediaisfullscreen]]:text-base',
-                          '[--media-text-color:white]',
+                          mediaType === 'video'
+                            ? '[--media-text-color:white]'
+                            : '[--media-text-color:var(--color-primary)]',
                         )}
                       />
                     ) : (
@@ -739,7 +741,9 @@ export function Player({
                         <MediaTimeDisplay
                           className={cn(
                             'bg-transparent text-xs group-[[mediaisfullscreen]]:text-base',
-                            '[--media-text-color:white]',
+                            mediaType === 'video'
+                              ? '[--media-text-color:white]'
+                              : '[--media-text-color:var(--color-primary)]',
                             'tabular-nums',
                           )}
                           showDuration={false}
@@ -747,7 +751,9 @@ export function Player({
                         <MediaDurationDisplay
                           className={cn(
                             'bg-transparent text-xs group-[[mediaisfullscreen]]:text-base',
-                            '[--media-text-color:white]',
+                            mediaType === 'video'
+                              ? '[--media-text-color:white]'
+                              : '[--media-text-color:var(--color-primary)]',
                             'tabular-nums',
                           )}
                         />
