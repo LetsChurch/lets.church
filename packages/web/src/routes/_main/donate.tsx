@@ -126,7 +126,7 @@ function DonatePage() {
         </Text>
       </header>
 
-      <section className="lg:border-fancy-pants lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:rounded-xl lg:bg-white lg:p-6 lg:shadow-lg lg:dark:bg-zinc-900">
+      <section className="lg:border-fancy-pants lg:sticky lg:top-4 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:max-h-[calc(100dvh-2rem)] lg:self-start lg:overflow-y-auto lg:rounded-xl lg:bg-white lg:p-6 lg:shadow-lg lg:dark:bg-zinc-900">
         <Title order={2} className="mb-5 text-2xl">
           Choose your gift
         </Title>
