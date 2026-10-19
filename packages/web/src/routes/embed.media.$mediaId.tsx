@@ -1,7 +1,7 @@
 import { UploadViewSource } from '@letschurch/db/types';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, notFound } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Player } from '@/components/player';
 import { trpcClient, useTRPC } from '@/trpc/react';
@@ -17,6 +17,14 @@ export const Route = createFileRoute('/embed/media/$mediaId')({
   validateSearch: (search: Record<string, unknown>) => {
     return {
       type: (search.type as 'video' | 'audio' | undefined) ?? 'video',
+      // Off unless the embedding page opts in with ?autoplay=1. Always-on
+      // autoplay let a second (even hidden) embed on the same page start
+      // playing once the user interacted with the first.
+      autoplay:
+        search.autoplay === 1 ||
+        search.autoplay === '1' ||
+        search.autoplay === true ||
+        search.autoplay === 'true',
     };
   },
   loader: async ({ context: { queryClient, trpc }, params }) => {
@@ -134,26 +142,35 @@ function RouteComponent() {
   // media is guaranteed to be present.
   const media = mediaData as NonNullable<typeof mediaData>;
 
-  // Record a view once the embed actually mounts on the client — not in the
+  // Record a view on first play — not on mount (an embed that's loaded but
+  // never played, e.g. hidden on the host page, isn't a view) and not in the
   // loader, which also runs on preload/revalidation. createUploadView returns
   // the daily viewHash the player uses to record watch-time; it stays '' until
   // the mutation resolves, which the player treats as "not ready to record".
+  // Watch-time isn't lost meanwhile: the player reports the element's
+  // cumulative `played` ranges once the hash arrives.
   const [viewHash, setViewHash] = useState('');
+  const viewRequestedRef = useRef(false);
+  const mountedRef = useRef(true);
   useEffect(() => {
-    let cancelled = false;
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+  const handlePlaybackStart = useCallback(() => {
+    if (viewRequestedRef.current) return;
+    viewRequestedRef.current = true;
     trpcClient.media.createUploadView
       .mutate({
         uploadRecordId: params.mediaId,
         source: UploadViewSource.EMBED,
       })
       .then((res) => {
-        if (!cancelled) {
+        if (mountedRef.current) {
           setViewHash(res?.viewHash ?? '');
         }
       });
-    return () => {
-      cancelled = true;
-    };
   }, [params.mediaId]);
 
   // Determine what type to show based on query param and availability
@@ -192,6 +209,8 @@ function RouteComponent() {
         lengthSeconds={media.lengthSeconds}
         videoClassName="size-full"
         embed={true}
+        autoplay={search.autoplay}
+        onPlaybackStart={handlePlaybackStart}
       />
     </div>
   );

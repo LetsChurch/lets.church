@@ -50,8 +50,13 @@ type Props = {
   lengthSeconds?: number | null;
   videoClassName?: string | null;
   embed?: boolean;
+  // Start playback as soon as the media is ready. Embeds turn this off by
+  // default so a page can't end up with several frames playing on their own.
+  autoplay?: boolean;
   initialTimestamp?: number;
   onVideoEnded?: () => void;
+  // Fires once on the first play, user- or autoplay-initiated.
+  onPlaybackStart?: () => void;
   // True while this is a live broadcast streaming from Mux's live HLS. Shows a
   // LIVE badge and disables the VOD-only view-range tracking.
   isLive?: boolean;
@@ -88,8 +93,10 @@ export function Player({
   lengthSeconds,
   videoClassName,
   embed = false,
+  autoplay = true,
   initialTimestamp,
   onVideoEnded,
+  onPlaybackStart,
   isLive = false,
   docked = false,
 }: Props) {
@@ -490,6 +497,7 @@ export function Player({
     const onPlay = () => {
       if (hasStarted) return;
       hasStarted = true;
+      onPlaybackStart?.();
       if (mediaType === 'video') {
         const hls = videoElement.api;
         const idx = hls?.currentLevel ?? -1;
@@ -512,12 +520,15 @@ export function Player({
     setupHls();
     videoElement.addEventListener('canplay', setupHls, { signal: ac.signal });
     videoElement.addEventListener('play', onPlay, { signal: ac.signal });
+    // The SSR'd element can start autoplaying before hydration attaches the
+    // listener above, in which case its `play` event has already fired.
+    if (!videoElement.paused) onPlay();
 
     return () => {
       ac.abort();
       hlsCleanup?.();
     };
-  }, [uploadRecordId, mediaType]);
+  }, [uploadRecordId, mediaType, onPlaybackStart]);
 
   return (
     <LcTooltip.Provider>
@@ -581,7 +592,7 @@ export function Player({
                     : undefined
                 }
                 playsInline
-                autoplay
+                autoplay={autoplay}
                 className={
                   mediaType === 'video'
                     ? 'bg-black'
