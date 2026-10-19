@@ -12,6 +12,7 @@ import {
   IconChevronDown,
   IconCode,
   IconDeviceTvOld,
+  IconJson,
   IconDownload,
   IconEdit,
   IconFlag,
@@ -49,7 +50,8 @@ type MediaDownloadKind =
   | 'VIDEO_480P'
   | 'AUDIO'
   | 'TRANSCRIPT_VTT'
-  | 'TRANSCRIPT_TXT';
+  | 'TRANSCRIPT_TXT'
+  | 'TRANSCRIPT_JSON';
 
 type MediaActionsProps = {
   ratingData: {
@@ -119,6 +121,8 @@ function getDownloadIcon(kind: MediaDownloadKind) {
       return <IconBadgeCc size={16} />;
     case 'TRANSCRIPT_TXT':
       return <IconArticle size={16} />;
+    case 'TRANSCRIPT_JSON':
+      return <IconJson size={16} />;
     default:
       return <IconDeviceTvOld size={16} />;
   }
@@ -474,7 +478,7 @@ export function MediaActions({
               <LcMenu.Root>
                 <LcMenu.Trigger
                   render={(props) => (
-                    <LcButton {...props} className="p-2">
+                    <LcButton {...props} className="p-2" aria-label="Download">
                       <IconDownload size={16} />
                     </LcButton>
                   )}

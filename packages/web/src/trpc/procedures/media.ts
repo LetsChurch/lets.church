@@ -554,7 +554,8 @@ export const mediaProcedures = {
         | 'VIDEO_480P'
         | 'AUDIO'
         | 'TRANSCRIPT_VTT'
-        | 'TRANSCRIPT_TXT';
+        | 'TRANSCRIPT_TXT'
+        | 'TRANSCRIPT_JSON';
 
       const downloadUrls: Array<{
         kind: MediaDownloadKind;
@@ -680,6 +681,17 @@ export const mediaProcedures = {
 
         // Wait for all signed URLs to be generated
         await Promise.all(downloadPromises);
+
+        // Built on request from transcript_paragraph rows rather than an S3
+        // artifact; listed after the static transcripts so it doesn't race
+        // them in the menu order.
+        if (transcribingFinishedAt) {
+          downloadUrls.push({
+            kind: 'TRANSCRIPT_JSON',
+            label: 'Transcript (json)',
+            url: `/media/${OutgoingIdSchema.parse(media.id)}/transcript.json`,
+          });
+        }
       }
 
       // Compile markdown description to HTML if present

@@ -10,7 +10,8 @@ type MediaDownloadKind =
   | 'VIDEO_480P'
   | 'AUDIO'
   | 'TRANSCRIPT_VTT'
-  | 'TRANSCRIPT_TXT';
+  | 'TRANSCRIPT_TXT'
+  | 'TRANSCRIPT_JSON';
 
 type MediaHeaderProps = {
   title: string | null;

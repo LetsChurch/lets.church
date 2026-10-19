@@ -52,6 +52,7 @@ import { Route as MainAboutIndexRouteImport } from './routes/_main/about/index'
 import { Route as SeriesSeriesIdRssDotxmlRouteImport } from './routes/series.$seriesId.rss[.]xml'
 import { Route as PlaylistPlaylistIdRssDotxmlRouteImport } from './routes/playlist.$playlistId.rss[.]xml'
 import { Route as OidcDotwellKnownOpenidConfigurationRouteImport } from './routes/oidc.[.]well-known.openid-configuration'
+import { Route as MediaMediaIdTranscriptDotjsonRouteImport } from './routes/media.$mediaId.transcript[.]json'
 import { Route as EmbedMediaMediaIdRouteImport } from './routes/embed.media.$mediaId'
 import { Route as EmbedChannelSlugRouteImport } from './routes/embed.channel.$slug'
 import { Route as ChannelSlugRssDotxmlRouteImport } from './routes/channel.$slug.rss[.]xml'
@@ -353,6 +354,12 @@ const OidcDotwellKnownOpenidConfigurationRoute =
   OidcDotwellKnownOpenidConfigurationRouteImport.update({
     id: '/oidc/.well-known/openid-configuration',
     path: '/oidc/.well-known/openid-configuration',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const MediaMediaIdTranscriptDotjsonRoute =
+  MediaMediaIdTranscriptDotjsonRouteImport.update({
+    id: '/media/$mediaId/transcript.json',
+    path: '/media/$mediaId/transcript.json',
     getParentRoute: () => rootRouteImport,
   } as any)
 const EmbedMediaMediaIdRoute = EmbedMediaMediaIdRouteImport.update({
@@ -900,6 +907,7 @@ export interface FileRoutesByFullPath {
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
   '/embed/channel/$slug': typeof EmbedChannelSlugRoute
   '/embed/media/$mediaId': typeof EmbedMediaMediaIdRoute
+  '/media/$mediaId/transcript.json': typeof MediaMediaIdTranscriptDotjsonRoute
   '/oidc/.well-known/openid-configuration': typeof OidcDotwellKnownOpenidConfigurationRoute
   '/playlist/$playlistId/rss.xml': typeof PlaylistPlaylistIdRssDotxmlRoute
   '/series/$seriesId/rss.xml': typeof SeriesSeriesIdRssDotxmlRoute
@@ -1026,6 +1034,7 @@ export interface FileRoutesByTo {
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
   '/embed/channel/$slug': typeof EmbedChannelSlugRoute
   '/embed/media/$mediaId': typeof EmbedMediaMediaIdRoute
+  '/media/$mediaId/transcript.json': typeof MediaMediaIdTranscriptDotjsonRoute
   '/oidc/.well-known/openid-configuration': typeof OidcDotwellKnownOpenidConfigurationRoute
   '/playlist/$playlistId/rss.xml': typeof PlaylistPlaylistIdRssDotxmlRoute
   '/series/$seriesId/rss.xml': typeof SeriesSeriesIdRssDotxmlRoute
@@ -1156,6 +1165,7 @@ export interface FileRoutesById {
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
   '/embed/channel/$slug': typeof EmbedChannelSlugRoute
   '/embed/media/$mediaId': typeof EmbedMediaMediaIdRoute
+  '/media/$mediaId/transcript.json': typeof MediaMediaIdTranscriptDotjsonRoute
   '/oidc/.well-known/openid-configuration': typeof OidcDotwellKnownOpenidConfigurationRoute
   '/playlist/$playlistId/rss.xml': typeof PlaylistPlaylistIdRssDotxmlRoute
   '/series/$seriesId/rss.xml': typeof SeriesSeriesIdRssDotxmlRoute
@@ -1286,6 +1296,7 @@ export interface FileRouteTypes {
     | '/channel/$slug/rss.xml'
     | '/embed/channel/$slug'
     | '/embed/media/$mediaId'
+    | '/media/$mediaId/transcript.json'
     | '/oidc/.well-known/openid-configuration'
     | '/playlist/$playlistId/rss.xml'
     | '/series/$seriesId/rss.xml'
@@ -1412,6 +1423,7 @@ export interface FileRouteTypes {
     | '/channel/$slug/rss.xml'
     | '/embed/channel/$slug'
     | '/embed/media/$mediaId'
+    | '/media/$mediaId/transcript.json'
     | '/oidc/.well-known/openid-configuration'
     | '/playlist/$playlistId/rss.xml'
     | '/series/$seriesId/rss.xml'
@@ -1541,6 +1553,7 @@ export interface FileRouteTypes {
     | '/channel/$slug/rss.xml'
     | '/embed/channel/$slug'
     | '/embed/media/$mediaId'
+    | '/media/$mediaId/transcript.json'
     | '/oidc/.well-known/openid-configuration'
     | '/playlist/$playlistId/rss.xml'
     | '/series/$seriesId/rss.xml'
@@ -1631,6 +1644,7 @@ export interface RootRouteChildren {
   ChannelSlugRssDotxmlRoute: typeof ChannelSlugRssDotxmlRoute
   EmbedChannelSlugRoute: typeof EmbedChannelSlugRoute
   EmbedMediaMediaIdRoute: typeof EmbedMediaMediaIdRoute
+  MediaMediaIdTranscriptDotjsonRoute: typeof MediaMediaIdTranscriptDotjsonRoute
   OidcDotwellKnownOpenidConfigurationRoute: typeof OidcDotwellKnownOpenidConfigurationRoute
   PlaylistPlaylistIdRssDotxmlRoute: typeof PlaylistPlaylistIdRssDotxmlRoute
   SeriesSeriesIdRssDotxmlRoute: typeof SeriesSeriesIdRssDotxmlRoute
@@ -1937,6 +1951,13 @@ declare module '@tanstack/react-router' {
       path: '/oidc/.well-known/openid-configuration'
       fullPath: '/oidc/.well-known/openid-configuration'
       preLoaderRoute: typeof OidcDotwellKnownOpenidConfigurationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/media/$mediaId/transcript.json': {
+      id: '/media/$mediaId/transcript.json'
+      path: '/media/$mediaId/transcript.json'
+      fullPath: '/media/$mediaId/transcript.json'
+      preLoaderRoute: typeof MediaMediaIdTranscriptDotjsonRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/embed/media/$mediaId': {
@@ -2813,6 +2834,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChannelSlugRssDotxmlRoute: ChannelSlugRssDotxmlRoute,
   EmbedChannelSlugRoute: EmbedChannelSlugRoute,
   EmbedMediaMediaIdRoute: EmbedMediaMediaIdRoute,
+  MediaMediaIdTranscriptDotjsonRoute: MediaMediaIdTranscriptDotjsonRoute,
   OidcDotwellKnownOpenidConfigurationRoute:
     OidcDotwellKnownOpenidConfigurationRoute,
   PlaylistPlaylistIdRssDotxmlRoute: PlaylistPlaylistIdRssDotxmlRoute,
