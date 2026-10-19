@@ -35,7 +35,7 @@ import { MediaHeader } from '@/components/media-header';
 import { MediaInfoTabs } from '@/components/media-info-tabs';
 import { MediaSidebarTabs } from '@/components/media-sidebar-tabs';
 import { MobileDrawer } from '@/components/mobile-drawer';
-import { Player } from '@/components/player';
+import { DOCKED_AUDIO_PLAYER_HEIGHT, Player } from '@/components/player';
 import {
   type PlaylistPage,
   PlaylistSidebar,
@@ -48,8 +48,10 @@ import {
 import { TranscriptSearchResults } from '@/components/transcript-search-results';
 import { WindowSplitter } from '@/components/window-splitter';
 import { useAutoplay } from '@/hooks/use-autoplay';
+import { useDockedPlayer } from '@/hooks/use-docked-player';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { IncomingIdSchema, idTranslator } from '@/schemas/common';
+import { useBrowserSize } from '@/stores/browser-size';
 import { useSetBackgroundImage } from '@/stores/header';
 import type { TranscriptLine } from '@/stores/transcript-search';
 import {
@@ -93,6 +95,10 @@ function toCarouselItem(item: {
       : undefined,
   };
 }
+
+// Docked player height cap, as a fraction of the viewport height, so the
+// transcript/playlist below it keeps most of the sidebar.
+const MAX_DOCKED_PLAYER_VIEWPORT_FRACTION = 0.4;
 
 export const Route = createFileRoute('/_main/media/$mediaId')({
   component: RouteComponent,
@@ -1005,6 +1011,33 @@ function RouteComponent() {
     hasSidebar: !hideTranscript,
   });
 
+  const browserSize = useBrowserSize();
+
+  // Once the inline player (video or audio) scrolls out of view, dock it above
+  // the transcript. Video scales down to the height cap; the audio card has a
+  // fixed height, so only dock it when the viewport is tall enough for it.
+  const canDockAudio =
+    Boolean(media.audioSource) &&
+    browserSize.height * MAX_DOCKED_PLAYER_VIEWPORT_FRACTION >=
+      DOCKED_AUDIO_PLAYER_HEIGHT;
+  const dockedPlayer = useDockedPlayer({
+    enabled:
+      layout.showSidebar &&
+      !hideTranscript &&
+      (Boolean(media.mediaSource) || canDockAudio),
+  });
+  // Fill the sidebar's width, but cap tall (e.g. portrait) videos so the
+  // transcript/playlist below keeps most of the viewport.
+  const dockedVideoHeight = Math.round(
+    Math.min(
+      (transcriptWidth * aspectHeight) / aspectWidth,
+      browserSize.height * MAX_DOCKED_PLAYER_VIEWPORT_FRACTION,
+    ),
+  );
+  const dockedVideoWidth = Math.round(
+    (dockedVideoHeight * aspectWidth) / aspectHeight,
+  );
+
   const handleTranscriptWidthChange = (width: number) => {
     setTranscriptWidth(width);
     layout.setTranscriptWidth(width);
@@ -1028,31 +1061,58 @@ function RouteComponent() {
         >
           {/* TODO: remove mb-10 when related content is implemented */}
           <div className="mb-10 w-full">
-            <div className="relative">
-              <Player
-                key={params.mediaId}
-                uploadRecordId={params.mediaId}
-                viewHash={viewHash}
-                mediaSource={media.mediaSource}
-                audioSource={media.audioSource}
-                posterThumbnailUrl={media.posterThumbnailUrl}
-                videoWidth={layout.videoWidth}
-                videoHeight={layout.videoHeight}
-                peaksJsonUrl={media.peaksJsonUrl}
-                lengthSeconds={media.lengthSeconds}
-                videoClassName={layout.showSidebar ? null : 'sticky top-0 z-10'}
-                initialTimestamp={initialTimestamp}
-                onVideoEnded={autoplay.handleVideoEnded}
-                isLive={media.isLive}
-              />
-              {hasPlaylistContext && nextItem ? (
-                <AutoplayCountdown
-                  isVisible={autoplay.showCountdown}
-                  countdown={autoplay.countdown}
-                  nextMediaTitle={nextItem.title ?? 'Untitled'}
-                  onCancel={autoplay.cancelAutoplay}
+            <div
+              ref={dockedPlayer.placeholderRef}
+              // Single column: keep the video pinned while scrolling the
+              // details. Sticky goes on this wrapper (its parent spans the whole
+              // column), not the Player, whose parent is only as tall as it is.
+              className={
+                !layout.showSidebar && media.mediaSource
+                  ? 'sticky top-0 z-10'
+                  : undefined
+              }
+              style={
+                dockedPlayer.isDocked
+                  ? { height: `${dockedPlayer.holdHeight}px` }
+                  : undefined
+              }
+            >
+              <div ref={dockedPlayer.floatingRef} className="relative">
+                <Player
+                  key={params.mediaId}
+                  uploadRecordId={params.mediaId}
+                  viewHash={viewHash}
+                  mediaSource={media.mediaSource}
+                  audioSource={media.audioSource}
+                  posterThumbnailUrl={media.posterThumbnailUrl}
+                  videoWidth={
+                    dockedPlayer.isDocked ? dockedVideoWidth : layout.videoWidth
+                  }
+                  videoHeight={
+                    dockedPlayer.isDocked
+                      ? dockedVideoHeight
+                      : layout.videoHeight
+                  }
+                  peaksJsonUrl={media.peaksJsonUrl}
+                  lengthSeconds={media.lengthSeconds}
+                  videoClassName={
+                    // Centered in the slot when capped narrower than it.
+                    dockedPlayer.isDocked ? 'mx-auto w-fit' : null
+                  }
+                  docked={dockedPlayer.isDocked}
+                  initialTimestamp={initialTimestamp}
+                  onVideoEnded={autoplay.handleVideoEnded}
+                  isLive={media.isLive}
                 />
-              ) : null}
+                {hasPlaylistContext && nextItem ? (
+                  <AutoplayCountdown
+                    isVisible={autoplay.showCountdown}
+                    countdown={autoplay.countdown}
+                    nextMediaTitle={nextItem.title ?? 'Untitled'}
+                    onCancel={autoplay.cancelAutoplay}
+                  />
+                ) : null}
+              </div>
             </div>
 
             <MediaHeader
@@ -1166,6 +1226,8 @@ function RouteComponent() {
             />
             <div style={{ width: `${transcriptWidth}px` }}>
               <MediaSidebarTabs
+                dockSlotRef={dockedPlayer.slotRef}
+                dockSlotHeight={dockedPlayer.slotHeight}
                 transcript={transcript}
                 paragraphs={paragraphs}
                 isTranscriptProcessing={!media.transcribingFinishedAt}

@@ -55,7 +55,14 @@ type Props = {
   // True while this is a live broadcast streaming from Mux's live HLS. Shows a
   // LIVE badge and disables the VOD-only view-range tracking.
   isLive?: boolean;
+  // Docked into the media page's sidebar (see useDockedPlayer). Audio gets a
+  // card surface (it no longer sits on the page's tinted header backdrop) and a
+  // compact height so the transcript/playlist below keeps its room.
+  docked?: boolean;
 };
+
+const AUDIO_PLAYER_HEIGHT = 240;
+export const DOCKED_AUDIO_PLAYER_HEIGHT = 176;
 
 function serializeTimeRanges(
   ranges: TimeRanges,
@@ -84,6 +91,7 @@ export function Player({
   initialTimestamp,
   onVideoEnded,
   isLive = false,
+  docked = false,
 }: Props) {
   const trpc = useTRPC();
   const videoRef = useRef<HlsVideoElement>(null);
@@ -520,6 +528,9 @@ export function Player({
           mediaType === 'video' && 'bg-black',
           mediaType === 'video' && videoClassName,
           mediaType === 'audio' && embed && 'w-full',
+          mediaType === 'audio' &&
+            docked &&
+            'border-fancy-pants bg-zinc-100 dark:bg-zinc-900',
         )}
       >
         {isLive && currentSource && (
@@ -547,7 +558,7 @@ export function Player({
                 height: embed
                   ? '100%'
                   : mediaType === 'audio'
-                    ? '240px'
+                    ? `${docked ? DOCKED_AUDIO_PLAYER_HEIGHT : AUDIO_PLAYER_HEIGHT}px`
                     : `${videoHeight}px`,
               }}
               autohide={mediaType === 'audio' ? '-1' : '2'}
