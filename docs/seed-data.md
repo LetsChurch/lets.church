@@ -14,9 +14,9 @@ how to add new uploads to the seed.
    local minio buckets (`ingest`, `public`, `backup`). The directory tree
    under `seed-data/lcdevs3/letschurch-dev-public/{uploadId}/` becomes the
    public S3 prefix for that upload — including pre-rendered HLS audio
-   (`AUDIO.m3u8` + `AUDIO_*.m4s`), thumbnails, peaks, the legacy VTT
-   transcript, and (for LLM-enabled uploads) the camelCase `transcript.json`
-   produced by the worker pipeline.
+   (`AUDIO.m3u8` + `AUDIO_*.m4s`), thumbnails, peaks, the `transcript.vtt`
+   captions download, and the camelCase `transcript.json` produced by the
+   worker pipeline.
 2. **`just seed-db`** — runs `packages/web/src/seed/dev.ts` inside the `web`
    container. It inserts users, channels, organizations, uploads, and (for
    uploads listed in `LLM_SEEDED_UPLOAD_IDS`) direct-inserts the LLM data
@@ -27,22 +27,18 @@ how to add new uploads to the seed.
    `.gitattributes`) and deliberately live outside `seed-data/lcdevs3/` so
    `seed-s3-public` doesn't waste a sync round-trip uploading them.
 
-## Two seed regimes per upload
+## Seed transcripts
 
-- **Legacy uploads** — ship a `transcript.vtt` only. The Transcript tab uses
-  the VTT-derived line transcript; no summary, no paragraph embeddings, no
-  `lc_media_v1` index entry. **No uploads in the current seed corpus are in
-  this regime** — every one has a real `transcript.json` plus a committed
-  LLM snapshot. The legacy path is still preserved in case new audio is
-  added before its snapshot is generated.
-- **LLM-seeded uploads** — ship both `transcript.json` (raw worker output,
-  under `seed-data/lcdevs3/letschurch-dev-public/{uploadId}/`) and a
-  snapshot of the post-pipeline DB state at `seed-data/llm/{uploadId}.json`
-  (paragraphs with embeddings + display/search summaries + summary
-  embeddings). The seed direct-inserts from the snapshot and fires an
-  `indexDocument('media', …)` to push the unified doc to `lc_media_v1`. No
-  LLM calls at seed time — the snapshot _is_ the real LLM output, captured
-  once and committed.
+Every seeded upload ships `transcript.json` (raw worker output, under
+`seed-data/lcdevs3/letschurch-dev-public/{uploadId}/`) and a snapshot of the
+post-pipeline DB state at `seed-data/llm/{uploadId}.json` (paragraphs with
+embeddings + display/search summaries + summary embeddings). The seed
+direct-inserts from the snapshot and fires an `indexDocument('media', …)` to
+push the unified doc to `lc_media_v1`. No LLM calls at seed time — the
+snapshot _is_ the real LLM output, captured once and committed. The media page
+renders transcripts from `transcript_paragraph` rows only, so new seed audio
+needs a `transcript.json` and a snapshot (generate one with
+`LIVE_PIPELINE=1 just seed-db`, below) before its Transcript tab shows anything.
 
 The current seed corpus has **27 LLM-seeded uploads**: the 20-part Dorean
 Principle audiobook (Foreword → Conclusion + 3 Appendices) plus the 7

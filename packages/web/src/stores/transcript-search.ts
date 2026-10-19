@@ -2,37 +2,29 @@ import type { Document } from 'flexsearch';
 import { atom } from 'nanostores';
 import PLazy from 'p-lazy';
 
-import { escapeHtml } from '@/util/html-escape';
-
-export type TranscriptLine = {
-  id?: number;
-  start: number;
-  text: string;
-};
-
-export type SearchResult = {
+type IndexedParagraph = {
   id: number;
-  start: number;
   text: string;
-  highlighted: string;
 };
 
-// Search state atoms
+// Search state atoms. Results are the indices (into the paragraph array that
+// was searched) of matching paragraphs; TranscriptParagraphs renders and
+// highlights them.
 export const $searchQuery = atom<string>('');
-export const $searchResults = atom<SearchResult[]>([]);
+export const $searchResults = atom<number[]>([]);
 export const $isSearchActive = atom<boolean>(false);
 
 // Lazy-loaded FlexSearch index
-let flexSearchIndexPromise: PLazy<Document<TranscriptLine>> | null = null;
+let flexSearchIndexPromise: PLazy<Document<IndexedParagraph>> | null = null;
 
 export function initializeSearchIndex(
-  transcriptLines: TranscriptLine[],
-): PLazy<Document<TranscriptLine>> {
+  paragraphs: Array<{ text: string }>,
+): PLazy<Document<IndexedParagraph>> {
   if (!flexSearchIndexPromise) {
     flexSearchIndexPromise = PLazy.from(async () => {
       const { Document } = await import('flexsearch');
 
-      const index = new Document<TranscriptLine>({
+      const index = new Document<IndexedParagraph>({
         document: {
           id: 'id',
           store: true,
@@ -45,12 +37,8 @@ export function initializeSearchIndex(
         },
       });
 
-      // Add all transcript lines to the index
-      transcriptLines.forEach((line, i) => {
-        index.add({
-          id: i,
-          ...line,
-        });
+      paragraphs.forEach((p, i) => {
+        index.add({ id: i, text: p.text });
       });
 
       return index;
@@ -62,15 +50,14 @@ export function initializeSearchIndex(
 
 export async function performSearch(
   query: string,
-  transcriptLines: TranscriptLine[],
+  paragraphs: Array<{ text: string }>,
 ): Promise<void> {
   if (!query.trim()) {
     $searchResults.set([]);
     return;
   }
 
-  const indexPromise = initializeSearchIndex(transcriptLines);
-  const index = await indexPromise;
+  const index = await initializeSearchIndex(paragraphs);
 
   const results = await index.search(query, {
     enrich: true,
@@ -78,51 +65,17 @@ export async function performSearch(
   });
 
   // FlexSearch returns results grouped by field
-  const searchResults: SearchResult[] = [];
+  const ids: number[] = [];
 
   if (results.length > 0 && results[0]?.result) {
     for (const item of results[0].result) {
       if (item && typeof item === 'object' && 'doc' in item) {
-        const doc = item.doc as TranscriptLine & { id: number };
-        // Create highlighted version by finding the query terms in the text
-        const highlighted = highlightText(doc.text, query);
-
-        searchResults.push({
-          id: doc.id,
-          start: doc.start,
-          text: doc.text,
-          highlighted,
-        });
+        ids.push((item.doc as IndexedParagraph).id);
       }
     }
   }
 
-  $searchResults.set(searchResults);
-}
-
-function highlightText(text: string, query: string): string {
-  // The result is rendered with dangerouslySetInnerHTML in
-  // transcript-search-results.tsx. Transcript cue text comes from untrusted
-  // uploaded/imported media, so escape it before inserting the <mark> tags;
-  // otherwise markup like `<img onerror=...>` in a cue would execute.
-  const escaped = escapeHtml(text);
-
-  // Split query into terms and escape special regex characters
-  const terms = query
-    .toLowerCase()
-    .split(/\s+/)
-    .filter((term) => term.length > 0)
-    .map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-
-  if (terms.length === 0) {
-    return escaped;
-  }
-
-  // Create a regex that matches any of the terms (case insensitive)
-  const pattern = new RegExp(`(${terms.join('|')})`, 'gi');
-
-  // Replace matches with highlighted version
-  return escaped.replace(pattern, '<mark>$1</mark>');
+  $searchResults.set(ids);
 }
 
 export function resetSearch(): void {

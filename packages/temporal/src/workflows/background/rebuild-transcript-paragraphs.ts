@@ -26,8 +26,7 @@ const { storeTranscriptParagraphs } = proxyActivities<typeof activities>({
  */
 export async function rebuildTranscriptParagraphsWorkflow(
   uploadRecordId: string,
-  // Where the Python transcribe worker writes it (services/transcribe); uploads
-  // from the legacy TS worker used `transcript.original.json` and can pass it.
+  // Where the Python transcribe worker writes it (services/transcribe).
   transcriptJsonKey = `${uploadRecordId}/transcript.json`,
 ) {
   const { changed } = await storeTranscriptParagraphs(

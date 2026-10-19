@@ -12,7 +12,6 @@ import { invariant } from 'es-toolkit';
 import type * as backgroundActivities from '../../activities/background';
 import type * as probeActivities from '../../activities/probe';
 import type * as transcodeActivities from '../../activities/transcode';
-import type * as transcribeActivities from '../../activities/transcribe';
 import {
   BACKGROUND_QUEUE,
   PRIORITY_USER,
@@ -48,7 +47,19 @@ const { transcode, createThumbnails } = proxyActivities<
   retry: { maximumAttempts: 2 },
 });
 
-const { transcribe } = proxyActivities<typeof transcribeActivities>({
+// Served by the Python worker (services/transcribe), so there's no TS module to
+// derive the type from; this mirrors its `transcribe` activity signature.
+const { transcribe } = proxyActivities<{
+  transcribe(
+    uploadRecordId: string,
+    s3UploadKey: string,
+    storageLocation?: string,
+  ): Promise<{
+    transcriptKey: string;
+    transcriptJsonKey: string;
+    additionalKeys: string[];
+  }>;
+}>({
   startToCloseTimeout: '180 minutes',
   heartbeatTimeout: '10 minutes',
   taskQueue: TRANSCRIBE_QUEUE,

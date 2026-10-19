@@ -40,12 +40,11 @@ import {
   type PlaylistPage,
   PlaylistSidebar,
 } from '@/components/playlist-sidebar';
-import { Transcript } from '@/components/transcript';
 import {
   type TranscriptParagraph,
+  TranscriptNoMatches,
   TranscriptParagraphs,
 } from '@/components/transcript-paragraphs';
-import { TranscriptSearchResults } from '@/components/transcript-search-results';
 import { WindowSplitter } from '@/components/window-splitter';
 import { useAutoplay } from '@/hooks/use-autoplay';
 import { useDockedPlayer } from '@/hooks/use-docked-player';
@@ -53,7 +52,6 @@ import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { IncomingIdSchema, idTranslator } from '@/schemas/common';
 import { useBrowserSize } from '@/stores/browser-size';
 import { useSetBackgroundImage } from '@/stores/header';
-import type { TranscriptLine } from '@/stores/transcript-search';
 import {
   $isSearchActive,
   $searchQuery,
@@ -141,7 +139,7 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
     }
   },
   loader: async ({ context: { queryClient, trpc }, params }) => {
-    // The transcript/paragraphs/rating/comments ensureQueryData calls run for
+    // The paragraphs/rating/comments ensureQueryData calls run for
     // their cache-priming side effect (the component reads them via
     // useSuspenseQuery); only media is used here directly. View recording is
     // deliberately NOT done here — loaders also run on preload/revalidation,
@@ -150,11 +148,6 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
     const [media] = await Promise.all([
       queryClient.ensureQueryData(
         trpc.media.getMediaById.queryOptions({
-          mediaId: params.mediaId,
-        }),
-      ),
-      queryClient.ensureQueryData(
-        trpc.media.getTranscript.queryOptions({
           mediaId: params.mediaId,
         }),
       ),
@@ -194,7 +187,7 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
     const { probe: _probe, ...mediaWithoutProbe } = media;
 
     // Only `media` is read off loaderData (consumed by head() for SEO meta,
-    // where hooks can't run). transcript/paragraphs/rating/comments are read
+    // where hooks can't run). paragraphs/rating/comments are read
     // in the component via useSuspenseQuery — the ensureQueryData calls above
     // already primed them into the cache, so returning them here too would
     // just bloat the serialized SSR payload.
@@ -340,40 +333,22 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
 });
 
 function MobileTranscriptDrawerContent({
-  transcript,
   paragraphs,
   isTranscriptProcessing,
 }: {
-  transcript: Array<{ start: number; text: string }>;
-  paragraphs?: Array<TranscriptParagraph> | null;
+  paragraphs: Array<TranscriptParagraph>;
   isTranscriptProcessing: boolean;
 }) {
-  const useParagraphs = Boolean(paragraphs && paragraphs.length > 0);
   const isSearchActive = useStore($isSearchActive);
   const searchQuery = useStore($searchQuery);
   const searchResults = useStore($searchResults);
 
-  // Mirror of the desktop sidebar's `searchableLines`: feed paragraphs
-  // (in ms) to the search store when we're in paragraph mode. See
-  // media-sidebar-tabs.tsx for the rationale.
-  const searchableLines = useMemo<TranscriptLine[]>(() => {
-    if (useParagraphs && paragraphs) {
-      return paragraphs.map((p, i) => ({
-        id: i,
-        start: p.start * 1000,
-        text: p.text,
-      }));
-    }
-    return transcript;
-  }, [useParagraphs, paragraphs, transcript]);
-
-  // Paragraph-mode search results re-render through TranscriptParagraphs
-  // so annotations stay visible. See media-sidebar-tabs.tsx for context.
+  // Search results re-render through TranscriptParagraphs so annotations
+  // stay visible. See media-sidebar-tabs.tsx for context.
   const matchedParagraphs = useMemo(() => {
-    if (!useParagraphs || !paragraphs) return null;
-    const matchedIds = new Set(searchResults.map((r) => r.id));
+    const matchedIds = new Set(searchResults);
     return paragraphs.filter((_, i) => matchedIds.has(i));
-  }, [useParagraphs, paragraphs, searchResults]);
+  }, [paragraphs, searchResults]);
 
   const handleSearchClick = () => {
     $isSearchActive.set(true);
@@ -386,7 +361,7 @@ function MobileTranscriptDrawerContent({
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     $searchQuery.set(query);
-    void performSearch(query, searchableLines);
+    void performSearch(query, paragraphs);
   };
 
   const hasQuery = searchQuery.trim().length > 0;
@@ -441,23 +416,18 @@ function MobileTranscriptDrawerContent({
 
       <div className="fade-bottom flex min-h-0 flex-1 flex-col overflow-hidden">
         {isSearchActive && hasQuery ? (
-          useParagraphs && matchedParagraphs && matchedParagraphs.length > 0 ? (
+          matchedParagraphs.length > 0 ? (
             <TranscriptParagraphs
               paragraphs={matchedParagraphs}
               isTranscriptProcessing={isTranscriptProcessing}
               highlightQuery={searchQuery}
             />
           ) : (
-            <TranscriptSearchResults />
+            <TranscriptNoMatches />
           )
-        ) : useParagraphs ? (
-          <TranscriptParagraphs
-            paragraphs={paragraphs ?? []}
-            isTranscriptProcessing={isTranscriptProcessing}
-          />
         ) : (
-          <Transcript
-            transcript={transcript}
+          <TranscriptParagraphs
+            paragraphs={paragraphs}
             isTranscriptProcessing={isTranscriptProcessing}
           />
         )}
@@ -699,17 +669,8 @@ function RouteComponent() {
     };
   }, [params.mediaId]);
 
-  // Poll for transcript updates when transcription is in progress
-  const { data: transcriptData } = useSuspenseQuery({
-    ...trpc.media.getTranscript.queryOptions({
-      mediaId: params.mediaId,
-    }),
-    refetchInterval: media && !media.transcribingFinishedAt ? 60000 : false,
-  });
-  const transcript = transcriptData ?? [];
-
-  // Word-level paragraph transcript (newer pipeline). Null until rows exist,
-  // in which case the sidebar falls back to the legacy line transcript above.
+  // Word-level paragraph transcript. Null until rows exist; polls while
+  // transcription is in progress.
   const { data: paragraphsData } = useSuspenseQuery({
     ...trpc.media.getTranscriptParagraphs.queryOptions({
       mediaId: params.mediaId,
@@ -1228,8 +1189,7 @@ function RouteComponent() {
               <MediaSidebarTabs
                 dockSlotRef={dockedPlayer.slotRef}
                 dockSlotHeight={dockedPlayer.slotHeight}
-                transcript={transcript}
-                paragraphs={paragraphs}
+                paragraphs={paragraphs ?? []}
                 isTranscriptProcessing={!media.transcribingFinishedAt}
                 playlistContext={
                   hasPlaylistContext && activeListId && playlistData
@@ -1261,8 +1221,7 @@ function RouteComponent() {
         <MobileDrawer.Portal>
           <MobileDrawer.Content className="h-[85vh]">
             <MobileTranscriptDrawerContent
-              transcript={transcript}
-              paragraphs={paragraphs}
+              paragraphs={paragraphs ?? []}
               isTranscriptProcessing={!media.transcribingFinishedAt}
             />
           </MobileDrawer.Content>

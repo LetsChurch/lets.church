@@ -7,7 +7,6 @@
     "./activities/background": "./src/activities/background/index.ts",
     "./activities/probe": "./src/activities/probe/index.ts",
     "./activities/transcode": "./src/activities/transcode/index.ts",
-    "./activities/transcribe": "./src/activities/transcribe/index.ts",
     "./activities/import": "./src/activities/import/index.ts",
     "./activities/background/*": "./src/activities/background/*.ts",
     "./workflows/background": "./src/workflows/background/index.ts",

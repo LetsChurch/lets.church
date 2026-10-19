@@ -4235,11 +4235,10 @@ export const adminRouter = router({
           });
         }
 
-        // Probe for at least one paragraph so we can refuse cleanly on legacy
-        // uploads that haven't been through the new transcribe pipeline (the
-        // summarize activity would otherwise fail mid-run with a less obvious
-        // error). `select 1 ... limit 1` rather than a count — we only need
-        // existence.
+        // Probe for at least one paragraph so we can refuse cleanly when
+        // paragraph storage never landed (the summarize activity would
+        // otherwise fail mid-run with a less obvious error). `select 1 ...
+        // limit 1` rather than a count — we only need existence.
         const hasParagraph = await db
           .select({ id: TranscriptParagraph.id })
           .from(TranscriptParagraph)
@@ -4346,7 +4345,7 @@ export const adminRouter = router({
   // lc_media_v1 reindex). Independent of summary regen so admins can fix
   // annotations after a prompt change without paying for the summary
   // (~$0.02 / call each for gpt-6-luna on a typical sermon-length
-  // transcript). Same legacy-upload guard and RUNNING-check as the summary
+  // transcript). Same no-paragraphs guard and RUNNING-check as the summary
   // procedure.
   regenerateUploadAnnotations: adminProcedure
     .input(

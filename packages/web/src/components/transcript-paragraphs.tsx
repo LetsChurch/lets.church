@@ -79,8 +79,8 @@ export type TranscriptParagraph = {
 type Props = {
   paragraphs: Array<TranscriptParagraph>;
   isTranscriptProcessing?: boolean;
-  // When set (paragraph-search results), per-word matches get the same
-  // orange `<mark>` styling the legacy text-only results view used. Each
+  // When set (paragraph-search results), per-word matches get orange
+  // `<mark>` styling. Each
   // whitespace-separated term is matched case-insensitively as a regex
   // substring against each word.
   highlightQuery?: string;
@@ -658,6 +658,15 @@ const ParagraphView = memo(function ParagraphView({
   );
 });
 
+// Empty state for a transcript search with no matching paragraphs.
+export function TranscriptNoMatches() {
+  return (
+    <div className="flex size-full items-center justify-center p-5">
+      <p className="text-sm text-gray-500">No results found</p>
+    </div>
+  );
+}
+
 export function TranscriptParagraphs({
   paragraphs,
   isTranscriptProcessing = false,
@@ -690,7 +699,7 @@ export function TranscriptParagraphs({
 
   const active = useMemo(() => {
     if (flat.length === 0) return { paragraphIndex: -1, wordIndex: -1 };
-    // currentTime is in seconds (NOT ms — the legacy VTT path divides by 1000).
+    // currentTime and word starts are both in seconds.
     let i = bSearch(flat, currentTime, (w, ct) => w.start - ct);
     if (i < 0) i = -i - 2; // last word whose start <= currentTime
     if (i < 0) return { paragraphIndex: -1, wordIndex: -1 };

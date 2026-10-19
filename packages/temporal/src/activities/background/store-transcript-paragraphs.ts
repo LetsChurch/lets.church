@@ -13,7 +13,7 @@ import {
 import {
   type TranscriptJsonSegment,
   transcriptJsonSchema,
-} from '../../util/whisper';
+} from '../../util/transcript-json';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/store-transcript-paragraphs',
@@ -60,8 +60,7 @@ function fingerprintTranscriptSource(
  * Idempotent: an identical transcript is a no-op, preserving any LLM work that
  * landed before an activity/workflow retry. A genuinely changed transcript is
  * replaced and all transcript-derived summary state is invalidated in the same
- * transaction. No-ops on legacy transcripts that lack paragraph markers,
- * leaving the media page on the legacy VTT rendering.
+ * transaction.
  */
 export default async function storeTranscriptParagraphs(
   uploadRecordId: string,
@@ -79,14 +78,6 @@ export default async function storeTranscriptParagraphs(
   invariant(body, `No object with key ${s3UploadKey} found`);
 
   const parsed = transcriptJsonSchema.parse(JSON.parse(body));
-
-  // Legacy gate: only the paragraph-aware worker output carries isParagraphStart.
-  if (!parsed.segments.some((s) => s.isParagraphStart)) {
-    activityLogger.info(
-      'No paragraph markers; skipping (legacy transcript stays on VTT rendering)',
-    );
-    return { paragraphs: 0, changed: false };
-  }
 
   // Group consecutive segments into paragraphs: start a new paragraph when a
   // non-first segment is flagged isParagraphStart (mirrors the worker's

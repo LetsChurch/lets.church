@@ -25,7 +25,6 @@ import rehypeStringify from 'rehype-stringify';
 import remarkLinkify from 'remark-linkify';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
-import { type NodeCue, parseSync as parseVtt } from 'subtitle';
 import { unified } from 'unified';
 import { z } from 'zod';
 
@@ -653,27 +652,6 @@ export const mediaProcedures = {
 
         // Add transcript downloads only if transcription completed
         if (transcribingFinishedAt) {
-          // Two generations of uploads live side-by-side in S3:
-          //   * New (Python transcribe worker, this branch): uploads
-          //     `transcript.txt` (paragraphs joined with blank lines) and
-          //     persists rows to `transcript_paragraph`.
-          //   * Legacy (older TS worker): uploaded `transcript.original.txt`
-          //     (raw whisper output, no paragraph grouping) and did not
-          //     populate `transcript_paragraph`.
-          // Presence of paragraph rows is the cleanest signal for which
-          // generation produced this upload — we don't have to probe S3
-          // and the bit aligns with what's actually shown in the UI.
-          const hasParagraphs =
-            (
-              await db
-                .select({ id: TranscriptParagraph.id })
-                .from(TranscriptParagraph)
-                .where(eq(TranscriptParagraph.uploadRecordId, media.id))
-                .limit(1)
-            ).length > 0;
-          const txtKey = hasParagraphs
-            ? `${media.id}/transcript.txt`
-            : `${media.id}/transcript.original.txt`;
           downloadPromises.push(
             getPublicUrlWithFilename(
               getLocation(storageLocation).public,
@@ -688,7 +666,7 @@ export const mediaProcedures = {
             }),
             getPublicUrlWithFilename(
               getLocation(storageLocation).public,
-              txtKey,
+              `${media.id}/transcript.txt`,
               `${baseFilename} transcript.txt`,
             ).then((url) => {
               downloadUrls.push({
@@ -1060,84 +1038,8 @@ export const mediaProcedures = {
       return { success: true, secondsRecorded: seconds.size };
     }),
 
-  getTranscript: publicProcedure
-    .input(getTranscriptSchema)
-    .query(async ({ input, ctx }) => {
-      moduleLogger.info(
-        {
-          context: {
-            mediaId: input.mediaId,
-          },
-        },
-        'Fetching transcript',
-      );
-
-      const sessionUserId = ctx.session?.appUserId ?? null;
-      const media = await db.query.UploadRecord.findFirst({
-        columns: { id: true, visibility: true, storageLocation: true },
-        with: {
-          channel: {
-            columns: { id: true, visibility: true, approvedAt: true },
-          },
-        },
-        where: (t, { eq }) => eq(t.id, input.mediaId),
-      });
-
-      if (!media) return null;
-
-      if (media.channel.visibility === 'PRIVATE' || !media.channel.approvedAt) {
-        return null;
-      }
-
-      if (media.visibility === 'PRIVATE') {
-        if (!sessionUserId) return null;
-        if (!ctx.isSiteAdmin) {
-          const membershipCheck = await db.query.ChannelMembership.findFirst({
-            columns: { appUserId: true },
-            where: (t, { and, eq }) =>
-              and(
-                eq(t.channelId, media.channel.id),
-                eq(t.appUserId, sessionUserId),
-              ),
-          });
-          if (!membershipCheck) return null;
-        }
-      }
-
-      try {
-        const url = getPublicMediaUrl(
-          media.storageLocation,
-          `${input.mediaId}/transcript.vtt`,
-        );
-        const res = await fetch(url);
-
-        if (!res.ok) {
-          return null;
-        }
-
-        const text = await res.text();
-        const parsed = parseVtt(text)
-          .filter((n): n is NodeCue => n.type === 'cue')
-          .map(({ data: { start, text } }) => ({ start, text }));
-
-        return parsed;
-      } catch (e) {
-        moduleLogger.error(
-          {
-            context: {
-              mediaId: input.mediaId,
-              error: e,
-            },
-          },
-          'Error fetching transcript',
-        );
-        return null;
-      }
-    }),
-
-  // Paragraph transcript with per-word timings (the newer pipeline). Returns
-  // null when no rows exist so the client can fall back to the legacy VTT
-  // transcript (getTranscript). Access checks mirror getTranscript exactly.
+  // Paragraph transcript with per-word timings. Returns null when no rows
+  // exist yet (transcription still in progress).
   getTranscriptParagraphs: publicProcedure
     .input(getTranscriptSchema)
     .query(async ({ input, ctx }) => {
@@ -1960,7 +1862,7 @@ export const mediaProcedures = {
         return empty;
       }
 
-      // Mirror the access checks used by getMediaById/getTranscript: the caller
+      // Mirror the access checks used by getMediaById/getTranscriptParagraphs: the caller
       // must be able to view the source media before we surface anything
       // derived from it (its embedding, even indirectly).
       if (
