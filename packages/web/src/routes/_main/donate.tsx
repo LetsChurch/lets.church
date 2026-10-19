@@ -4,6 +4,7 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { z } from 'zod';
 
+import { DonationBudget } from '@/components/donation-budget';
 import { Alert, Button, Text, Title } from '@/components/ui';
 import { useAppForm } from '@/components/ui/form';
 import { donationAmounts, formatDonationAmount } from '@/donations/amounts';
@@ -45,6 +46,7 @@ export const Route = createFileRoute('/_main/donate')({
       queryClient.ensureQueryData(
         trpc.donations.getCheckoutDefaults.queryOptions(),
       ),
+      queryClient.ensureQueryData(trpc.donations.getBudget.queryOptions()),
     ]);
     return { env, defaults };
   },
@@ -332,7 +334,8 @@ function DonatePage() {
         </form>
       </section>
 
-      <aside className="lg:col-start-1 lg:row-start-2">
+      <aside className="flex flex-col gap-6 lg:col-start-1 lg:row-start-2">
+        <DonationBudget />
         <div className="lg:border-fancy-pants max-w-xl lg:rounded-lg lg:bg-white lg:p-5 lg:shadow-sm lg:dark:bg-zinc-900">
           <Title order={2} className="mb-3 text-lg">
             Tax information
@@ -346,7 +349,7 @@ function DonatePage() {
             EIN 92-3744006
           </Text>
         </div>
-        <Text size="sm" c="dimmed" className="mt-4 max-w-xl">
+        <Text size="sm" c="dimmed" className="max-w-xl">
           Already give each month?{' '}
           <Link
             to="/auth/email-sign-in"

@@ -527,6 +527,10 @@ export const DonationSubscription = pgTable(
     canceledAt: timestamp('canceled_at', { precision: 3 }),
     endedAt: timestamp('ended_at', { precision: 3 }),
     lastPaymentFailedAt: timestamp('last_payment_failed_at', { precision: 3 }),
+    // Admin annotation for special arrangements: a signed monthly adjustment
+    // to what this plan counts toward the public budget, plus why.
+    budgetOffsetCents: integer('budget_offset_cents').notNull().default(0),
+    budgetOffsetNote: text('budget_offset_note'),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
   },
@@ -674,6 +678,46 @@ export const DonationWebhookEvent = pgTable('donation_webhook_event', {
     .notNull()
     .defaultNow(),
 });
+
+// Public "where your gift goes" breakdown on the donate page. Each category is
+// a monthly expense line set by admins.
+export const DonationBudgetCategory = pgTable(
+  'donation_budget_category',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    description: text('description'),
+    monthlyAmountCents: integer('monthly_amount_cents').notNull(),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+  },
+  (DonationBudgetCategory) => ({
+    donation_budget_category_amount_nonnegative: check(
+      'donation_budget_category_amount_nonnegative',
+      sql`${DonationBudgetCategory.monthlyAmountCents} >= 0`,
+    ),
+  }),
+);
+
+// Monthly giving that doesn't run through Stripe (checks, transfers, pledges),
+// counted toward the public budget's monthly intake.
+export const DonationUntrackedGift = pgTable(
+  'donation_untracked_gift',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    label: text('label').notNull(),
+    monthlyAmountCents: integer('monthly_amount_cents').notNull(),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+  },
+  (DonationUntrackedGift) => ({
+    donation_untracked_gift_amount_positive: check(
+      'donation_untracked_gift_amount_positive',
+      sql`${DonationUntrackedGift.monthlyAmountCents} > 0`,
+    ),
+  }),
+);
 
 export const OidcAuthorizationCode = pgTable(
   'oidc_authorization_code',

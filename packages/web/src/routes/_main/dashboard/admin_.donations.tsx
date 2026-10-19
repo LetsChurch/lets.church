@@ -23,6 +23,9 @@ import { formatDonationAmount } from '@/donations/amounts';
 import { formatDonationDate } from '@/donations/dates';
 import { useTRPC } from '@/trpc/react';
 
+import { DonationBudgetAdmin } from './-components/donation-budget-admin';
+import { SubscriptionBudgetOffset } from './-components/subscription-budget-offset';
+
 export const Route = createFileRoute('/_main/dashboard/admin_/donations')({
   component: AdminDonationsPage,
   beforeLoad: async ({ context }) => {
@@ -57,6 +60,7 @@ export const Route = createFileRoute('/_main/dashboard/admin_/donations')({
       queryClient.ensureQueryData(
         trpc.donations.getAdminImports.queryOptions(),
       ),
+      queryClient.ensureQueryData(trpc.donations.getAdminBudget.queryOptions()),
     ]);
     return {
       backNavigation: {
@@ -444,7 +448,8 @@ function AdminDonationsPage() {
         <div>
           <Title order={1}>Donations</Title>
           <Text size="sm" c="dimmed">
-            Review gifts, maintain recurring plans, and run migration imports.
+            Review gifts, maintain recurring plans, set the public budget, and
+            run migration imports.
           </Text>
         </div>
         <a
@@ -504,8 +509,13 @@ function AdminDonationsPage() {
         <Tabs.List className="mb-5 overflow-x-auto">
           <Tabs.Tab value="recurring">Recurring</Tabs.Tab>
           <Tabs.Tab value="transactions">Transactions</Tabs.Tab>
+          <Tabs.Tab value="budget">Budget</Tabs.Tab>
           <Tabs.Tab value="imports">Imports</Tabs.Tab>
         </Tabs.List>
+
+        <Tabs.Panel value="budget">
+          <DonationBudgetAdmin />
+        </Tabs.Panel>
 
         <Tabs.Panel value="recurring">
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -541,6 +551,7 @@ function AdminDonationsPage() {
                 <Table.Th>Amount</Table.Th>
                 <Table.Th>Status</Table.Th>
                 <Table.Th>Billing</Table.Th>
+                <Table.Th>Budget</Table.Th>
                 <Table.Th>References</Table.Th>
                 <Table.Th />
               </Table.Tr>
@@ -587,6 +598,19 @@ function AdminDonationsPage() {
                     <Table.Td>
                       {subscription.currentPeriodEnd?.toLocaleDateString() ??
                         'Not set'}
+                    </Table.Td>
+                    <Table.Td>
+                      <SubscriptionBudgetOffset
+                        subscriptionId={subscription.id}
+                        donorLabel={
+                          subscription.donorName ||
+                          subscription.donorEmail ||
+                          'this donor'
+                        }
+                        budgetOffsetCents={subscription.budgetOffsetCents}
+                        budgetOffsetNote={subscription.budgetOffsetNote}
+                        countsTowardBudget={subscription.countsTowardBudget}
+                      />
                     </Table.Td>
                     <Table.Td>
                       <Text size="xs" className="font-mono">

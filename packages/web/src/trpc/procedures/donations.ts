@@ -1,16 +1,34 @@
 import {
   Donation,
+  DonationBudgetCategory,
   DonationDonor,
   DonationImportBatch,
   DonationSubscription,
+  DonationUntrackedGift,
   db,
 } from '@letschurch/db';
 import { TRPCError } from '@trpc/server';
-import { and, count, desc, eq, ilike, inArray, lt, or, sum } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  lt,
+  or,
+  sql,
+  sum,
+} from 'drizzle-orm';
 import type Stripe from 'stripe';
 import { z } from 'zod';
 
 import { donationAmounts } from '@/donations/amounts';
+import {
+  BUDGET_SUBSCRIPTION_STATUSES,
+  summarizeBudget,
+} from '@/donations/budget';
 import { donationStatementYear } from '@/donations/dates';
 import { claimDonorsForVerifiedUser } from '@/donations/identity';
 import { getStripe, getStripeConfig } from '@/donations/stripe-client';
@@ -18,7 +36,12 @@ import {
   recurringDonationProductId,
   subscriptionAmountUpdateParams,
 } from '@/donations/subscription-amount';
-import { donationSubscriptionAmountSchema } from '@/schemas/donations';
+import {
+  donationBudgetCategorySchema,
+  donationSubscriptionAmountSchema,
+  donationSubscriptionBudgetOffsetSchema,
+  donationUntrackedGiftSchema,
+} from '@/schemas/donations';
 
 import { authProcedure, publicProcedure } from '../trpc';
 
@@ -64,6 +87,54 @@ async function syncSubscriptionAmount(
       updatedAt: new Date(),
     })
     .where(eq(DonationSubscription.stripeSubscriptionId, subscription.id));
+}
+
+// Plans set to stop at period end are not scheduled intake anymore.
+const countsTowardBudget = and(
+  inArray(DonationSubscription.status, [...BUDGET_SUBSCRIPTION_STATUSES]),
+  eq(DonationSubscription.cancelAtPeriodEnd, false),
+  eq(DonationSubscription.currency, 'usd'),
+)!;
+
+async function loadBudget() {
+  const [categories, subscriptions, untrackedGifts] = await Promise.all([
+    db
+      .select({
+        id: DonationBudgetCategory.id,
+        name: DonationBudgetCategory.name,
+        description: DonationBudgetCategory.description,
+        monthlyAmountCents: DonationBudgetCategory.monthlyAmountCents,
+        sortOrder: DonationBudgetCategory.sortOrder,
+      })
+      .from(DonationBudgetCategory)
+      .orderBy(
+        asc(DonationBudgetCategory.sortOrder),
+        asc(DonationBudgetCategory.createdAt),
+      ),
+    db
+      .select({
+        frequency: DonationSubscription.frequency,
+        amountCents: DonationSubscription.amountCents,
+        budgetOffsetCents: DonationSubscription.budgetOffsetCents,
+      })
+      .from(DonationSubscription)
+      .where(countsTowardBudget),
+    db
+      .select({
+        id: DonationUntrackedGift.id,
+        label: DonationUntrackedGift.label,
+        monthlyAmountCents: DonationUntrackedGift.monthlyAmountCents,
+      })
+      .from(DonationUntrackedGift)
+      .orderBy(asc(DonationUntrackedGift.createdAt)),
+  ]);
+
+  return {
+    categories,
+    subscriptions,
+    untrackedGifts,
+    summary: summarizeBudget({ categories, subscriptions, untrackedGifts }),
+  };
 }
 
 export const donationProcedures = {
@@ -422,6 +493,9 @@ export const donationProcedures = {
           canceledAt: DonationSubscription.canceledAt,
           endedAt: DonationSubscription.endedAt,
           lastPaymentFailedAt: DonationSubscription.lastPaymentFailedAt,
+          budgetOffsetCents: DonationSubscription.budgetOffsetCents,
+          budgetOffsetNote: DonationSubscription.budgetOffsetNote,
+          countsTowardBudget: sql<boolean>`${countsTowardBudget}`,
           createdAt: DonationSubscription.createdAt,
         })
         .from(DonationSubscription)
@@ -525,5 +599,132 @@ export const donationProcedures = {
         return_url: `${getStripeConfig().WEB_URL}/dashboard/admin/donations`,
       });
       return { url: portal.url };
+    }),
+
+  getBudget: publicProcedure.query(async () => {
+    const { categories, summary } = await loadBudget();
+    return {
+      categories: categories.map(
+        ({ id, name, description, monthlyAmountCents }) => ({
+          id,
+          name,
+          description,
+          monthlyAmountCents,
+        }),
+      ),
+      expensesCents: summary.expensesCents,
+      incomeCents: summary.incomeCents,
+      differenceCents: summary.differenceCents,
+    };
+  }),
+
+  getAdminBudget: adminProcedure.query(async () => {
+    const { categories, subscriptions, untrackedGifts, summary } =
+      await loadBudget();
+    return {
+      categories,
+      untrackedGifts,
+      countedSubscriptionCount: subscriptions.length,
+      adjustedSubscriptionCount: subscriptions.filter(
+        ({ budgetOffsetCents }) => budgetOffsetCents !== 0,
+      ).length,
+      summary,
+    };
+  }),
+
+  saveBudgetCategory: adminProcedure
+    .input(donationBudgetCategorySchema)
+    .mutation(async ({ input: { id, description, ...values } }) => {
+      const row = {
+        ...values,
+        description: description || null,
+        updatedAt: new Date(),
+      };
+      if (id) {
+        const updated = await db
+          .update(DonationBudgetCategory)
+          .set(row)
+          .where(eq(DonationBudgetCategory.id, id))
+          .returning({ id: DonationBudgetCategory.id });
+        if (!updated.length) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Budget category not found',
+          });
+        }
+        return { id };
+      }
+      const [created] = await db
+        .insert(DonationBudgetCategory)
+        .values(row)
+        .returning({ id: DonationBudgetCategory.id });
+      return { id: created!.id };
+    }),
+
+  deleteBudgetCategory: adminProcedure
+    .input(z.object({ id: z.uuid() }))
+    .mutation(async ({ input }) => {
+      await db
+        .delete(DonationBudgetCategory)
+        .where(eq(DonationBudgetCategory.id, input.id));
+      return { success: true };
+    }),
+
+  saveUntrackedGift: adminProcedure
+    .input(donationUntrackedGiftSchema)
+    .mutation(async ({ input: { id, ...values } }) => {
+      const row = { ...values, updatedAt: new Date() };
+      if (id) {
+        const updated = await db
+          .update(DonationUntrackedGift)
+          .set(row)
+          .where(eq(DonationUntrackedGift.id, id))
+          .returning({ id: DonationUntrackedGift.id });
+        if (!updated.length) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Untracked gift not found',
+          });
+        }
+        return { id };
+      }
+      const [created] = await db
+        .insert(DonationUntrackedGift)
+        .values(row)
+        .returning({ id: DonationUntrackedGift.id });
+      return { id: created!.id };
+    }),
+
+  deleteUntrackedGift: adminProcedure
+    .input(z.object({ id: z.uuid() }))
+    .mutation(async ({ input }) => {
+      await db
+        .delete(DonationUntrackedGift)
+        .where(eq(DonationUntrackedGift.id, input.id));
+      return { success: true };
+    }),
+
+  setSubscriptionBudgetOffset: adminProcedure
+    .input(donationSubscriptionBudgetOffsetSchema)
+    .mutation(async ({ input }) => {
+      const updated = await db
+        .update(DonationSubscription)
+        .set({
+          budgetOffsetCents: input.budgetOffsetCents,
+          budgetOffsetNote:
+            input.budgetOffsetCents === 0
+              ? null
+              : input.budgetOffsetNote || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(DonationSubscription.id, input.subscriptionId))
+        .returning({ id: DonationSubscription.id });
+      if (!updated.length) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Recurring donation not found',
+        });
+      }
+      return { success: true };
     }),
 };

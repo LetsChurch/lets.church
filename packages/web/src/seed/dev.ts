@@ -9,6 +9,8 @@ import {
   ChannelMembership,
   ChannelSubscription,
   db,
+  DonationBudgetCategory,
+  DonationUntrackedGift,
   FeaturedUpload,
   Organization,
   OrganizationAddress,
@@ -1931,6 +1933,38 @@ await db.insert(SpeakerAttribution).values(
     updatedAt: new Date(),
   })),
 );
+
+// Sample "where your gift goes" budget for the donate page. The seed has no
+// Stripe subscriptions, so an untracked gift stands in for intake.
+await db.insert(DonationBudgetCategory).values(
+  [
+    {
+      name: 'Storage',
+      description: 'Video files, audio, and backups',
+      monthlyAmountCents: 50_000,
+    },
+    {
+      name: 'Inference',
+      description: 'Transcripts, summaries, and search',
+      monthlyAmountCents: 30_000,
+    },
+    {
+      name: 'Legal',
+      description: 'Nonprofit filings and compliance',
+      monthlyAmountCents: 15_000,
+    },
+  ].map((category, index) => ({
+    ...category,
+    sortOrder: index * 10,
+    updatedAt: new Date(),
+  })),
+);
+
+await db.insert(DonationUntrackedGift).values({
+  label: 'Partner church check',
+  monthlyAmountCents: 20_000,
+  updatedAt: new Date(),
+});
 
 // Index every LLM-seeded upload's media doc once, now that paragraphs,
 // summaries, annotations, AND speaker attributions are all in place. This is

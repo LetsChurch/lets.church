@@ -302,6 +302,10 @@ status, and receipt links.
   store uploaded CSV contents. Import runs retain counts, filenames, and errors.
 - Checkout status responses contain no donor details and expose only the amount,
   frequency, and payment status needed by the confirmation page.
+- The public budget on the donate page (`donations.getBudget`) exposes only
+  category lines and aggregate monthly totals. Per-plan budget offsets and
+  their notes, untracked-gift labels, and plan counts stay administrator-only;
+  budget edits are administrator-only and amount-bounded.
 
 Keep Stripe secret keys and webhook signing secrets out of client bundles and
 logs. Do not log donor names, email addresses, checkout payloads, or webhook
