@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { getInitialBrowserSize } from '@/stores/browser-size';
+import { useBrowserSize } from '@/stores/browser-size';
 import {
   getInitialSidebarCollapsed,
   SIDEBAR_CHANGE_EVENT,
@@ -54,89 +54,54 @@ export function useVideoLayout({
     transcriptSidebarWidth,
   );
 
-  const [layout, setLayout] = useState<VideoLayoutResult>(() => {
-    const browserSize = getInitialBrowserSize();
+  // Hydration-safe: matches the server's size while hydrating, then the live
+  // window size (re-rendering on resize).
+  const browserSize = useBrowserSize();
 
-    return calculateLayout({
-      vw: browserSize.width,
-      vh: browserSize.height,
+  useEffect(() => {
+    const handleSidebarChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ collapsed: boolean }>;
+      setPageSidebarCollapsed(customEvent.detail.collapsed);
+    };
+    const ac = new AbortController();
+    window.addEventListener(SIDEBAR_CHANGE_EVENT, handleSidebarChange, {
+      signal: ac.signal,
+    });
+    return () => ac.abort();
+  }, []);
+
+  const layout = useMemo(
+    () =>
+      calculateLayout({
+        vw: browserSize.width,
+        vh: browserSize.height,
+        aspectWidth,
+        aspectHeight,
+        minVisibleHeight,
+        headerHeight,
+        contentMargins,
+        chromeBelow,
+        transcriptSidebarWidth: dynamicTranscriptWidth,
+        gap,
+        pageSidebarCollapsed,
+        isAudio,
+        hasSidebar,
+      }),
+    [
+      browserSize,
       aspectWidth,
       aspectHeight,
       minVisibleHeight,
       headerHeight,
       contentMargins,
       chromeBelow,
-      transcriptSidebarWidth: dynamicTranscriptWidth,
+      dynamicTranscriptWidth,
       gap,
       pageSidebarCollapsed,
       isAudio,
       hasSidebar,
-    });
-  });
-
-  useEffect(() => {
-    const recalculate = () => {
-      setLayout(
-        calculateLayout({
-          vw: window.innerWidth,
-          vh: window.innerHeight,
-          aspectWidth,
-          aspectHeight,
-          minVisibleHeight,
-          headerHeight,
-          contentMargins,
-          chromeBelow,
-          transcriptSidebarWidth: dynamicTranscriptWidth,
-          gap,
-          pageSidebarCollapsed,
-          isAudio,
-          hasSidebar,
-        }),
-      );
-    };
-
-    const handleSidebarChange = (event: Event) => {
-      const customEvent = event as CustomEvent<{ collapsed: boolean }>;
-      setPageSidebarCollapsed(customEvent.detail.collapsed);
-    };
-
-    let rafId: number | null = null;
-    const scheduleRecalculate = () => {
-      if (rafId !== null) return;
-      rafId = window.requestAnimationFrame(() => {
-        rafId = null;
-        recalculate();
-      });
-    };
-
-    const ac = new AbortController();
-
-    // Recalculate on resize (coalesced to one per frame)
-    window.addEventListener('resize', scheduleRecalculate, ac);
-
-    // Listen for sidebar changes
-    window.addEventListener(SIDEBAR_CHANGE_EVENT, handleSidebarChange, ac);
-
-    // Recalculate whenever dependencies change
-    recalculate();
-
-    return () => {
-      ac.abort();
-      if (rafId !== null) window.cancelAnimationFrame(rafId);
-    };
-  }, [
-    aspectWidth,
-    aspectHeight,
-    minVisibleHeight,
-    headerHeight,
-    contentMargins,
-    chromeBelow,
-    dynamicTranscriptWidth,
-    gap,
-    pageSidebarCollapsed,
-    isAudio,
-    hasSidebar,
-  ]);
+    ],
+  );
 
   return { ...layout, setTranscriptWidth: setDynamicTranscriptWidth };
 }
