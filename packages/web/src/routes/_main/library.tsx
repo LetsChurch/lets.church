@@ -9,14 +9,18 @@ import { MediaCard } from '@/components/media-card';
 import { MediaGrid } from '@/components/media-grid';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { useTRPC } from '@/trpc/react';
+import { getNextCursor } from '@/util/next-cursor';
 
 export const Route = createFileRoute('/_main/library')({
   component: RouteComponent,
   loader: ({ context }) =>
     context.queryClient.prefetchInfiniteQuery(
-      context.trpc.library.getSavedMedia.infiniteQueryOptions({
-        limit: 20,
-      }),
+      context.trpc.library.getSavedMedia.infiniteQueryOptions(
+        {
+          limit: 20,
+        },
+        { getNextPageParam: getNextCursor },
+      ),
     ),
   head: () => ({
     meta: [
@@ -47,21 +51,13 @@ function RouteComponent() {
     hasNextPage: hasNextSaved,
     isFetchingNextPage: isFetchingNextSaved,
   } = useInfiniteQuery({
-    ...trpc.library.getSavedMedia.infiniteQueryOptions({
-      limit: 20,
-    }),
+    ...trpc.library.getSavedMedia.infiniteQueryOptions(
+      {
+        limit: 20,
+      },
+      { getNextPageParam: getNextCursor },
+    ),
     enabled: isLoggedIn,
-    getNextPageParam: (lastPage) => {
-      if (
-        lastPage &&
-        typeof lastPage === 'object' &&
-        'nextCursor' in lastPage
-      ) {
-        return lastPage.nextCursor;
-      }
-      return null;
-    },
-    initialPageParam: null as string | null,
   });
 
   // Infinite scroll observer

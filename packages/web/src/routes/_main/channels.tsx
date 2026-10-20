@@ -11,6 +11,7 @@ import MainLayout from '@/components/main-layout';
 import { MediaGrid } from '@/components/media-grid';
 import { useTRPC } from '@/trpc/react';
 import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from '@/util/image-sizes';
+import { getNextCursor } from '@/util/next-cursor';
 
 const channelsSearchSchema = z.object({
   search: z.string().optional(),
@@ -28,11 +29,14 @@ export const Route = createFileRoute('/_main/channels')({
   }),
   loader: async ({ context, deps }) => {
     await context.queryClient.prefetchInfiniteQuery(
-      context.trpc.channel.listPublicChannels.infiniteQueryOptions({
-        search: deps.search,
-        sortBy: deps.sort,
-        limit: 20,
-      }),
+      context.trpc.channel.listPublicChannels.infiniteQueryOptions(
+        {
+          search: deps.search,
+          sortBy: deps.sort,
+          limit: 20,
+        },
+        { getNextPageParam: getNextCursor },
+      ),
     );
 
     return {
@@ -151,13 +155,14 @@ function RouteComponent() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    ...trpc.channel.listPublicChannels.infiniteQueryOptions({
-      search: searchParam,
-      sortBy: sort,
-      limit: 20,
-    }),
-    getNextPageParam: (lastPage) => lastPage?.nextCursor ?? null,
-    initialPageParam: null as number | null,
+    ...trpc.channel.listPublicChannels.infiniteQueryOptions(
+      {
+        search: searchParam,
+        sortBy: sort,
+        limit: 20,
+      },
+      { getNextPageParam: getNextCursor },
+    ),
   });
 
   useEffect(() => {

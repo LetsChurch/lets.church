@@ -22,6 +22,7 @@ import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { useTRPC } from '@/trpc/react';
 import { formatTime } from '@/util/format';
 import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from '@/util/image-sizes';
+import { getNextCursor } from '@/util/next-cursor';
 
 export const Route = createFileRoute('/_main/')({
   component: Home,
@@ -37,9 +38,12 @@ export const Route = createFileRoute('/_main/')({
         context.trpc.home.getFeaturedUploads.queryOptions(),
       ),
       context.queryClient.prefetchInfiniteQuery(
-        context.trpc.home.getTrendingUploads.infiniteQueryOptions({
-          limit: 36,
-        }),
+        context.trpc.home.getTrendingUploads.infiniteQueryOptions(
+          {
+            limit: 36,
+          },
+          { getNextPageParam: getNextCursor },
+        ),
       ),
     ]);
 
@@ -452,20 +456,12 @@ function Home() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    ...trpc.home.getTrendingUploads.infiniteQueryOptions({
-      limit: 36,
-    }),
-    getNextPageParam: (lastPage) => {
-      if (
-        lastPage &&
-        typeof lastPage === 'object' &&
-        'nextCursor' in lastPage
-      ) {
-        return lastPage.nextCursor;
-      }
-      return undefined;
-    },
-    initialPageParam: 0,
+    ...trpc.home.getTrendingUploads.infiniteQueryOptions(
+      {
+        limit: 36,
+      },
+      { getNextPageParam: getNextCursor, initialCursor: 0 },
+    ),
   });
 
   const { data: subscriptionUploads } = useQuery({

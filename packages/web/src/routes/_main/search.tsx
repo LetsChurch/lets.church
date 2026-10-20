@@ -38,6 +38,7 @@ import { useTRPC } from '@/trpc/react';
 import { bibleBookName, formatVerseRef } from '@/util/bible-url';
 import { formatTime } from '@/util/format';
 import { joinAdjacentMarks } from '@/util/highlight';
+import { getNextCursor } from '@/util/next-cursor';
 import {
   isTooManyRequestsError,
   SEARCH_RATE_LIMIT_MESSAGE,
@@ -117,19 +118,22 @@ export const Route = createFileRoute('/_main/search')({
       deps.dateEnd != null;
     if (deps.q || hasFacets) {
       const searchOptions = {
-        ...context.trpc.search.hybridSearch.infiniteQueryOptions({
-          q: deps.q ?? '',
-          channelSlugs: deps.channelSlugs,
-          bibleRefs: deps.bibleRefs,
-          bibleBooks: deps.bibleBooks,
-          speakers: deps.speakers,
-          limit: 20,
-          sort: deps.sort,
-          dateRange: deps.dateRange,
-          dateGte: deps.dateStart,
-          dateLte: deps.dateEnd,
-          skipLogging: deps.skipLogging,
-        }),
+        ...context.trpc.search.hybridSearch.infiniteQueryOptions(
+          {
+            q: deps.q ?? '',
+            channelSlugs: deps.channelSlugs,
+            bibleRefs: deps.bibleRefs,
+            bibleBooks: deps.bibleBooks,
+            speakers: deps.speakers,
+            limit: 20,
+            sort: deps.sort,
+            dateRange: deps.dateRange,
+            dateGte: deps.dateStart,
+            dateLte: deps.dateEnd,
+            skipLogging: deps.skipLogging,
+          },
+          { getNextPageParam: getNextCursor },
+        ),
         // Search requests are expensive and should never multiply themselves
         // after a server or network failure.
         retry: false,
@@ -490,13 +494,6 @@ function SearchResults({ q }: { q: string }) {
           .join(', ')
           .trim();
 
-  const getNextPageParam = (lastPage: unknown) => {
-    if (lastPage && typeof lastPage === 'object' && 'nextCursor' in lastPage) {
-      return (lastPage as { nextCursor: number | null }).nextCursor;
-    }
-    return null;
-  };
-
   // ── Fast pass: the instant, BM25-only list (no query embed, no kNN). ────────
   const {
     data: fastData,
@@ -507,21 +504,22 @@ function SearchResults({ q }: { q: string }) {
     isPlaceholderData,
     error: fastError,
   } = useInfiniteQuery({
-    ...trpc.search.hybridSearch.infiniteQueryOptions({
-      q,
-      channelSlugs,
-      bibleRefs,
-      bibleBooks,
-      speakers,
-      limit: 20,
-      sort,
-      dateRange,
-      dateGte: dateStart,
-      dateLte: dateEnd,
-      skipLogging,
-    }),
-    getNextPageParam,
-    initialPageParam: 0,
+    ...trpc.search.hybridSearch.infiniteQueryOptions(
+      {
+        q,
+        channelSlugs,
+        bibleRefs,
+        bibleBooks,
+        speakers,
+        limit: 20,
+        sort,
+        dateRange,
+        dateGte: dateStart,
+        dateLte: dateEnd,
+        skipLogging,
+      },
+      { getNextPageParam: getNextCursor, initialCursor: 0 },
+    ),
     // Changing a filter (channel, date, sort) re-keys this query. Keep the
     // previous results + facets on screen while the new ones load instead of
     // wiping to a skeleton — selecting a channel shouldn't blank the facet list
@@ -556,22 +554,23 @@ function SearchResults({ q }: { q: string }) {
     isPending: deepIsPending,
     error: deepError,
   } = useInfiniteQuery({
-    ...trpc.search.hybridSearch.infiniteQueryOptions({
-      q,
-      channelSlugs,
-      bibleRefs,
-      bibleBooks,
-      speakers,
-      limit: 20,
-      sort,
-      dateRange,
-      dateGte: dateStart,
-      dateLte: dateEnd,
-      skipLogging,
-      deep: true,
-    }),
-    getNextPageParam,
-    initialPageParam: 0,
+    ...trpc.search.hybridSearch.infiniteQueryOptions(
+      {
+        q,
+        channelSlugs,
+        bibleRefs,
+        bibleBooks,
+        speakers,
+        limit: 20,
+        sort,
+        dateRange,
+        dateGte: dateStart,
+        dateLte: dateEnd,
+        skipLogging,
+        deep: true,
+      },
+      { getNextPageParam: getNextCursor, initialCursor: 0 },
+    ),
     enabled: wantDeep,
     retry: false,
     refetchOnWindowFocus: false,

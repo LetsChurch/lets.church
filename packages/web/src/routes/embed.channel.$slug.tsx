@@ -12,6 +12,7 @@ import { SearchRow } from '@/components/search-row';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 import { formatTime } from '@/util/format';
+import { getNextCursor } from '@/util/next-cursor';
 
 type TranscriptSegment = {
   start: number;
@@ -80,22 +81,28 @@ export const Route = createFileRoute('/embed/channel/$slug')({
     if (deps.q) {
       // Prefetch search results
       const searchPromise = context.queryClient.prefetchInfiniteQuery(
-        context.trpc.search.hybridSearch.infiniteQueryOptions({
-          q: deps.q,
-          channelSlugs: [slug],
-          limit: 20,
-          sort: deps.sort,
-          dateRange: deps.dateRange,
-        }),
+        context.trpc.search.hybridSearch.infiniteQueryOptions(
+          {
+            q: deps.q,
+            channelSlugs: [slug],
+            limit: 20,
+            sort: deps.sort,
+            dateRange: deps.dateRange,
+          },
+          { getNextPageParam: getNextCursor },
+        ),
       );
       await Promise.all([channelPromise, searchPromise]);
     } else {
       // Prefetch recent uploads
       const mediaPromise = context.queryClient.prefetchInfiniteQuery(
-        context.trpc.channel.getChannelMedia.infiniteQueryOptions({
-          slug,
-          limit: 20,
-        }),
+        context.trpc.channel.getChannelMedia.infiniteQueryOptions(
+          {
+            slug,
+            limit: 20,
+          },
+          { getNextPageParam: getNextCursor },
+        ),
       );
       await Promise.all([channelPromise, mediaPromise]);
     }
@@ -276,21 +283,13 @@ function RecentUploads({ channelSlug }: { channelSlug: string }) {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    ...trpc.channel.getChannelMedia.infiniteQueryOptions({
-      slug: channelSlug,
-      limit: 20,
-    }),
-    getNextPageParam: (lastPage) => {
-      if (
-        lastPage &&
-        typeof lastPage === 'object' &&
-        'nextCursor' in lastPage
-      ) {
-        return lastPage.nextCursor;
-      }
-      return null;
-    },
-    initialPageParam: null as string | null,
+    ...trpc.channel.getChannelMedia.infiniteQueryOptions(
+      {
+        slug: channelSlug,
+        limit: 20,
+      },
+      { getNextPageParam: getNextCursor },
+    ),
   });
 
   // Infinite scroll observer
@@ -434,24 +433,16 @@ function SearchResults({ q, channelSlug }: { q: string; channelSlug: string }) {
     isFetchingNextPage,
     isPending,
   } = useInfiniteQuery({
-    ...trpc.search.hybridSearch.infiniteQueryOptions({
-      q,
-      channelSlugs: [channelSlug],
-      limit: 20,
-      sort: search.sort,
-      dateRange: search.dateRange,
-    }),
-    getNextPageParam: (lastPage) => {
-      if (
-        lastPage &&
-        typeof lastPage === 'object' &&
-        'nextCursor' in lastPage
-      ) {
-        return lastPage.nextCursor;
-      }
-      return null;
-    },
-    initialPageParam: 0,
+    ...trpc.search.hybridSearch.infiniteQueryOptions(
+      {
+        q,
+        channelSlugs: [channelSlug],
+        limit: 20,
+        sort: search.sort,
+        dateRange: search.dateRange,
+      },
+      { getNextPageParam: getNextCursor, initialCursor: 0 },
+    ),
   });
 
   // Infinite scroll observer

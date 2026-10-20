@@ -51,7 +51,7 @@
     "blurhash": "^2.0.5",
     "crawlee": "^3.15.3",
     "diff": "^8.0.2",
-    "drizzle-orm": "^0.45.1",
+    "drizzle-orm": "catalog:",
     "es-toolkit": "catalog:",
     "execa": "^9.6.0",
     "fast-glob": "^3.3.3",

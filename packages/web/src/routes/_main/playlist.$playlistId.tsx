@@ -11,6 +11,7 @@ import { MediaCard } from '@/components/media-card';
 import { MediaGrid } from '@/components/media-grid';
 import { useTRPC } from '@/trpc/react';
 import { formatTime } from '@/util/format';
+import { getNextCursor } from '@/util/next-cursor';
 
 export const Route = createFileRoute('/_main/playlist/$playlistId')({
   component: RouteComponent,
@@ -27,10 +28,13 @@ export const Route = createFileRoute('/_main/playlist/$playlistId')({
         }),
       ),
       context.queryClient.prefetchInfiniteQuery(
-        context.trpc.playlist.getPublicPlaylistMedia.infiniteQueryOptions({
-          playlistId,
-          limit: 20,
-        }),
+        context.trpc.playlist.getPublicPlaylistMedia.infiniteQueryOptions(
+          {
+            playlistId,
+            limit: 20,
+          },
+          { getNextPageParam: getNextCursor },
+        ),
       ),
     ]);
 
@@ -171,21 +175,13 @@ function RouteComponent() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    ...trpc.playlist.getPublicPlaylistMedia.infiniteQueryOptions({
-      playlistId,
-      limit: 20,
-    }),
-    getNextPageParam: (lastPage) => {
-      if (
-        lastPage &&
-        typeof lastPage === 'object' &&
-        'nextCursor' in lastPage
-      ) {
-        return lastPage.nextCursor;
-      }
-      return null;
-    },
-    initialPageParam: null as string | null,
+    ...trpc.playlist.getPublicPlaylistMedia.infiniteQueryOptions(
+      {
+        playlistId,
+        limit: 20,
+      },
+      { getNextPageParam: getNextCursor },
+    ),
   });
 
   // Infinite scroll observer

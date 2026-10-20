@@ -37,6 +37,7 @@ import { useSetBackgroundImage } from '@/stores/header';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { formatTime } from '@/util/format';
 import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from '@/util/image-sizes';
+import { getNextCursor } from '@/util/next-cursor';
 
 export const Route = createFileRoute('/_main/channel/$slug')({
   component: RouteComponent,
@@ -56,10 +57,13 @@ export const Route = createFileRoute('/_main/channel/$slug')({
 
     // Fetch first page of media
     const mediaPromise = context.queryClient.prefetchInfiniteQuery(
-      context.trpc.channel.getChannelMedia.infiniteQueryOptions({
-        slug,
-        limit: 20,
-      }),
+      context.trpc.channel.getChannelMedia.infiniteQueryOptions(
+        {
+          slug,
+          limit: 20,
+        },
+        { getNextPageParam: getNextCursor },
+      ),
     );
 
     // Prefetch playlists
@@ -274,21 +278,13 @@ function RouteComponent() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    ...trpc.channel.getChannelMedia.infiniteQueryOptions({
-      slug,
-      limit: 20,
-    }),
-    getNextPageParam: (lastPage) => {
-      if (
-        lastPage &&
-        typeof lastPage === 'object' &&
-        'nextCursor' in lastPage
-      ) {
-        return lastPage.nextCursor;
-      }
-      return null;
-    },
-    initialPageParam: null as string | null,
+    ...trpc.channel.getChannelMedia.infiniteQueryOptions(
+      {
+        slug,
+        limit: 20,
+      },
+      { getNextPageParam: getNextCursor },
+    ),
   });
 
   // Local state for follow status with optimistic updates
