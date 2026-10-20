@@ -3,7 +3,6 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import viteReact from '@vitejs/plugin-react';
 import { nitro } from 'nitro/vite';
 import { defineConfig } from 'vite';
-import tsConfigPaths from 'vite-tsconfig-paths';
 
 // Security response headers applied to every route by Nitro's routeRules (only
 // in the built server — the Vite dev server doesn't run Nitro, so localhost dev
@@ -30,8 +29,10 @@ export default defineConfig(() => ({
   server: {
     port: 3000,
   },
+  resolve: {
+    tsconfigPaths: true,
+  },
   plugins: [
-    tsConfigPaths(),
     tanstackStart(),
     // Precompress public assets (the large /reading/ + /search/ JSON) to .br/.gz
     // at build time; Nitro's static handler serves them with Content-Encoding when

@@ -16,7 +16,7 @@ const config: StorybookConfig = {
   // and route-manifest generation). Storybook renders components in isolation
   // with its own memory router and doesn't build a server, and those plugins'
   // build hooks break the Storybook bundle ("multiple entries detected"). Strip
-  // them here; keep Tailwind, React, and tsconfig-paths.
+  // them here; keep Tailwind and React.
   viteFinal: async (viteConfig) => {
     const plugins = (viteConfig.plugins ?? []).flat(Infinity);
     viteConfig.plugins = plugins.filter((plugin) => {
