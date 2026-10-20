@@ -20,7 +20,7 @@ import type { CSSProperties, ReactNode } from 'react';
 
 /**
  * Thin wrapper around dnd-kit for the dashboard's vertical, drag-handle-driven
- * reorderable lists (playlists, featured uploads). Renders a `DndContext` +
+ * reorderable lists (playlists, featured uploads, budget categories). Renders a `DndContext` +
  * `SortableContext` and maps each item through the render prop. Reordering is
  * surfaced via `onReorder` with the already-reordered array so callers can both
  * update local state and persist the new order.
@@ -29,12 +29,15 @@ export function SortableList<T>({
   items,
   getId,
   onReorder,
+  as: Container = 'div',
   className,
   children,
 }: {
   items: T[];
   getId: (item: T) => string;
   onReorder: (items: T[]) => void;
+  // `tbody` lets table rows be the sortable items.
+  as?: 'div' | 'tbody';
   className?: string;
   children: (item: T) => ReactNode;
 }) {
@@ -63,10 +66,18 @@ export function SortableList<T>({
       sensors={sensors}
       collisionDetection={closestCenter}
       modifiers={[restrictToVerticalAxis]}
+      // Portal dnd-kit's screen-reader <div>s to <body> so they're never
+      // invalid children (e.g. of a <table>). They only render after mount, so
+      // there's no SSR/hydration difference.
+      accessibility={{
+        container: typeof document === 'undefined' ? undefined : document.body,
+      }}
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-        <div className={className}>{items.map((item) => children(item))}</div>
+        <Container className={className}>
+          {items.map((item) => children(item))}
+        </Container>
       </SortableContext>
     </DndContext>
   );

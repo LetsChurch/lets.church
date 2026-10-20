@@ -41,6 +41,7 @@ import {
   donationSubscriptionAmountSchema,
   donationSubscriptionExcludeFromBudgetSchema,
   donationUntrackedGiftSchema,
+  reorderDonationBudgetCategoriesSchema,
 } from '@/schemas/donations';
 
 import { authProcedure, publicProcedure } from '../trpc';
@@ -666,11 +667,45 @@ export const donationProcedures = {
         }
         return { id };
       }
+      // New categories go to the end; order is changed by dragging rows.
       const [created] = await db
         .insert(DonationBudgetCategory)
-        .values(row)
+        .values({
+          ...row,
+          sortOrder: sql`(select coalesce(max(${DonationBudgetCategory.sortOrder}), -1) + 1 from ${DonationBudgetCategory})`,
+        })
         .returning({ id: DonationBudgetCategory.id });
       return { id: created!.id };
+    }),
+
+  reorderBudgetCategories: adminProcedure
+    .input(reorderDonationBudgetCategoriesSchema)
+    .mutation(async ({ input: { categoryIds } }) => {
+      await db.transaction(async (tx) => {
+        const current = await tx
+          .select({ id: DonationBudgetCategory.id })
+          .from(DonationBudgetCategory)
+          .for('update');
+        const currentIds = new Set(current.map(({ id }) => id));
+        if (
+          currentIds.size !== categoryIds.length ||
+          categoryIds.some((id) => !currentIds.has(id))
+        ) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message:
+              'Budget categories changed since the page loaded. Refresh and try again.',
+          });
+        }
+        const updatedAt = new Date();
+        for (const [sortOrder, id] of categoryIds.entries()) {
+          await tx
+            .update(DonationBudgetCategory)
+            .set({ sortOrder, updatedAt })
+            .where(eq(DonationBudgetCategory.id, id));
+        }
+      });
+      return { success: true };
     }),
 
   deleteBudgetCategory: adminProcedure

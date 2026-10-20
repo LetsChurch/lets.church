@@ -37,7 +37,17 @@ export const donationBudgetCategorySchema = z.object({
     .int()
     .min(0, 'Amount cannot be negative')
     .max(BUDGET_MAX_MONTHLY_CENTS),
-  sortOrder: z.number().int().min(0).max(10_000),
+});
+
+export const reorderDonationBudgetCategoriesSchema = z.object({
+  categoryIds: z
+    .array(z.uuid())
+    .min(1)
+    .max(500)
+    .refine(
+      (categoryIds) => new Set(categoryIds).size === categoryIds.length,
+      'Category IDs must be unique',
+    ),
 });
 
 export const donationUntrackedGiftSchema = z.object({
