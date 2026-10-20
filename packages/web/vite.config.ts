@@ -5,10 +5,10 @@ import { fileURLToPath } from 'node:url';
 
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
 import tailwindcss from '@tailwindcss/vite';
-import { nitroV2Plugin } from '@tanstack/nitro-v2-vite-plugin';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import viteReact from '@vitejs/plugin-react';
 import { playwright } from '@vitest/browser-playwright';
+import { nitro } from 'nitro/vite';
 import { defineConfig } from 'vite';
 import tsConfigPaths from 'vite-tsconfig-paths';
 
@@ -50,6 +50,35 @@ const embedSecurityHeaders: Record<string, string> = {
     "frame-ancestors *; object-src 'none'; base-uri 'self'; upgrade-insecure-requests",
 };
 
+// Server-only packages kept out of the SSR bundle: native modules, and packages
+// that read their own files at runtime (uglify-js via html-minifier, pino's
+// transport workers). Vite's ssr.external leaves them as bare imports and
+// Nitro's traceDeps copies them into .output/server/node_modules; Nitro v3
+// bundles everything else. Nitro resolves and traces these from web's own
+// node_modules, so any that are imported here only through a workspace package
+// (pino via @letschurch/util, mjml/html-minifier via @letschurch/temporal) must
+// also be declared in web's package.json. @temporalio/client is traced but not
+// listed as external: src/temporal/index.ts loads it through createRequire,
+// which the bundler can't see.
+const serverExternals = [
+  '@node-rs/xxhash',
+  'argon2',
+  'blurhash',
+  'execa',
+  'html-minifier',
+  'mime',
+  'mjml',
+  'mkdirp',
+  'nodemailer',
+  'pino',
+  'pino-pretty',
+  'playwright',
+  'rimraf',
+  'sharp',
+  'stripe',
+  'subtitle',
+];
+
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig((_config) => ({
   server: {
@@ -63,36 +92,20 @@ export default defineConfig((_config) => ({
   plugins: [
     tsConfigPaths(),
     tanstackStart(),
-    nitroV2Plugin({
+    nitro({
       preset: 'node-server',
       routeRules: {
         '/**': { headers: securityHeaders },
         '/embed/**': { headers: embedSecurityHeaders },
       },
+      traceDeps: [...serverExternals, '@temporalio/client'],
     }),
     viteReact(),
     tailwindcss(),
   ],
   ssr: {
     noExternal: ['@tanstack/react-start', '@tanstack/react-router'],
-    external: [
-      '@node-rs/xxhash',
-      'argon2',
-      'blurhash',
-      'execa',
-      'html-minifier',
-      'mime',
-      'mjml',
-      'mkdirp',
-      'nodemailer',
-      'pino',
-      'pino-pretty',
-      'playwright',
-      'rimraf',
-      'sharp',
-      'stripe',
-      'subtitle',
-    ],
+    external: serverExternals,
   },
   test: {
     projects: [

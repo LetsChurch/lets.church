@@ -25,7 +25,7 @@ const config: StorybookConfig = {
         name.startsWith('tanstack-router') ||
         name.startsWith('tanstack:router') ||
         name === 'start-client-tree-plugin' ||
-        name === 'tanstack-nitro-v2-vite-plugin' ||
+        name.startsWith('nitro') ||
         name === 'virtual-bundle'
       );
     });
