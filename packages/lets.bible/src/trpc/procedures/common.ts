@@ -44,8 +44,8 @@ export const commonProcedures = {
   }),
 
   // Effective reading preferences (DB for signed-in, else cookie, else default).
-  preferences: publicProcedure.query(
-    ({ ctx }): Promise<Preferences> => resolvePreferences(subOf(ctx), ctx.req),
+  preferences: publicProcedure.query(({ ctx }): Promise<Preferences> =>
+    resolvePreferences(subOf(ctx), ctx.req),
   ),
 
   // Update preferences: persist to the DB (signed-in) + set the lb-prefs cookie.

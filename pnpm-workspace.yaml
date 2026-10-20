@@ -2,8 +2,8 @@ packages:
   - "./packages/*"
 
 catalog:
-  "@aws-sdk/client-s3": 3.948.0
-  "@aws-sdk/s3-request-presigner": 3.948.0
+  "@aws-sdk/client-s3": 3.1153.0
+  "@aws-sdk/s3-request-presigner": 3.1153.0
   "@base-ui/react": "^1.9.0"
   "@chromatic-com/storybook": "^5.6.0"
   "@elastic/elasticsearch": "^8.19.1"
@@ -39,8 +39,8 @@ catalog:
   "fast-xml-parser": "^5.11.2"
   "jose": "^6.2.13"
   "nitro": "3.0.260903-beta"
-  "oxfmt": "0.58.0"
-  "oxlint": "1.73.0"
+  "oxfmt": "0.74.0"
+  "oxlint": "1.89.0"
   "p-map": "^7.1.1"
   "p-retry": "^7.1.0"
   "pg": "^8.23.1"
