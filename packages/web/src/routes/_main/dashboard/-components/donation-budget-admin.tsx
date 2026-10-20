@@ -39,10 +39,6 @@ function parseCents(dollars: string) {
   return Number.isFinite(value) ? Math.round(value * 100) : null;
 }
 
-function signedAmount(cents: number) {
-  return `${cents > 0 ? '+' : ''}${formatDonationAmount(cents)}`;
-}
-
 function plural(count: number, noun: string) {
   return `${count} ${noun}${count === 1 ? '' : 's'}`;
 }
@@ -270,9 +266,9 @@ export function DonationBudgetAdmin() {
       <Text size="sm" c="dimmed" className="mb-4">
         Categories and the monthly comparison appear on the donate page once at
         least one category exists. Scheduled gifts count active monthly plans at
-        their full charge (quarterly and yearly plans are spread per month) and
-        leave out plans set to stop. Adjust what a plan counts for from its row
-        on the Recurring tab.
+        their charge less an estimated card fee of 2.9% + 30¢ (quarterly and
+        yearly plans are spread per month) and leave out plans set to stop.
+        Exclude a plan from its row on the Recurring tab.
       </Text>
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryCard
@@ -288,8 +284,8 @@ export function DonationBudgetAdmin() {
           label="Scheduled monthly gifts"
           value={formatDonationAmount(summary.recurringCents)}
           detail={
-            budget.adjustedSubscriptionCount > 0
-              ? `${plural(budget.countedSubscriptionCount, 'plan')} · ${signedAmount(summary.subscriptionOffsetCents)} from ${plural(budget.adjustedSubscriptionCount, 'offset')}`
+            budget.excludedSubscriptionCount > 0
+              ? `${plural(budget.countedSubscriptionCount, 'plan')} counted · ${budget.excludedSubscriptionCount} excluded`
               : `${plural(budget.countedSubscriptionCount, 'plan')} counted`
           }
         />

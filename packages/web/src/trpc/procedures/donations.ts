@@ -39,7 +39,7 @@ import {
 import {
   donationBudgetCategorySchema,
   donationSubscriptionAmountSchema,
-  donationSubscriptionBudgetOffsetSchema,
+  donationSubscriptionExcludeFromBudgetSchema,
   donationUntrackedGiftSchema,
 } from '@/schemas/donations';
 
@@ -89,8 +89,10 @@ async function syncSubscriptionAmount(
     .where(eq(DonationSubscription.stripeSubscriptionId, subscription.id));
 }
 
-// Plans set to stop at period end are not scheduled intake anymore.
-const countsTowardBudget = and(
+// Plans set to stop at period end are not scheduled intake anymore. Plans an
+// admin excluded are filtered out after loading so the admin view can count
+// them.
+const eligibleForBudget = and(
   inArray(DonationSubscription.status, [...BUDGET_SUBSCRIPTION_STATUSES]),
   eq(DonationSubscription.cancelAtPeriodEnd, false),
   eq(DonationSubscription.currency, 'usd'),
@@ -115,10 +117,10 @@ async function loadBudget() {
       .select({
         frequency: DonationSubscription.frequency,
         amountCents: DonationSubscription.amountCents,
-        budgetOffsetCents: DonationSubscription.budgetOffsetCents,
+        excludeFromBudget: DonationSubscription.excludeFromBudget,
       })
       .from(DonationSubscription)
-      .where(countsTowardBudget),
+      .where(eligibleForBudget),
     db
       .select({
         id: DonationUntrackedGift.id,
@@ -129,11 +131,19 @@ async function loadBudget() {
       .orderBy(asc(DonationUntrackedGift.createdAt)),
   ]);
 
+  const counted = subscriptions.filter(
+    ({ excludeFromBudget }) => !excludeFromBudget,
+  );
   return {
     categories,
-    subscriptions,
+    countedSubscriptionCount: counted.length,
+    excludedSubscriptionCount: subscriptions.length - counted.length,
     untrackedGifts,
-    summary: summarizeBudget({ categories, subscriptions, untrackedGifts }),
+    summary: summarizeBudget({
+      categories,
+      subscriptions: counted,
+      untrackedGifts,
+    }),
   };
 }
 
@@ -493,9 +503,8 @@ export const donationProcedures = {
           canceledAt: DonationSubscription.canceledAt,
           endedAt: DonationSubscription.endedAt,
           lastPaymentFailedAt: DonationSubscription.lastPaymentFailedAt,
-          budgetOffsetCents: DonationSubscription.budgetOffsetCents,
-          budgetOffsetNote: DonationSubscription.budgetOffsetNote,
-          countsTowardBudget: sql<boolean>`${countsTowardBudget}`,
+          excludeFromBudget: DonationSubscription.excludeFromBudget,
+          eligibleForBudget: sql<boolean>`${eligibleForBudget}`,
           createdAt: DonationSubscription.createdAt,
         })
         .from(DonationSubscription)
@@ -619,15 +628,18 @@ export const donationProcedures = {
   }),
 
   getAdminBudget: adminProcedure.query(async () => {
-    const { categories, subscriptions, untrackedGifts, summary } =
-      await loadBudget();
+    const {
+      categories,
+      countedSubscriptionCount,
+      excludedSubscriptionCount,
+      untrackedGifts,
+      summary,
+    } = await loadBudget();
     return {
       categories,
       untrackedGifts,
-      countedSubscriptionCount: subscriptions.length,
-      adjustedSubscriptionCount: subscriptions.filter(
-        ({ budgetOffsetCents }) => budgetOffsetCents !== 0,
-      ).length,
+      countedSubscriptionCount,
+      excludedSubscriptionCount,
       summary,
     };
   }),
@@ -704,17 +716,13 @@ export const donationProcedures = {
       return { success: true };
     }),
 
-  setSubscriptionBudgetOffset: adminProcedure
-    .input(donationSubscriptionBudgetOffsetSchema)
+  setSubscriptionExcludeFromBudget: adminProcedure
+    .input(donationSubscriptionExcludeFromBudgetSchema)
     .mutation(async ({ input }) => {
       const updated = await db
         .update(DonationSubscription)
         .set({
-          budgetOffsetCents: input.budgetOffsetCents,
-          budgetOffsetNote:
-            input.budgetOffsetCents === 0
-              ? null
-              : input.budgetOffsetNote || null,
+          excludeFromBudget: input.excludeFromBudget,
           updatedAt: new Date(),
         })
         .where(eq(DonationSubscription.id, input.subscriptionId))

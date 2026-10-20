@@ -253,6 +253,13 @@
       "when": 1792437856060,
       "tag": "0035_add-donation-budget",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792518413445,
+      "tag": "0036_replace-budget-offset-with-exclude",
+      "breakpoints": true
     }
   ]
 }

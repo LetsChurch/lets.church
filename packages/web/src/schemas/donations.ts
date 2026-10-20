@@ -50,14 +50,9 @@ export const donationUntrackedGiftSchema = z.object({
     .max(BUDGET_MAX_MONTHLY_CENTS),
 });
 
-export const donationSubscriptionBudgetOffsetSchema = z.object({
+export const donationSubscriptionExcludeFromBudgetSchema = z.object({
   subscriptionId: z.uuid(),
-  budgetOffsetCents: z
-    .number()
-    .int()
-    .min(-BUDGET_MAX_MONTHLY_CENTS)
-    .max(BUDGET_MAX_MONTHLY_CENTS),
-  budgetOffsetNote: z.string().trim().max(200),
+  excludeFromBudget: z.boolean(),
 });
 
 export const donationSubscriptionAmountSchema = z.object({

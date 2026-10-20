@@ -24,7 +24,7 @@ import { formatDonationDate } from '@/donations/dates';
 import { useTRPC } from '@/trpc/react';
 
 import { DonationBudgetAdmin } from './-components/donation-budget-admin';
-import { SubscriptionBudgetOffset } from './-components/subscription-budget-offset';
+import { SubscriptionBudgetToggle } from './-components/subscription-budget-toggle';
 
 export const Route = createFileRoute('/_main/dashboard/admin_/donations')({
   component: AdminDonationsPage,
@@ -600,16 +600,15 @@ function AdminDonationsPage() {
                         'Not set'}
                     </Table.Td>
                     <Table.Td>
-                      <SubscriptionBudgetOffset
+                      <SubscriptionBudgetToggle
                         subscriptionId={subscription.id}
                         donorLabel={
                           subscription.donorName ||
                           subscription.donorEmail ||
                           'this donor'
                         }
-                        budgetOffsetCents={subscription.budgetOffsetCents}
-                        budgetOffsetNote={subscription.budgetOffsetNote}
-                        countsTowardBudget={subscription.countsTowardBudget}
+                        excludeFromBudget={subscription.excludeFromBudget}
+                        eligibleForBudget={subscription.eligibleForBudget}
                       />
                     </Table.Td>
                     <Table.Td>

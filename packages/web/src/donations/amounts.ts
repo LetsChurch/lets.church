@@ -13,6 +13,13 @@ export function estimatedFeeCoveredTotal(baseAmountCents: number): number {
   );
 }
 
+// The card fee Stripe keeps from one charge, at the same estimated rate.
+export function estimatedCardFeeCents(chargeCents: number): number {
+  return Math.round(
+    chargeCents * ESTIMATED_CARD_PERCENT + ESTIMATED_CARD_FIXED_CENTS,
+  );
+}
+
 export function donationAmounts(baseAmountCents: number, coverFees: boolean) {
   const amountCents = coverFees
     ? estimatedFeeCoveredTotal(baseAmountCents)

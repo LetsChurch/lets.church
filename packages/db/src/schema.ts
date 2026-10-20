@@ -527,10 +527,9 @@ export const DonationSubscription = pgTable(
     canceledAt: timestamp('canceled_at', { precision: 3 }),
     endedAt: timestamp('ended_at', { precision: 3 }),
     lastPaymentFailedAt: timestamp('last_payment_failed_at', { precision: 3 }),
-    // Admin annotation for special arrangements: a signed monthly adjustment
-    // to what this plan counts toward the public budget, plus why.
-    budgetOffsetCents: integer('budget_offset_cents').notNull().default(0),
-    budgetOffsetNote: text('budget_offset_note'),
+    // Admin switch for special arrangements: leave this plan out of the
+    // public budget's monthly giving.
+    excludeFromBudget: boolean('exclude_from_budget').notNull().default(false),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
   },
