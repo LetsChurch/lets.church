@@ -12,8 +12,14 @@ import type Stripe from 'stripe';
 
 import logger from '@/util/logger';
 
-import { sendDonationNotifications } from './notifications';
 import {
+  sendDonationNotifications,
+  sendSubscriptionAdminNotice,
+  type SubscriptionAdminNotice,
+  type SubscriptionCancellation,
+} from './notifications';
+import {
+  isNewlyScheduledCancellation,
   resolveCheckoutDonationStatus,
   resolveDonationAdjustmentStatus,
   resolveSubscriptionAmounts,
@@ -599,9 +605,9 @@ async function applyFailedInvoice(
   invoice: Stripe.Invoice,
   stripeSubscription: Stripe.Subscription,
   failedAt: Date,
-) {
+): Promise<SubscriptionAdminNotice | null> {
   const subscription = await upsertSubscription(tx, stripeSubscription);
-  if (!subscription) return;
+  if (!subscription) return null;
   const newerSuccessfulDonation = await tx.query.Donation.findFirst({
     where: (table, { and, eq, gte }) =>
       and(
@@ -611,14 +617,48 @@ async function applyFailedInvoice(
       ),
     columns: { id: true },
   });
+  const recovered =
+    invoice.status === 'paid' || Boolean(newerSuccessfulDonation);
   await tx
     .update(DonationSubscription)
     .set({
-      lastPaymentFailedAt:
-        invoice.status === 'paid' || newerSuccessfulDonation ? null : failedAt,
+      lastPaymentFailedAt: recovered ? null : failedAt,
       updatedAt: new Date(),
     })
     .where(eq(DonationSubscription.id, subscription.id));
+  if (recovered) return null;
+  return {
+    kind: 'PAYMENT_FAILED',
+    subscriptionId: subscription.id,
+    invoiceId: invoice.id,
+    amountCents: invoice.amount_due,
+    currency: invoice.currency,
+    attemptCount: invoice.attempt_count,
+    nextAttemptAt: invoice.next_payment_attempt
+      ? new Date(invoice.next_payment_attempt * 1000)
+      : null,
+    failureMessage: invoiceFailureMessage(invoice),
+  };
+}
+
+function invoiceFailureMessage(invoice: Stripe.Invoice) {
+  for (const invoicePayment of invoice.payments?.data ?? []) {
+    const intent = invoicePayment.payment.payment_intent;
+    if (typeof intent === 'object' && intent?.last_payment_error?.message) {
+      return intent.last_payment_error.message;
+    }
+  }
+  return null;
+}
+
+function subscriptionCancellation(
+  subscription: Stripe.Subscription,
+): SubscriptionCancellation {
+  return {
+    reason: subscription.cancellation_details?.reason ?? null,
+    feedback: subscription.cancellation_details?.feedback ?? null,
+    comment: subscription.cancellation_details?.comment ?? null,
+  };
 }
 
 async function applyChargeRefund(tx: TransactionClient, charge: Stripe.Charge) {
@@ -699,6 +739,7 @@ async function applyEvent(
   event: Stripe.Event,
   prepared: PreparedEvent,
   succeeded: SucceededDonations,
+  notices: SubscriptionAdminNotice[],
 ) {
   switch (event.type) {
     case 'checkout.session.completed':
@@ -724,22 +765,57 @@ async function applyEvent(
         succeeded,
       );
       break;
-    case 'invoice.payment_failed':
+    case 'invoice.payment_failed': {
       if (!prepared.invoice) throw new Error('Missing failed invoice');
       if (!prepared.subscription) break;
-      await applyFailedInvoice(
+      const notice = await applyFailedInvoice(
         tx,
         prepared.invoice,
         prepared.subscription,
         new Date(event.created * 1000),
       );
+      if (notice) notices.push(notice);
       break;
+    }
     case 'customer.subscription.created':
     case 'customer.subscription.updated':
-    case 'customer.subscription.deleted':
-      if (!prepared.subscription) throw new Error('Missing subscription');
-      await upsertSubscription(tx, prepared.subscription);
+    case 'customer.subscription.deleted': {
+      const stripeSubscription = prepared.subscription;
+      if (!stripeSubscription) throw new Error('Missing subscription');
+      const subscription = await upsertSubscription(tx, stripeSubscription);
+      if (!subscription) break;
+      // A checkout that was never paid expires as incomplete_expired; that is
+      // an abandoned gift, not a canceled plan.
+      if (
+        event.type === 'customer.subscription.deleted' &&
+        stripeSubscription.status !== 'incomplete_expired'
+      ) {
+        notices.push({
+          kind: 'ENDED',
+          subscriptionId: subscription.id,
+          endedAt: subscription.endedAt,
+          cancellation: subscriptionCancellation(stripeSubscription),
+        });
+      }
+      if (
+        event.type === 'customer.subscription.updated' &&
+        isNewlyScheduledCancellation(
+          event.data.previous_attributes,
+          stripeSubscription,
+        )
+      ) {
+        notices.push({
+          kind: 'CANCELLATION_SCHEDULED',
+          subscriptionId: subscription.id,
+          eventId: event.id,
+          cancelAt: stripeSubscription.cancel_at
+            ? new Date(stripeSubscription.cancel_at * 1000)
+            : subscription.currentPeriodEnd,
+          cancellation: subscriptionCancellation(stripeSubscription),
+        });
+      }
       break;
+    }
     case 'charge.refunded':
       if (!prepared.charge) throw new Error('Missing refunded charge');
       await applyChargeRefund(tx, prepared.charge);
@@ -765,6 +841,7 @@ export async function processStripeEvent(event: Stripe.Event) {
   const prepared = await prepareEvent(event);
   let duplicate = false;
   const succeeded: SucceededDonations = [];
+  const notices: SubscriptionAdminNotice[] = [];
 
   await db.transaction(async (tx) => {
     const [receipt] = await tx
@@ -782,11 +859,14 @@ export async function processStripeEvent(event: Stripe.Event) {
       return;
     }
 
-    await applyEvent(tx, event, prepared, succeeded);
+    await applyEvent(tx, event, prepared, succeeded, notices);
   });
 
   for (const donationId of succeeded) {
     await sendDonationNotifications(donationId);
+  }
+  for (const notice of notices) {
+    await sendSubscriptionAdminNotice(notice);
   }
 
   return { duplicate };

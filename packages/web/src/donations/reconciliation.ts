@@ -73,3 +73,38 @@ export function resolveDonationAdjustmentStatus(input: {
   if (input.refundedAmountCents > 0) return 'PARTIALLY_REFUNDED';
   return 'SUCCEEDED';
 }
+
+type CancelSchedule = {
+  cancel_at_period_end: boolean;
+  cancel_at: number | null;
+};
+
+/**
+ * Whether a customer.subscription.updated event is the one that scheduled the
+ * plan to cancel. Stripe's previous_attributes only lists changed keys, so a
+ * missing key means the value was unchanged. Donor and admin cancellations set
+ * cancel_at_period_end; the Billing Portal may set cancel_at instead.
+ */
+export function isNewlyScheduledCancellation(
+  previous: Partial<CancelSchedule> | undefined,
+  current: CancelSchedule & { status: string },
+) {
+  if (!previous) return false;
+  const isScheduled = (schedule: CancelSchedule) =>
+    schedule.cancel_at_period_end || schedule.cancel_at != null;
+  const before = {
+    cancel_at_period_end:
+      'cancel_at_period_end' in previous
+        ? Boolean(previous.cancel_at_period_end)
+        : current.cancel_at_period_end,
+    cancel_at:
+      'cancel_at' in previous
+        ? (previous.cancel_at ?? null)
+        : current.cancel_at,
+  };
+  return (
+    current.status !== 'canceled' &&
+    isScheduled(current) &&
+    !isScheduled(before)
+  );
+}

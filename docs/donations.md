@@ -199,6 +199,27 @@ marks the gift succeeded first. Workflow IDs are keyed to the donation
 `REJECT_DUPLICATE`, so each gift is acknowledged once. Payloads are encrypted so
 donor details stay out of Temporal history. Admin imports never send email.
 
+Recurring plans also send `ADMIN_EMAIL` a notice (only from the webhook, after
+the ledger commits) when:
+
+- **A payment fails** (`invoice.payment_failed`, unless the invoice has since
+  been paid): amount, attempt number, Stripe's failure message, and the next
+  retry date. One email per invoice
+  (`donation-payment-failed-admin-notice:<invoice id>`), not per retry.
+- **A cancellation is scheduled** (`customer.subscription.updated` whose
+  `previous_attributes` show `cancel_at_period_end`/`cancel_at` turning on):
+  the cancel date plus Stripe's cancellation reason and any donor feedback or
+  comment. Keyed to the event
+  (`donation-cancel-scheduled-admin-notice:<event id>`), so resuming and
+  cancelling again sends another.
+- **A plan ends** (`customer.subscription.deleted`, except `incomplete_expired`
+  plans from abandoned checkouts): the end date and cancellation reason, for
+  example a donor request or retries exhausted. Sent once per plan
+  (`donation-subscription-ended-admin-notice:<subscription id>`).
+
+A donor who stops a gift at period end produces two notices: one when they
+schedule it and one when the plan ends.
+
 Donors can open `/dashboard/account/donations` to see gift history, download
 receipts, print annual statements, update billing details, change the amount
 of a recurring gift, stop a recurring gift at the end of its billing period, or

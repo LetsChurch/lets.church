@@ -155,6 +155,158 @@ export function buildAdminDonationEmail(
   };
 }
 
+export type SubscriptionCancellation = {
+  reason: string | null;
+  feedback: string | null;
+  comment: string | null;
+};
+
+/**
+ * A recurring-donation event the site admin should hear about. Collected while
+ * a Stripe event is applied and sent after the ledger transaction commits.
+ */
+export type SubscriptionAdminNotice =
+  | {
+      kind: 'PAYMENT_FAILED';
+      subscriptionId: string;
+      invoiceId: string;
+      amountCents: number;
+      currency: string;
+      attemptCount: number;
+      nextAttemptAt: Date | null;
+      failureMessage: string | null;
+    }
+  | {
+      kind: 'CANCELLATION_SCHEDULED';
+      subscriptionId: string;
+      eventId: string;
+      cancelAt: Date | null;
+      cancellation: SubscriptionCancellation;
+    }
+  | {
+      kind: 'ENDED';
+      subscriptionId: string;
+      endedAt: Date | null;
+      cancellation: SubscriptionCancellation;
+    };
+
+export type SubscriptionEmailDetails = {
+  subscriptionId: string;
+  stripeSubscriptionId: string;
+  amountCents: number;
+  currency: string;
+  frequency: Frequency;
+  donorName: string | null;
+  donorEmail: string | null;
+};
+
+const cancellationReasonLabels: Record<string, string> = {
+  cancellation_requested: 'Canceled on request',
+  payment_failed: 'Payment failed',
+  payment_disputed: 'Payment disputed',
+  canceled_by_retention_policy: 'Retention policy',
+};
+
+function humanize(value: string) {
+  const words = value.replaceAll('_', ' ');
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+function cancellationFields(cancellation: SubscriptionCancellation) {
+  return [
+    [
+      'Reason',
+      cancellation.reason
+        ? (cancellationReasonLabels[cancellation.reason] ??
+          humanize(cancellation.reason))
+        : null,
+    ],
+    [
+      'Donor feedback',
+      cancellation.feedback ? humanize(cancellation.feedback) : null,
+    ],
+    ['Donor comment', cancellation.comment?.trim() || null],
+  ] as const;
+}
+
+export function buildAdminSubscriptionNoticeEmail(
+  notice: SubscriptionAdminNotice,
+  details: SubscriptionEmailDetails,
+  webUrl: string,
+) {
+  const frequency = frequencyLabels[details.frequency].toLowerCase();
+  const adminUrl = `${webUrl}/dashboard/admin/donations`;
+
+  let title: string;
+  let summary: string;
+  let subject: string;
+  let noticeFields: ReadonlyArray<readonly [string, string | null]>;
+  let amount = formatDonationAmount(details.amountCents, details.currency);
+
+  switch (notice.kind) {
+    case 'PAYMENT_FAILED':
+      amount = formatDonationAmount(notice.amountCents, notice.currency);
+      title = 'Recurring donation payment failed';
+      subject = `${humanize(frequency)} donation payment failed: ${amount}`;
+      summary = notice.nextAttemptAt
+        ? `A recurring donation payment failed. Stripe will retry on ${formatDate(notice.nextAttemptAt)}.`
+        : 'A recurring donation payment failed. Stripe will not retry it automatically.';
+      noticeFields = [
+        ['Failure reason', notice.failureMessage],
+        ['Attempt', String(notice.attemptCount)],
+        ['Invoice ID', notice.invoiceId],
+      ];
+      break;
+    case 'CANCELLATION_SCHEDULED':
+      title = 'Recurring donation set to cancel';
+      subject = `${humanize(frequency)} donation set to cancel: ${amount}`;
+      summary = notice.cancelAt
+        ? `A recurring donation is set to cancel on ${formatDate(notice.cancelAt)}.`
+        : 'A recurring donation is set to cancel.';
+      noticeFields = cancellationFields(notice.cancellation);
+      break;
+    case 'ENDED':
+      title = 'Recurring donation canceled';
+      subject = `${humanize(frequency)} donation canceled: ${amount}`;
+      summary = notice.endedAt
+        ? `A recurring donation ended on ${formatDate(notice.endedAt)}.`
+        : 'A recurring donation ended.';
+      noticeFields = cancellationFields(notice.cancellation);
+      break;
+  }
+
+  const fields = [
+    ['Amount', amount],
+    ['Frequency', humanize(frequency)],
+    ['Donor', details.donorName?.trim() || 'Unknown'],
+    ['Donor email', details.donorEmail ?? 'None'],
+    ...noticeFields,
+    ['Subscription ID', details.subscriptionId],
+    ['Stripe subscription', details.stripeSubscriptionId],
+  ].filter((field): field is [string, string] => field[1] != null);
+
+  const text = stripIndent`
+    ${summary}
+
+    ${fields.map(([label, value]) => `${label}: ${value}`).join('\n')}
+
+    Manage donations: ${adminUrl}
+  `;
+
+  const html = emailHtml(
+    title,
+    stripIndent`
+      ${summary}
+
+      ${fields.map(([label, value]) => `<b>${label}:</b> ${sanitizeForHtml(value)}`).join('<br>')}
+
+      <a href="${sanitizeForHtml(adminUrl)}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">Manage donations</a>
+    `,
+  ).html;
+
+  return { subject, text, html };
+}
+
 async function loadDonationEmailDetails(
   donationId: string,
 ): Promise<DonationEmailDetails | null> {
@@ -179,6 +331,29 @@ async function loadDonationEmailDetails(
   };
 }
 
+async function loadSubscriptionEmailDetails(
+  subscriptionId: string,
+): Promise<SubscriptionEmailDetails | null> {
+  const subscription = await db.query.DonationSubscription.findFirst({
+    where: (table, { eq }) => eq(table.id, subscriptionId),
+  });
+  if (!subscription) return null;
+  const donor = await db.query.DonationDonor.findFirst({
+    where: (table, { eq }) => eq(table.id, subscription.donorId),
+    columns: { name: true, email: true },
+  });
+
+  return {
+    subscriptionId: subscription.id,
+    stripeSubscriptionId: subscription.stripeSubscriptionId,
+    amountCents: subscription.amountCents,
+    currency: subscription.currency,
+    frequency: subscription.frequency,
+    donorName: donor?.name ?? null,
+    donorEmail: donor?.email ?? null,
+  };
+}
+
 function asError(error: unknown) {
   return error instanceof Error ? error : new Error(String(error));
 }
@@ -190,7 +365,7 @@ function isAlreadyStarted(error: unknown) {
   );
 }
 
-// Both emails carry donor PII, so the payload is encrypted to keep names and
+// Donation emails carry donor PII, so the payload is encrypted to keep names and
 // addresses out of Temporal workflow history. The workflow id is keyed to the
 // donation and duplicates are rejected so a donation is acknowledged once.
 async function startDonationEmail(
@@ -278,5 +453,53 @@ export async function sendDonationNotifications(donationId: string) {
         'Failed to send admin donation notification',
       );
     }
+  }
+}
+
+function subscriptionNoticeWorkflowId(notice: SubscriptionAdminNotice) {
+  switch (notice.kind) {
+    case 'PAYMENT_FAILED':
+      return `donation-payment-failed-admin-notice:${notice.invoiceId}`;
+    case 'CANCELLATION_SCHEDULED':
+      return `donation-cancel-scheduled-admin-notice:${notice.eventId}`;
+    case 'ENDED':
+      return `donation-subscription-ended-admin-notice:${notice.subscriptionId}`;
+  }
+}
+
+/**
+ * Notify the site admin about a failed recurring payment or a canceled plan.
+ * Like sendDonationNotifications, failures are logged and swallowed.
+ */
+export async function sendSubscriptionAdminNotice(
+  notice: SubscriptionAdminNotice,
+) {
+  const { WEB_URL, ADMIN_EMAIL } = z
+    .object({ WEB_URL: z.url(), ADMIN_EMAIL: z.email().optional() })
+    .parse(process.env);
+  if (!ADMIN_EMAIL) return;
+
+  try {
+    const details = await loadSubscriptionEmailDetails(notice.subscriptionId);
+    if (!details) {
+      moduleLogger.warn(
+        { targetId: notice.subscriptionId },
+        'Subscription not found for admin notice',
+      );
+      return;
+    }
+    await startDonationEmail(
+      subscriptionNoticeWorkflowId(notice),
+      'Recurring donation admin notification email',
+      {
+        to: ADMIN_EMAIL,
+        ...buildAdminSubscriptionNoticeEmail(notice, details, WEB_URL),
+      },
+    );
+  } catch (err) {
+    moduleLogger.error(
+      { err: asError(err), targetId: notice.subscriptionId },
+      'Failed to send recurring donation admin notice',
+    );
   }
 }

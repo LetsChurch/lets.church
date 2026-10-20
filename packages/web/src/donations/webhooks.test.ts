@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  isNewlyScheduledCancellation,
   resolveCheckoutDonationStatus,
   resolveDonationAdjustmentStatus,
   resolveSubscriptionAmounts,
@@ -72,5 +73,36 @@ describe('donation webhook reconciliation', () => {
         disputeStatus: 'won',
       }),
     ).toBe('PARTIALLY_REFUNDED');
+  });
+
+  it('detects the update that schedules a cancellation', () => {
+    const scheduled = {
+      cancel_at_period_end: true,
+      cancel_at: null,
+      status: 'active',
+    };
+    expect(
+      isNewlyScheduledCancellation({ cancel_at_period_end: false }, scheduled),
+    ).toBe(true);
+    expect(
+      isNewlyScheduledCancellation(
+        { cancel_at: null },
+        {
+          cancel_at_period_end: false,
+          cancel_at: 1_800_000_000,
+          status: 'active',
+        },
+      ),
+    ).toBe(true);
+    // Unrelated change on an already-scheduled plan.
+    expect(isNewlyScheduledCancellation({}, scheduled)).toBe(false);
+    // Resumed plan.
+    expect(
+      isNewlyScheduledCancellation(
+        { cancel_at_period_end: true },
+        { cancel_at_period_end: false, cancel_at: null, status: 'active' },
+      ),
+    ).toBe(false);
+    expect(isNewlyScheduledCancellation(undefined, scheduled)).toBe(false);
   });
 });
