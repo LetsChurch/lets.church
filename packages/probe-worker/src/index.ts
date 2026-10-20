@@ -1,8 +1,8 @@
 import * as activities from '@letschurch/temporal/activities/probe';
 import { PROBE_QUEUE } from '@letschurch/temporal/queues';
+import { initSentry } from '@letschurch/temporal/util/sentry';
 import { waitOnTemporal } from '@letschurch/temporal/util/temporal';
 import { msUnitSchema } from '@letschurch/temporal/util/zod';
-import * as Sentry from '@sentry/node';
 import { NativeConnection, Worker } from '@temporalio/worker';
 import { z } from 'zod';
 
@@ -24,12 +24,7 @@ const {
   })
   .parse(process.env);
 
-if (process.env.NODE_ENV !== 'development') {
-  Sentry.init({
-    dsn: SENTRY_DSN,
-    environment: process.env.NODE_ENV ?? 'default',
-  });
-}
+initSentry(SENTRY_DSN);
 
 await checkFfmpeg();
 

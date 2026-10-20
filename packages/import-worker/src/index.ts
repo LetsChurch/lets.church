@@ -1,6 +1,6 @@
 import * as importActivities from '@letschurch/temporal/activities/import';
 import { IMPORT_QUEUE } from '@letschurch/temporal/queues';
-import * as Sentry from '@sentry/node';
+import { initSentry } from '@letschurch/temporal/util/sentry';
 import { NativeConnection, Worker } from '@temporalio/worker';
 import { z } from 'zod';
 
@@ -22,12 +22,7 @@ const {
   })
   .parse(process.env);
 
-if (process.env.NODE_ENV !== 'development') {
-  Sentry.init({
-    dsn: SENTRY_DSN,
-    environment: process.env.NODE_ENV ?? 'default',
-  });
-}
+initSentry(SENTRY_DSN);
 
 await checkYtDlp();
 

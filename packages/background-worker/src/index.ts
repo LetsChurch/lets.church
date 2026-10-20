@@ -17,8 +17,8 @@ import {
   SUMMARY_MODEL,
 } from '@letschurch/temporal/util/llm';
 import { assertProductionPricingCoverage } from '@letschurch/temporal/util/llm-pricing';
+import { initSentry } from '@letschurch/temporal/util/sentry';
 import { waitOnTemporal } from '@letschurch/temporal/util/temporal';
-import * as Sentry from '@sentry/node';
 import { NativeConnection, Worker } from '@temporalio/worker';
 import { z } from 'zod';
 
@@ -32,12 +32,7 @@ const { IDENTITY, SENTRY_DSN, TEMPORAL_ADDRESS, TEMPORAL_SHUTDOWN_GRACE_TIME } =
     })
     .parse(process.env);
 
-if (process.env.NODE_ENV !== 'development') {
-  Sentry.init({
-    dsn: SENTRY_DSN,
-    environment: process.env.NODE_ENV ?? 'default',
-  });
-}
+initSentry(SENTRY_DSN);
 
 // Validate activity configurations on startup
 validateSendEmailConfig();

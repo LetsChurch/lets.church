@@ -87,6 +87,12 @@ Redact at the logging boundary and never place credentials, tokens, or raw
 request input into structured log context. Assume logs are durable and widely
 readable.
 
+Error trackers are sinks too. Workers initialize Sentry only through
+`initSentry`, which pins an explicit `dataCollection` baseline (no user info,
+cookies, bodies, database queries, or GenAI inputs/outputs; identifying headers
+and query params denied). Sentry v11 collects all of those when the option is
+unset, so never call `Sentry.init` directly or drop the baseline.
+
 ## 6. Bound everything the client controls
 
 Cap array lengths, numeric sizes, and any value that drives allocation or
@@ -131,6 +137,7 @@ slightly-different copy is how a fix silently regresses at one call site.
 | 3 — URL scheme allow-list    | `isSafeUrl`, `safeHttpHref`                                                    | `packages/web/src/util/safe-url.ts`                                                 |
 | 4 — read/write authorization | `isChannelRoutable`, `canViewMedia`, `canViewMediaById`, `getMemberChannelIds` | `packages/web/src/util/media-visibility.ts`                                         |
 | 5 — log redaction            | `redactLogInput`, `redactSensitive`                                            | `packages/web/src/util/redact-log-input.ts`, `packages/web/src/util/trpc-logger.ts` |
+| 5 — error-tracker collection | `initSentry`                                                                   | `packages/temporal/src/util/sentry.ts`                                              |
 | 6 — AI quota admission       | `enforceAiRateLimit`                                                           | `packages/web/src/ai/abuse-control.ts`                                              |
 | 7 — open-redirect            | `safeRedirect`                                                                 | `packages/web/src/util/safe-redirect.ts`                                            |
 | CSRF (cookie POSTs)          | `isAllowedPostOrigin`                                                          | `packages/web/src/util/request-origin.ts`                                           |

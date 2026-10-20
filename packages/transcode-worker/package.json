@@ -18,7 +18,6 @@
   },
   "dependencies": {
     "@letschurch/temporal": "workspace:*",
-    "@sentry/node": "catalog:",
     "@temporalio/worker": "catalog:",
     "es-toolkit": "catalog:",
     "execa": "^9.6.0",
