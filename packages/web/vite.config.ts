@@ -87,14 +87,21 @@ export default defineConfig((_config) => ({
   },
   plugins: [
     tanstackStart(),
-    nitro({
-      preset: 'node-server',
-      routeRules: {
-        '/**': { headers: securityHeaders },
-        '/embed/**': { headers: embedSecurityHeaders },
-      },
-      traceDeps: [...serverExternals, '@temporalio/client'],
-    }),
+    // Vitest 5 shares one Vite server across projects, where Nitro's dev hook
+    // evaluates the SSR entry and crashes on React's CJS entry. Tests never need
+    // the server build, so leave Nitro out under Vitest.
+    ...(process.env.VITEST
+      ? []
+      : [
+          nitro({
+            preset: 'node-server',
+            routeRules: {
+              '/**': { headers: securityHeaders },
+              '/embed/**': { headers: embedSecurityHeaders },
+            },
+            traceDeps: [...serverExternals, '@temporalio/client'],
+          }),
+        ]),
     viteReact(),
     tailwindcss(),
   ],

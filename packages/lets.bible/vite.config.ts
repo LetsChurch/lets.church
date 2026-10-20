@@ -37,13 +37,19 @@ export default defineConfig(() => ({
     // Precompress public assets (the large /reading/ + /search/ JSON) to .br/.gz
     // at build time; Nitro's static handler serves them with Content-Encoding when
     // the client allows it — e.g. BSB reading ~28.8MB raw → ~2.5MB brotli.
-    nitro({
-      preset: 'node-server',
-      compressPublicAssets: { gzip: true, brotli: true },
-      routeRules: {
-        '/**': { headers: securityHeaders },
-      },
-    }),
+    // Left out under Vitest: its dev hook evaluates the SSR entry in Vitest 5's
+    // shared Vite server and crashes on React's CJS entry.
+    ...(process.env.VITEST
+      ? []
+      : [
+          nitro({
+            preset: 'node-server',
+            compressPublicAssets: { gzip: true, brotli: true },
+            routeRules: {
+              '/**': { headers: securityHeaders },
+            },
+          }),
+        ]),
     viteReact(),
     tailwindcss(),
   ],

@@ -97,7 +97,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe.sequential('Stripe webhook HTTP authenticity boundary', () => {
+describe('Stripe webhook HTTP authenticity boundary', () => {
   it('accepts an SDK-signed payload and returns the receipt envelope', async () => {
     const payload = JSON.stringify(validEvent);
     const request = signedRequest(payload);
