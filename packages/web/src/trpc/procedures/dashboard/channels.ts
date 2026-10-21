@@ -625,6 +625,7 @@ export const channelRouter = router({
       uploadCountResult,
       speakerCountResult,
       unlabeledCountResult,
+      uploadListCountResult,
     ] = await Promise.all([
       db
         .select({ count: count() })
@@ -693,6 +694,11 @@ export const channelRouter = router({
           ),
         )
         .then((r) => r[0]),
+      db
+        .select({ count: count() })
+        .from(UploadList)
+        .where(eq(UploadList.channelId, input.channelId))
+        .then((r) => r[0]),
     ]);
 
     const totalViews = Number(viewCountResult?.count ?? 0);
@@ -701,6 +707,7 @@ export const channelRouter = router({
     const membershipCount = channel.memberships.length;
     const speakerCount = Number(speakerCountResult?.count ?? 0);
     const unlabeledVoiceCount = Number(unlabeledCountResult?.count ?? 0);
+    const uploadListCount = Number(uploadListCountResult?.count ?? 0);
 
     const { avatarPath, avatarLocation, ...channelWithoutPath } = channel;
     const avatarUrl = imageUrl(avatarLocation, avatarPath, {
@@ -726,7 +733,7 @@ export const channelRouter = router({
         memberships: membershipCount,
         speakers: speakerCount,
         unlabeledVoices: unlabeledVoiceCount,
-        uploadLists: 0, // Will be fetched separately if needed
+        uploadLists: uploadListCount,
       },
       avatarUrl,
       userMembership: ctx.membership,
@@ -3232,6 +3239,15 @@ export const channelRouter = router({
           updatedAt: true,
         },
         with: {
+          // Routability fields, so the dashboard only offers View when the
+          // public playlist/series page would resolve.
+          channel: {
+            columns: {
+              visibility: true,
+              approvedAt: true,
+              deletedAt: true,
+            },
+          },
           uploads: {
             columns: {
               rank: true,

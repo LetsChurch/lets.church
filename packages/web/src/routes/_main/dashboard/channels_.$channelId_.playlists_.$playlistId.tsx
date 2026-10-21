@@ -1,6 +1,7 @@
 import { Combobox } from '@base-ui/react/combobox';
 import {
   IconEdit,
+  IconEye,
   IconGripVertical,
   IconLink,
   IconPlus,
@@ -37,6 +38,7 @@ import { idTranslator } from '@/schemas/common';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 import { formatDate } from '@/util/format';
+import { isChannelRoutable } from '@/util/media-visibility-rules';
 
 export const Route = createFileRoute(
   '/_main/dashboard/channels_/$channelId_/playlists_/$playlistId',
@@ -306,12 +308,15 @@ function PlaylistDetailsPage() {
     upload,
   }));
 
+  const shortId = idTranslator.fromUUID(playlist.id);
+  const isSeries = playlist.type === 'SERIES';
+  const typeLabel = isSeries ? 'Series' : 'Playlist';
+  const isPubliclyViewable =
+    !playlist.channel || isChannelRoutable(playlist.channel);
+
   const handleCopyPlaylistLink = async () => {
-    const shortId = idTranslator.fromUUID(playlist.id);
-    const isSeries = playlist.type === 'SERIES';
     const path = isSeries ? 'series' : 'playlist';
     const url = `${window.location.origin}/${path}/${shortId}`;
-    const typeLabel = isSeries ? 'Series' : 'Playlist';
 
     try {
       await navigator.clipboard.writeText(url);
@@ -357,6 +362,19 @@ function PlaylistDetailsPage() {
               label: 'Edit',
               icon: <IconEdit size={16} />,
               onClick: openEdit,
+            },
+            isPubliclyViewable && {
+              key: 'view',
+              label: 'View',
+              menuLabel: `View public ${typeLabel.toLowerCase()}`,
+              icon: <IconEye size={16} />,
+              variant: 'default',
+              link: isSeries
+                ? { to: '/series/$seriesId', params: { seriesId: shortId } }
+                : {
+                    to: '/playlist/$playlistId',
+                    params: { playlistId: shortId },
+                  },
             },
             {
               key: 'copy-link',
