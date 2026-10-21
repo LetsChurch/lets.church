@@ -21,6 +21,7 @@ export async function downloadUrl(
   dir: string,
   log: Logger,
   heartbeat: (s: string) => unknown = noop,
+  { maxBytes = MAX_DOWNLOAD_BYTES }: { maxBytes?: number } = {},
 ): Promise<string> {
   // safeFetch validates the URL (and every redirect hop) against the SSRF
   // policy before the worker makes any outbound request.
@@ -47,10 +48,10 @@ export async function downloadUrl(
   const heartbeatTransform = new Transform({
     transform(chunk: Buffer, _encoding, callback) {
       downloadedBytes += chunk.length;
-      if (downloadedBytes > MAX_DOWNLOAD_BYTES) {
+      if (downloadedBytes > maxBytes) {
         callback(
           new Error(
-            `Download from ${url} exceeded the maximum of ${MAX_DOWNLOAD_BYTES} bytes`,
+            `Download from ${url} exceeded the maximum of ${maxBytes} bytes`,
           ),
         );
         return;

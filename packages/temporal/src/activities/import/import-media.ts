@@ -15,6 +15,7 @@ import {
   updateUploadRecord,
 } from '../../client';
 import { downloadFromUrl } from '../../util/import';
+import { downloadUrl } from '../../util/import/download';
 import logger from '../../util/logger';
 
 const moduleLogger = logger.child({
@@ -23,12 +24,21 @@ const moduleLogger = logger.child({
 
 const WORK_DIR = process.env.IMPORT_WORKING_DIRECTORY ?? '/data/import';
 
+// Fallback artwork (feed/CSV cover images) has no business being this large.
+const MAX_THUMBNAIL_BYTES = 25 * 1024 * 1024;
+
 export default async function importMedia(
   url: string,
   {
     trimSilence = false,
+    thumbnailUrl,
     ...data
-  }: UploadRecordCreateData & { trimSilence?: boolean },
+  }: UploadRecordCreateData & {
+    trimSilence?: boolean;
+    // Artwork to use when the downloader doesn't produce its own thumbnail
+    // (plain media URLs never do), e.g. a podcast's cover image.
+    thumbnailUrl?: string | null;
+  },
 ) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'importMedia',
@@ -51,6 +61,7 @@ export default async function importMedia(
   }
 
   let uploadRecordId: string;
+  let storageLocation: string;
   const dir = join(WORK_DIR, uuid());
   await mkdirp(dir);
 
@@ -58,11 +69,31 @@ export default async function importMedia(
   let thumbnailUploadKey: string | null = null;
 
   try {
-    const { mediaPath, thumbnailPath } = await downloadFromUrl(url, {
-      dir,
-      logger: activityLogger,
-      heartbeat,
-    });
+    const { mediaPath, thumbnailPath: downloadedThumbnailPath } =
+      await downloadFromUrl(url, {
+        dir,
+        logger: activityLogger,
+        heartbeat,
+      });
+
+    let thumbnailPath = downloadedThumbnailPath;
+    if (!thumbnailPath && thumbnailUrl) {
+      // Best-effort: missing artwork shouldn't fail the media import.
+      try {
+        thumbnailPath = await downloadUrl(
+          thumbnailUrl,
+          dir,
+          activityLogger,
+          heartbeat,
+          { maxBytes: MAX_THUMBNAIL_BYTES },
+        );
+      } catch (e) {
+        activityLogger.warn(
+          { err: e instanceof Error ? e : new Error(String(e)) },
+          'Failed to download fallback thumbnail',
+        );
+      }
+    }
 
     // Placement happens at record creation (on a DB-backed worker); the
     // downloaded size lets it reserve capacity for source + output.
@@ -71,6 +102,7 @@ export default async function importMedia(
       creationOperationId,
     );
     uploadRecordId = created.id;
+    storageLocation = created.storageLocation;
     const { ingest: ingestS3 } = getLocation(created.storageLocation);
     mediaUploadKey = `${uploadRecordId}/${uuid()}`;
 
@@ -116,5 +148,10 @@ export default async function importMedia(
     await rimraf(dir);
   }
 
-  return { uploadRecordId, mediaUploadKey, thumbnailUploadKey };
+  return {
+    uploadRecordId,
+    storageLocation,
+    mediaUploadKey,
+    thumbnailUploadKey,
+  };
 }

@@ -7,6 +7,7 @@ export type BulkMediaImportItem = {
   title: string;
   description?: string;
   publishedAt?: string;
+  thumbnailUrl?: string;
 };
 
 type CsvRow = Record<string, string>;
@@ -80,7 +81,7 @@ function publishedAt(value: string, rowNumber: number) {
   return parsed.toISOString();
 }
 
-function mediaUrl(value: string, rowNumber: number) {
+function httpUrl(value: string, rowNumber: number) {
   let parsed: URL;
   try {
     parsed = new URL(value);
@@ -141,6 +142,13 @@ export function parseBulkMediaImportCsv(csv: string): BulkMediaImportItem[] {
     const url = value(values, 'url', 'media url', 'source url');
     const title = value(values, 'title');
     const description = value(values, 'description', 'summary');
+    const thumbnailUrl = value(
+      values,
+      'thumbnail',
+      'thumbnail url',
+      'image',
+      'image url',
+    );
     const publishedAtValue = value(
       values,
       'publishedAt',
@@ -164,11 +172,14 @@ export function parseBulkMediaImportCsv(csv: string): BulkMediaImportItem[] {
     }
 
     return {
-      url: mediaUrl(url, rowNumber),
+      url: httpUrl(url, rowNumber),
       title,
       ...(description ? { description } : {}),
       ...(publishedAtValue
         ? { publishedAt: publishedAt(publishedAtValue, rowNumber) }
+        : {}),
+      ...(thumbnailUrl
+        ? { thumbnailUrl: httpUrl(thumbnailUrl, rowNumber) }
         : {}),
     };
   });

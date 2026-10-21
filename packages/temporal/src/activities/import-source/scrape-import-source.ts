@@ -10,6 +10,12 @@ export type ScrapedMediaItem = {
   title?: string;
   description?: string;
   publishedAt?: Date | string;
+  /** `itunes:episode`, when the feed numbers its items. */
+  episode?: number;
+  /** `itunes:season`; episode numbers usually restart each season. */
+  season?: number;
+  /** Per-item artwork (e.g. `itunes:image`), used as the upload thumbnail. */
+  imageUrl?: string;
 };
 
 /**

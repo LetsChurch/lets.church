@@ -42,6 +42,15 @@ make a bare `fetch` to a user-influenced URL. Tools that do their own networking
 (subprocesses, headless browsers) can only be input-validated — rely on egress
 network policy for the rest.
 
+Feed and batch imports (`importFeed`, CSV `bulkImportMedia`) carry URLs one step
+removed from the user: enclosure URLs and artwork come out of a feed or CSV the
+user points at. The web app never fetches any of them. The import worker reads
+the feed through `safeFetch` (body capped), downloads each media URL through
+the same `downloadFromUrl` path as a single-URL import, fetches artwork through
+`downloadUrl` (`safeFetch` on every hop, capped at 25 MiB), and fails a feed
+whose parsed result is too large for a Temporal payload rather than truncating
+it silently.
+
 Media services that fetch our own stored files follow the same idea with a
 fixed allow-list instead of a DNS check (see `docs/storage-locations.md`):
 

@@ -48,6 +48,11 @@ import {
   parseBulkMediaImportCsv,
 } from '@/imports/bulk-media-import';
 import {
+  discardCreatedImportSeries,
+  ImportSeriesError,
+  resolveImportSeries,
+} from '@/imports/series';
+import {
   finalizeMultipartUploadSchema,
   getThumbnailResize,
   multipartUploadSchema,
@@ -71,7 +76,9 @@ import {
   deleteUploadSchema,
   getSpeakerAppearancesSchema,
   getSpeakerLabelingQueueSchema,
+  importFeedSchema,
   importMediaSchema,
+  importSeriesSchema,
   inviteChannelMemberSchema,
   playlistQuerySchema,
   removeFromPlaylistSchema,
@@ -105,6 +112,7 @@ import {
   startIndexMediaDocument,
   syncScheduledPublish,
   triggerBulkMediaImport,
+  triggerFeedImport,
 } from '@/temporal';
 import {
   mantineAvatarLg2x,
@@ -308,6 +316,22 @@ async function loadOwnedSpeakerLink(
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Request not found' });
   }
   return link;
+}
+
+async function resolveSeriesForImport(
+  channelId: string,
+  appUserId: string,
+  series: z.infer<typeof importSeriesSchema> | undefined,
+) {
+  if (!series) return undefined;
+  try {
+    return await resolveImportSeries(channelId, appUserId, series);
+  } catch (error) {
+    if (error instanceof ImportSeriesError) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+    }
+    throw error;
+  }
 }
 
 export const channelRouter = router({
@@ -4003,6 +4027,7 @@ export const channelRouter = router({
         channelId: z.string().uuid(),
         filename: z.string().trim().min(1).max(255),
         csv: z.string().min(1).max(MAX_BULK_MEDIA_IMPORT_BYTES),
+        series: importSeriesSchema.optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -4017,25 +4042,42 @@ export const channelRouter = router({
         });
       }
 
+      const series = await resolveSeriesForImport(
+        input.channelId,
+        ctx.session.appUserId,
+        input.series,
+      );
+
       try {
         const { workflowCount } = await triggerBulkMediaImport(
           input.channelId,
           ctx.session.appUserId,
           input.filename,
           items,
+          series,
         );
 
         moduleLogger.info(
           {
             channelId: input.channelId,
             appUserId: ctx.session.appUserId,
-            context: { itemCount: items.length, workflowCount },
+            context: {
+              itemCount: items.length,
+              workflowCount,
+              seriesId: series?.id,
+            },
           },
           'Bulk import workflows started',
         );
 
-        return { success: true, itemCount: items.length, workflowCount };
+        return {
+          success: true,
+          itemCount: items.length,
+          workflowCount,
+          seriesId: series?.id ?? null,
+        };
       } catch (error) {
+        if (series) await discardCreatedImportSeries(series);
         moduleLogger.error(
           {
             channelId: input.channelId,
@@ -4050,6 +4092,53 @@ export const channelRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to start the bulk import.',
+        });
+      }
+    }),
+
+  importFeed: siteAdminChannelProcedure
+    .input(importFeedSchema)
+    .mutation(async ({ ctx, input }) => {
+      const series = await resolveSeriesForImport(
+        input.channelId,
+        ctx.session.appUserId,
+        input.series,
+      );
+
+      try {
+        const { feedImportId } = await triggerFeedImport(
+          input.channelId,
+          ctx.session.appUserId,
+          input.url,
+          { license: input.license, series },
+        );
+
+        moduleLogger.info(
+          {
+            channelId: input.channelId,
+            appUserId: ctx.session.appUserId,
+            context: { feedImportId, url: input.url, seriesId: series?.id },
+          },
+          'Feed import workflow started',
+        );
+
+        return { success: true, feedImportId, seriesId: series?.id ?? null };
+      } catch (error) {
+        if (series) await discardCreatedImportSeries(series);
+        moduleLogger.error(
+          {
+            channelId: input.channelId,
+            appUserId: ctx.session.appUserId,
+            context: {
+              url: input.url,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to start feed import workflow',
+        );
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to start the feed import.',
         });
       }
     }),

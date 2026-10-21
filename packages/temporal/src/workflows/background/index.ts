@@ -49,6 +49,10 @@ export {
   handleMultipartMediaUploadWorkflow,
   uploadDoneSignal,
 } from './handle-multipart-media-upload';
+export {
+  type ImportFeedWorkflowParams,
+  importFeedWorkflow,
+} from './import-feed';
 export { importMediaWorkflow } from './import-media';
 export { indexDocumentWorkflow } from './index-document';
 export {

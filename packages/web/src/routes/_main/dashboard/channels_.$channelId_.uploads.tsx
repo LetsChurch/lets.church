@@ -10,6 +10,7 @@ import {
   IconEye,
   IconEyeOff,
   IconPhoto,
+  IconRss,
   IconStar,
   IconStarFilled,
   IconTrash,
@@ -37,6 +38,13 @@ import {
   DataTableToolbar,
 } from '@/components/dashboard/data-table';
 import { HeaderActions } from '@/components/dashboard/header-actions';
+import {
+  emptyImportSeries,
+  ImportSeriesFields,
+  type ImportSeriesState,
+  importSeriesInput,
+  isImportSeriesComplete,
+} from '@/components/dashboard/import-series-fields';
 import { LcMenu, MenuItemButton, OverflowMenu } from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import {
@@ -627,6 +635,19 @@ function ChannelUploadsPage() {
     { open: openBulkImportModal, close: closeBulkImportModal },
   ] = useDisclosure();
   const [bulkImportFile, setBulkImportFile] = useState<File | null>(null);
+  const [bulkImportSeries, setBulkImportSeries] =
+    useState<ImportSeriesState>(emptyImportSeries);
+
+  const [
+    feedImportModalOpened,
+    { open: openFeedImportModal, close: closeFeedImportModal },
+  ] = useDisclosure();
+  const [feedImportForm, setFeedImportForm] = useState<{
+    url: string;
+    // FEED → the feed's declared license, else the channel default
+    license: UploadLicense | 'FEED';
+    series: ImportSeriesState;
+  }>({ url: '', license: 'FEED', series: emptyImportSeries });
 
   // Auto-open upload modal when navigating here with ?upload=true
   useEffect(() => {
@@ -733,7 +754,7 @@ function ChannelUploadsPage() {
 
   const bulkImportMutation = useMutation(
     trpc.dashboard.channels.bulkImportMedia.mutationOptions({
-      onSuccess: ({ itemCount }) => {
+      onSuccess: ({ itemCount, seriesId }) => {
         notifications.show({
           title: 'Bulk import started',
           message: `${itemCount.toLocaleString()} media items were queued for import.`,
@@ -741,6 +762,14 @@ function ChannelUploadsPage() {
         });
         closeBulkImportModal();
         setBulkImportFile(null);
+        setBulkImportSeries(emptyImportSeries);
+        if (seriesId) {
+          void queryClient.invalidateQueries({
+            queryKey: trpc.dashboard.channels.getChannelPlaylists.queryKey({
+              channelId: channel.id,
+            }),
+          });
+        }
       },
       onError: (error) => {
         notifications.show({
@@ -754,7 +783,52 @@ function ChannelUploadsPage() {
 
   const handleOpenBulkImport = () => {
     setBulkImportFile(null);
+    setBulkImportSeries(emptyImportSeries);
     openBulkImportModal();
+  };
+
+  const feedImportMutation = useMutation(
+    trpc.dashboard.channels.importFeed.mutationOptions({
+      onSuccess: ({ seriesId }) => {
+        notifications.show({
+          title: 'Feed import started',
+          message:
+            'Every item in the feed will be queued for import. This can take a few minutes to appear.',
+          color: 'green',
+        });
+        closeFeedImportModal();
+        setFeedImportForm({
+          url: '',
+          license: 'FEED',
+          series: emptyImportSeries,
+        });
+        if (seriesId) {
+          void queryClient.invalidateQueries({
+            queryKey: trpc.dashboard.channels.getChannelPlaylists.queryKey({
+              channelId: channel.id,
+            }),
+          });
+        }
+      },
+      onError: (error) => {
+        notifications.show({
+          title: 'Could not start feed import',
+          message: error.message,
+          color: 'red',
+        });
+      },
+    }),
+  );
+
+  const handleFeedImport = () => {
+    feedImportMutation.mutate({
+      channelId: channel.id,
+      url: feedImportForm.url.trim(),
+      ...(feedImportForm.license !== 'FEED'
+        ? { license: feedImportForm.license }
+        : {}),
+      series: importSeriesInput(feedImportForm.series),
+    });
   };
 
   const handleBulkImport = async () => {
@@ -773,6 +847,7 @@ function ChannelUploadsPage() {
         channelId: channel.id,
         filename: bulkImportFile.name,
         csv: await bulkImportFile.text(),
+        series: importSeriesInput(bulkImportSeries),
       });
     } catch {
       notifications.show({
@@ -809,6 +884,13 @@ function ChannelUploadsPage() {
               icon: <IconDownload size={16} />,
               color: 'blue',
               onClick: openImportModal,
+            },
+            isSiteAdmin && {
+              key: 'import-feed',
+              label: 'Import Feed',
+              icon: <IconRss size={16} />,
+              color: 'blue',
+              onClick: openFeedImportModal,
             },
             isSiteAdmin && {
               key: 'bulk-import',
@@ -1189,7 +1271,8 @@ function ChannelUploadsPage() {
                 </Text>
                 <Text size="xs" c="dimmed" className="mb-1">
                   Required columns: url, title. Optional: description,
-                  publishedAt (ISO 8601). Maximum file size: 64 MiB.
+                  publishedAt (ISO 8601), thumbnail (image URL). Rows keep their
+                  order in a series. Maximum file size: 64 MiB.
                 </Text>
                 <input
                   type="file"
@@ -1200,6 +1283,12 @@ function ChannelUploadsPage() {
                   className="text-primary file:bg-brand/10 file:text-brand mt-1 block w-full text-sm file:mr-3 file:rounded-full file:border-0 file:px-3 file:py-2 file:font-semibold"
                 />
               </div>
+
+              <ImportSeriesFields
+                channelId={channel.id}
+                value={bulkImportSeries}
+                onChange={setBulkImportSeries}
+              />
 
               <div className="mt-4 flex flex-wrap items-center justify-end gap-4">
                 <Button
@@ -1215,9 +1304,100 @@ function ChannelUploadsPage() {
                   leftSection={<IconUpload size={16} />}
                   onClick={handleBulkImport}
                   loading={bulkImportMutation.isPending}
-                  disabled={!bulkImportFile}
+                  disabled={
+                    !bulkImportFile || !isImportSeriesComplete(bulkImportSeries)
+                  }
                 >
                   Start Bulk Import
+                </Button>
+              </div>
+            </div>
+          </LcModal.Popup>
+        </LcModal.Portal>
+      </LcModal.Root>
+
+      <LcModal.Root
+        open={feedImportModalOpened}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) closeFeedImportModal();
+        }}
+      >
+        <LcModal.Portal>
+          <LcModal.Backdrop />
+          <LcModal.Popup size="lg">
+            <ModalHeader title={`Import Feed to ${channel.name}`} />
+            <div className="flex flex-col gap-4">
+              <Text size="sm" c="dimmed">
+                Imports every audio or video item in an RSS or podcast feed
+                once, in episode order, using the feed&apos;s artwork as
+                thumbnails. To keep importing new episodes as they are
+                published, set up an import source instead.
+              </Text>
+
+              <TextInput
+                label="Feed URL"
+                placeholder="https://example.com/feed.xml"
+                required
+                value={feedImportForm.url}
+                onChange={(e) =>
+                  setFeedImportForm({
+                    ...feedImportForm,
+                    url: e.currentTarget.value,
+                  })
+                }
+              />
+
+              <Select
+                label="License"
+                description="By default, uses the license the feed declares, or the channel's default license if it declares none."
+                data={[
+                  { value: 'FEED', label: 'From the feed' },
+                  { value: 'STANDARD', label: 'Standard Copyright' },
+                  { value: 'PUBLIC_DOMAIN', label: 'Public Domain' },
+                  {
+                    group: 'Creative Commons',
+                    items: [
+                      { value: 'CC_BY', label: 'CC BY' },
+                      { value: 'CC_BY_SA', label: 'CC BY-SA' },
+                      { value: 'CC_BY_NC', label: 'CC BY-NC' },
+                      { value: 'CC_BY_NC_SA', label: 'CC BY-NC-SA' },
+                      { value: 'CC_BY_ND', label: 'CC BY-ND' },
+                      { value: 'CC_BY_NC_ND', label: 'CC BY-NC-ND' },
+                      { value: 'CC0', label: 'CC0' },
+                    ],
+                  },
+                ]}
+                value={feedImportForm.license}
+                onChange={(license) =>
+                  setFeedImportForm({
+                    ...feedImportForm,
+                    license: license as UploadLicense | 'FEED',
+                  })
+                }
+              />
+
+              <ImportSeriesFields
+                channelId={channel.id}
+                value={feedImportForm.series}
+                onChange={(series) =>
+                  setFeedImportForm({ ...feedImportForm, series })
+                }
+              />
+
+              <div className="mt-4 flex flex-wrap items-center justify-end gap-4">
+                <Button variant="subtle" onClick={closeFeedImportModal}>
+                  Cancel
+                </Button>
+                <Button
+                  leftSection={<IconRss size={16} />}
+                  onClick={handleFeedImport}
+                  loading={feedImportMutation.isPending}
+                  disabled={
+                    !feedImportForm.url.trim() ||
+                    !isImportSeriesComplete(feedImportForm.series)
+                  }
+                >
+                  Start Feed Import
                 </Button>
               </div>
             </div>

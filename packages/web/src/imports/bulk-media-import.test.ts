@@ -27,6 +27,28 @@ describe('bulk media CSV import', () => {
     ]);
   });
 
+  it('accepts an optional thumbnail URL column', () => {
+    const csv = [
+      'url,title,thumbnail url',
+      'https://example.com/a.mp3,With art,https://example.com/cover.jpg',
+      'https://example.com/b.mp3,Without art,',
+    ].join('\n');
+
+    expect(parseBulkMediaImportCsv(csv)).toEqual([
+      {
+        url: 'https://example.com/a.mp3',
+        title: 'With art',
+        thumbnailUrl: 'https://example.com/cover.jpg',
+      },
+      { url: 'https://example.com/b.mp3', title: 'Without art' },
+    ]);
+    expect(() =>
+      parseBulkMediaImportCsv(
+        'url,title,image\nhttps://example.com/a.mp3,Bad art,ftp://x/y.jpg',
+      ),
+    ).toThrow(/Row 2 must use an HTTP or HTTPS URL/);
+  });
+
   it('requires URL and title columns', () => {
     expect(() =>
       parseBulkMediaImportCsv('description\nNo media fields'),

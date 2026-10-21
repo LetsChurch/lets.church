@@ -19,6 +19,7 @@ export type BulkMediaImportItem = {
   title: string;
   description?: string;
   publishedAt?: string;
+  thumbnailUrl?: string;
 };
 
 export type BulkImportMediaWorkflowParams = {
@@ -32,11 +33,15 @@ export type BulkImportMediaWorkflowParams = {
   visibility: string;
   userCommentsEnabled: boolean;
   webUrl?: string;
+  // When set, item N (counting across all batches) lands in this series at
+  // rank `firstRank + N`, preserving the source's order.
+  series?: { id: string; firstRank: number };
   items: BulkMediaImportItem[];
 };
 
 /**
- * Dispatches one independent importMediaWorkflow for every uploaded CSV row.
+ * Dispatches one independent importMediaWorkflow for every uploaded CSV row
+ * (or every item of an imported feed).
  * This coordinator exists only to keep the web request short and Temporal
  * payloads bounded; it has no relationship to recurring import sources.
  */
@@ -51,6 +56,7 @@ export async function bulkImportMediaWorkflow({
   visibility,
   userCommentsEnabled,
   webUrl,
+  series,
   items,
 }: BulkImportMediaWorkflowParams): Promise<{ workflowCount: number }> {
   setCurrentDetails(`Launching ${items.length} media import workflows`);
@@ -74,6 +80,15 @@ export async function bulkImportMediaWorkflow({
           visibility,
           userCommentsEnabled,
           trimSilence: false,
+          thumbnailUrl: item.thumbnailUrl ?? null,
+          ...(series
+            ? {
+                series: {
+                  id: series.id,
+                  rank: series.firstRank + csvItemIndex,
+                },
+              }
+            : {}),
           taskQueue: BACKGROUND_QUEUE,
           channelId,
           webUrl,

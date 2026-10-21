@@ -1,5 +1,6 @@
 import {
   ParentClosePolicy,
+  patched,
   proxyActivities,
   setCurrentDetails,
   startChild,
@@ -23,9 +24,13 @@ import { processMediaWorkflow } from './process-media';
 const { importMedia } = proxyActivities<{
   importMedia: (
     url: string,
-    data: UploadRecordCreateData & { trimSilence?: boolean },
+    data: UploadRecordCreateData & {
+      trimSilence?: boolean;
+      thumbnailUrl?: string | null;
+    },
   ) => Promise<{
     uploadRecordId: string;
+    storageLocation: string;
     mediaUploadKey: string;
     thumbnailUploadKey: string | null;
   }>;
@@ -49,6 +54,14 @@ const { triggerPagerDutyAlert } = proxyActivities<typeof backgroundActivities>({
   retry: { maximumAttempts: 3 },
 });
 
+const { addUploadToSeries, createUploadState } = proxyActivities<
+  typeof backgroundActivities
+>({
+  startToCloseTimeout: '1 minute',
+  taskQueue: BACKGROUND_QUEUE,
+  retry: { maximumAttempts: 5 },
+});
+
 export async function importMediaWorkflow({
   url,
   username,
@@ -60,6 +73,8 @@ export async function importMediaWorkflow({
   publishedAt,
   userCommentsEnabled = true,
   trimSilence = false,
+  thumbnailUrl = null,
+  series,
   taskQueue,
   importSourceId,
   channelId,
@@ -80,6 +95,11 @@ export async function importMediaWorkflow({
   title: string;
   taskQueue: string;
   trimSilence: boolean;
+  // Fallback artwork when the source has none of its own (feed/CSV imports).
+  thumbnailUrl?: string | null;
+  // Series to place the upload in, at a rank the starter reserved so a batch
+  // lands in order regardless of which download finishes first.
+  series?: { id: string; rank: number };
   importSourceId?: string;
   // Channel id + web origin, supplied by the starter (the web client, or
   // `scrapeAndImportWorkflow` which has both). Used to deep-link the
@@ -93,23 +113,33 @@ export async function importMediaWorkflow({
   let uploadRecordId: string | undefined;
   try {
     setCurrentDetails('Downloading & importing source media');
-    const { mediaUploadKey, thumbnailUploadKey, ...importIds } =
-      await importMedia(url, {
-        title,
-        description,
-        license,
-        visibility,
-        uploadFinalized: true,
-        uploadFinalizedByUsername: username,
-        createdByUsername: username,
-        channelSlug,
-        userCommentsEnabled,
-        trimSilence,
-        ...(publishedAt
-          ? { publishedAt: new Date(publishedAt as string | Date) }
-          : {}),
-      });
+    const {
+      mediaUploadKey,
+      thumbnailUploadKey,
+      storageLocation,
+      ...importIds
+    } = await importMedia(url, {
+      title,
+      description,
+      license,
+      visibility,
+      uploadFinalized: true,
+      uploadFinalizedByUsername: username,
+      createdByUsername: username,
+      channelSlug,
+      userCommentsEnabled,
+      trimSilence,
+      thumbnailUrl,
+      ...(publishedAt
+        ? { publishedAt: new Date(publishedAt as string | Date) }
+        : {}),
+    });
     uploadRecordId = importIds.uploadRecordId;
+
+    if (series) {
+      setCurrentDetails('Adding to series');
+      await addUploadToSeries(uploadRecordId, series.id, series.rank);
+    }
 
     // Now that the upload record id exists, resolve its dashboard deep-links
     // and forward them onto the processing children's User Metadata. Built
@@ -140,6 +170,17 @@ export async function importMediaWorkflow({
     });
 
     if (thumbnailUploadKey) {
+      // processImage locates its source through the key's upload_state row
+      // (as the multipart upload flow writes it); without one every imported
+      // thumbnail failed with "No upload state".
+      if (patched('import-thumbnail-upload-state')) {
+        await createUploadState({
+          s3Key: thumbnailUploadKey,
+          storageLocation,
+          uploadType: 'thumbnail',
+          uploadRecordId,
+        });
+      }
       await startChild(processImageWorkflow, {
         taskQueue,
         workflowId: `processImage:${thumbnailUploadKey}`,

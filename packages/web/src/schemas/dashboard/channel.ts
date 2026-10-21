@@ -518,3 +518,23 @@ export const importMediaSchema = z.object({
   userCommentsEnabled: z.boolean().default(true),
   trimSilence: z.boolean().default(false),
 });
+
+// Where a batch import (CSV or feed) lands: a series created for it, or one the
+// channel already has (appended after its current entries).
+export const importSeriesSchema = z.discriminatedUnion('mode', [
+  z.object({
+    mode: z.literal('new'),
+    title: z.string().trim().min(1, 'Series title is required').max(500),
+  }),
+  z.object({ mode: z.literal('existing'), seriesId: playlistIdSchema }),
+]);
+
+export const importFeedSchema = z.object({
+  channelId: channelIdSchema,
+  // Scheme restriction only; the import worker's safeFetch enforces the SSRF
+  // policy on the feed and on every enclosure/artwork URL inside it.
+  url: z.url({ protocol: /^https?$/, message: 'Please enter a valid URL' }),
+  // Omitted → the feed's declared license, else the channel default.
+  license: z.nativeEnum(UploadLicense).optional(),
+  series: importSeriesSchema.optional(),
+});

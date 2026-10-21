@@ -1286,7 +1286,11 @@ export async function triggerBulkMediaImport(
     title: string;
     description?: string;
     publishedAt?: string;
+    thumbnailUrl?: string;
   }>,
+  // Place item N in this series at rank `firstRank + N` (see
+  // `resolveImportSeries`).
+  series?: { id: string; firstRank: number },
 ) {
   const [channel, user] = await Promise.all([
     db.query.Channel.findFirst({
@@ -1368,6 +1372,7 @@ export async function triggerBulkMediaImport(
             visibility: channel.defaultUploadVisibility ?? 'PUBLIC',
             userCommentsEnabled: channel.defaultUploadCommentsEnabled ?? true,
             webUrl: process.env.WEB_URL,
+            series,
             items: batch,
           },
         ],
@@ -1382,6 +1387,90 @@ export async function triggerBulkMediaImport(
     ),
   );
   return { bulkImportId, workflowCount: batches.length };
+}
+
+/**
+ * Trigger a one-time import of every media item in an RSS/podcast feed. The
+ * worker fetches and orders the feed (the web app never fetches the
+ * user-supplied URL), then fans out through the same per-item import workflows
+ * as a CSV bulk import.
+ */
+export async function triggerFeedImport(
+  channelId: string,
+  userId: string,
+  feedUrl: string,
+  {
+    license,
+    series,
+  }: { license?: string; series?: { id: string; firstRank: number } } = {},
+) {
+  const [channel, user] = await Promise.all([
+    db.query.Channel.findFirst({
+      where: (t, { eq }) => eq(t.id, channelId),
+      columns: {
+        id: true,
+        slug: true,
+        defaultUploadLicense: true,
+        defaultUploadVisibility: true,
+        defaultUploadCommentsEnabled: true,
+      },
+    }),
+    db.query.AppUser.findFirst({
+      where: (t, { eq }) => eq(t.id, userId),
+      columns: { id: true, username: true },
+    }),
+  ]);
+
+  if (!channel) {
+    throw new Error(`Channel ${channelId} not found`);
+  }
+  if (!user) {
+    throw new Error(`User ${userId} not found`);
+  }
+
+  const feedImportId = randomUUID();
+  const channelHref = absoluteWebUrl(dashboardPaths.channel(channel.id));
+
+  await startBackground('importFeedWorkflow', {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_IMPORT },
+    ...staticMeta({
+      summary: `Feed import — ${channel.slug}`,
+      detailLines: [`Feed \`${feedUrl.replaceAll(/[\r\n`]/g, ' ')}\``],
+      links: [
+        { href: feedUrl, text: 'Source feed' },
+        ...(channelHref
+          ? [{ href: channelHref, text: 'Channel dashboard' }]
+          : []),
+      ],
+    }),
+    workflowId: `importFeed:${channel.slug}:${feedImportId}`,
+    args: [
+      {
+        feedImportId,
+        feedUrl,
+        channelId: channel.id,
+        channelSlug: channel.slug,
+        userId: user.id,
+        username: user.username,
+        ...(license ? { license } : {}),
+        defaultLicense: channel.defaultUploadLicense ?? 'STANDARD',
+        visibility: channel.defaultUploadVisibility ?? 'PUBLIC',
+        userCommentsEnabled: channel.defaultUploadCommentsEnabled ?? true,
+        webUrl: process.env.WEB_URL,
+        series,
+      },
+    ],
+    typedSearchAttributes: [
+      { key: CHANNEL_ID_KEY, value: channel.id },
+      { key: CHANNEL_SLUG_KEY, value: channel.slug },
+      { key: USER_ID_KEY, value: user.id },
+      { key: USERNAME_KEY, value: user.username },
+    ],
+  });
+
+  return { feedImportId };
 }
 
 /**
