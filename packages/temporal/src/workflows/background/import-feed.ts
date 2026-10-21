@@ -6,7 +6,9 @@ import {
   startChild,
 } from '@temporalio/workflow';
 
-import type * as importActivities from '../../activities/import';
+// Through import-source rather than activities/import, which would pull the
+// import worker's ES2023 download code into every worker package's typecheck.
+import type * as importSourceActivities from '../../activities/import-source';
 import { BACKGROUND_QUEUE, IMPORT_QUEUE, PRIORITY_IMPORT } from '../../queues';
 import {
   CHANNEL_ID_KEY,
@@ -21,7 +23,7 @@ import {
 } from './bulk-import-media';
 
 // Scraping runs on IMPORT_QUEUE: the import worker owns outbound fetches.
-const { scrapeMediaFeed } = proxyActivities<typeof importActivities>({
+const { scrapeMediaFeed } = proxyActivities<typeof importSourceActivities>({
   startToCloseTimeout: '5 minutes',
   taskQueue: IMPORT_QUEUE,
   retry: { maximumAttempts: 3 },

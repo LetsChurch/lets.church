@@ -14,6 +14,7 @@ export {
   type ScrapedMediaItem,
   scrapeImportSource,
 } from './scrape-import-source';
+export { type ScrapedMediaFeed, scrapeMediaFeed } from './scrapers/rss';
 export { sendImportErrorNotification } from './send-import-error-notification';
 export { updateImportRun } from './update-import-run';
 export { updateImportSourceTimestamps } from './update-import-source-timestamps';

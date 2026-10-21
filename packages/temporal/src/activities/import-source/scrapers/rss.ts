@@ -170,21 +170,22 @@ export function feedLicense(
  * every item has an episode number (audiobooks and serial podcasts; a missing
  * season counts as 0, since episodes restart each season); otherwise oldest-first by publish
  * date; otherwise the reverse of document order, since feeds list newest
- * first.
+ * first. (Copy-then-sort rather than toSorted/toReversed: worker packages
+ * that typecheck these sources target ES2022.)
  */
 export function orderFeedItems(items: ScrapedMediaItem[]): ScrapedMediaItem[] {
   if (items.length > 0 && items.every((item) => item.episode !== undefined)) {
-    return items.toSorted(
+    return [...items].sort(
       (a, b) => (a.season ?? 0) - (b.season ?? 0) || a.episode! - b.episode!,
     );
   }
   if (items.length > 0 && items.every((item) => item.publishedAt)) {
-    return items.toSorted(
+    return [...items].sort(
       (a, b) =>
         new Date(a.publishedAt!).getTime() - new Date(b.publishedAt!).getTime(),
     );
   }
-  return items.toReversed();
+  return [...items].reverse();
 }
 
 /**
