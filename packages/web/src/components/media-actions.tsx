@@ -37,6 +37,7 @@ import { LcMenu, MenuItemButton, MenuItemLink } from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { LcTooltip } from '@/components/lc-tooltip';
 import { useAbortController } from '@/hooks/use-abort-controller';
+import { IncomingIdSchema } from '@/schemas/common';
 import { $currentTime } from '@/stores/player';
 import { askVideoQuestion, openVideoAsk } from '@/stores/video-ask';
 import { useTRPC } from '@/trpc/react';
@@ -638,7 +639,12 @@ export function MediaActions({
           <div className="shrink-0 pr-4">
             <Link
               to="/dashboard/channels/$channelId/uploads/$uploadId"
-              params={{ channelId: channelData.id, uploadId }}
+              // Dashboard routes are keyed by UUID; these ids may be short
+              // public ids (and uploadId may be either form, from the URL).
+              params={{
+                channelId: IncomingIdSchema.parse(channelData.id),
+                uploadId: IncomingIdSchema.parse(uploadId),
+              }}
               className="border-fancy-pants text-primary/80 hover:text-primary inline-flex items-center gap-0.5 rounded-full bg-gray-950/10 px-3 py-1.5 text-sm font-semibold transition-colors hover:bg-gray-950/15 active:scale-[0.97] dark:bg-white/15 dark:hover:bg-white/20"
             >
               <IconEdit size={16} />

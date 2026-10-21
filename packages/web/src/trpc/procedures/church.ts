@@ -328,7 +328,7 @@ export const churchProcedures = {
 
   getOrganizationBySlug: publicProcedure
     .input(organizationBySlugSchema)
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       moduleLogger.info('Fetching organization by slug');
 
       const organization = await db.query.Organization.findFirst({
@@ -474,6 +474,22 @@ export const churchProcedures = {
         ? formatPhoneNumber(organization.primaryPhoneNumber, 'US')
         : null;
 
+      // Mirrors the dashboard's gate (site admin or organization admin) so the
+      // public page can link back to the editor.
+      const appUserId = ctx.session?.appUserId;
+      const membership =
+        appUserId && !ctx.isSiteAdmin
+          ? await db.query.OrganizationMembership.findFirst({
+              columns: { isAdmin: true },
+              where: (t, { and, eq }) =>
+                and(
+                  eq(t.organizationId, organization.id),
+                  eq(t.appUserId, appUserId),
+                ),
+            })
+          : null;
+      const canEdit = ctx.isSiteAdmin || Boolean(membership?.isAdmin);
+
       moduleLogger.info('Organization fetched successfully by slug');
 
       return {
@@ -501,6 +517,7 @@ export const churchProcedures = {
         addresses: organization.addresses,
         officialChannels,
         endorsedChannels,
+        canEdit,
       };
     }),
 

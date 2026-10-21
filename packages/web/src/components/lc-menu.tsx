@@ -129,7 +129,7 @@ export function OverflowMenu({
 
 // Shared styling for all menu item variants
 const menuItemClassName =
-  'flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-primary text-sm outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100 data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-zinc-800 dark:focus:bg-zinc-800 dark:hover:bg-zinc-800';
+  'flex w-full data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-primary text-sm outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100 data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-zinc-800 dark:focus:bg-zinc-800 dark:hover:bg-zinc-800';
 
 // Helper component for menu items with consistent styling
 type MenuItemButtonProps = {
@@ -137,6 +137,7 @@ type MenuItemButtonProps = {
   children: ReactNode;
   icon?: ReactNode;
   className?: string;
+  disabled?: boolean;
 };
 
 export function MenuItemButton({
@@ -144,14 +145,19 @@ export function MenuItemButton({
   children,
   icon,
   className = '',
+  disabled,
 }: MenuItemButtonProps) {
   return (
     <LcMenuItem
+      nativeButton
+      disabled={disabled}
+      // Hand the handler to Menu.Item (not the rendered button) so Base UI
+      // merges it with its own and suppresses it while disabled.
+      onClick={onClick}
       render={(props) => (
         <button
           {...props}
           type="button"
-          onClick={onClick}
           className={`${menuItemClassName} ${className}`}
         >
           {icon ? icon : null}

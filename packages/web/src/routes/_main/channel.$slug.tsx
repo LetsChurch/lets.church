@@ -11,6 +11,7 @@ import {
   IconBrandYoutube,
   IconBuildingChurch,
   IconChevronRight,
+  IconEdit,
   IconPlaylist,
   IconRss,
   IconWorld,
@@ -33,6 +34,7 @@ import { MediaCard } from '@/components/media-card';
 import { MediaGrid } from '@/components/media-grid';
 import { getPillButtonClasses } from '@/components/pill-button';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
+import { idTranslator } from '@/schemas/common';
 import { useSetBackgroundImage } from '@/stores/header';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { formatTime } from '@/util/format';
@@ -534,20 +536,38 @@ function RouteComponent() {
                 </p>
               </div>
 
-              {isLoggedIn ? (
-                <FollowButton
-                  onClick={handleFollowToggle}
-                  disabled={isTogglingFollow}
-                  isFollowing={isFollowing}
-                />
-              ) : (
-                <Link
-                  to="/auth/register"
-                  className={getPillButtonClasses({ size: 'lg' })}
-                >
-                  Follow
-                </Link>
-              )}
+              <div className="flex items-center gap-2">
+                {channel.canEdit ? (
+                  <Link
+                    to="/dashboard/channels/$channelId"
+                    // Dashboard routes are keyed by UUID; channel.id is the
+                    // short public id.
+                    params={{ channelId: idTranslator.toUUID(channel.id) }}
+                    className={getPillButtonClasses({
+                      variant: 'ghost',
+                      size: 'lg',
+                      className: 'gap-1',
+                    })}
+                  >
+                    <IconEdit size={16} />
+                    Edit
+                  </Link>
+                ) : null}
+                {isLoggedIn ? (
+                  <FollowButton
+                    onClick={handleFollowToggle}
+                    disabled={isTogglingFollow}
+                    isFollowing={isFollowing}
+                  />
+                ) : (
+                  <Link
+                    to="/auth/register"
+                    className={getPillButtonClasses({ size: 'lg' })}
+                  >
+                    Follow
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
         </div>

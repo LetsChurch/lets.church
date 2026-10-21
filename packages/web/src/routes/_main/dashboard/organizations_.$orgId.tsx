@@ -1,12 +1,19 @@
-import { IconCheck, IconNetwork, IconUsers, IconX } from '@tabler/icons-react';
+import {
+  IconCheck,
+  IconEdit,
+  IconNetwork,
+  IconUsers,
+  IconX,
+} from '@tabler/icons-react';
 import {
   useMutation,
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { createFileRoute, Link, redirect } from '@tanstack/react-router';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 
-import { Avatar, Badge, Button, Text, Title, Tooltip } from '@/components/ui';
+import { HeaderActions } from '@/components/dashboard/header-actions';
+import { Avatar, Badge, Text, Title, Tooltip } from '@/components/ui';
 import { notifications } from '@/components/ui/notifications';
 import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
@@ -141,8 +148,8 @@ function OrganizationDetailsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex flex-wrap items-start justify-start gap-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-wrap items-start justify-start gap-4">
           <Avatar
             className="size-18"
             src={organization.avatarUrl}
@@ -203,39 +210,42 @@ function OrganizationDetailsPage() {
             )}
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-start gap-4">
-          {isSiteAdmin &&
-            (!isApproved ? (
-              <Button
-                color="green"
-                leftSection={<IconCheck size={16} />}
-                onClick={handleApproveOrganization}
-                loading={approveOrganizationMutation.isPending}
-              >
-                Approve Organization
-              </Button>
-            ) : (
-              <Button
-                color="orange"
-                leftSection={<IconX size={16} />}
-                onClick={handleUnapproveOrganization}
-                loading={unapproveOrganizationMutation.isPending}
-              >
-                Unapprove Organization
-              </Button>
-            ))}
-          {isAdmin && (
-            <Button
-              variant="light"
-              component={Link}
-              className="content-center"
-              to="/dashboard/organizations/$orgId/edit"
-              params={{ orgId: organization.id }}
-            >
-              Edit Organization
-            </Button>
-          )}
-        </div>
+        <HeaderActions
+          menuLabel="More organization actions"
+          actions={[
+            // Site admins have no membership row but may still edit.
+            (isAdmin || isSiteAdmin) && {
+              key: 'edit',
+              label: 'Edit',
+              icon: <IconEdit size={16} />,
+              link: {
+                to: '/dashboard/organizations/$orgId/edit',
+                params: { orgId: organization.id },
+              },
+            },
+            isSiteAdmin &&
+              (isApproved
+                ? {
+                    key: 'unapprove',
+                    label: 'Unapprove',
+                    menuLabel: 'Unapprove organization',
+                    icon: <IconX size={16} />,
+                    color: 'orange',
+                    loading: unapproveOrganizationMutation.isPending,
+                    onClick: handleUnapproveOrganization,
+                  }
+                : {
+                    key: 'approve',
+                    label: 'Approve',
+                    menuLabel: 'Approve organization',
+                    icon: <IconCheck size={16} />,
+                    color: 'green',
+                    variant: 'filled',
+                    loading: approveOrganizationMutation.isPending,
+                    onClick: handleApproveOrganization,
+                  }),
+          ]}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">

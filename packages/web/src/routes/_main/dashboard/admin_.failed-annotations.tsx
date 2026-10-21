@@ -3,10 +3,10 @@ import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 
+import { HeaderActions } from '@/components/dashboard/header-actions';
 import {
   ActionIcon,
   Badge,
-  Button,
   Table,
   Text,
   Title,
@@ -141,38 +141,37 @@ function RouteComponent() {
             have no OUTLINE annotations
           </Text>
         </div>
-        {data.uploads.length > 0 ? (
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {data.contentFilterCount > 0 ? (
-              <Button
-                variant="light"
-                color="blue"
-                leftSection={<IconRefresh size={16} />}
-                onClick={() => retryContentFiltersMutation.mutate()}
-                loading={retryContentFiltersMutation.isPending}
-                disabled={
-                  regenerateMutation.isPending || retryAllMutation.isPending
-                }
-              >
-                Retry Content Filter Failures (
-                {data.contentFilterCount.toLocaleString()})
-              </Button>
-            ) : null}
-            <Button
-              variant="light"
-              color="blue"
-              leftSection={<IconRefresh size={16} />}
-              onClick={() => retryAllMutation.mutate()}
-              loading={retryAllMutation.isPending}
-              disabled={
-                regenerateMutation.isPending ||
-                retryContentFiltersMutation.isPending
-              }
-            >
-              Retry All
-            </Button>
-          </div>
-        ) : null}
+        <HeaderActions
+          menuLabel="More retry actions"
+          actions={
+            data.uploads.length > 0
+              ? [
+                  {
+                    key: 'retry-all',
+                    label: 'Retry All',
+                    icon: <IconRefresh size={16} />,
+                    color: 'blue',
+                    loading: retryAllMutation.isPending,
+                    disabled:
+                      regenerateMutation.isPending ||
+                      retryContentFiltersMutation.isPending,
+                    onClick: () => retryAllMutation.mutate(),
+                  },
+                  data.contentFilterCount > 0 && {
+                    key: 'retry-content-filters',
+                    label: `Retry Content Filter Failures (${data.contentFilterCount.toLocaleString()})`,
+                    icon: <IconRefresh size={16} />,
+                    color: 'blue',
+                    loading: retryContentFiltersMutation.isPending,
+                    disabled:
+                      regenerateMutation.isPending ||
+                      retryAllMutation.isPending,
+                    onClick: () => retryContentFiltersMutation.mutate(),
+                  },
+                ]
+              : []
+          }
+        />
       </div>
 
       <Table>

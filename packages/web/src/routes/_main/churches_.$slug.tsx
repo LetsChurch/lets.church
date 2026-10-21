@@ -11,6 +11,7 @@ import {
   IconBuilding,
   IconBuildingChurch,
   IconChevronRight,
+  IconEdit,
   IconMail,
   IconMapPin,
   IconPhone,
@@ -23,9 +24,17 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { Avatar } from '@/components/avatar';
 import Header from '@/components/header';
 import { MediaCarousel } from '@/components/media-carousel';
+import { getPillButtonClasses } from '@/components/pill-button';
 import { Tag } from '@/components/tag';
+import { idTranslator } from '@/schemas/common';
 import { useTRPC } from '@/trpc/react';
 import { formatTime } from '@/util/format';
+
+const editLinkClasses = getPillButtonClasses({
+  variant: 'ghost',
+  size: 'lg',
+  className: 'shrink-0 gap-1',
+});
 
 export const Route = createFileRoute('/_main/churches_/$slug')({
   component: ChurchProfileComponent,
@@ -309,10 +318,34 @@ function ChurchProfileComponent() {
               className="size-20 shrink-0 sm:size-32 lg:size-40"
               fallbackClassName="text-xl sm:text-3xl lg:text-4xl"
             />
-            <div className="flex-1 px-4 py-3 sm:px-6 sm:py-4 lg:px-8 lg:py-6">
-              <h1 className="text-xl font-bold tracking-tight text-zinc-900 sm:text-3xl lg:text-4xl dark:text-white">
+            <div className="flex flex-1 flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4 lg:px-8 lg:py-6">
+              <h1 className="min-w-0 flex-1 text-xl font-bold tracking-tight text-zinc-900 sm:text-3xl lg:text-4xl dark:text-white">
                 {church.name}
               </h1>
+              {church.canEdit ? (
+                // Dashboard routes are keyed by UUID; church.id is the short
+                // public id. Non-church organizations live under their own
+                // dashboard section.
+                church.type === 'CHURCH' ? (
+                  <Link
+                    to="/dashboard/churches/$churchId"
+                    params={{ churchId: idTranslator.toUUID(church.id) }}
+                    className={editLinkClasses}
+                  >
+                    <IconEdit size={16} />
+                    Edit
+                  </Link>
+                ) : (
+                  <Link
+                    to="/dashboard/organizations/$orgId"
+                    params={{ orgId: idTranslator.toUUID(church.id) }}
+                    className={editLinkClasses}
+                  >
+                    <IconEdit size={16} />
+                    Edit
+                  </Link>
+                )
+              ) : null}
             </div>
           </div>
         </div>

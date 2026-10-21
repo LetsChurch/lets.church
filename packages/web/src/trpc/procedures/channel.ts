@@ -243,6 +243,18 @@ export const channelProcedures = {
 
       const { subscriberCount, isFollowing, uploadCount } = channel;
 
+      // Mirrors the dashboard edit page's gate (site admin or channel admin)
+      // so the public page can link back to the editor.
+      const membership =
+        appUserId && !ctx.isSiteAdmin
+          ? await db.query.ChannelMembership.findFirst({
+              columns: { isAdmin: true },
+              where: (t, { and, eq }) =>
+                and(eq(t.channelId, channel.id), eq(t.appUserId, appUserId)),
+            })
+          : null;
+      const canEdit = ctx.isSiteAdmin || Boolean(membership?.isAdmin);
+
       // Is the channel currently broadcasting? (a started, not-yet-ended live
       // broadcast). Drives the channel-page live indicator + avatar badge.
       const liveBroadcastVisibilities =
@@ -283,6 +295,7 @@ export const channelProcedures = {
         subscriberCount,
         uploadCount,
         isFollowing,
+        canEdit,
       };
     }),
 

@@ -36,6 +36,7 @@ import {
   DataTableSearch,
   DataTableToolbar,
 } from '@/components/dashboard/data-table';
+import { HeaderActions } from '@/components/dashboard/header-actions';
 import { LcMenu, MenuItemButton, OverflowMenu } from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import {
@@ -792,36 +793,32 @@ function ChannelUploadsPage() {
           </Text>
         </div>
 
-        <div className="flex flex-wrap items-center justify-start gap-4">
-          {isSiteAdmin && (
-            <>
-              <Button
-                variant="light"
-                color="blue"
-                leftSection={<IconDownload size={16} />}
-                onClick={openImportModal}
-              >
-                Import URL
-              </Button>
-              <Button
-                variant="light"
-                color="blue"
-                leftSection={<IconUpload size={16} />}
-                onClick={handleOpenBulkImport}
-              >
-                Bulk Import CSV
-              </Button>
-            </>
-          )}
-          {canUpload && (
-            <Button
-              leftSection={<IconUpload size={16} />}
-              onClick={openUploadModal}
-            >
-              Upload
-            </Button>
-          )}
-        </div>
+        <HeaderActions
+          menuLabel="More upload actions"
+          actions={[
+            canUpload && {
+              key: 'upload',
+              label: 'Upload',
+              icon: <IconUpload size={16} />,
+              variant: 'filled',
+              onClick: openUploadModal,
+            },
+            isSiteAdmin && {
+              key: 'import-url',
+              label: 'Import URL',
+              icon: <IconDownload size={16} />,
+              color: 'blue',
+              onClick: openImportModal,
+            },
+            isSiteAdmin && {
+              key: 'bulk-import',
+              label: 'Bulk Import CSV',
+              icon: <IconUpload size={16} />,
+              color: 'blue',
+              onClick: handleOpenBulkImport,
+            },
+          ]}
+        />
       </div>
 
       {selection.length > 0 ? (

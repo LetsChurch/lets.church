@@ -17,6 +17,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useDebounce } from 'use-debounce';
 
+import { HeaderActions } from '@/components/dashboard/header-actions';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { SortableItem, SortableList } from '@/components/sortable-list';
 import {
@@ -348,22 +349,24 @@ function PlaylistDetailsPage() {
             {formatDate(playlist.createdAt)}
           </Text>
         </div>
-        <div className="flex flex-wrap items-center justify-start gap-4">
-          <Button
-            variant="light"
-            leftSection={<IconLink size={16} />}
-            onClick={handleCopyPlaylistLink}
-          >
-            Copy Link
-          </Button>
-          <Button
-            variant="light"
-            leftSection={<IconEdit size={16} />}
-            onClick={openEdit}
-          >
-            Edit
-          </Button>
-        </div>
+        <HeaderActions
+          menuLabel="More playlist actions"
+          actions={[
+            {
+              key: 'edit',
+              label: 'Edit',
+              icon: <IconEdit size={16} />,
+              onClick: openEdit,
+            },
+            {
+              key: 'copy-link',
+              label: 'Copy Link',
+              icon: <IconLink size={16} />,
+              variant: 'default',
+              onClick: handleCopyPlaylistLink,
+            },
+          ]}
+        />
       </div>
 
       <InputWrapper label="Add Upload to Playlist">

@@ -1,6 +1,9 @@
 import {
+  IconArrowUpRight,
   IconBroadcast,
   IconCheck,
+  IconEdit,
+  IconEye,
   IconHeart,
   IconList,
   IconMicrophone,
@@ -17,15 +20,8 @@ import {
 } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 
-import {
-  Avatar,
-  Badge,
-  Button,
-  Table,
-  Text,
-  Title,
-  Tooltip,
-} from '@/components/ui';
+import { HeaderActions } from '@/components/dashboard/header-actions';
+import { Avatar, Badge, Table, Text, Title, Tooltip } from '@/components/ui';
 import { notifications } from '@/components/ui/notifications';
 import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
@@ -101,7 +97,10 @@ function ChannelDetailsPage() {
   const { userMembership } = channel;
   const isChannelAdmin = userMembership?.isAdmin ?? false;
   const isApproved = Boolean(channel.approvedAt);
-  const canManageLive = isChannelAdmin || isSiteAdmin;
+  const canManageChannel = isChannelAdmin || isSiteAdmin;
+  const canManageLive = canManageChannel;
+  // The public page 404s for unapproved/private channels.
+  const isPubliclyViewable = isApproved && channel.visibility !== 'PRIVATE';
 
   // Live stream status for the tile (admin-only; the procedure is admin-gated).
   const liveStreamQuery = useQuery({
@@ -176,8 +175,8 @@ function ChannelDetailsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex flex-wrap items-start justify-start gap-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-wrap items-start justify-start gap-4">
           <Avatar
             src={channel.avatarUrl}
             alt={channel.name}
@@ -229,7 +228,18 @@ function ChannelDetailsPage() {
               </Tooltip>
             </div>
             <div className="mb-3 flex flex-wrap items-center justify-start gap-4">
-              <Text c="dimmed">@{channel.slug}</Text>
+              {isPubliclyViewable ? (
+                <Link
+                  to="/channel/$slug"
+                  params={{ slug: channel.slug }}
+                  className="text-secondary hover:text-primary inline-flex items-center gap-1 underline-offset-4 hover:underline"
+                >
+                  @{channel.slug}
+                  <IconArrowUpRight size={14} aria-hidden />
+                </Link>
+              ) : (
+                <Text c="dimmed">@{channel.slug}</Text>
+              )}
               <Text c="dimmed" size="sm">
                 Created {formatDate(channel.createdAt)}
               </Text>
@@ -241,39 +251,49 @@ function ChannelDetailsPage() {
             )}
           </div>
         </div>
-        <div className="flex flex-col gap-4">
-          {isSiteAdmin &&
-            (!isApproved ? (
-              <Button
-                color="green"
-                leftSection={<IconCheck size={16} />}
-                onClick={handleApproveChannel}
-                loading={approveChannelMutation.isPending}
-              >
-                Approve Channel
-              </Button>
-            ) : (
-              <Button
-                color="orange"
-                leftSection={<IconX size={16} />}
-                onClick={handleUnapproveChannel}
-                loading={unapproveChannelMutation.isPending}
-              >
-                Unapprove Channel
-              </Button>
-            ))}
-          {(isChannelAdmin || isSiteAdmin) && (
-            <Button
-              component={Link}
-              to="/dashboard/channels/$channelId/edit"
-              params={{ channelId: channel.id }}
-              variant="light"
-              className="content-center"
-            >
-              Edit Channel
-            </Button>
-          )}
-        </div>
+        <HeaderActions
+          menuLabel="More channel actions"
+          actions={[
+            canManageChannel && {
+              key: 'edit',
+              label: 'Edit',
+              icon: <IconEdit size={16} />,
+              link: {
+                to: '/dashboard/channels/$channelId/edit',
+                params: { channelId: channel.id },
+              },
+            },
+            isPubliclyViewable && {
+              key: 'view',
+              label: 'View',
+              menuLabel: 'View public page',
+              icon: <IconEye size={16} />,
+              variant: 'default',
+              link: { to: '/channel/$slug', params: { slug: channel.slug } },
+            },
+            isSiteAdmin &&
+              (isApproved
+                ? {
+                    key: 'unapprove',
+                    label: 'Unapprove',
+                    menuLabel: 'Unapprove channel',
+                    icon: <IconX size={16} />,
+                    color: 'orange',
+                    loading: unapproveChannelMutation.isPending,
+                    onClick: handleUnapproveChannel,
+                  }
+                : {
+                    key: 'approve',
+                    label: 'Approve',
+                    menuLabel: 'Approve channel',
+                    icon: <IconCheck size={16} />,
+                    color: 'green',
+                    variant: 'filled',
+                    loading: approveChannelMutation.isPending,
+                    onClick: handleApproveChannel,
+                  }),
+          ]}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">

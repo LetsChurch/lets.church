@@ -1,8 +1,16 @@
-import { IconShield, IconUsers, IconVideo } from '@tabler/icons-react';
+import {
+  IconArrowUpRight,
+  IconEdit,
+  IconEye,
+  IconShield,
+  IconUsers,
+  IconVideo,
+} from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 
-import { Avatar, Badge, Button, Text, Title, Tooltip } from '@/components/ui';
+import { HeaderActions } from '@/components/dashboard/header-actions';
+import { Avatar, Badge, Text, Title, Tooltip } from '@/components/ui';
 import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
 
@@ -45,11 +53,13 @@ function ChurchDetailsPage() {
 
   const { userMembership } = church;
   const isAdmin = userMembership?.isAdmin ?? false;
+  // The public church page 404s until the church is approved.
+  const isPubliclyViewable = Boolean(church.approvedAt);
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex flex-wrap items-start justify-start gap-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-wrap items-start justify-start gap-4">
           <Avatar
             src={church.avatarUrl}
             alt={church.name}
@@ -72,7 +82,18 @@ function ChurchDetailsPage() {
               </Tooltip>
             </div>
             <div className="mb-3 flex flex-wrap items-center justify-start gap-4">
-              <Text c="dimmed">@{church.slug}</Text>
+              {isPubliclyViewable ? (
+                <Link
+                  to="/churches/$slug"
+                  params={{ slug: church.slug }}
+                  className="text-secondary hover:text-primary inline-flex items-center gap-1 underline-offset-4 hover:underline"
+                >
+                  @{church.slug}
+                  <IconArrowUpRight size={14} aria-hidden />
+                </Link>
+              ) : (
+                <Text c="dimmed">@{church.slug}</Text>
+              )}
               <Text c="dimmed" size="sm">
                 Founded {formatDate(church.createdAt)}
               </Text>
@@ -84,19 +105,28 @@ function ChurchDetailsPage() {
             )}
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-start gap-4">
-          {isAdmin && (
-            <Button
-              variant="light"
-              component={Link}
-              to="/dashboard/churches/$churchId/edit"
-              params={{ churchId: church.id }}
-              className="content-center"
-            >
-              Edit Church
-            </Button>
-          )}
-        </div>
+        <HeaderActions
+          menuLabel="More church actions"
+          actions={[
+            isAdmin && {
+              key: 'edit',
+              label: 'Edit',
+              icon: <IconEdit size={16} />,
+              link: {
+                to: '/dashboard/churches/$churchId/edit',
+                params: { churchId: church.id },
+              },
+            },
+            isPubliclyViewable && {
+              key: 'view',
+              label: 'View',
+              menuLabel: 'View public page',
+              icon: <IconEye size={16} />,
+              variant: 'default',
+              link: { to: '/churches/$slug', params: { slug: church.slug } },
+            },
+          ]}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
