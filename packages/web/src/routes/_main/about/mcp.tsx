@@ -2,6 +2,8 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 
 const MCP_URL = 'https://lets.church/mcp';
 const CLAUDE_DIRECTORY_URL = 'https://claude.ai/directory/letschurch';
+const CHATGPT_PLUGIN_URL =
+  'https://chatgpt.com/plugins/plugin_asdk_app_6ac68bd47aec81919a6d7fae4139a14c';
 
 export const Route = createFileRoute('/_main/about/mcp')({
   component: RouteComponent,
@@ -13,7 +15,7 @@ export const Route = createFileRoute('/_main/about/mcp')({
       {
         name: 'description',
         content:
-          "Connect Claude and other AI assistants to Let's Church with the Model Context Protocol to search sermons, read transcripts, and find churches — with links back to the source.",
+          "Connect Claude, ChatGPT, and other AI assistants to Let's Church with the Model Context Protocol to search sermons, read transcripts, and find churches, with links back to the source.",
       },
     ],
     links: [
@@ -79,10 +81,10 @@ function RouteComponent() {
       <p>
         Let's Church offers a{' '}
         <a href="https://modelcontextprotocol.io">Model Context Protocol</a>{' '}
-        (MCP) server, so AI assistants like Claude can search sermons, read
-        transcripts, and find churches on your behalf. Every answer links back
-        to the exact moment in the sermon it came from, so you can listen for
-        yourself.
+        (MCP) server, so AI assistants like Claude and ChatGPT can search
+        sermons, read transcripts, and find churches for you. Every answer links
+        back to the exact moment in the sermon it came from, so you can listen
+        for yourself.
       </p>
 
       <h3>Connect</h3>
@@ -109,35 +111,13 @@ function RouteComponent() {
 
       <h4>ChatGPT</h4>
       <p>
-        Custom connectors need a paid ChatGPT plan (Plus, Pro, Business,
-        Enterprise, or Edu). On Business and Enterprise workspaces, an admin may
-        need to allow them first.
+        Let's Church is also a ChatGPT plugin. Open{' '}
+        <a href={CHATGPT_PLUGIN_URL}>Let's Church in ChatGPT</a> and add it to
+        your account.
       </p>
-      <ol>
-        <li>
-          Open <strong>Settings</strong> →{' '}
-          <strong>Apps &amp; Connectors</strong>, then{' '}
-          <strong>Advanced settings</strong>, and turn on{' '}
-          <strong>Developer mode</strong>
-        </li>
-        <li>
-          Back in <strong>Apps &amp; Connectors</strong>, choose{' '}
-          <strong>Create</strong>
-        </li>
-        <li>
-          Name it <em>Let's Church</em>, paste the server address above, set{' '}
-          <strong>Authentication</strong> to <strong>No authentication</strong>,
-          and confirm that you trust the connector
-        </li>
-        <li>
-          In a new chat, open the <strong>+</strong> menu, choose{' '}
-          <strong>Developer mode</strong>, and turn on Let's Church
-        </li>
-      </ol>
       <p>
-        ChatGPT moves these settings around from time to time; if a menu isn't
-        where we describe, look for <em>Developer mode</em> and{' '}
-        <em>Connectors</em> in Settings.
+        On Business and Enterprise workspaces, an admin may need to allow the
+        plugin first.
       </p>
 
       <h4>Claude Code</h4>
@@ -196,7 +176,7 @@ function RouteComponent() {
         <li>
           <strong>Anonymous.</strong> It doesn't sign in as you, so your
           library, history, and followed channels aren't available. Searches are
-          handled like anonymous searches on the site — see our{' '}
+          handled like anonymous searches on the site. See our{' '}
           <Link to="/about/privacy">Privacy Policy</Link>.
         </li>
         <li>
@@ -209,7 +189,7 @@ function RouteComponent() {
       <h3>Attribution</h3>
       <p>
         The sermons belong to the ministries who share them. When your assistant
-        quotes a sermon, it's given a link to the exact timestamp — please keep
+        quotes a sermon, it's given a link to the exact timestamp. Please keep
         those links so others can hear the full context and find the ministry
         behind it.
       </p>
