@@ -44,6 +44,7 @@ export const heidelbergCatechismTagSlug = 'heidelberg-catechism';
 export const canonsOfDortTagSlug = 'canons-of-dort';
 export const threeFormsOfUnityTagSlug = 'three-forms-of-unity';
 export const westminsterConfessionTagSlug = 'westminster-confession';
+export const westminsterConfession1788TagSlug = 'westminster-confession-1788';
 export const savoyDeclarationTagSlug = 'savoy-declaration';
 export const philadelphiaConfessionTagSlug = 'philadelphia-declaration';
 export const newHampshireConfessionTagSlug = 'new-hampshire-declaration';
@@ -351,6 +352,13 @@ const tagsData: ReadonlyArray<TagData> = [
     slug: westminsterConfessionTagSlug,
     label: 'Westminster Confession (1646)',
     suggests: [reformedTagSlug],
+  },
+  {
+    category: 'CONFESSION',
+    color: 'INDIGO',
+    slug: westminsterConfession1788TagSlug,
+    label: 'Westminster Confession (1788 American Revision)',
+    suggests: [reformedTagSlug, presbyterianTagSlug],
   },
   {
     category: 'CONFESSION',
