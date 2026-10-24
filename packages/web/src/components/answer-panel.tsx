@@ -23,7 +23,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Streamdown } from 'streamdown';
+import { defaultRehypePlugins, Streamdown } from 'streamdown';
 
 import {
   type AnswerSource,
@@ -31,6 +31,7 @@ import {
   parseAnswerStream,
 } from '@/ai/answer-stream';
 import type { SearchAnswerInput } from '@/ai/search-answer.server';
+import { rehypeGlueCitations } from '@/components/answer-citation-glue';
 import { Avatar } from '@/components/avatar';
 import { LcTooltip } from '@/components/lc-tooltip';
 import {
@@ -100,6 +101,13 @@ export const parseStream = parseAnswerStream;
 const VISIBLE_SOURCES = 3;
 
 const CITATION_HREF = /^#lc-cite-(\d+)$/;
+
+// Streamdown's defaults (raw/sanitize/harden) plus our citation glue, which runs
+// last so its nowrap wrapper isn't sanitized away.
+const REHYPE_PLUGINS = [
+  ...Object.values(defaultRehypePlugins),
+  rehypeGlueCitations,
+];
 
 // Turn the model's bare [1] / [1, 2] citation markers into links to
 // #lc-cite-N, which the markdown anchor renderer upgrades into hover-preview
@@ -862,6 +870,7 @@ export function AnswerCard({
               <Streamdown
                 parseIncompleteMarkdown
                 components={components}
+                rehypePlugins={REHYPE_PLUGINS}
                 className="max-w-none text-sm leading-relaxed text-(--answer-ink) [&>*+*]:mt-2.5!"
               >
                 {renderedAnswer}

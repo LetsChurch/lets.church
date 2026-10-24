@@ -176,8 +176,10 @@ export const SeededFollowUpAndSourceRail: Story = {
 
     await userEvent.type(canvas.getByRole('textbox'), 'Who is she?');
     await userEvent.click(canvas.getByRole('button', { name: 'Send' }));
+    // ("Clementine." is glued into a nowrap span with its citation badge, so
+    // match only the text before it.)
     await expect(
-      canvas.findByText(/History carried forward: she is Clementine/),
+      canvas.findByText(/History carried forward: she is/),
     ).resolves.toBeInTheDocument();
 
     // Both source sections remain rendered and attached to their own turns.
