@@ -334,6 +334,16 @@ function AdminPage() {
             </Text>
           </div>
         </Link>
+        <Link to="/dashboard/admin/link-suggestions" className="block">
+          <div className="dashboard-card" data-interactive="true">
+            <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
+              <Text fw={500}>Link Suggestions</Text>
+            </div>
+            <Text size="sm" c="dimmed">
+              Organizations and channels that look like they should be linked
+            </Text>
+          </div>
+        </Link>
         <Link to="/dashboard/admin/failed-uploads" className="block">
           <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">

@@ -146,6 +146,7 @@ import {
 } from '../../speaker-labeling/queue';
 import { authProcedure, router } from '../../trpc';
 import { newsletterListsRouter } from '../newsletter-lists';
+import { adminLinkSuggestionsRouter } from './admin-link-suggestions';
 import { adminStorageRouter } from './admin-storage';
 import { deleteUserAccount } from './delete-user';
 import { getDuplicateUploads } from './duplicate-uploads';
@@ -5068,6 +5069,7 @@ export const adminRouter = router({
 
   newsletterLists: newsletterListsRouter,
   storage: adminStorageRouter,
+  linkSuggestions: adminLinkSuggestionsRouter,
 
   getReindexStatus: adminProcedure.query(async () => {
     const kinds: ReindexKind[] = [

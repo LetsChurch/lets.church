@@ -110,6 +110,7 @@ import { Route as MainDashboardAdminFailedUploadsRouteImport } from './routes/_m
 import { Route as MainDashboardAdminFailedSummariesRouteImport } from './routes/_main/dashboard/admin_.failed-summaries'
 import { Route as MainDashboardAdminFailedAnnotationsRouteImport } from './routes/_main/dashboard/admin_.failed-annotations'
 import { Route as MainDashboardAdminDuplicateUploadsRouteImport } from './routes/_main/dashboard/admin_.duplicate-uploads'
+import { Route as MainDashboardAdminLinkSuggestionsRouteImport } from './routes/_main/dashboard/admin_.link-suggestions'
 import { Route as MainDashboardAdminDonationsRouteImport } from './routes/_main/dashboard/admin_.donations'
 import { Route as MainDashboardAdminDeletingUploadsRouteImport } from './routes/_main/dashboard/admin_.deleting-uploads'
 import { Route as MainDashboardAdminChannelsRouteImport } from './routes/_main/dashboard/admin_.channels'
@@ -677,6 +678,12 @@ const MainDashboardAdminDuplicateUploadsRoute =
     path: '/admin/duplicate-uploads',
     getParentRoute: () => MainDashboardRoute,
   } as any)
+const MainDashboardAdminLinkSuggestionsRoute =
+  MainDashboardAdminLinkSuggestionsRouteImport.update({
+    id: '/admin_/link-suggestions',
+    path: '/admin/link-suggestions',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
 const MainDashboardAdminDonationsRoute =
   MainDashboardAdminDonationsRouteImport.update({
     id: '/admin_/donations',
@@ -924,6 +931,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin/deleting-uploads': typeof MainDashboardAdminDeletingUploadsRoute
   '/dashboard/admin/donations': typeof MainDashboardAdminDonationsRoute
   '/dashboard/admin/duplicate-uploads': typeof MainDashboardAdminDuplicateUploadsRoute
+  '/dashboard/admin/link-suggestions': typeof MainDashboardAdminLinkSuggestionsRoute
   '/dashboard/admin/failed-annotations': typeof MainDashboardAdminFailedAnnotationsRoute
   '/dashboard/admin/failed-summaries': typeof MainDashboardAdminFailedSummariesRoute
   '/dashboard/admin/failed-uploads': typeof MainDashboardAdminFailedUploadsRoute
@@ -1051,6 +1059,7 @@ export interface FileRoutesByTo {
   '/dashboard/admin/deleting-uploads': typeof MainDashboardAdminDeletingUploadsRoute
   '/dashboard/admin/donations': typeof MainDashboardAdminDonationsRoute
   '/dashboard/admin/duplicate-uploads': typeof MainDashboardAdminDuplicateUploadsRoute
+  '/dashboard/admin/link-suggestions': typeof MainDashboardAdminLinkSuggestionsRoute
   '/dashboard/admin/failed-annotations': typeof MainDashboardAdminFailedAnnotationsRoute
   '/dashboard/admin/failed-summaries': typeof MainDashboardAdminFailedSummariesRoute
   '/dashboard/admin/failed-uploads': typeof MainDashboardAdminFailedUploadsRoute
@@ -1182,6 +1191,7 @@ export interface FileRoutesById {
   '/_main/dashboard/admin_/deleting-uploads': typeof MainDashboardAdminDeletingUploadsRoute
   '/_main/dashboard/admin_/donations': typeof MainDashboardAdminDonationsRoute
   '/_main/dashboard/admin_/duplicate-uploads': typeof MainDashboardAdminDuplicateUploadsRoute
+  '/_main/dashboard/admin_/link-suggestions': typeof MainDashboardAdminLinkSuggestionsRoute
   '/_main/dashboard/admin_/failed-annotations': typeof MainDashboardAdminFailedAnnotationsRoute
   '/_main/dashboard/admin_/failed-summaries': typeof MainDashboardAdminFailedSummariesRoute
   '/_main/dashboard/admin_/failed-uploads': typeof MainDashboardAdminFailedUploadsRoute
@@ -1313,6 +1323,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/deleting-uploads'
     | '/dashboard/admin/donations'
     | '/dashboard/admin/duplicate-uploads'
+    | '/dashboard/admin/link-suggestions'
     | '/dashboard/admin/failed-annotations'
     | '/dashboard/admin/failed-summaries'
     | '/dashboard/admin/failed-uploads'
@@ -1440,6 +1451,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/deleting-uploads'
     | '/dashboard/admin/donations'
     | '/dashboard/admin/duplicate-uploads'
+    | '/dashboard/admin/link-suggestions'
     | '/dashboard/admin/failed-annotations'
     | '/dashboard/admin/failed-summaries'
     | '/dashboard/admin/failed-uploads'
@@ -1570,6 +1582,7 @@ export interface FileRouteTypes {
     | '/_main/dashboard/admin_/deleting-uploads'
     | '/_main/dashboard/admin_/donations'
     | '/_main/dashboard/admin_/duplicate-uploads'
+    | '/_main/dashboard/admin_/link-suggestions'
     | '/_main/dashboard/admin_/failed-annotations'
     | '/_main/dashboard/admin_/failed-summaries'
     | '/_main/dashboard/admin_/failed-uploads'
@@ -2359,6 +2372,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainDashboardAdminDuplicateUploadsRouteImport
       parentRoute: typeof MainDashboardRoute
     }
+    '/_main/dashboard/admin_/link-suggestions': {
+      id: '/_main/dashboard/admin_/link-suggestions'
+      path: '/admin/link-suggestions'
+      fullPath: '/dashboard/admin/link-suggestions'
+      preLoaderRoute: typeof MainDashboardAdminLinkSuggestionsRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
     '/_main/dashboard/admin_/donations': {
       id: '/_main/dashboard/admin_/donations'
       path: '/admin/donations'
@@ -2597,6 +2617,7 @@ interface MainDashboardRouteChildren {
   MainDashboardAdminDeletingUploadsRoute: typeof MainDashboardAdminDeletingUploadsRoute
   MainDashboardAdminDonationsRoute: typeof MainDashboardAdminDonationsRoute
   MainDashboardAdminDuplicateUploadsRoute: typeof MainDashboardAdminDuplicateUploadsRoute
+  MainDashboardAdminLinkSuggestionsRoute: typeof MainDashboardAdminLinkSuggestionsRoute
   MainDashboardAdminFailedAnnotationsRoute: typeof MainDashboardAdminFailedAnnotationsRoute
   MainDashboardAdminFailedSummariesRoute: typeof MainDashboardAdminFailedSummariesRoute
   MainDashboardAdminFailedUploadsRoute: typeof MainDashboardAdminFailedUploadsRoute
@@ -2664,6 +2685,8 @@ const MainDashboardRouteChildren: MainDashboardRouteChildren = {
   MainDashboardAdminDonationsRoute: MainDashboardAdminDonationsRoute,
   MainDashboardAdminDuplicateUploadsRoute:
     MainDashboardAdminDuplicateUploadsRoute,
+  MainDashboardAdminLinkSuggestionsRoute:
+    MainDashboardAdminLinkSuggestionsRoute,
   MainDashboardAdminFailedAnnotationsRoute:
     MainDashboardAdminFailedAnnotationsRoute,
   MainDashboardAdminFailedSummariesRoute:

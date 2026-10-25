@@ -260,6 +260,13 @@
       "when": 1792518413445,
       "tag": "0036_replace-budget-offset-with-exclude",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1792889211420,
+      "tag": "0037_add-org-channel-link-suggestion",
+      "breakpoints": true
     }
   ]
 }

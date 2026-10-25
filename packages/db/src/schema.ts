@@ -1134,6 +1134,55 @@ export const OrganizationChannelAssociation = pgTable(
   }),
 );
 
+// Review state for detected organization/channel link suggestions. The
+// suggestions themselves are computed on demand; this only records which pairs
+// an admin dismissed and which pairs the weekly digest already reported.
+export const OrganizationChannelLinkSuggestion = pgTable(
+  'organization_channel_link_suggestion',
+  {
+    organizationId: uuid('organization_id').notNull(),
+    channelId: uuid('channel_id').notNull(),
+    notifiedAt: timestamp('notified_at', { precision: 3 }),
+    dismissedAt: timestamp('dismissed_at', { precision: 3 }),
+    dismissedById: uuid('dismissed_by_id'),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { precision: 3 })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (OrganizationChannelLinkSuggestion) => ({
+    organization_channel_link_suggestion_organization_fkey: foreignKey({
+      name: 'organization_channel_link_suggestion_organization_fkey',
+      columns: [OrganizationChannelLinkSuggestion.organizationId],
+      foreignColumns: [Organization.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    organization_channel_link_suggestion_channel_fkey: foreignKey({
+      name: 'organization_channel_link_suggestion_channel_fkey',
+      columns: [OrganizationChannelLinkSuggestion.channelId],
+      foreignColumns: [Channel.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    organization_channel_link_suggestion_dismissed_by_fkey: foreignKey({
+      name: 'organization_channel_link_suggestion_dismissed_by_fkey',
+      columns: [OrganizationChannelLinkSuggestion.dismissedById],
+      foreignColumns: [AppUser.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+    OrganizationChannelLinkSuggestion_cpk: primaryKey({
+      name: 'OrganizationChannelLinkSuggestion_cpk',
+      columns: [
+        OrganizationChannelLinkSuggestion.organizationId,
+        OrganizationChannelLinkSuggestion.channelId,
+      ],
+    }),
+  }),
+);
+
 export const Channel = pgTable(
   'channel',
   {

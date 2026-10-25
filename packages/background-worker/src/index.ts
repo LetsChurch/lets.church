@@ -6,11 +6,13 @@ import {
   validateSendEmailConfig,
   validateSendVerificationEmailConfig,
 } from '@letschurch/temporal/activities/background';
+import { client } from '@letschurch/temporal/client';
 import {
   BACKGROUND_QUEUE,
   GLACIER_QUEUE,
   STORAGE_QUEUE,
 } from '@letschurch/temporal/queues';
+import { ensureSchedules } from '@letschurch/temporal/schedules';
 import {
   ANNOTATE_MODEL,
   EMBED_MODEL,
@@ -94,6 +96,9 @@ const storageWorker = await Worker.create({
     process.env.STORAGE_MOVE_CONCURRENCY ?? 4,
   ),
 });
+
+// Reconcile the fixed app-wide schedules (idempotent; every replica runs it).
+await ensureSchedules(await client);
 
 await Promise.all([
   backgroundWorker.run(),

@@ -59,6 +59,7 @@ export {
   type MuxImportRecordingWorkflowParams,
   muxImportRecordingWorkflow,
 } from './mux-import-recording';
+export { organizationChannelLinkDigestWorkflow } from './org-channel-link-digest';
 export { postUserRegistrationWorkflow } from './post-user-registration';
 export { processImageWorkflow } from './process-image';
 export { processMediaWorkflow } from './process-media';

@@ -231,16 +231,16 @@ lb-up: lb-migrate lb-es-push lb-seed-bible lb-seed-lexicon lb-seed-crossrefs lb-
 os-push-mappings:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/opensearch run push-mappings'
 
+# Fixed schedules are reconciled by the background worker on boot
+# (packages/temporal/src/schedules.ts); this just seeds the first salt.
 temporal-schedule: restart-workers
   just temporal workflow execute --task-queue background --type updateDailySaltWorkflow --workflow-id update-daily-salt
-  -just temporal schedule create --schedule-id update-daily-salt --cron @daily --overlap-policy Skip --task-queue background --type updateDailySaltWorkflow --workflow-id update-daily-salt
-  -just temporal schedule create --schedule-id update-upload-scores --interval 5m --overlap-policy Skip --task-queue background --type updateUploadScoresWorkflow --workflow-id update-upload-scores
-  -just temporal schedule create --schedule-id update-comment-scores --interval 5m --overlap-policy Skip --task-queue background --type updateCommentScoresWorkflow --workflow-id update-comment-scores
 
 temporal-schedule-delete:
   just temporal schedule delete --schedule-id update-daily-salt
   just temporal schedule delete --schedule-id update-upload-scores
   just temporal schedule delete --schedule-id update-comment-scores
+  just temporal schedule delete --schedule-id org-channel-link-digest
 
 init: db-migrate os-push-mappings temporal-schedule
 

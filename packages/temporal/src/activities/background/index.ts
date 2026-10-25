@@ -85,6 +85,7 @@ export {
 export { getStoredProbe } from './get-stored-probe';
 export { default as indexDocument } from './index-document';
 export { default as isUploadFinalized } from './is-upload-finalized';
+export { sendOrganizationChannelLinkDigest } from './org-channel-link-suggestions';
 export { default as processImage } from './process-image';
 export {
   getReindexCount,

@@ -34,6 +34,7 @@ export const dashboardPaths = {
     `/dashboard/channels/${channelId}/uploads/${uploadId}`,
   channel: (channelId: string) => `/dashboard/channels/${channelId}`,
   adminImportSources: () => '/dashboard/admin/import-sources',
+  adminLinkSuggestions: () => '/dashboard/admin/link-suggestions',
 } as const;
 
 /**
