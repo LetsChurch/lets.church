@@ -5,9 +5,18 @@ WORKDIR /build
 COPY services/download/ .
 RUN CGO_ENABLED=0 GOOS=linux GOEXPERIMENT=jsonv2 go build -ldflags="-w -s" -o download-service .
 
-FROM debian:bullseye-slim AS build-audiowaveform
-RUN apt-get update && apt-get install -y git wget cmake build-essential libmad0-dev libid3tag0-dev libsndfile1-dev libgd-dev libboost-filesystem-dev libboost-program-options-dev libboost-regex-dev
+FROM debian:bookworm-slim AS build-audiowaveform
+RUN apt-get update && apt-get install -y git wget cmake build-essential libmad0-dev libid3tag0-dev libgd-dev libboost-filesystem-dev libboost-program-options-dev libboost-regex-dev libflac-dev libogg-dev libvorbis-dev libopus-dev
 RUN mkdir -p /home/build
+# Debian stopped shipping a static libsndfile after bullseye, so build one
+# against the distro's static FLAC/Ogg/Vorbis/Opus, which audiowaveform's static
+# build links explicitly. MPEG stays off: audiowaveform doesn't link mpg123 or
+# lame, and we only hand it WAV anyway (runAudiowaveform converts with ffmpeg).
+RUN git clone --depth 1 --branch 1.2.2 https://github.com/libsndfile/libsndfile.git /home/build/libsndfile
+WORKDIR /home/build/libsndfile/build
+RUN cmake -D BUILD_SHARED_LIBS=OFF -D ENABLE_MPEG=OFF \
+  -D BUILD_PROGRAMS=OFF -D BUILD_EXAMPLES=OFF -D BUILD_TESTING=OFF -D CMAKE_INSTALL_PREFIX=/usr .. && \
+  make install
 RUN git clone https://github.com/bbc/audiowaveform.git /home/build/audiowaveform
 WORKDIR /home/build/audiowaveform
 RUN git checkout 1.7.1
