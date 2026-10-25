@@ -37,6 +37,7 @@ const navigation = [
 ];
 
 export default function BottomTabBar() {
+  const barRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   // Position of the sliding underline, measured from the active link. Null
   // until measured (and when no bar route is active) so the indicator is
@@ -65,8 +66,30 @@ export default function BottomTabBar() {
     return () => observer.disconnect();
   }, [pathname]);
 
+  // Publish the bar's height so the mini player can float just above it. It's
+  // 0 while the bar is hidden (sm and up).
+  useEffect(() => {
+    const bar = barRef.current;
+    if (!bar) return;
+    const root = document.documentElement;
+    const observer = new ResizeObserver(() => {
+      root.style.setProperty(
+        '--bottom-tab-bar-height',
+        `${bar.offsetHeight}px`,
+      );
+    });
+    observer.observe(bar);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty('--bottom-tab-bar-height');
+    };
+  }, []);
+
   return (
-    <div className="fixed right-0 bottom-0 left-0 z-30 bg-white px-4 sm:hidden dark:bg-gray-950">
+    <div
+      ref={barRef}
+      className="fixed right-0 bottom-0 left-0 z-30 bg-white px-4 sm:hidden dark:bg-gray-950"
+    >
       <nav ref={navRef} className="relative flex items-center justify-around">
         {navigation.map((item) => (
           <Link

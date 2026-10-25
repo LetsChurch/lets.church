@@ -1,7 +1,9 @@
+import { useStore } from '@nanostores/react';
 import type { HlsVideoElement } from 'hls-video-element';
 import HlsVideo from 'hls-video-element/react';
 import { useEffect, useRef, useState } from 'react';
 
+import { $isNowPlayingPlaying } from '@/stores/now-playing';
 import { formatTime } from '@/util/format';
 import { stopMediaElement } from '@/util/stop-media-element';
 
@@ -33,6 +35,9 @@ export function MiniPlayer({
   const videoRef = useRef<HlsVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [displayTime, setDisplayTime] = useState(initialTimestamp);
+  // Don't talk over the persistent player: preview the picture silently while
+  // something is already playing.
+  const muted = useStore($isNowPlayingPlaying);
 
   const hasVideo = Boolean(mediaSource);
   const source = mediaSource ?? audioSource;
@@ -228,6 +233,7 @@ export function MiniPlayer({
             src={source}
             poster={thumbnailUrl ?? undefined}
             autoplay
+            muted={muted}
             playsInline
             style={{ width: '100%', display: 'block' }}
           />
@@ -252,6 +258,7 @@ export function MiniPlayer({
             ref={videoRef}
             src={source}
             autoplay
+            muted={muted}
             playsInline
             style={{ position: 'absolute', width: 0, height: 0, opacity: 0 }}
           />

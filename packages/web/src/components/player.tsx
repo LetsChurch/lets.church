@@ -64,6 +64,13 @@ type Props = {
   // card surface (it no longer sits on the page's tinted header backdrop) and a
   // compact height so the transcript/playlist below keeps its room.
   docked?: boolean;
+  // Shrunk into the persistent mini player (see persistent-player.tsx): just
+  // the picture at videoWidth x videoHeight, with the mini player supplying its
+  // own controls. Audio shows the poster as artwork.
+  mini?: boolean;
+  // Receives the underlying media element, so controls outside the player
+  // (the mini player's) can drive it.
+  onMediaElement?: (el: HlsVideoElement | null) => void;
 };
 
 const AUDIO_PLAYER_HEIGHT = 240;
@@ -99,6 +106,8 @@ export function Player({
   onPlaybackStart,
   isLive = false,
   docked = false,
+  mini = false,
+  onMediaElement,
 }: Props) {
   const trpc = useTRPC();
   const videoRef = useRef<HlsVideoElement>(null);
@@ -157,12 +166,22 @@ export function Player({
   // don't stop playback on disconnect, and hls-video-element defers autoplay to
   // hls.js's MANIFEST_PARSED — which can fire *after* a fast unmount and start a
   // detached, unpausable stream. See stopMediaElement. Mirrors the mini-player.
+  //
+  // Only once the element has actually left the document: StrictMode's dev-only
+  // effect replay runs this cleanup on a still-mounted player, and tearing that
+  // down would kill playback. A real unmount has already detached it by the
+  // time passive cleanups run.
   useEffect(() => {
     const el = videoRef.current;
     return () => {
-      stopMediaElement(el);
+      if (!el?.isConnected) stopMediaElement(el);
     };
   }, []);
+
+  useEffect(() => {
+    onMediaElement?.(videoRef.current);
+    return () => onMediaElement?.(null);
+  }, [onMediaElement]);
 
   // Keyboard shortcuts for media controls
   useEffect(() => {
@@ -535,16 +554,17 @@ export function Player({
       <div
         className={cn(
           'relative overflow-hidden',
-          !embed && 'rounded-2xl',
+          !embed && (mini ? 'rounded-lg' : 'rounded-2xl'),
           mediaType === 'video' && 'bg-black',
           mediaType === 'video' && videoClassName,
           mediaType === 'audio' && embed && 'w-full',
           mediaType === 'audio' &&
             docked &&
             'border-fancy-pants bg-zinc-100 dark:bg-zinc-900',
+          mini && 'bg-black',
         )}
       >
-        {isLive && currentSource && (
+        {isLive && currentSource && !mini && (
           <div className="pointer-events-none absolute top-3 left-3 z-10 flex items-center gap-1.5 rounded-md bg-red-600 px-2 py-1 text-xs font-semibold tracking-wide text-white uppercase group-[[mediaisfullscreen]]:top-6 group-[[mediaisfullscreen]]:left-6">
             <span className="size-2 animate-pulse rounded-full bg-white" />
             Live
@@ -552,7 +572,7 @@ export function Player({
         )}
         {currentSource ? (
           <>
-            {mediaType === 'audio' && (
+            {mediaType === 'audio' && !mini && (
               <WaveformBackground
                 peaksJsonUrl={peaksJsonUrl}
                 currentTime={currentTime}
@@ -565,10 +585,12 @@ export function Player({
               style={{
                 '--media-background-color': 'none',
                 width:
-                  mediaType === 'audio' || embed ? '100%' : `${videoWidth}px`,
+                  (mediaType === 'audio' || embed) && !mini
+                    ? '100%'
+                    : `${videoWidth}px`,
                 height: embed
                   ? '100%'
-                  : mediaType === 'audio'
+                  : mediaType === 'audio' && !mini
                     ? `${docked ? DOCKED_AUDIO_PLAYER_HEIGHT : AUDIO_PLAYER_HEIGHT}px`
                     : `${videoHeight}px`,
               }}
@@ -605,6 +627,9 @@ export function Player({
                   'pointer-events-none absolute inset-0 flex flex-col transition-opacity duration-300',
                   mediaType === 'video' &&
                     'group-[[userinactive]:not([mediapaused])]:opacity-0',
+                  // Hidden rather than unmounted so the controls don't have to
+                  // re-associate with the controller on every expand.
+                  mini && 'hidden',
                 )}
               >
                 <div
@@ -805,6 +830,14 @@ export function Player({
                 </div>
               </div>
             </MediaController>
+
+            {mini && mediaType === 'audio' && posterThumbnailUrl ? (
+              <img
+                src={posterThumbnailUrl}
+                alt=""
+                className="pointer-events-none absolute inset-0 size-full object-cover"
+              />
+            ) : null}
 
             {/* Seek feedback layer - independent of controls visibility */}
             {seekFeedback && (

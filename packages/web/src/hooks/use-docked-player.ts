@@ -22,6 +22,7 @@ export function useDockedPlayer({ enabled }: { enabled: boolean }) {
   const slotRef = useRef<HTMLDivElement>(null);
   const fromRectRef = useRef<DOMRect | null>(null);
   const dockedRef = useRef(false);
+  const unmountingRef = useRef(false);
   // Inline player height to hold open while docked; null when undocked.
   const [holdHeight, setHoldHeight] = useState<number | null>(null);
   // Height of the docked player, so the sidebar slot can reserve room for it.
@@ -58,6 +59,14 @@ export function useDockedPlayer({ enabled }: { enabled: boolean }) {
     observer.observe(placeholder);
     return () => observer.disconnect();
   }, [enabled]);
+
+  // Declared before the effect below so its cleanup runs first on unmount.
+  useLayoutEffect(() => {
+    unmountingRef.current = false;
+    return () => {
+      unmountingRef.current = true;
+    };
+  }, []);
 
   useLayoutEffect(() => {
     const el = floatingRef.current;
@@ -99,6 +108,10 @@ export function useDockedPlayer({ enabled }: { enabled: boolean }) {
     return () => {
       ac.abort();
       resizeObserver.disconnect();
+      // Leaving the page: stay where the user last saw the player, so the
+      // persistent player measures (and flies to the mini player from) the
+      // docked spot rather than the inline one.
+      if (unmountingRef.current) return;
       for (const prop of DOCKED_STYLE_PROPS) el.style.removeProperty(prop);
     };
   }, [isDocked]);
@@ -113,18 +126,19 @@ export function useDockedPlayer({ enabled }: { enabled: boolean }) {
   };
 }
 
-// Animate `el` from its previous on-screen rect to where it is now.
-function flip(el: HTMLElement, from: DOMRect | null) {
+// Animate `el` from its previous on-screen rect to where it is now. Returns
+// the animation, or null when there's nothing to animate.
+export function flip(el: HTMLElement, from: DOMRect | null) {
   if (!from || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    return;
+    return null;
   }
   const to = el.getBoundingClientRect();
-  if (!to.width || !to.height) return;
+  if (!to.width || !to.height) return null;
   const dx = from.left - to.left;
   const dy = from.top - to.top;
   const sx = from.width / to.width;
   const sy = from.height / to.height;
-  el.animate(
+  return el.animate(
     [
       {
         transformOrigin: 'top left',

@@ -21,7 +21,7 @@ import {
   useLocation,
 } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 
 import { AutoplayCountdown } from '@/components/autoplay-countdown';
@@ -35,7 +35,8 @@ import { MediaHeader } from '@/components/media-header';
 import { MediaInfoTabs } from '@/components/media-info-tabs';
 import { MediaSidebarTabs } from '@/components/media-sidebar-tabs';
 import { MobileDrawer } from '@/components/mobile-drawer';
-import { DOCKED_AUDIO_PLAYER_HEIGHT, Player } from '@/components/player';
+import { PlayerSlot } from '@/components/persistent-player';
+import { DOCKED_AUDIO_PLAYER_HEIGHT } from '@/components/player';
 import {
   type PlaylistPage,
   PlaylistSidebar,
@@ -52,6 +53,7 @@ import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { IncomingIdSchema, idTranslator } from '@/schemas/common';
 import { useBrowserSize } from '@/stores/browser-size';
 import { useSetBackgroundImage } from '@/stores/header';
+import { $nowPlaying, type NowPlayingMedia } from '@/stores/now-playing';
 import {
   $isSearchActive,
   $searchQuery,
@@ -640,12 +642,23 @@ function RouteComponent() {
       : undefined,
   });
 
+  // Coming back to media that's still playing (expanding the mini player,
+  // browser back) picks up where playback is, not at the URL's #t=.
+  const resumingPlaybackRef = useRef(
+    $nowPlaying.get()?.media.id === params.mediaId &&
+      Boolean($nowPlaying.get()?.started),
+  );
+
   // Parse timestamp from URL hash on mount. TanStack Router's
   // `location.hash` already has the leading `#` stripped
   // (router-core/router.js: `hash.split('#').reverse()[0]`), so pass it
   // straight to URLSearchParams — slicing the first character would
   // drop the leading key letter and break the parse.
   useEffect(() => {
+    if (resumingPlaybackRef.current) {
+      resumingPlaybackRef.current = false;
+      return;
+    }
     if (location.hash) {
       const hashParams = new URLSearchParams(location.hash);
       const t = hashParams.get('t');
@@ -999,6 +1012,39 @@ function RouteComponent() {
     (dockedVideoHeight * aspectWidth) / aspectHeight,
   );
 
+  const nowPlayingMedia = useMemo<NowPlayingMedia>(
+    () => ({
+      id: params.mediaId,
+      shortId: mediaIdShort,
+      listId: searchParams.list,
+      title: media.title,
+      channelName: media.channel.name,
+      mediaSource: media.mediaSource ?? null,
+      audioSource: media.audioSource ?? null,
+      posterThumbnailUrl: media.posterThumbnailUrl ?? null,
+      peaksJsonUrl: media.peaksJsonUrl ?? null,
+      lengthSeconds: media.lengthSeconds ?? null,
+      width: media.width ?? null,
+      height: media.height ?? null,
+      isLive: media.isLive,
+    }),
+    [
+      params.mediaId,
+      mediaIdShort,
+      searchParams.list,
+      media.title,
+      media.channel.name,
+      media.mediaSource,
+      media.audioSource,
+      media.posterThumbnailUrl,
+      media.peaksJsonUrl,
+      media.lengthSeconds,
+      media.width,
+      media.height,
+      media.isLive,
+    ],
+  );
+
   const handleTranscriptWidthChange = (width: number) => {
     setTranscriptWidth(width);
     layout.setTranscriptWidth(width);
@@ -1039,13 +1085,9 @@ function RouteComponent() {
               }
             >
               <div ref={dockedPlayer.floatingRef} className="relative">
-                <Player
-                  key={params.mediaId}
-                  uploadRecordId={params.mediaId}
+                <PlayerSlot
+                  media={nowPlayingMedia}
                   viewHash={viewHash}
-                  mediaSource={media.mediaSource}
-                  audioSource={media.audioSource}
-                  posterThumbnailUrl={media.posterThumbnailUrl}
                   videoWidth={
                     dockedPlayer.isDocked ? dockedVideoWidth : layout.videoWidth
                   }
@@ -1054,8 +1096,6 @@ function RouteComponent() {
                       ? dockedVideoHeight
                       : layout.videoHeight
                   }
-                  peaksJsonUrl={media.peaksJsonUrl}
-                  lengthSeconds={media.lengthSeconds}
                   videoClassName={
                     // Centered in the slot when capped narrower than it.
                     dockedPlayer.isDocked ? 'mx-auto w-fit' : null
@@ -1063,7 +1103,6 @@ function RouteComponent() {
                   docked={dockedPlayer.isDocked}
                   initialTimestamp={initialTimestamp}
                   onVideoEnded={autoplay.handleVideoEnded}
-                  isLive={media.isLive}
                 />
                 {hasPlaylistContext && nextItem ? (
                   <AutoplayCountdown
