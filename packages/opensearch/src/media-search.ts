@@ -6,6 +6,9 @@ import {
   osMsearch,
   osSearch,
 } from './client';
+import { MEDIA_INDEX, RRF_PIPELINE, SPEAKER_VECTOR_INDEX } from './indices';
+
+export { MEDIA_INDEX, RRF_PIPELINE, SPEAKER_VECTOR_INDEX };
 
 // Hybrid search over the unified `lc_media_v1` index. Two stages:
 //
@@ -34,18 +37,6 @@ import {
 // whose attributed `paragraphs.speakerName` matches (the `speaker` keyword still
 // holds raw diarization labels like SPEAKER_00). Visual "objects" from the query
 // parser are folded into `lexicalText`; there are still no image embeddings.
-
-export const MEDIA_INDEX = 'lc_media_v1';
-
-// Flat companion index for speaker suggestions: one doc per (upload, label)
-// attribution, holding that label's mean 192-dim titanet vector + speakerId +
-// channelId. kNN + collapse(speakerId) over this gives server-side, score-ranked
-// identity suggestions (see suggestSpeakersByEmbedding).
-export const SPEAKER_VECTOR_INDEX = 'lc_speaker_vectors';
-
-// Search pipeline (PUT in mappings.ts) that normalizes + weight-fuses the hybrid
-// sub-queries. Id kept as `lc-media-rrf` though it no longer uses RRF.
-export const RRF_PIPELINE = 'lc-media-rrf';
 
 // inner_hits names must be unique across all hybrid sub-queries in one request.
 const PARA_BM25 = 'para_bm25';

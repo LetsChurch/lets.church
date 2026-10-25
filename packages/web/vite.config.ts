@@ -79,8 +79,11 @@ export default defineConfig((_config) => ({
     // Allow the in-compose-network service hostname so other dev containers can
     // reach http://web:3000 without Vite's dev-server host check rejecting them —
     // e.g. the oidc-client example's back-channel calls and the mux-webhooks
-    // forwarder POSTing to /webhooks/mux.
-    allowedHosts: ['web'],
+    // forwarder POSTing to /webhooks/mux. Dev stacks share one Docker network,
+    // so each stack reaches its own web container as `web.<worktree>.internal`
+    // (see docs/worktrees.md). `*.localhost` (the HTTPS router) is allowed by
+    // default.
+    allowedHosts: ['web', '.internal'],
   },
   resolve: {
     tsconfigPaths: true,

@@ -307,17 +307,25 @@ when embeddings are unavailable.
 
 | Service | URL (dev) | Notes |
 | --- | --- | --- |
-| lets.bible | http://localhost:4001 | the app under test |
-| web (OIDC IdP) | http://localhost:4000 | identity provider for sign-in |
+| lets.bible | https://main.lb.localhost | the app under test (`HOST_LETS_BIBLE_URL`) |
+| web (OIDC IdP) | https://main.lc.localhost | identity provider for sign-in (`HOST_WEB_URL`) |
 | postgres | localhost:5432 | `letsbible` DB (separate from web's `letschurch`) |
-| elasticsearch | localhost:${HOST_ES_PORT} | shared cluster; lets.bible owns `lets_bible_*` indices |
+| opensearch | localhost:${HOST_OPENSEARCH_PORT} | shared cluster; lets.bible owns `lets_bible_*` indices |
+
+> The URLs above are the primary checkout's; the mkcert CA must be trusted
+> (`mkcert -install`). **In a worktree** (docs/worktrees.md) the same suites run
+> against `https://<worktree>.lb.localhost` and `https://<worktree>.lc.localhost`,
+> on the worktree's own `letsbible_<worktree>` DB and `<worktree>__lets_bible_*`
+> indices; `.envrc` points Playwright at it (`LETS_BIBLE_E2E_URL`). Provision
+> with `just wt-up` (copies the primary checkout's data) or `just wt-up fresh`
+> (empty DBs + `lb-up`).
 
 > **Media tab prerequisite:** the study panel's Media tab (Suite E) calls web's
 > `/api/internal/media-for-verse` server-to-server (unauthenticated — it only
 > returns public media). It needs the **web** app's `lc_media_v1` index populated
 > with public/approved uploads that BIBLE-annotate at least one verse, and
-> `WEB_INTERNAL_URL` on `letsbible` (default `http://web:3000`, falls back to
-> `OIDC_INTERNAL_URL`). That comes from the `.envrc`/docker-compose defaults; when
+> `WEB_INTERNAL_URL` on `letsbible` (default `http://web.${LC_WT}.internal:3000`,
+> this checkout's own web container; falls back to `OIDC_INTERNAL_URL`). That comes from the `.envrc`/docker-compose defaults; when
 > web is unreachable the tab degrades to its empty state (not a bug).
 
 > The Bash shell used for `docker compose` must have direnv loaded first:
@@ -426,7 +434,7 @@ just lb-up             # all of the above, in order
 
 A Playwright suite lives in `packages/lets.bible/e2e/` (config:
 `playwright.config.ts`). It runs against the **already-running** dev server
-(`http://localhost:4001`; override with `LETS_BIBLE_E2E_URL`) — it does not start
+(`LETS_BIBLE_E2E_URL`, which `.envrc` sets to this checkout's lets.bible URL) — it does not start
 its own server, so the dev stack must be up with the Bible/lexicon seeded and the
 search index built. Run from `packages/lets.bible`:
 
@@ -437,7 +445,7 @@ pnpm run test:e2e                        # or test:e2e:ui
 
 Each test gets a fresh browser context (empty localStorage/IndexedDB), so the
 local-first cases start clean. Automated cases are tagged **[E2E: file]** next to
-their ID below; everything else is manual. Keep these in sync (see CLAUDE.md):
+their ID below; everything else is manual. Keep these in sync (see AGENTS.md):
 adding/changing a spec must update the matching case here.
 
 Currently automated: LB-SMOKE-01/02/03/05 (`smoke`), LB-READ-01/07/08/11/12
@@ -742,7 +750,7 @@ the stage and clicking fills the input or navigates.
 | LB-SEC-01 | — | GET `/callback?state=forged&code=abc` with **no** `lb_oidc_state` cookie | Redirect to `/?error=state` (login-CSRF blocked); no session created. |
 | LB-SEC-02 | — | GET `/callback` with a `lb_oidc_state` cookie that **mismatches** the URL `state` | `/?error=state`. |
 | LB-SEC-03 | — | GET `/login` and inspect `Set-Cookie` | Sets `lb_oidc_state` HttpOnly, SameSite=Lax, Max-Age≈600. |
-| LB-SEC-04 | Signed in (IdP) | Navigate to `http://localhost:4000/oidc/logout` with **no** `id_token_hint` | SSO session is **NOT** cleared (forged-logout CSRF blocked) — revisiting `/login` round-trips back signed-in. |
+| LB-SEC-04 | Signed in (IdP) | Navigate to `<web URL>/oidc/logout` with **no** `id_token_hint` | SSO session is **NOT** cleared (forged-logout CSRF blocked) — revisiting `/login` round-trips back signed-in. |
 | LB-SEC-05 | Signed in | Real RP logout (sends `id_token_hint`) | SSO session **is** cleared (re-auth required). |
 | LB-SEC-06 | — | Tamper an id_token (wrong signature/alg) in the callback exchange | Verification fails (`algorithms:['ES256']` pinned); login rejected. |
 

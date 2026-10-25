@@ -2,6 +2,7 @@ import { Channel, db, UploadRecord } from '@letschurch/db';
 import {
   MSearchResponseSchema,
   msearchOrganizations,
+  ORGANIZATION_INDEX,
   osMsearch,
 } from '@letschurch/opensearch';
 import { and, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
@@ -108,7 +109,7 @@ export const churchProcedures = {
 
       // Extract organization IDs from hits
       const organizationIds = organizationsResponse.hits.hits
-        .filter((hit) => hit._index === 'lc_organizations')
+        .filter((hit) => hit._index === ORGANIZATION_INDEX)
         .map((hit) => hit._id);
 
       // Fetch full organization data from database
@@ -226,7 +227,7 @@ export const churchProcedures = {
 
       // Extract organization IDs from hits
       const organizationIds = organizationsResponse.hits.hits
-        .filter((hit) => hit._index === 'lc_organizations')
+        .filter((hit) => hit._index === ORGANIZATION_INDEX)
         .map((hit) => hit._id);
 
       // Fetch basic organization data from database

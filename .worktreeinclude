@@ -1,0 +1,4 @@
+# Gitignored files that new worktrees copy from the primary checkout
+# (`wt step copy-ignored --require-include` in .config/wt.toml; Claude Code reads
+# this file too when it creates worktrees).
+AGENTS.local.md

@@ -1,5 +1,6 @@
 import { db, SearchLogEntry } from '@letschurch/db';
 import {
+  CHANNEL_INDEX,
   type MediaSegment,
   MEDIA_SEARCH_MAX_CANDIDATES,
   MediaSearchPaginationSchema,
@@ -732,7 +733,7 @@ export const searchProcedures = {
       }));
       const carouselIds =
         MSearchResponseSchema.parse(channelsRaw)
-          .responses[0]?.hits.hits.filter((h) => h._index === 'lc_channels')
+          .responses[0]?.hits.hits.filter((h) => h._index === CHANNEL_INDEX)
           .map((h) => h._id) ?? [];
 
       const [items, facetedChannels, channels] = await Promise.all([

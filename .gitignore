@@ -1,4 +1,5 @@
 .envrc.local
+AGENTS.local.md
 .direnv
 
 node_modules

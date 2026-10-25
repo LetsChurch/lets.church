@@ -13,8 +13,11 @@ import {
   UploadRecord,
 } from '@letschurch/db';
 import {
+  CHANNEL_INDEX,
   client,
   escapeDocument,
+  MEDIA_INDEX,
+  ORGANIZATION_INDEX,
   SPEAKER_VECTOR_INDEX,
 } from '@letschurch/opensearch';
 import { encodeKnnFloatVector } from '@letschurch/util/server/knn-vector';
@@ -108,7 +111,7 @@ async function getDocument(
       const loc = addresses[0];
 
       return {
-        index: 'lc_organizations',
+        index: ORGANIZATION_INDEX,
         id: documentId,
         document: {
           name: rec.name,
@@ -132,7 +135,7 @@ async function getDocument(
     case 'channel':
       log.info('Fetching metadata');
       return {
-        index: 'lc_channels',
+        index: CHANNEL_INDEX,
         id: documentId,
         document: await db
           .select({ name: Channel.name, visibility: Channel.visibility })
@@ -368,7 +371,7 @@ async function getDocument(
       }
 
       return {
-        index: 'lc_media_v1',
+        index: MEDIA_INDEX,
         id: documentId,
         // Sibling to `document`: the activity syncs these into the flat
         // `lc_speaker_vectors` index (one per attributed label) after indexing.

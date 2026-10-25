@@ -1,8 +1,10 @@
 import { Channel, db } from '@letschurch/db';
 import {
+  CHANNEL_INDEX,
   client as esClient,
   escapeDocument,
   MEDIA_INDEX,
+  ORGANIZATION_INDEX,
 } from '@letschurch/opensearch';
 import { Context, sleep } from '@temporalio/activity';
 import { eq } from 'drizzle-orm';
@@ -13,9 +15,6 @@ import indexDocument from './index-document';
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/sync-channel-documents',
 });
-
-const CHANNEL_INDEX = 'lc_channels';
-const ORGANIZATION_INDEX = 'lc_organizations';
 
 // How often to poll the update-by-query task (and heartbeat while waiting).
 const TASK_POLL_MS = 2_000;

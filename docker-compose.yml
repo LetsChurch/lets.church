@@ -1,7 +1,19 @@
-volumes:
-  os-data:
-  pg-data:
-  pnpm-store:
+# App services for ONE checkout (the primary one or a `git worktree`). The
+# shared infrastructure they talk to — Postgres, OpenSearch, Temporal, Valkey,
+# Mailpit, imgproxy, Traefik — lives in docker-compose.infra.yml and is started
+# by `just infra-up`. Every checkout's containers join the same `lc-infra`
+# network, so service names are NOT unique across stacks: never address another
+# app container by its bare service name (`web`); use its per-checkout alias
+# (`web.${LC_WT}.internal`). See docs/worktrees.md.
+networks:
+  default:
+    name: lc-infra
+    external: true
+
+x-app-env: &app-env
+  # Per-checkout isolation on the shared infrastructure, set by .envrc.
+  OPENSEARCH_INDEX_PREFIX: ${OPENSEARCH_INDEX_PREFIX:-}
+  TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
 
 # Storage locations (packages/s3/README.md#storage-locations). Each location id
 # pairs an ingest and a public bucket and is discovered from
@@ -65,16 +77,23 @@ services:
     depends_on:
       temporal-namespace-setup:
         condition: service_completed_successfully
-      valkey:
-        condition: service_healthy
-    ports:
-      - 127.0.0.1:${HOST_WEB_PORT}:3000
+    networks:
+      default:
+        aliases: ['web.${LC_WT:?run inside direnv}.internal']
+    # List form: Compose interpolates label values but not mapping keys, and
+    # router names must be unique per checkout.
+    labels:
+      - traefik.enable=true
+      # The web origin plus one level of subdomains under it (published church
+      # websites are served on `<slug>.<web host>`).
+      - 'traefik.http.routers.${LC_WT}-web.rule=Host(`${LC_WEB_HOST}`) || HostRegexp(`^[a-z0-9-]+\.${LC_WEB_HOST_RE}$$`)'
+      - traefik.http.services.${LC_WT}-web.loadbalancer.server.port=3000
     environment:
       NODE_ENV: development
       ADMIN_EMAIL: ${ADMIN_EMAIL}
-      DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
+      DATABASE_URL: postgres://letschurch:password@postgres:5432/${LC_PG_DATABASE:-letschurch}
       OPENSEARCH_URL: http://opensearch:9200
-      VALKEY_URL: redis://valkey:6379
+      VALKEY_URL: redis://valkey:6379/${LC_VALKEY_DB:-0}
       IMGPROXY_KEY: ${IMGPROXY_KEY}
       IMGPROXY_SALT: ${IMGPROXY_SALT}
       IMGPROXY_URL: ${HOST_IMGPROXY_URL}
@@ -91,7 +110,7 @@ services:
       HCAPTCHA_SECRET_KEY: '0x0000000000000000000000000000000000000000'
       WEB_URL: ${HOST_WEB_URL}
       # Base URL for linking scripture refs into lets.bible (Vite inlines VITE_*).
-      VITE_LETS_BIBLE_URL: ${VITE_LETS_BIBLE_URL:-http://localhost:4001}
+      VITE_LETS_BIBLE_URL: ${VITE_LETS_BIBLE_URL:?set by .envrc}
       ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
       # Embedded OIDC provider (lets.church as identity provider for first-party
       # satellite sites). Signing key is asymmetric (ES256) and separate from
@@ -126,7 +145,7 @@ services:
       # Optional in development; unsigned events are accepted with a warning.
       # Always configure the Workbench endpoint secret in production.
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
-      <<: [*s3-ingest-env, *s3-public-env, *s3-backup-env, *mux-env]
+      <<: [*app-env, *s3-ingest-env, *s3-public-env, *s3-backup-env, *mux-env]
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
@@ -162,31 +181,30 @@ services:
     depends_on:
       web:
         condition: service_started
-      postgres:
-        condition: service_healthy
-      opensearch:
-        condition: service_healthy
-    ports:
-      - 127.0.0.1:${HOST_LETS_BIBLE_PORT}:3000
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${LC_WT}-letsbible.rule=Host(`${LC_LB_HOST}`)
+      - traefik.http.services.${LC_WT}-letsbible.loadbalancer.server.port=3000
     environment:
       NODE_ENV: development
       PORT: 3000
-      LETS_BIBLE_DATABASE_URL: postgres://letsbible:password@postgres:5432/letsbible
+      LETS_BIBLE_DATABASE_URL: postgres://letsbible:password@postgres:5432/${LC_LB_PG_DATABASE:-letsbible}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       POSTHOG_PROJECT_TOKEN: ${POSTHOG_PROJECT_TOKEN:-}
       POSTHOG_HOST: ${POSTHOG_HOST:-https://us.i.posthog.com}
       POSTHOG_AI_CAPTURE_CONTENT: ${POSTHOG_AI_CAPTURE_CONTENT:-false}
       OPENSEARCH_URL: http://opensearch:9200
       OIDC_ISSUER: ${OIDC_ISSUER:-${HOST_WEB_URL}}
-      OIDC_INTERNAL_URL: http://web:3000
+      OIDC_INTERNAL_URL: http://web.${LC_WT:?run inside direnv}.internal:3000
       # Back-channel origin for web's media-for-verse API (the study panel's
       # "Media" tab). Same web service as the OIDC back-channel; kept as its own
       # var so prod can point it independently.
-      WEB_INTERNAL_URL: http://web:3000
+      WEB_INTERNAL_URL: http://web.${LC_WT:?run inside direnv}.internal:3000
       OIDC_CLIENT_ID: lets.bible
       OIDC_REDIRECT_URI: ${OIDC_LETS_BIBLE_REDIRECT_URI}
       OIDC_POST_LOGOUT_REDIRECT_URI: ${OIDC_LETS_BIBLE_POST_LOGOUT_URI}
-      VALKEY_URL: redis://valkey:6379
+      VALKEY_URL: redis://valkey:6379/${LC_VALKEY_DB:-0}
+      <<: *app-env
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
@@ -200,8 +218,11 @@ services:
       target: letsbible-dev
     command: pnpm --filter @letschurch/lets.bible run storybook
     restart: unless-stopped
-    ports:
-      - 127.0.0.1:${HOST_LETS_BIBLE_STORYBOOK_PORT}:6006
+    profiles: [storybook]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${LC_WT}-letsbible-storybook.rule=Host(`${LC_WT}.storybook-lb.localhost`)
+      - traefik.http.services.${LC_WT}-letsbible-storybook.loadbalancer.server.port=6006
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
@@ -219,7 +240,7 @@ services:
       SENTRY_DSN: ${SENTRY_BACKGROUND_WORKER_DSN}
       SERVICE_NAME: background-worker
       IDENTITY: dev
-      DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
+      DATABASE_URL: postgres://letschurch:password@postgres:5432/${LC_PG_DATABASE:-letschurch}
       OPENSEARCH_URL: http://opensearch:9200
       LISTMONK_INTERNAL_URL: http://listmonk:9000
       MAPBOX_GEOCODING_TOKEN: ${MAPBOX_GEOCODING_TOKEN}
@@ -236,7 +257,7 @@ services:
       OPENROUTER_ANNOTATE_MODEL: ${OPENROUTER_ANNOTATE_MODEL:-openai/gpt-6-luna}
       OPENROUTER_ANNOTATE_FALLBACK_MODEL: ${OPENROUTER_ANNOTATE_FALLBACK_MODEL:-anthropic/claude-haiku-4-5}
       OPENROUTER_SUMMARY_FALLBACK_MODEL: ${OPENROUTER_SUMMARY_FALLBACK_MODEL:-anthropic/claude-haiku-4-5}
-      <<: [*s3-ingest-env, *s3-public-env, *s3-backup-env, *mux-env]
+      <<: [*app-env, *s3-ingest-env, *s3-public-env, *s3-backup-env, *mux-env]
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
@@ -254,7 +275,8 @@ services:
       - ./packages/background-worker:/usr/src/app/packages/background-worker
       - /usr/src/app/packages/background-worker/node_modules
     depends_on:
-      - temporal
+      temporal-namespace-setup:
+        condition: service_completed_successfully
 
   probe-worker:
     build:
@@ -270,7 +292,7 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
       MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 5
-      <<: *s3-ingest-env
+      <<: [*app-env, *s3-ingest-env]
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
@@ -288,7 +310,8 @@ services:
       - ./packages/probe-worker:/usr/src/app/packages/probe-worker
       - /usr/src/app/packages/probe-worker/node_modules
     depends_on:
-      - temporal
+      temporal-namespace-setup:
+        condition: service_completed_successfully
 
   transcode-worker:
     build:
@@ -304,7 +327,7 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
       MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 1
-      <<: [*s3-ingest-env, *s3-public-env]
+      <<: [*app-env, *s3-ingest-env, *s3-public-env]
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
@@ -322,17 +345,8 @@ services:
       - ./packages/transcode-worker:/usr/src/app/packages/transcode-worker
       - /usr/src/app/packages/transcode-worker/node_modules
     depends_on:
-      - temporal
-
-  download-service:
-    build:
-      context: .
-      target: download-service
-    restart: unless-stopped
-    ports:
-      - 127.0.0.1:${HOST_DOWNLOAD_PORT:-4900}:8080
-    environment:
-      JWT_SECRET: ${JWT_SECRET}
+      temporal-namespace-setup:
+        condition: service_completed_successfully
 
   transcribe-worker:
     build:
@@ -341,6 +355,8 @@ services:
       args:
         WHISPER_MODEL: ${WHISPER_MODEL:-tiny.en}
     restart: unless-stopped
+    # Several GB of models; worktrees leave it off by default (COMPOSE_PROFILES).
+    profiles: [transcribe]
     environment:
       SENTRY_DSN: ${SENTRY_TRANSCRIBE_WORKER_DSN}
       IDENTITY: dev
@@ -354,7 +370,7 @@ services:
       WTPSPLIT_MODEL: ${WTPSPLIT_MODEL:-sat-12l-sm}
       WTPSPLIT_PARAGRAPH_THRESHOLD: ${WTPSPLIT_PARAGRAPH_THRESHOLD:-0.5}
       WTPSPLIT_SENTENCE_THRESHOLD: ${WTPSPLIT_SENTENCE_THRESHOLD:-0.4}
-      <<: [*s3-ingest-env, *s3-public-env]
+      <<: [*app-env, *s3-ingest-env, *s3-public-env]
     volumes:
       - ./services/transcribe/src:/app/src
       # Tooling for `just regenerate-seed-transcript` — bind the scripts and
@@ -364,7 +380,8 @@ services:
       - ./services/transcribe/scripts:/app/scripts
       - ./seed-data:/seed-data
     depends_on:
-      - temporal
+      temporal-namespace-setup:
+        condition: service_completed_successfully
     healthcheck:
       test: ['CMD', 'test', '-f', '/tmp/ready']
       interval: 30s
@@ -386,7 +403,7 @@ services:
       IDENTITY: dev
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1m
-      <<: [*s3-ingest-env, *mux-env]
+      <<: [*app-env, *s3-ingest-env, *mux-env]
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
@@ -404,7 +421,8 @@ services:
       - ./packages/import-worker:/usr/src/app/packages/import-worker
       - /usr/src/app/packages/import-worker/node_modules
     depends_on:
-      - temporal
+      temporal-namespace-setup:
+        condition: service_completed_successfully
 
   # Local-dev Mux webhook forwarder. Logs in with MUX_TOKEN_ID/MUX_TOKEN_SECRET,
   # then runs the Mux CLI's `webhooks listen`, which forwards every webhook for
@@ -417,11 +435,13 @@ services:
     # glibc base (not alpine): @mux/cli ships per-platform binaries built
     # against glibc, so the musl alpine image fails with ENOENT at runtime.
     image: node:22-slim
+    # One webhook forwarder per account is plenty; worktrees leave it off.
+    profiles: [webhooks]
     command: >-
       sh -c 'npm install -g @mux/cli &&
       env | grep -E "^MUX_TOKEN_(ID|SECRET)=" > /tmp/mux.env &&
       mux login --env-file /tmp/mux.env &&
-      mux webhooks listen --forward-to http://web:3000/webhooks/mux ||
+      mux webhooks listen --forward-to http://web.${LC_WT:?run inside direnv}.internal:3000/webhooks/mux ||
       (echo "mux-webhooks idle: set real MUX_TOKEN_ID/MUX_TOKEN_SECRET to enable" && sleep 3600)'
     restart: unless-stopped
     environment:
@@ -439,6 +459,7 @@ services:
   # webhook destination is needed locally.
   stripe-webhooks:
     image: stripe/stripe-cli:v1.44.0
+    profiles: [webhooks]
     entrypoint: ['/bin/sh', '-c']
     command:
       - |
@@ -450,7 +471,7 @@ services:
         stripe listen \
           --api-key "$$STRIPE_SECRET_KEY" \
           --events checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired,invoice.paid,invoice.payment_failed,customer.subscription.created,customer.subscription.updated,customer.subscription.deleted,charge.refunded,charge.dispute.created,charge.dispute.updated,charge.dispute.closed \
-          --forward-to http://web:3000/webhooks/stripe ||
+          --forward-to http://web.${LC_WT:?run inside direnv}.internal:3000/webhooks/stripe ||
           (echo "stripe-webhooks idle: Stripe CLI listener failed; check STRIPE_SECRET_KEY" && exec sleep 3600)
     restart: unless-stopped
     environment:
@@ -458,231 +479,27 @@ services:
     depends_on:
       - web
 
-  #
-  # Vendor Services
-  #
-  listmonk:
-    image: listmonk/listmonk:v5.1.0
-    command: [sh, -c, './listmonk --install --yes && ./listmonk']
-    restart: unless-stopped
-    environment:
-      LISTMONK_db__host: postgres
-      LISTMONK_db__port: 5432
-      LISTMONK_db__user: listmonk
-      LISTMONK_db__password: listmonk
-      LISTMONK_db__database: listmonk
-      LISTMONK_db__ssl_mode: disable
-      LISTMONK_app__address: 0.0.0.0:9000
-      LISTMONK_ADMIN_USER: ${LISTMONK_USER}
-      LISTMONK_ADMIN_PASSWORD: ${LISTMONK_PASSWORD}
-      TZ: US/Eastern
-    ports:
-      - '127.0.0.1:${HOST_LISTMONK_PORT}:9000'
-    depends_on:
-      postgres:
-        condition: service_healthy
-      mailpit:
-        condition: service_started
-
-  imgproxy:
-    image: darthsim/imgproxy:v3.21.0
-    restart: unless-stopped
-    environment:
-      IMGPROXY_KEY: ${IMGPROXY_KEY}
-      IMGPROXY_SALT: ${IMGPROXY_SALT}
-      # Originals are fetched over HTTP from the storage locations' public CDN
-      # URLs only. Composed in .envrc; each entry is a `/`-terminated prefix.
-      # Required (`:?`): an empty value would let imgproxy fetch any URL.
-      IMGPROXY_ALLOWED_SOURCES: ${IMGPROXY_ALLOWED_SOURCES:?set by .envrc from STORAGE_*_PUBLIC_URL}
-    ports:
-      - 127.0.0.1:${HOST_IMGPROXY_PORT}:8080
-
-  temporal-schema-setup:
-    image: temporalio/admin-tools:1.31.0
-    environment:
-      POSTGRES_SEEDS: postgres
-      DB_PORT: 5432
-      POSTGRES_USER: temporal
-      SQL_PASSWORD: password
-      DBNAME: temporal
-      ES_SEEDS: opensearch
-    command:
-      - sh
-      - -c
-      - |
-        retries=0; max_retries=30
-        until nc -z $${POSTGRES_SEEDS} $${DB_PORT}; do
-          retries=$$((retries + 1))
-          if [ "$$retries" -ge "$$max_retries" ]; then
-            echo "ERROR: PostgreSQL not reachable after $$((max_retries * 2))s"
-            exit 1
-          fi
-          echo 'Waiting for PostgreSQL...'; sleep 2
-        done
-        temporal-sql-tool \
-          --plugin postgres12_pgx \
-          --ep "$${POSTGRES_SEEDS}" \
-          -u "$${POSTGRES_USER}" \
-          -p "$${DB_PORT}" \
-          --db "$${DBNAME}" \
-          setup-schema -v 0.0 || true
-        temporal-sql-tool \
-          --plugin postgres12_pgx \
-          --ep "$${POSTGRES_SEEDS}" \
-          -u "$${POSTGRES_USER}" \
-          -p "$${DB_PORT}" \
-          --db "$${DBNAME}" \
-          update-schema \
-          -d /etc/temporal/schema/postgresql/v12/temporal/versioned
-        retries=0
-        until wget -qO- http://$${ES_SEEDS}:9200 >/dev/null 2>&1; do
-          retries=$$((retries + 1))
-          if [ "$$retries" -ge "$$max_retries" ]; then
-            echo "ERROR: Elasticsearch not reachable after $$((max_retries * 2))s"
-            exit 1
-          fi
-          echo 'Waiting for Elasticsearch...'; sleep 2
-        done
-        temporal-elasticsearch-tool --endpoint "http://$${ES_SEEDS}:9200" setup-schema --fail
-    depends_on:
-      - postgres
-      - opensearch
-
-  temporal:
-    image: temporalio/server:1.31.0
-    restart: unless-stopped
-    environment:
-      BIND_ON_IP: '0.0.0.0'
-      DB: postgres12_pgx
-      DB_PORT: 5432
-      POSTGRES_SEEDS: postgres
-      POSTGRES_USER: temporal
-      POSTGRES_PWD: password
-      DBNAME: temporal
-      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yml
-      ENABLE_ES: true
-      ES_SEEDS: opensearch
-      ES_VERSION: v7 # Even though we run v8, temporal only has configuration for v7
-    ports:
-      - 127.0.0.1:${HOST_TEMPORAL_PORT}:7233
-    volumes:
-      - ./etc/temporal/dynamicconfig:/etc/temporal/config/dynamicconfig
-    depends_on:
-      temporal-schema-setup:
-        condition: service_completed_successfully
-    healthcheck:
-      test: ['CMD', 'nc', '-z', 'localhost', '7233']
-      interval: 5s
-      timeout: 5s
-      retries: 20
-      start_period: 10s
-
+  # Creates this checkout's Temporal namespace (TEMPORAL_NAMESPACE) and its
+  # custom search attributes on the shared Temporal server. Idempotent.
   temporal-namespace-setup:
     image: temporalio/admin-tools:1.31.0
     environment:
       TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
       ES_SEEDS: opensearch
     command:
       - sh
       - -c
       - |
+        ns="$${TEMPORAL_NAMESPACE}"
         until temporal operator cluster health | grep -q SERVING; do echo 'Waiting for Temporal...'; sleep 2; done
-        temporal operator namespace create --retention 24h --namespace default 2>/dev/null || true
+        temporal operator namespace create --retention 24h --namespace "$$ns" 2>/dev/null || true
         printf 'PUT /temporal_visibility_v1_dev HTTP/1.0\r\nHost: '"$${ES_SEEDS}"':9200\r\nContent-Length: 2\r\nContent-Type: application/json\r\n\r\n{}' | nc $${ES_SEEDS} 9200 >/dev/null 2>&1 || true
         until wget -qO- http://$${ES_SEEDS}:9200/temporal_visibility_v1_dev >/dev/null 2>&1; do echo 'Waiting for Temporal visibility index...'; sleep 2; done
-        until temporal operator search-attribute list --namespace default >/dev/null 2>&1; do echo 'Waiting for namespace cache...'; sleep 1; done
-        temporal operator search-attribute create --namespace default --name UploadId --type Keyword 2>/dev/null || true
-        temporal operator search-attribute create --namespace default --name UserId --type Keyword 2>/dev/null || true
-        temporal operator search-attribute create --namespace default --name Username --type Keyword 2>/dev/null || true
-        temporal operator search-attribute create --namespace default --name ChannelSlug --type Keyword 2>/dev/null || true
-        temporal operator search-attribute create --namespace default --name ChannelId --type Keyword 2>/dev/null || true
-        temporal operator search-attribute create --namespace default --name ImportSourceId --type Keyword 2>/dev/null || true
-    depends_on:
-      temporal:
-        condition: service_healthy
-
-  temporal-admin-tools:
-    image: temporalio/admin-tools:1.31.0
-    restart: unless-stopped
-    environment:
-      TEMPORAL_ADDRESS: temporal:7233
-    stdin_open: true
-    tty: true
-    depends_on:
-      - temporal
-
-  temporal-ui:
-    image: temporalio/ui:2.44.1
-    restart: unless-stopped
-    environment:
-      TEMPORAL_ADDRESS: temporal:7233
-      TEMPORAL_CORS_ORIGINS: http://localhost:3000
-    ports:
-      - 127.0.0.1:${HOST_TEMPORAL_UI_PORT}:8080
-    depends_on:
-      - temporal
-
-  #
-  # Service Dependencies
-  #
-  postgres:
-    image: postgres:18.3-alpine3.23
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${PG_USER}
-      POSTGRES_PASSWORD: ${PG_PASSWORD}
-      POSTGRES_DB: ${PG_DATABASE}
-    ports:
-      - 127.0.0.1:${HOST_PG_PORT}:5432
-    volumes:
-      - ./etc/postgres-init:/docker-entrypoint-initdb.d
-      - pg-data:/var/lib/postgresql
-    command:
-      [
-        'postgres',
-        '-c',
-        'log_statement=all',
-        '-c',
-        'log_min_duration_statement=0',
-      ]
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  opensearch:
-    image: opensearchproject/opensearch:3.8.0
-    restart: unless-stopped
-    environment:
-      - cluster.routing.allocation.disk.threshold_enabled=true
-      - cluster.routing.allocation.disk.watermark.low=512mb
-      - cluster.routing.allocation.disk.watermark.high=256mb
-      - cluster.routing.allocation.disk.watermark.flood_stage=128mb
-      - discovery.type=single-node
-      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
-      - DISABLE_SECURITY_PLUGIN=true
-    ports:
-      - 127.0.0.1:${HOST_OPENSEARCH_PORT}:9200
-    volumes:
-      - os-data:/usr/share/opensearch/data
-    healthcheck:
-      test: curl -s -f opensearch:9200/_cluster/health >/dev/null || exit 1
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-  valkey:
-    image: valkey/valkey:8-alpine
-    restart: unless-stopped
-    command: ['valkey-server', '--save', '', '--appendonly', 'no']
-    ports:
-      - 127.0.0.1:${HOST_VALKEY_PORT}:6379
-    healthcheck:
-      test: ['CMD', 'valkey-cli', 'ping']
-      interval: 10s
-      timeout: 5s
-      retries: 5
+        until temporal operator search-attribute list --namespace "$$ns" >/dev/null 2>&1; do echo 'Waiting for namespace cache...'; sleep 1; done
+        for attr in UploadId UserId Username ChannelSlug ChannelId ImportSourceId; do
+          temporal operator search-attribute create --namespace "$$ns" --name "$$attr" --type Keyword 2>/dev/null || true
+        done
 
   #
   # Development
@@ -693,8 +510,11 @@ services:
       target: dev
     command: pnpm --filter @letschurch/web run storybook
     restart: unless-stopped
-    ports:
-      - 127.0.0.1:${HOST_STORYBOOK_PORT}:6006
+    profiles: [storybook]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${LC_WT}-storybook.rule=Host(`${LC_WT}.storybook.localhost`)
+      - traefik.http.services.${LC_WT}-storybook.loadbalancer.server.port=6006
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
@@ -711,10 +531,3 @@ services:
       - /usr/src/app/packages/temporal/node_modules
       - ./packages/web:/usr/src/app/packages/web
       - /usr/src/app/packages/web/node_modules
-
-  mailpit:
-    image: axllent/mailpit:v1.13.0
-    restart: unless-stopped
-    ports:
-      - 127.0.0.1:${HOST_MAILPIT_SMTP_PORT}:1025 # smtp server
-      - 127.0.0.1:${HOST_MAILPIT_WEB_PORT}:8025 # web ui

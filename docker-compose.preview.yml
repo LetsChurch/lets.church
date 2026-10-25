@@ -1,5 +1,7 @@
 # Production preview overrides
 # Use with: docker compose -f docker-compose.yml -f docker-compose.preview.yml up
+# (`just preview`, which starts the shared infrastructure first — the migration
+# services below can't depend_on postgres/opensearch across compose projects).
 
 services:
   # Migration Services
@@ -9,10 +11,7 @@ services:
     command: sh -c 'cd /usr/src/app/packages/db && pnpm run db:mark-baseline && pnpm run db:migrate'
     restart: "no"
     environment:
-      DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
-    depends_on:
-      postgres:
-        condition: service_healthy
+      DATABASE_URL: postgres://letschurch:password@postgres:5432/${LC_PG_DATABASE:-letschurch}
 
   opensearch-migrate:
     build:
@@ -21,9 +20,7 @@ services:
     restart: "no"
     environment:
       OPENSEARCH_URL: http://opensearch:9200
-    depends_on:
-      opensearch:
-        condition: service_healthy
+      OPENSEARCH_INDEX_PREFIX: ${OPENSEARCH_INDEX_PREFIX:-}
 
   # Application Services
   web:
@@ -91,9 +88,3 @@ services:
     environment:
       NODE_ENV: production
       IDENTITY: ${IDENTITY:-preview}
-
-  download-service:
-    build:
-      target: download-service
-    command: null
-    volumes: !reset []

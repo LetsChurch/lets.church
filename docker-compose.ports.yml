@@ -1,0 +1,21 @@
+# Host ports for the app services, only for the opt-in `LC_ROUTING=ports`
+# (http://localhost:4000 and friends); .envrc adds this file to COMPOSE_FILE in
+# that mode. By default every checkout is reached through Traefik at
+# https://<name>.lc.localhost, so several stacks never fight over the same
+# ports. See docs/worktrees.md.
+services:
+  web:
+    ports:
+      - 127.0.0.1:${HOST_WEB_PORT}:3000
+
+  letsbible:
+    ports:
+      - 127.0.0.1:${HOST_LETS_BIBLE_PORT}:3000
+
+  letsbible-storybook:
+    ports:
+      - 127.0.0.1:${HOST_LETS_BIBLE_STORYBOOK_PORT}:6006
+
+  storybook:
+    ports:
+      - 127.0.0.1:${HOST_STORYBOOK_PORT}:6006

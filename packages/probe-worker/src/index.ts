@@ -13,6 +13,7 @@ const {
   MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS,
   SENTRY_DSN,
   TEMPORAL_ADDRESS,
+  TEMPORAL_NAMESPACE,
   TEMPORAL_SHUTDOWN_GRACE_TIME,
 } = z
   .object({
@@ -20,6 +21,8 @@ const {
     MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: z.string(),
     SENTRY_DSN: z.string(),
     TEMPORAL_ADDRESS: z.string(),
+    // Unset (`default`) in production; dev worktrees each get their own.
+    TEMPORAL_NAMESPACE: z.string().default('default'),
     TEMPORAL_SHUTDOWN_GRACE_TIME: msUnitSchema,
   })
   .parse(process.env);
@@ -33,6 +36,7 @@ await waitOnTemporal();
 const worker = await Worker.create({
   identity: `probe-worker ${IDENTITY}`,
   connection: await NativeConnection.connect({ address: TEMPORAL_ADDRESS }),
+  namespace: TEMPORAL_NAMESPACE,
   activities,
   taskQueue: PROBE_QUEUE,
   shutdownGraceTime: TEMPORAL_SHUTDOWN_GRACE_TIME,

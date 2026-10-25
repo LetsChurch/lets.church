@@ -1,0 +1,304 @@
+# Shared development infrastructure: one Postgres, OpenSearch, Temporal, Valkey,
+# Mailpit, imgproxy, download service, and the Traefik HTTPS router, used by
+# every checkout's app stack (docker-compose.yml). Each checkout — the primary
+# one and every `git worktree` — isolates itself logically instead of running
+# its own copies: its own Postgres databases, OpenSearch index prefix, Temporal
+# namespace, and Valkey DB number. See docs/worktrees.md.
+#
+# Always manage this through `just infra …` (scripts/dev-env.sh), which pins the
+# project directory to the primary checkout so bind mounts never point into a
+# worktree that might be deleted later.
+name: lc-infra
+
+networks:
+  # App stacks join this network as their default network (external there).
+  default:
+    name: lc-infra
+
+volumes:
+  # Explicit names so the data that lived in the old single-project stack
+  # (`letschurch_dev`) carries over. Compose warns that these volumes were
+  # created by another project; that's expected and harmless.
+  pg-data:
+    name: ${LC_INFRA_PG_VOLUME:-letschurch_dev_pg-data}
+  os-data:
+    name: ${LC_INFRA_OS_VOLUME:-letschurch_dev_os-data}
+
+services:
+  #
+  # HTTPS router
+  #
+  # Routes `https://<host>.localhost` to containers by their Docker labels, using
+  # mkcert certificates generated per worktree into $LC_DEV_HOME/traefik
+  # (`just wt-cert`). Plain HTTP redirects to HTTPS.
+  traefik:
+    image: traefik:v3.7.14
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=lc-infra
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls=true
+      - --api.dashboard=true
+    ports:
+      - 127.0.0.1:${HOST_HTTP_PORT:-80}:80
+      - 127.0.0.1:${HOST_HTTPS_PORT:-443}:443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${LC_DEV_HOME:?set by .envrc}/traefik:/etc/traefik/dynamic:ro
+    labels:
+      traefik.enable: 'true'
+      traefik.http.routers.infra-traefik.rule: Host(`traefik.infra.localhost`)
+      traefik.http.routers.infra-traefik.service: api@internal
+
+  #
+  # Vendor Services
+  #
+  listmonk:
+    image: listmonk/listmonk:v5.1.0
+    command: [sh, -c, './listmonk --install --yes && ./listmonk']
+    restart: unless-stopped
+    environment:
+      LISTMONK_db__host: postgres
+      LISTMONK_db__port: 5432
+      LISTMONK_db__user: listmonk
+      LISTMONK_db__password: listmonk
+      LISTMONK_db__database: listmonk
+      LISTMONK_db__ssl_mode: disable
+      LISTMONK_app__address: 0.0.0.0:9000
+      LISTMONK_ADMIN_USER: ${LISTMONK_USER}
+      LISTMONK_ADMIN_PASSWORD: ${LISTMONK_PASSWORD}
+      TZ: US/Eastern
+    ports:
+      - '127.0.0.1:${HOST_LISTMONK_PORT}:9000'
+    labels:
+      traefik.enable: 'true'
+      traefik.http.routers.infra-listmonk.rule: Host(`listmonk.infra.localhost`)
+      traefik.http.services.infra-listmonk.loadbalancer.server.port: '9000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  imgproxy:
+    image: darthsim/imgproxy:v3.21.0
+    restart: unless-stopped
+    environment:
+      IMGPROXY_KEY: ${IMGPROXY_KEY}
+      IMGPROXY_SALT: ${IMGPROXY_SALT}
+      # Originals are fetched over HTTP from the storage locations' public CDN
+      # URLs only. Composed in .envrc; each entry is a `/`-terminated prefix.
+      # Required (`:?`): an empty value would let imgproxy fetch any URL.
+      IMGPROXY_ALLOWED_SOURCES: ${IMGPROXY_ALLOWED_SOURCES:?set by .envrc from STORAGE_*_PUBLIC_URL}
+    ports:
+      - 127.0.0.1:${HOST_IMGPROXY_PORT}:8080
+    labels:
+      traefik.enable: 'true'
+      traefik.http.routers.infra-imgproxy.rule: Host(`imgproxy.infra.localhost`)
+      traefik.http.services.infra-imgproxy.loadbalancer.server.port: '8080'
+
+  # Stateless: verifies JWT_SECRET-signed download tokens, which every checkout
+  # shares, so one instance serves them all.
+  download-service:
+    build:
+      context: .
+      target: download-service
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:${HOST_DOWNLOAD_PORT:-4900}:8080
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+    labels:
+      traefik.enable: 'true'
+      traefik.http.routers.infra-download.rule: Host(`download.infra.localhost`)
+      traefik.http.services.infra-download.loadbalancer.server.port: '8080'
+
+  temporal-schema-setup:
+    image: temporalio/admin-tools:1.31.0
+    environment:
+      POSTGRES_SEEDS: postgres
+      DB_PORT: 5432
+      POSTGRES_USER: temporal
+      SQL_PASSWORD: password
+      DBNAME: temporal
+      ES_SEEDS: opensearch
+    command:
+      - sh
+      - -c
+      - |
+        retries=0; max_retries=30
+        until nc -z $${POSTGRES_SEEDS} $${DB_PORT}; do
+          retries=$$((retries + 1))
+          if [ "$$retries" -ge "$$max_retries" ]; then
+            echo "ERROR: PostgreSQL not reachable after $$((max_retries * 2))s"
+            exit 1
+          fi
+          echo 'Waiting for PostgreSQL...'; sleep 2
+        done
+        temporal-sql-tool \
+          --plugin postgres12_pgx \
+          --ep "$${POSTGRES_SEEDS}" \
+          -u "$${POSTGRES_USER}" \
+          -p "$${DB_PORT}" \
+          --db "$${DBNAME}" \
+          setup-schema -v 0.0 || true
+        temporal-sql-tool \
+          --plugin postgres12_pgx \
+          --ep "$${POSTGRES_SEEDS}" \
+          -u "$${POSTGRES_USER}" \
+          -p "$${DB_PORT}" \
+          --db "$${DBNAME}" \
+          update-schema \
+          -d /etc/temporal/schema/postgresql/v12/temporal/versioned
+        retries=0
+        until wget -qO- http://$${ES_SEEDS}:9200 >/dev/null 2>&1; do
+          retries=$$((retries + 1))
+          if [ "$$retries" -ge "$$max_retries" ]; then
+            echo "ERROR: Elasticsearch not reachable after $$((max_retries * 2))s"
+            exit 1
+          fi
+          echo 'Waiting for Elasticsearch...'; sleep 2
+        done
+        temporal-elasticsearch-tool --endpoint "http://$${ES_SEEDS}:9200" setup-schema --fail
+    depends_on:
+      - postgres
+      - opensearch
+
+  temporal:
+    image: temporalio/server:1.31.0
+    restart: unless-stopped
+    environment:
+      BIND_ON_IP: '0.0.0.0'
+      DB: postgres12_pgx
+      DB_PORT: 5432
+      POSTGRES_SEEDS: postgres
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: password
+      DBNAME: temporal
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yml
+      ENABLE_ES: true
+      ES_SEEDS: opensearch
+      ES_VERSION: v7 # Even though we run v8, temporal only has configuration for v7
+    ports:
+      - 127.0.0.1:${HOST_TEMPORAL_PORT}:7233
+    volumes:
+      - ./etc/temporal/dynamicconfig:/etc/temporal/config/dynamicconfig
+    depends_on:
+      temporal-schema-setup:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD', 'nc', '-z', 'localhost', '7233']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # `just temporal …` runs the CLI here with the calling checkout's
+  # TEMPORAL_NAMESPACE.
+  temporal-admin-tools:
+    image: temporalio/admin-tools:1.31.0
+    restart: unless-stopped
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+    stdin_open: true
+    tty: true
+    depends_on:
+      - temporal
+
+  temporal-ui:
+    image: temporalio/ui:2.44.1
+    restart: unless-stopped
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:3000
+    ports:
+      - 127.0.0.1:${HOST_TEMPORAL_UI_PORT}:8080
+    labels:
+      traefik.enable: 'true'
+      traefik.http.routers.infra-temporal.rule: Host(`temporal.infra.localhost`)
+      traefik.http.services.infra-temporal.loadbalancer.server.port: '8080'
+    depends_on:
+      - temporal
+
+  #
+  # Service Dependencies
+  #
+  postgres:
+    image: postgres:18.3-alpine3.23
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DATABASE}
+    ports:
+      - 127.0.0.1:${HOST_PG_PORT}:5432
+    volumes:
+      - ./etc/postgres-init:/docker-entrypoint-initdb.d
+      - pg-data:/var/lib/postgresql
+    command:
+      [
+        'postgres',
+        '-c',
+        'log_statement=all',
+        '-c',
+        'log_min_duration_statement=0',
+      ]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  opensearch:
+    image: opensearchproject/opensearch:3.8.0
+    restart: unless-stopped
+    environment:
+      - cluster.routing.allocation.disk.threshold_enabled=true
+      - cluster.routing.allocation.disk.watermark.low=512mb
+      - cluster.routing.allocation.disk.watermark.high=256mb
+      - cluster.routing.allocation.disk.watermark.flood_stage=128mb
+      - discovery.type=single-node
+      - OPENSEARCH_JAVA_OPTS=${OPENSEARCH_JAVA_OPTS:--Xms512m -Xmx512m}
+      - DISABLE_SECURITY_PLUGIN=true
+    ports:
+      - 127.0.0.1:${HOST_OPENSEARCH_PORT}:9200
+    volumes:
+      - os-data:/usr/share/opensearch/data
+    healthcheck:
+      test: curl -s -f opensearch:9200/_cluster/health >/dev/null || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    restart: unless-stopped
+    # Each checkout uses its own logical DB (LC_VALKEY_DB, 0 for the primary
+    # checkout, 1-255 hashed from the worktree name for the rest).
+    command:
+      ['valkey-server', '--save', '', '--appendonly', 'no', '--databases', '256']
+    ports:
+      - 127.0.0.1:${HOST_VALKEY_PORT}:6379
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mailpit:
+    image: axllent/mailpit:v1.13.0
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:${HOST_MAILPIT_SMTP_PORT}:1025 # smtp server
+      - 127.0.0.1:${HOST_MAILPIT_WEB_PORT}:8025 # web ui
+    labels:
+      traefik.enable: 'true'
+      traefik.http.routers.infra-mail.rule: Host(`mail.infra.localhost`)
+      traefik.http.services.infra-mail.loadbalancer.server.port: '8025'

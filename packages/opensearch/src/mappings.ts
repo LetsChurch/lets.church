@@ -3,7 +3,13 @@ import { diff } from 'jest-diff';
 import pc from 'picocolors';
 
 import { client, waitForOpenSearch } from './client';
-import { RRF_PIPELINE } from './media-search';
+import {
+  CHANNEL_INDEX,
+  MEDIA_INDEX,
+  ORGANIZATION_INDEX,
+  RRF_PIPELINE,
+  SPEAKER_VECTOR_INDEX,
+} from './indices';
 
 const logger = baseLogger.child({
   package: '@letschurch/opensearch',
@@ -28,7 +34,7 @@ const targetMappings: Record<
     dynamicSettings?: Record<string, unknown>;
   }
 > = {
-  lc_channels: {
+  [CHANNEL_INDEX]: {
     settings: {
       number_of_replicas: 0,
     },
@@ -44,7 +50,7 @@ const targetMappings: Record<
       },
     },
   },
-  lc_organizations: {
+  [ORGANIZATION_INDEX]: {
     settings: {
       number_of_replicas: 0,
     },
@@ -76,7 +82,7 @@ const targetMappings: Record<
   // upload with nested paragraphs (preserves `inner_hits` so search can show +
   // jump to the matched paragraph). The sole media search index now that the
   // legacy per-entity lc_uploads_v2 / lc_transcripts have been retired.
-  lc_media_v1: {
+  [MEDIA_INDEX]: {
     settings: {
       number_of_replicas: 0,
       // Enable approximate kNN (HNSW) for this index's knn_vector fields.
@@ -226,7 +232,7 @@ const targetMappings: Record<
   // label's mean titanet vector. Suggestion = kNN over `embedding` +
   // collapse(speakerId): server-side, score-ranked identities, no nested-kNN /
   // aggregation limitations. Synced by index-document.ts on every media reindex.
-  lc_speaker_vectors: {
+  [SPEAKER_VECTOR_INDEX]: {
     settings: {
       number_of_replicas: 0,
       'index.knn': true,
@@ -254,7 +260,7 @@ const serverMappings = Object.fromEntries(
       { mappings: { properties?: Record<string, Record<string, unknown>> } }
     >,
   )
-    .filter(([indexName]) => indexName.startsWith('lc_'))
+    .filter(([indexName]) => indexName in targetMappings)
     .map(
       ([
         indexName,

@@ -12,6 +12,7 @@ const {
   OPENSEARCH_USERNAME,
   OPENSEARCH_PASSWORD,
   OPENSEARCH_SSL_REJECT_UNAUTHORIZED,
+  OPENSEARCH_INDEX_PREFIX,
 } = z
   .object({
     OPENSEARCH_URL: z.string(),
@@ -21,6 +22,14 @@ const {
     OPENSEARCH_SSL_REJECT_UNAUTHORIZED: z
       .enum(['true', 'false'])
       .default('false'),
+    // Unset in production and the primary dev checkout. Dev worktrees share one
+    // cluster and set a per-worktree prefix (`<worktree>__`) so each gets its own
+    // indices + pipeline (see docs/worktrees.md). Must stay a valid index-name
+    // prefix: lowercase, not starting with `_`/`-`.
+    OPENSEARCH_INDEX_PREFIX: z
+      .string()
+      .regex(/^([a-z0-9][a-z0-9_-]*)?$/)
+      .default(''),
   })
   .parse(process.env);
 
@@ -30,7 +39,7 @@ const {
 // applied to a live index, so when one is needed the index is destroyed first
 // (manually, before that deploy), then recreated fresh + repopulated by
 // `index-verses.ts`.
-export const VERSE_INDEX = 'lets_bible_verses';
+export const VERSE_INDEX = `${OPENSEARCH_INDEX_PREFIX}lets_bible_verses`;
 
 // Companion index of multi-verse THOUGHT UNITS: the translators' own paragraphs
 // (reading blocks), embedded whole. Verse boundaries (Stephanus 1551) routinely
@@ -40,13 +49,13 @@ export const VERSE_INDEX = 'lets_bible_verses';
 // gives the verse-finder a recall lane for spanning thoughts (the model then
 // cites the anchor verse inside the passage). Same cluster, own index. See
 // search/passages.ts + index-passages.ts.
-export const PASSAGE_INDEX = 'lets_bible_passages';
+export const PASSAGE_INDEX = `${OPENSEARCH_INDEX_PREFIX}lets_bible_passages`;
 
 // Search pipeline that fuses the two branches of a `hybrid` query — the lexical
 // bool and the semantic knn — via min-max score normalization + a weighted
 // arithmetic mean (created by push-mappings.ts). Passed as the `search_pipeline`
 // URL param on the hybrid search request.
-export const HYBRID_PIPELINE = 'lets_bible_hybrid';
+export const HYBRID_PIPELINE = `${OPENSEARCH_INDEX_PREFIX}lets_bible_hybrid`;
 
 export const client = new Client({
   node: OPENSEARCH_URL,

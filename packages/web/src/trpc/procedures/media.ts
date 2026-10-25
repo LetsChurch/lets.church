@@ -13,7 +13,7 @@ import {
   UploadViewSecond,
   UploadViewSource,
 } from '@letschurch/db';
-import { osSearch } from '@letschurch/opensearch';
+import { MEDIA_INDEX, osSearch } from '@letschurch/opensearch';
 import { getPublicUrlWithFilename } from '@letschurch/s3';
 import { getLocation } from '@letschurch/s3/locations';
 import { xxh64 } from '@node-rs/xxhash';
@@ -1918,7 +1918,7 @@ export const mediaProcedures = {
       // the channel clause differs.
       const knnByChannel = (sameChannel: boolean) =>
         osSearch({
-          index: 'lc_media_v1',
+          index: MEDIA_INDEX,
           _source: false,
           size: k,
           // OpenSearch knn query: vector + k + an optional `filter` query that

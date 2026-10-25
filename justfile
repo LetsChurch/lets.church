@@ -2,35 +2,74 @@ default:
   @just --choose
 
 #
-# Docker
+# Shared infrastructure
+#
+# Postgres, OpenSearch, Temporal, Valkey, Mailpit, imgproxy, the download
+# service and the Traefik HTTPS router run ONCE, in the `lc-infra` compose
+# project (docker-compose.infra.yml), and every checkout's app stack below
+# connects to them. See docs/worktrees.md.
+
+# Start the shared infrastructure (idempotent) and wait until it's healthy
+infra-up *params:
+  scripts/dev-env.sh infra-up {{params}}
+infra-stop:
+  scripts/dev-env.sh infra down
+# Any docker compose command against the infra project, e.g. `just infra logs -f postgres`
+infra *args:
+  scripts/dev-env.sh infra {{args}}
+# Delete the shared infrastructure's data volumes — every checkout's databases and indices
+infra-prune:
+  scripts/dev-env.sh infra down --volumes
+
+#
+# Worktrees
+#
+# `wt switch --create <branch>` runs these through .config/wt.toml; they work in
+# any `git worktree` too.
+
+# Provision + start this worktree: copy the primary checkout's databases and
+# indices (`clone`, default), or start empty and run the seeds (`fresh`)
+wt-up mode='clone':
+  scripts/dev-env.sh wt-up {{mode}}
+# Stop this worktree and delete its databases, indices, Temporal namespace, cache, and certificate
+wt-down:
+  scripts/dev-env.sh wt-down
+# Print this checkout's URLs and resource names
+wt-info:
+  @scripts/dev-env.sh wt-info
+# (Re)issue the mkcert certificates for the infra hosts and this checkout
+wt-cert:
+  scripts/dev-env.sh cert
+
+#
+# Docker (this checkout's app containers)
 #
 
-start *params='-d --remove-orphans':
+start *params='-d --remove-orphans': infra-up
   docker compose up {{params}}
-preview *params='-d --remove-orphans':
-  docker compose -f docker-compose.yml -f docker-compose.preview.yml up {{params}}
+preview *params='-d --remove-orphans': infra-up
+  docker compose -f docker-compose.yml -f docker-compose.preview.yml $([ "$LC_ROUTING" = ports ] && echo '-f docker-compose.ports.yml') up {{params}}
 stop:
-  docker compose down
+  docker compose --profile '*' down
 stop-preview:
-  docker compose -f docker-compose.yml -f docker-compose.preview.yml down
+  docker compose -f docker-compose.yml -f docker-compose.preview.yml --profile '*' down
 prune:
-  docker compose down --rmi local --volumes
+  docker compose --profile '*' down --rmi local --volumes
 prune-preview:
-  docker compose -f docker-compose.yml -f docker-compose.preview.yml down --rmi local --volumes
+  docker compose -f docker-compose.yml -f docker-compose.preview.yml --profile '*' down --rmi local --volumes
 build *params:
   docker compose build {{params}}
 build-preview *params:
   docker compose -f docker-compose.yml -f docker-compose.preview.yml build {{params}}
 
-# Wait for docker services to be healthy (timeout after 60 seconds)
+# Wait for the shared infrastructure to be healthy
 check-health:
-  docker compose exec postgres sh -c 'timeout 60 sh -c "until pg_isready; do sleep 1; done"'
-  docker compose exec opensearch sh -c 'timeout 60 sh -c "until curl -sf opensearch:9200/_cat/health >/dev/null; do sleep 1; done"'
+  scripts/dev-env.sh infra-up
 
-# Start development services, initialize database, and seed data (web + lets.bible)
+# Start development services, initialize database, and seed data (web + lets.bible).
+# In a worktree, use `just wt-up` instead.
 up:
   just start
-  just check-health
   just init seed
   just lb-up
 
@@ -55,17 +94,18 @@ follow service: (logs service '-f')
 restart *services:
   docker compose restart {{services}}
 
+# Restart whichever workers this checkout runs (transcribe-worker is a profile)
 restart-workers:
-  docker compose restart background-worker import-worker probe-worker transcribe-worker transcode-worker
+  #!/usr/bin/env bash
+  set -euo pipefail
+  workers=$(docker compose ps --services --status running | grep -- '-worker$' || true)
+  [ -z "$workers" ] || docker compose restart $workers
 
 exec service +command:
   docker compose exec {{service}} {{command}}
 
 ports:
   docker compose ps --format json | jq -r '.[] | .Service, .Publishers[]?.PublishedPort'
-
-purge-pg:
-  docker volume rm ${COMPOSE_PROJECT_NAME}_pg-data
 
 pnpmi:
   just exec web pnpm install
@@ -74,8 +114,9 @@ pnpmi:
 # Development
 #
 
+# Temporal CLI, scoped to this checkout's namespace (TEMPORAL_NAMESPACE)
 temporal *args:
-  docker compose exec temporal-admin-tools temporal {{args}}
+  scripts/dev-env.sh temporal {{args}}
 
 db-generate name:
   docker compose exec web sh -c 'cd /usr/src/app/packages/db && pnpm exec drizzle-kit generate --name {{name}}'
@@ -339,11 +380,21 @@ regenerate-seed-transcript uuid model="base.en":
       --whisper-model {{model}}"
   echo "wrote $hls_dir/transcript.json"
 
+# Start over from empty data. In a worktree this only resets that worktree; in
+# the primary checkout it wipes the shared infrastructure, i.e. every
+# worktree's databases and indices too.
 reset:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  if [ "$LC_WT" != main ]; then
+    just wt-down
+    just wt-up fresh
+    exit
+  fi
   just stop
+  just infra-prune
   docker volume prune --all --force
   just start
-  gum spin --title "Waiting for services..." -- sleep 10
   just init seed
 
 truncate:

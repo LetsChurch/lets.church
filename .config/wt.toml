@@ -1,0 +1,29 @@
+# Worktree lifecycle for worktrunk (`wt`, in shell.nix). Every worktree gets
+# its own app stack on the shared infrastructure, reachable at
+# https://<worktree>.lc.localhost — see docs/worktrees.md. The hooks only call
+# just recipes, so with plain `git worktree` run the same steps by hand.
+
+[pre-start]
+# The new checkout's .envrc is the same file the primary checkout already
+# trusts; allow it so these hooks (and your shell) load the worktree's env.
+direnv = "direnv allow"
+# Personal, gitignored files listed in .worktreeinclude (AGENTS.local.md).
+copy = "wt step copy-ignored --require-include"
+
+[post-start]
+# Background (follow with `wt config state logs`). Host node_modules are for
+# editors and host-side checks; containers install their own.
+install = "direnv exec . pnpm install --frozen-lockfile"
+# Copies the primary checkout's databases + search indices, then starts the
+# containers and runs migrations. `just wt-up fresh` seeds from scratch instead.
+stack = "direnv exec . just wt-up"
+
+[pre-remove]
+# Stops the containers and deletes the worktree's databases, indices, Temporal
+# namespace, cache DB, and certificate.
+stack = "direnv exec . just wt-down"
+
+[list]
+# Matches .envrc's LC_WT for typical lowercase branch names (it also
+# lowercases and replaces other punctuation).
+url = "https://{{ branch | sanitize }}.lc.localhost"

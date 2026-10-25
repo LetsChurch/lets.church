@@ -15,8 +15,10 @@ export {
   waitForOpenSearch,
 } from './client';
 export * from './media-search';
+export { CHANNEL_INDEX, INDEX_PREFIX, ORGANIZATION_INDEX } from './indices';
 
 import type { OsMsearchItem } from './client';
+import { CHANNEL_INDEX, ORGANIZATION_INDEX } from './indices';
 
 export function msearchChannels(
   query: string,
@@ -24,7 +26,7 @@ export function msearchChannels(
   size = 0,
 ): [OsMsearchItem, OsMsearchItem] {
   return [
-    { index: 'lc_channels' },
+    { index: CHANNEL_INDEX },
     {
       from,
       size,
@@ -61,7 +63,7 @@ export function msearchOrganizations(
   const trimmed = query.trim();
 
   return [
-    { index: 'lc_organizations' },
+    { index: ORGANIZATION_INDEX },
     {
       from,
       size,
@@ -137,13 +139,13 @@ export const OrganizationHitHighlightSchema = z.object({
 
 export const ChannelHitSchema = z.object({
   ...BaseHitSchema,
-  _index: z.literal('lc_channels'),
+  _index: z.literal(CHANNEL_INDEX),
   _source: ChannelHitSourceSchema,
 });
 
 export const OrganizationHitSchema = z.object({
   ...BaseHitSchema,
-  _index: z.literal('lc_organizations'),
+  _index: z.literal(ORGANIZATION_INDEX),
   _source: OrganizationHitSourceSchema,
 });
 

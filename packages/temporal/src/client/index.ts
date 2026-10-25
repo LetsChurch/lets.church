@@ -25,8 +25,12 @@ export type { UploadRecordCreateData } from './create-upload-record';
 
 const moduleLogger = logger.child({ module: 'temporal' });
 
-const { TEMPORAL_ADDRESS } = z
-  .object({ TEMPORAL_ADDRESS: z.string() })
+const { TEMPORAL_ADDRESS, TEMPORAL_NAMESPACE } = z
+  .object({
+    TEMPORAL_ADDRESS: z.string(),
+    // Unset (`default`) in production; dev worktrees each get their own.
+    TEMPORAL_NAMESPACE: z.string().default('default'),
+  })
   .parse(process.env);
 
 async function waitOnTemporal() {
@@ -41,6 +45,7 @@ export const client = PLazy.from(async () => {
     connection: await Connection.connect({
       address: TEMPORAL_ADDRESS,
     }),
+    namespace: TEMPORAL_NAMESPACE,
   });
 });
 

@@ -11,6 +11,7 @@ const {
   MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS,
   SENTRY_DSN,
   TEMPORAL_ADDRESS,
+  TEMPORAL_NAMESPACE,
   TEMPORAL_SHUTDOWN_GRACE_TIME,
 } = z
   .object({
@@ -18,6 +19,8 @@ const {
     MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: z.string(),
     SENTRY_DSN: z.string(),
     TEMPORAL_ADDRESS: z.string(),
+    // Unset (`default`) in production; dev worktrees each get their own.
+    TEMPORAL_NAMESPACE: z.string().default('default'),
     TEMPORAL_SHUTDOWN_GRACE_TIME: z.string(),
   })
   .parse(process.env);
@@ -29,6 +32,7 @@ await checkYtDlp();
 const importWorker = await Worker.create({
   identity: `import-worker ${IDENTITY}`,
   connection: await NativeConnection.connect({ address: TEMPORAL_ADDRESS }),
+  namespace: TEMPORAL_NAMESPACE,
   activities: importActivities,
   taskQueue: IMPORT_QUEUE,
   shutdownGraceTime: TEMPORAL_SHUTDOWN_GRACE_TIME as `${number}`, // TODO: fix this

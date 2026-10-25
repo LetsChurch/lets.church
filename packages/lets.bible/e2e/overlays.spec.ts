@@ -70,13 +70,16 @@ test('LB-OV-14 OT-quotation hover card links to its source passage', async ({
   await expect(page).toHaveURL(/\/bible\/isaiah\/7\?v=14/);
 });
 
-test('LB-OV divine name renders as Yahweh per preference', async ({ page }) => {
+test('LB-OV divine name renders as Yahweh per preference', async ({
+  page,
+  baseURL,
+}) => {
   // Set the preference via the lb-prefs cookie (read on SSR + client).
   await page.context().addCookies([
     {
       name: 'lb-prefs',
       value: encodeURIComponent(JSON.stringify({ divineName: 'yahweh' })),
-      url: 'http://localhost:4001',
+      url: baseURL,
     },
   ]);
   await page.goto('/bible/genesis/2');

@@ -1,5 +1,6 @@
 import { db } from '@letschurch/db';
 import {
+  CHANNEL_INDEX,
   MSearchResponseSchema,
   msearchChannels,
   osMsearch,
@@ -29,7 +30,7 @@ export async function resolveChannelNames(
   const seen = new Set<string>();
   for (const res of parsed.responses) {
     for (const hit of res.hits.hits) {
-      if (hit._index !== 'lc_channels') continue;
+      if (hit._index !== CHANNEL_INDEX) continue;
       if (seen.has(hit._id)) continue;
       seen.add(hit._id);
       orderedIds.push(hit._id);

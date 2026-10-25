@@ -1,5 +1,13 @@
 export ZXCVBN_MINIMUM_SCORE=0
 
+# Worktrees (docs/worktrees.md). A worktree inherits the primary checkout's
+# .envrc.local, then applies its own; these are the usual per-worktree knobs.
+# export LC_WT=my-name                  # default: derived from the directory name
+# export COMPOSE_PROFILES=transcribe    # opt in: transcribe, webhooks, storybook
+# export LC_ROUTING=ports               # serve http://localhost:4000/:4001 instead of HTTPS
+# Shared OpenSearch heap (default -Xms512m -Xmx512m); applies to `just infra-up`.
+# export OPENSEARCH_JAVA_OPTS='-Xms2g -Xmx2g'
+
 # Shared by the web process and background worker. Required format:
 # <key-id>:<32-byte key encoded as unpadded base64url>
 export PASSWORDLESS_EMAIL_ENCRYPTION_KEY=

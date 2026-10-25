@@ -28,6 +28,8 @@ logger = logging.getLogger(__name__)
 
 async def main() -> None:
     temporal_address = os.getenv("TEMPORAL_ADDRESS", "localhost:7233")
+    # Unset ("default") in production; dev worktrees each get their own.
+    temporal_namespace = os.getenv("TEMPORAL_NAMESPACE", "default")
     identity = os.getenv("IDENTITY", "transcribe")
     task_queue = os.getenv("TRANSCRIBE_TASK_QUEUE", "transcribe")
     max_concurrent = int(os.getenv("MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS", "1"))
@@ -42,7 +44,7 @@ async def main() -> None:
 
     logger.info(
         f"starting transcribe worker: identity={identity} queue={task_queue} "
-        f"temporal={temporal_address} device={device}"
+        f"temporal={temporal_address} namespace={temporal_namespace} device={device}"
     )
     logger.info(
         f"models: whisper={whisper_model} wtpsplit={wtpsplit_model} "
@@ -71,7 +73,7 @@ async def main() -> None:
 
     logger.info("models initialized; connecting to Temporal")
 
-    client = await Client.connect(temporal_address, identity=identity)
+    client = await Client.connect(temporal_address, namespace=temporal_namespace, identity=identity)
     set_temporal_client(client)
 
     worker = Worker(

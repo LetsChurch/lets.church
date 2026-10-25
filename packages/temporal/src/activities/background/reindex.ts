@@ -6,8 +6,10 @@ import {
   UploadRecord,
 } from '@letschurch/db';
 import {
+  CHANNEL_INDEX,
   client,
   MEDIA_INDEX,
+  ORGANIZATION_INDEX,
   SPEAKER_VECTOR_INDEX,
 } from '@letschurch/opensearch';
 import { heartbeat } from '@temporalio/activity';
@@ -211,8 +213,8 @@ export async function reindexBatch(
  */
 export async function refreshReindexTargets(kind: ReindexKind): Promise<void> {
   const indices: Record<ReindexKind, string[]> = {
-    channel: ['lc_channels'],
-    organization: ['lc_organizations'],
+    channel: [CHANNEL_INDEX],
+    organization: [ORGANIZATION_INDEX],
     media: [MEDIA_INDEX, SPEAKER_VECTOR_INDEX],
     speaker: [SPEAKER_VECTOR_INDEX],
   };
