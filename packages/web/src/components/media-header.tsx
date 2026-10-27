@@ -1,6 +1,3 @@
-import { Link } from '@tanstack/react-router';
-
-import { Avatar } from '@/components/avatar';
 import { MediaActions } from '@/components/media-actions';
 
 type MediaDownloadKind =
@@ -83,11 +80,7 @@ export function MediaHeader({
         onRate={onRate}
         shareData={shareData}
         downloadData={downloadData}
-        channelData={{
-          id: channel.id,
-          name: channel.name,
-          isFollowing: channel.isFollowing,
-        }}
+        channelData={channel}
         onFollowToggle={onFollowToggle}
         isSaved={isSaved}
         onSaveToggle={onSaveToggle}
@@ -99,29 +92,6 @@ export function MediaHeader({
         mediaTitle={title}
         publishedAt={publishedAt}
         lengthSeconds={lengthSeconds}
-        channelLink={
-          <Link
-            to="/channel/$slug"
-            params={{ slug: channel.slug }}
-            className="flex shrink-0 items-center gap-1.5 transition-opacity hover:opacity-80"
-          >
-            <Avatar
-              src={channel.avatarUrl}
-              alt={channel.name}
-              className="border-fancy-pants size-7"
-              fallbackClassName="bg-brand font-bold text-xs"
-            />
-            <div className="flex flex-col gap-0.5">
-              <div className="text-primary text-xs font-semibold">
-                {channel.name}
-              </div>
-              <div className="text-[10px] text-zinc-400">
-                {channel.subscriberCount.toLocaleString()}{' '}
-                {channel.subscriberCount === 1 ? 'follower' : 'followers'}
-              </div>
-            </div>
-          </Link>
-        }
       />
     </div>
   );

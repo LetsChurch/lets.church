@@ -13,10 +13,9 @@ import {
   IconCode,
   IconDeviceTvOld,
   IconJson,
+  IconDotsVertical,
   IconDownload,
   IconEdit,
-  IconFlag,
-  IconFlagFilled,
   IconShare2,
   IconSparkles,
   IconThumbDown,
@@ -28,15 +27,21 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import posthog from 'posthog-js';
-import type { ReactNode } from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 
+import { Avatar } from '@/components/avatar';
 import LcButton from '@/components/lc-button';
 import LcButtonGroup from '@/components/lc-button-group';
-import { LcMenu, MenuItemButton, MenuItemLink } from '@/components/lc-menu';
+import {
+  LcMenu,
+  MenuItemButton,
+  MenuItemLink,
+  MenuItemRouterLink,
+} from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { LcTooltip } from '@/components/lc-tooltip';
 import { useAbortController } from '@/hooks/use-abort-controller';
+import { useOverflowItems } from '@/hooks/use-overflow-items';
 import { IncomingIdSchema } from '@/schemas/common';
 import { $currentTime } from '@/stores/player';
 import { askVideoQuestion, openVideoAsk } from '@/stores/video-ask';
@@ -53,6 +58,8 @@ type MediaDownloadKind =
   | 'TRANSCRIPT_VTT'
   | 'TRANSCRIPT_TXT'
   | 'TRANSCRIPT_JSON';
+
+type OverflowKey = 'rate' | 'share' | 'save' | 'ask' | 'download' | 'edit';
 
 type MediaActionsProps = {
   ratingData: {
@@ -72,6 +79,9 @@ type MediaActionsProps = {
   channelData: {
     id: string;
     name: string;
+    slug: string;
+    avatarUrl: string | null;
+    subscriberCount: number;
     isFollowing: boolean;
   };
   onFollowToggle: () => void;
@@ -83,7 +93,6 @@ type MediaActionsProps = {
   };
   hasVideo?: boolean;
   hasAudio?: boolean;
-  channelLink?: ReactNode;
   uploadId?: string;
   canEditUpload?: boolean;
   mediaTitle?: string | null;
@@ -141,7 +150,6 @@ export function MediaActions({
   mediaDimensions,
   hasVideo = true,
   hasAudio = false,
-  channelLink,
   uploadId,
   canEditUpload = false,
   mediaTitle,
@@ -178,10 +186,6 @@ export function MediaActions({
   const [frozenTime, setFrozenTime] = useState<number>(0);
   const [includeTimestamp, setIncludeTimestamp] = useState(true);
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [showLeftFade, setShowLeftFade] = useState(false);
-  const [showRightFade, setShowRightFade] = useState(false);
-
   // Per-video suggested questions for the Ask dropdown. Generated server-side
   // (gpt-6-luna) once and cached in Valkey, so this fires on mount —
   // pre-generating as the page loads — and the menu has them ready with no delay.
@@ -197,6 +201,7 @@ export function MediaActions({
   // Controlled so picking a question can close the menu (our custom MenuItemButton
   // onClick overrides Base UI's default close-on-select).
   const [askMenuOpen, setAskMenuOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
 
   // Format time as MM:SS or H:MM:SS
   const formatTime = useCallback((seconds: number) => {
@@ -236,28 +241,6 @@ export function MediaActions({
     },
     [includeTimestamp, getUrlWithTimestamp],
   );
-
-  const handleScroll = useCallback(() => {
-    if (!scrollRef.current) return;
-    const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-    setShowLeftFade(scrollLeft > 0);
-    setShowRightFade(scrollLeft < scrollWidth - clientWidth - 1);
-  }, []);
-
-  useEffect(() => {
-    const element = scrollRef.current;
-    if (!element) return;
-
-    handleScroll();
-
-    // Use ResizeObserver to detect when the container size changes
-    const resizeObserver = new ResizeObserver(handleScroll);
-    resizeObserver.observe(element);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [handleScroll]);
 
   const handleShare = async () => {
     // Freeze the current time when modal opens
@@ -383,30 +366,149 @@ export function MediaActions({
     }
   };
 
+  const downloads = downloadData?.enabled ? downloadData.urls : [];
+  // Dashboard routes are keyed by UUID; these ids may be short public ids
+  // (and uploadId may be either form, from the URL).
+  const editParams =
+    canEditUpload && uploadId
+      ? {
+          channelId: IncomingIdSchema.parse(channelData.id),
+          uploadId: IncomingIdSchema.parse(uploadId),
+        }
+      : null;
+
+  const { containerRef, triggerRef, itemRef, hidden, idealWidth } =
+    useOverflowItems(
+      [
+        'rate',
+        'share',
+        'save',
+        'ask',
+        ...(downloads.length > 0 ? (['download'] as const) : []),
+        ...(editParams ? (['edit'] as const) : []),
+      ],
+      ['edit', 'download', 'save', 'share'],
+    );
+  // Once everything fits again the More trigger hides, so close its menu (and
+  // keep it closed, rather than reopening the next time something overflows).
+  if (moreMenuOpen && hidden.size === 0) setMoreMenuOpen(false);
+
+  // Hidden items stay mounted (out of the flow, invisible and inert) so the
+  // hook can still measure them; `null` is the More trigger, shown only when
+  // something has overflowed.
+  const slotProps = (key: OverflowKey | null) => {
+    const isHidden = key ? hidden.has(key) : hidden.size === 0;
+    return {
+      inert: isHidden,
+      className: cn(
+        'shrink-0 whitespace-nowrap',
+        isHidden && 'invisible absolute',
+      ),
+    };
+  };
+
+  const toggleSave = () => {
+    posthog.capture(
+      isSaved ? 'media_unsaved' : 'media_saved',
+      baseEventProps(),
+    );
+    onSaveToggle();
+  };
+
+  const downloadItems = downloads.map((download) => (
+    <MenuItemLink
+      key={download.url}
+      href={download.url}
+      download
+      icon={getDownloadIcon(download.kind)}
+      onClick={() => {
+        posthog.capture('media_downloaded', {
+          ...baseEventProps(),
+          download_kind: download.kind,
+          download_label: download.label,
+        });
+      }}
+    >
+      Download {download.label}
+    </MenuItemLink>
+  ));
+
   return (
     <LcTooltip.Provider>
-      <div className="-mx-4 flex min-w-0 items-center gap-2 sm:-mx-4">
-        {/* Scrollable area with shadows */}
-        <div className="relative isolate min-w-0">
-          {/* Left fade shadow */}
-          <div
-            className={cn(
-              'pointer-events-none absolute top-0 bottom-0 left-0 z-10 transition-opacity duration-200',
-              'w-4 bg-linear-to-r from-page to-transparent',
-              'sm:w-9 sm:from-40%',
-              showLeftFade ? 'opacity-100' : 'opacity-0',
-            )}
-          />
-
-          {/* Scrollable content */}
-          <div
-            ref={scrollRef}
-            onScroll={handleScroll}
-            className="flex items-center gap-2.5 overflow-x-auto px-4 py-1"
+      {/* Wraps onto a second row on narrow screens instead of scrolling
+          sideways: a horizontal scroller hid actions people didn't know were
+          there. */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        {/* Channel + Follow */}
+        <div className="flex min-w-0 items-center gap-1.5">
+          <Link
+            to="/channel/$slug"
+            params={{ slug: channelData.slug }}
+            className="shrink-0 transition-opacity hover:opacity-80"
+            // The name beside it is the keyboard stop for the same link.
+            tabIndex={-1}
           >
-            {/* Channel Link */}
-            {channelLink}
+            <Avatar
+              src={channelData.avatarUrl}
+              alt={channelData.name}
+              className="border-fancy-pants size-7"
+              fallbackClassName="bg-brand font-bold text-xs"
+            />
+          </Link>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <Link
+              to="/channel/$slug"
+              params={{ slug: channelData.slug }}
+              title={channelData.name}
+              className="text-primary block max-w-[24ch] truncate text-xs font-semibold transition-opacity hover:opacity-80"
+            >
+              {channelData.name}
+            </Link>
+            <div className="flex items-center gap-1 text-[10px] text-zinc-400">
+              <span>
+                {channelData.subscriberCount.toLocaleString()}{' '}
+                {channelData.subscriberCount === 1 ? 'follower' : 'followers'}
+              </span>
+              <span aria-hidden>·</span>
+              <button
+                type="button"
+                className={cn(
+                  // after: pads the hit area out to a usable tap target
+                  // without changing the compact text-link look. It grows
+                  // sideways and down only, so it never covers the channel
+                  // name link directly above.
+                  'focus-visible:ring-brand relative rounded-sm font-semibold transition-colors outline-none after:absolute after:-inset-x-2 after:top-0 after:-bottom-2 focus-visible:ring-2',
+                  channelData.isFollowing
+                    ? 'hover:text-primary text-zinc-400'
+                    : 'text-brand hover:text-primary',
+                )}
+                onClick={() => {
+                  posthog.capture(
+                    channelData.isFollowing
+                      ? 'channel_unfollowed'
+                      : 'channel_followed',
+                    baseEventProps(),
+                  );
+                  onFollowToggle();
+                }}
+              >
+                {channelData.isFollowing ? 'Following' : 'Follow'}
+              </button>
+            </div>
+          </div>
+        </div>
 
+        {/* Items that don't fit move into the More menu (Edit first, then
+            Download, Save and Share). The ideal-width basis (content width
+            until measured) lets the row drop below the channel before
+            anything is hidden; flex-wrap is the last resort if even the
+            always-shown items don't fit. */}
+        <div
+          ref={containerRef}
+          style={{ flexBasis: idealWidth }}
+          className="relative flex min-w-0 flex-auto flex-wrap items-center gap-2.5 py-1"
+        >
+          <div ref={itemRef('rate')} {...slotProps('rate')}>
             {/* Ratings */}
             <LcButtonGroup
               buttons={[
@@ -463,7 +565,9 @@ export function MediaActions({
                 },
               ]}
             />
+          </div>
 
+          <div ref={itemRef('share')} {...slotProps('share')}>
             {/* Share */}
             <LcTooltip
               content="Share"
@@ -473,92 +577,34 @@ export function MediaActions({
                 </LcButton>
               )}
             />
+          </div>
 
-            {/* Download */}
-            {downloadData?.enabled && downloadData.urls.length > 0 ? (
-              <LcMenu.Root>
-                <LcMenu.Trigger
-                  render={(props) => (
-                    <LcButton {...props} className="p-2" aria-label="Download">
-                      <IconDownload size={16} />
-                    </LcButton>
-                  )}
-                />
-                <LcMenu.Portal>
-                  <LcMenu.Positioner sideOffset={8} align="start">
-                    <LcMenu.Popup>
-                      {downloadData.urls.map((download) => (
-                        <MenuItemLink
-                          key={download.url}
-                          href={download.url}
-                          download
-                          icon={getDownloadIcon(download.kind)}
-                          onClick={() => {
-                            posthog.capture('media_downloaded', {
-                              ...baseEventProps(),
-                              download_kind: download.kind,
-                              download_label: download.label,
-                            });
-                          }}
-                        >
-                          Download {download.label}
-                        </MenuItemLink>
-                      ))}
-                    </LcMenu.Popup>
-                  </LcMenu.Positioner>
-                </LcMenu.Portal>
-              </LcMenu.Root>
-            ) : null}
-
-            {/* Divider */}
-            <div className="bg-vertical-divider h-7 w-px shrink-0" />
-
+          <div ref={itemRef('save')} {...slotProps('save')}>
             {/* Save */}
-            <LcButton
-              className={cn(
-                'flex items-center gap-0.5',
-                isSaved && 'bg-gray-950/15 dark:bg-white/10',
+            <LcTooltip
+              content={isSaved ? 'Saved' : 'Save'}
+              render={(props) => (
+                <LcButton
+                  {...props}
+                  aria-label="Save"
+                  aria-pressed={isSaved}
+                  className={cn(
+                    'p-2',
+                    isSaved && 'bg-gray-950/15 dark:bg-white/10',
+                  )}
+                  onClick={toggleSave}
+                >
+                  {isSaved ? (
+                    <IconBookmarkFilled size={16} />
+                  ) : (
+                    <IconBookmark size={16} />
+                  )}
+                </LcButton>
               )}
-              onClick={() => {
-                posthog.capture(
-                  isSaved ? 'media_unsaved' : 'media_saved',
-                  baseEventProps(),
-                );
-                onSaveToggle();
-              }}
-            >
-              {isSaved ? (
-                <IconBookmarkFilled size={16} />
-              ) : (
-                <IconBookmark size={16} />
-              )}
-              {isSaved ? 'Saved' : 'Save'}
-            </LcButton>
+            />
+          </div>
 
-            {/* Follow */}
-            <LcButton
-              className={cn(
-                'flex items-center gap-0.5',
-                channelData.isFollowing && 'bg-gray-950/15 dark:bg-white/10',
-              )}
-              onClick={() => {
-                posthog.capture(
-                  channelData.isFollowing
-                    ? 'channel_unfollowed'
-                    : 'channel_followed',
-                  baseEventProps(),
-                );
-                onFollowToggle();
-              }}
-            >
-              {channelData.isFollowing ? (
-                <IconFlagFilled size={16} />
-              ) : (
-                <IconFlag size={16} />
-              )}
-              {channelData.isFollowing ? 'Following' : 'Follow'}
-            </LcButton>
-
+          <div ref={itemRef('ask')} {...slotProps('ask')}>
             {/* Ask — main segment focuses the transcript search; the caret opens
                 AI-generated, video-specific suggested questions. */}
             <LcMenu.Root open={askMenuOpen} onOpenChange={setAskMenuOpen}>
@@ -625,33 +671,103 @@ export function MediaActions({
             </LcMenu.Root>
           </div>
 
-          {/* Right fade shadow */}
-          <div
-            className={cn(
-              '-right-px pointer-events-none absolute top-0 bottom-0 z-10 w-4 bg-linear-to-l from-page to-transparent transition-opacity duration-200 sm:w-9 sm:from-40% sm:from-page',
-              showRightFade ? 'opacity-100' : 'opacity-0',
-            )}
-          />
-        </div>
+          {downloads.length > 0 ? (
+            <div ref={itemRef('download')} {...slotProps('download')}>
+              {/* Download */}
+              <LcMenu.Root>
+                <LcMenu.Trigger
+                  render={(props) => (
+                    <LcButton {...props} className="p-2" aria-label="Download">
+                      <IconDownload size={16} />
+                    </LcButton>
+                  )}
+                />
+                <LcMenu.Portal>
+                  <LcMenu.Positioner sideOffset={8} align="start">
+                    <LcMenu.Popup>{downloadItems}</LcMenu.Popup>
+                  </LcMenu.Positioner>
+                </LcMenu.Portal>
+              </LcMenu.Root>
+            </div>
+          ) : null}
 
-        {/* Edit Upload */}
-        {canEditUpload && uploadId ? (
-          <div className="shrink-0 pr-4">
-            <Link
-              to="/dashboard/channels/$channelId/uploads/$uploadId"
-              // Dashboard routes are keyed by UUID; these ids may be short
-              // public ids (and uploadId may be either form, from the URL).
-              params={{
-                channelId: IncomingIdSchema.parse(channelData.id),
-                uploadId: IncomingIdSchema.parse(uploadId),
-              }}
-              className="border-fancy-pants text-primary/80 hover:text-primary inline-flex items-center gap-0.5 rounded-full bg-gray-950/10 px-3 py-1.5 text-sm font-semibold transition-colors hover:bg-gray-950/15 active:scale-[0.97] dark:bg-white/15 dark:hover:bg-white/20"
-            >
-              <IconEdit size={16} />
-              Edit
-            </Link>
+          {editParams ? (
+            <div ref={itemRef('edit')} {...slotProps('edit')}>
+              <Link
+                to="/dashboard/channels/$channelId/uploads/$uploadId"
+                params={editParams}
+                className="border-fancy-pants text-primary/80 hover:text-primary inline-flex items-center gap-0.5 rounded-full bg-gray-950/10 px-3 py-1.5 text-sm font-semibold transition-colors hover:bg-gray-950/15 active:scale-[0.97] dark:bg-white/15 dark:hover:bg-white/20"
+              >
+                <IconEdit size={16} />
+                Edit
+              </Link>
+            </div>
+          ) : null}
+
+          {/* More: whatever no longer fits on the row */}
+          <div ref={triggerRef} {...slotProps(null)}>
+            <LcMenu.Root open={moreMenuOpen} onOpenChange={setMoreMenuOpen}>
+              <LcMenu.Trigger
+                render={(props) => (
+                  <LcButton
+                    {...props}
+                    className="p-2"
+                    aria-label="More actions"
+                  >
+                    <IconDotsVertical size={16} />
+                  </LcButton>
+                )}
+              />
+              <LcMenu.Portal>
+                <LcMenu.Positioner sideOffset={8} align="end">
+                  <LcMenu.Popup>
+                    {hidden.has('share') ? (
+                      <MenuItemButton
+                        icon={<IconShare2 size={16} />}
+                        onClick={() => {
+                          setMoreMenuOpen(false);
+                          handleShare();
+                        }}
+                      >
+                        Share
+                      </MenuItemButton>
+                    ) : null}
+                    {hidden.has('save') ? (
+                      <MenuItemButton
+                        icon={
+                          isSaved ? (
+                            <IconBookmarkFilled size={16} />
+                          ) : (
+                            <IconBookmark size={16} />
+                          )
+                        }
+                        onClick={() => {
+                          setMoreMenuOpen(false);
+                          toggleSave();
+                        }}
+                      >
+                        {isSaved ? 'Remove from saved' : 'Save'}
+                      </MenuItemButton>
+                    ) : null}
+                    {hidden.has('download') ? downloadItems : null}
+                    {hidden.has('edit') && editParams ? (
+                      <>
+                        {hidden.size > 1 ? <LcMenu.Separator /> : null}
+                        <MenuItemRouterLink
+                          to="/dashboard/channels/$channelId/uploads/$uploadId"
+                          params={editParams}
+                          icon={<IconEdit size={16} />}
+                        >
+                          Edit
+                        </MenuItemRouterLink>
+                      </>
+                    ) : null}
+                  </LcMenu.Popup>
+                </LcMenu.Positioner>
+              </LcMenu.Portal>
+            </LcMenu.Root>
           </div>
-        ) : null}
+        </div>
       </div>
 
       {/* Share Modal */}
