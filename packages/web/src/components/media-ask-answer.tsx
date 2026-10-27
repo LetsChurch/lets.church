@@ -3,7 +3,7 @@ import { IconSparkles, IconX } from '@tabler/icons-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { VideoAnswerPanel } from '@/components/answer-panel';
-import { $setPlayAt } from '@/stores/player';
+import { seekTo } from '@/stores/player';
 import {
   $focusVideoAskInput,
   $videoAskActive,
@@ -56,7 +56,7 @@ export function MediaAskAnswer({ mediaId }: { mediaId: string }) {
           key={question}
           mediaId={mediaId}
           question={question}
-          onCite={(seconds) => $setPlayAt.set(seconds)}
+          onCite={seekTo}
         />
       </div>
     );

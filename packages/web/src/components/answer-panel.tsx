@@ -1121,10 +1121,12 @@ export function VideoAnswerPanel({
   mediaId,
   question,
   onCite,
+  variant,
 }: {
   mediaId: string;
   question: string;
   onCite: (startSeconds: number) => void;
+  variant?: 'card' | 'plain';
 }) {
   const [text, setText] = useState('');
   const [status, setStatus] = useState<AnswerStatus>('streaming');
@@ -1160,6 +1162,7 @@ export function VideoAnswerPanel({
       sources={sources}
       heading={question}
       onCite={onCite}
+      variant={variant}
       showActions
       answerId={terminal?.status === 'done' ? terminal.answerId : undefined}
     />

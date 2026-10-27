@@ -10,7 +10,7 @@ import { Link } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
 
 import { LcTooltip } from '@/components/lc-tooltip';
-import { $setPlayAt } from '@/stores/player';
+import { seekTo } from '@/stores/player';
 import { formatDate, formatTime } from '@/util/format';
 import type { KeywordIndexEntry } from '@/util/keyword-index';
 import { getLicenseInfo } from '@/util/license';
@@ -86,7 +86,7 @@ export function MediaInfoTabs({
         if (lengthSeconds != null && seconds > lengthSeconds) return;
 
         e.preventDefault();
-        $setPlayAt.set(seconds);
+        seekTo(seconds);
       },
       ac,
     );
@@ -260,7 +260,7 @@ export function MediaInfoTabs({
                   <div className="flex items-baseline gap-2">
                     <button
                       type="button"
-                      onClick={() => $setPlayAt.set(entry.startSeconds)}
+                      onClick={() => seekTo(entry.startSeconds)}
                       className="bg-primary/5 text-primary/70 hover:bg-primary/10 hover:text-primary dark:bg-primary/10 dark:hover:bg-primary/20 inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 text-xs tabular-nums"
                     >
                       <IconClock size={12} aria-hidden="true" />
@@ -313,7 +313,7 @@ export function MediaInfoTabs({
                       >
                         <button
                           type="button"
-                          onClick={() => $setPlayAt.set(occurrence.seconds)}
+                          onClick={() => seekTo(occurrence.seconds)}
                           className="bg-primary/5 text-primary/70 hover:bg-primary/10 hover:text-primary dark:bg-primary/10 dark:hover:bg-primary/20 inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 text-xs tabular-nums"
                         >
                           <IconClock size={12} aria-hidden="true" />

@@ -29,6 +29,8 @@ import { askVideoQuestion } from '@/stores/video-ask';
 
 type MediaSidebarTabsProps = {
   paragraphs: Array<TranscriptParagraph>;
+  // Media page path for copied timestamp links (see TranscriptParagraphs).
+  linkPath: string;
   isTranscriptProcessing: boolean;
   playlistContext?: {
     listId: string;
@@ -47,6 +49,7 @@ type MediaSidebarTabsProps = {
 
 export function MediaSidebarTabs({
   paragraphs,
+  linkPath,
   isTranscriptProcessing,
   playlistContext,
   dockSlotRef,
@@ -210,6 +213,7 @@ export function MediaSidebarTabs({
                   <TranscriptParagraphs
                     paragraphs={matchedParagraphs}
                     isTranscriptProcessing={isTranscriptProcessing}
+                    linkPath={linkPath}
                     highlightQuery={searchQuery}
                   />
                 ) : (
@@ -219,6 +223,7 @@ export function MediaSidebarTabs({
                 <TranscriptParagraphs
                   paragraphs={paragraphs}
                   isTranscriptProcessing={isTranscriptProcessing}
+                  linkPath={linkPath}
                 />
               )}
             </div>

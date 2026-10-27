@@ -10,9 +10,11 @@ import {
 import { Link } from '@tanstack/react-router';
 import bSearch from 'binary-search';
 import {
+  createContext,
   Fragment,
   memo,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -26,7 +28,7 @@ import {
 } from '@/components/lc-menu';
 import { LcTooltip } from '@/components/lc-tooltip';
 import { useCopied } from '@/hooks/use-copied';
-import { $currentTime, $setPlayAt } from '@/stores/player';
+import { $currentTime, seekTo } from '@/stores/player';
 import {
   buildLetsBibleUrl,
   formatBibleRef,
@@ -78,6 +80,10 @@ export type TranscriptParagraph = {
 
 type Props = {
   paragraphs: Array<TranscriptParagraph>;
+  // Path of the media page (see mediaPagePath) that copied timestamp links
+  // point at. Explicit rather than the current URL, because the transcript
+  // also shows outside its media page (the mini player).
+  linkPath: string;
   isTranscriptProcessing?: boolean;
   // When set (paragraph-search results), per-word matches get orange
   // `<mark>` styling. Each
@@ -278,16 +284,19 @@ const BIBLE_HIGHLIGHT_CLASS =
 const KEYWORD_HIGHLIGHT_CLASS =
   'bg-sky-400/25 dark:bg-transparent dark:text-white';
 
-// Copy a `<page>#t=<seconds>` deep-link to the clipboard, exposing a transient
+const LinkPathContext = createContext('');
+
+// Copy a `<media page>#t=<seconds>` deep-link to the clipboard, exposing a transient
 // `copied` flag for the icon swap. `navigator.clipboard` rejects on insecure
 // contexts (http://) or when denied — silent, since the URL bar still works.
 function useCopyTimestampLink(seconds: number) {
   const { copied, copy } = useCopied(1500);
+  const linkPath = useContext(LinkPathContext);
   const copyLink = useCallback(() => {
-    const base = window.location.href.split('#')[0] ?? '';
-    const seekTo = Math.max(0, Math.round(seconds));
-    return copy(`${base}#t=${seekTo}`);
-  }, [seconds, copy]);
+    const url = new URL(linkPath, window.location.origin);
+    url.hash = `t=${Math.max(0, Math.round(seconds))}`;
+    return copy(url.href);
+  }, [seconds, copy, linkPath]);
   return { copied, copy: copyLink };
 }
 
@@ -669,6 +678,7 @@ export function TranscriptNoMatches() {
 
 export function TranscriptParagraphs({
   paragraphs,
+  linkPath,
   isTranscriptProcessing = false,
   highlightQuery,
 }: Props) {
@@ -722,7 +732,7 @@ export function TranscriptParagraphs({
   }, [active.paragraphIndex, paragraphs, highlightPattern]);
 
   const handleSeek = useCallback((start: number) => {
-    $setPlayAt.set(start);
+    seekTo(start);
   }, []);
 
   if (isTranscriptProcessing || paragraphs.length === 0) {
@@ -758,27 +768,29 @@ export function TranscriptParagraphs({
   }
 
   return (
-    <LcTooltip.Provider>
-      <div
-        ref={containerRef}
-        className="size-full overflow-auto py-5 pr-5 pl-2"
-      >
-        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-3">
-          {paragraphs.map((p, pi) => (
-            <ParagraphView
-              key={p.order}
-              paragraph={p}
-              activeWordIndex={
-                pi === active.paragraphIndex ? active.wordIndex : -1
-              }
-              isActive={pi === active.paragraphIndex}
-              isFirstParagraph={pi === 0}
-              onSeek={handleSeek}
-              highlightPattern={highlightPattern}
-            />
-          ))}
+    <LinkPathContext.Provider value={linkPath}>
+      <LcTooltip.Provider>
+        <div
+          ref={containerRef}
+          className="size-full overflow-auto py-5 pr-5 pl-2"
+        >
+          <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-3">
+            {paragraphs.map((p, pi) => (
+              <ParagraphView
+                key={p.order}
+                paragraph={p}
+                activeWordIndex={
+                  pi === active.paragraphIndex ? active.wordIndex : -1
+                }
+                isActive={pi === active.paragraphIndex}
+                isFirstParagraph={pi === 0}
+                onSeek={handleSeek}
+                highlightPattern={highlightPattern}
+              />
+            ))}
+          </div>
         </div>
-      </div>
-    </LcTooltip.Provider>
+      </LcTooltip.Provider>
+    </LinkPathContext.Provider>
   );
 }

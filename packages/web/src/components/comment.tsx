@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Avatar } from '@/components/avatar';
 import { CommentInput } from '@/components/comment-input';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
-import { $setPlayAt } from '@/stores/player';
+import { seekTo } from '@/stores/player';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 
@@ -46,7 +46,7 @@ function renderWithTimestamps(
         href={`#t=${s}`}
         onClick={(e) => {
           e.preventDefault();
-          $setPlayAt.set(s);
+          seekTo(s);
         }}
         className="text-brand hover:text-brand cursor-pointer underline decoration-dotted dark:text-white dark:hover:text-white"
       >

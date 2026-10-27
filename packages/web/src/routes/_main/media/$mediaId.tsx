@@ -69,6 +69,7 @@ import {
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { formatTime } from '@/util/format';
 import { buildKeywordIndex } from '@/util/keyword-index';
+import { mediaPagePath } from '@/util/media-path';
 import { buildScriptureIndex } from '@/util/scripture-index';
 import { useVideoLayout } from '@/util/use-video-layout';
 
@@ -337,9 +338,11 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
 function MobileTranscriptDrawerContent({
   paragraphs,
   isTranscriptProcessing,
+  linkPath,
 }: {
   paragraphs: Array<TranscriptParagraph>;
   isTranscriptProcessing: boolean;
+  linkPath: string;
 }) {
   const isSearchActive = useStore($isSearchActive);
   const searchQuery = useStore($searchQuery);
@@ -422,6 +425,7 @@ function MobileTranscriptDrawerContent({
             <TranscriptParagraphs
               paragraphs={matchedParagraphs}
               isTranscriptProcessing={isTranscriptProcessing}
+              linkPath={linkPath}
               highlightQuery={searchQuery}
             />
           ) : (
@@ -431,6 +435,7 @@ function MobileTranscriptDrawerContent({
           <TranscriptParagraphs
             paragraphs={paragraphs}
             isTranscriptProcessing={isTranscriptProcessing}
+            linkPath={linkPath}
           />
         )}
       </div>
@@ -629,6 +634,7 @@ function RouteComponent() {
   // shows when there's a series/playlist to navigate.
   const hideTranscript = media.servingMux;
   const mediaIdShort = idTranslator.fromUUID(params.mediaId);
+  const transcriptLinkPath = mediaPagePath(mediaIdShort, searchParams.list);
   const nextItem = playlistData?.nextItem ?? undefined;
 
   // Autoplay
@@ -1012,6 +1018,9 @@ function RouteComponent() {
     (dockedVideoHeight * aspectWidth) / aspectHeight,
   );
 
+  // A boolean, not the Date: refetches hand back a new Date instance, which
+  // would give the now-playing media a new identity on every poll.
+  const isTranscriptProcessing = !media.transcribingFinishedAt;
   const nowPlayingMedia = useMemo<NowPlayingMedia>(
     () => ({
       id: params.mediaId,
@@ -1027,6 +1036,8 @@ function RouteComponent() {
       width: media.width ?? null,
       height: media.height ?? null,
       isLive: media.isLive,
+      hasTranscript: !hideTranscript,
+      isTranscriptProcessing,
     }),
     [
       params.mediaId,
@@ -1042,6 +1053,8 @@ function RouteComponent() {
       media.width,
       media.height,
       media.isLive,
+      hideTranscript,
+      isTranscriptProcessing,
     ],
   );
 
@@ -1230,6 +1243,7 @@ function RouteComponent() {
                 dockSlotHeight={dockedPlayer.slotHeight}
                 paragraphs={paragraphs ?? []}
                 isTranscriptProcessing={!media.transcribingFinishedAt}
+                linkPath={transcriptLinkPath}
                 playlistContext={
                   hasPlaylistContext && activeListId && playlistData
                     ? {
@@ -1262,6 +1276,7 @@ function RouteComponent() {
             <MobileTranscriptDrawerContent
               paragraphs={paragraphs ?? []}
               isTranscriptProcessing={!media.transcribingFinishedAt}
+              linkPath={transcriptLinkPath}
             />
           </MobileDrawer.Content>
         </MobileDrawer.Portal>

@@ -1,6 +1,8 @@
 import { useStore } from '@nanostores/react';
 import {
   IconArrowsDiagonal,
+  IconChevronDown,
+  IconChevronUp,
   IconPlayerPauseFilled,
   IconPlayerPlayFilled,
   IconRewindBackward15,
@@ -10,6 +12,7 @@ import {
 import { Link } from '@tanstack/react-router';
 import type { HlsVideoElement } from 'hls-video-element';
 import {
+  type ComponentProps,
   type ReactElement,
   useCallback,
   useEffect,
@@ -20,6 +23,11 @@ import {
 import { createPortal } from 'react-dom';
 
 import { LcTooltip } from '@/components/lc-tooltip';
+import {
+  type MiniPanel,
+  MiniPanelContent,
+  MiniPanelToggles,
+} from '@/components/mini-player-panel';
 import { Player } from '@/components/player';
 import { flip } from '@/hooks/use-docked-player';
 import { useBrowserSize } from '@/stores/browser-size';
@@ -309,12 +317,20 @@ function useMediaElementState(el: HlsVideoElement | null) {
 const MINI_DESKTOP_BOX = { width: 344, height: 194 };
 const MINI_MOBILE_BOX = { width: 84, height: 48 };
 const DISMISS_MS = 200;
+// Matches the panel's duration-300 grow/shrink transition.
+const PANEL_MS = 300;
+const PANEL_ID = 'mini-player-panel';
+const EXPAND_BUTTON_ID = 'mini-player-expand';
 
 /**
  * Owns the app's one <Player> (see the note at the top of this file) and the
  * mini player it shrinks into off the media page: a card in the bottom-right
  * corner on desktop, and a bar floating above the bottom tab bar on mobile
  * (Apple Podcasts-style). Render once, in the app shell.
+ *
+ * The mini player can grow to show the transcript or "ask about this video"
+ * (see mini-player-panel.tsx): below the controls on desktop, and above the bar
+ * on mobile, so the controls stay where the user's thumb already is.
  */
 export function PersistentPlayerHost() {
   const nowPlaying = useStore($nowPlaying);
@@ -323,12 +339,49 @@ export function PersistentPlayerHost() {
   const [portalTarget, setPortalTarget] = useState<HTMLDivElement | null>(null);
   const [mediaEl, setMediaEl] = useState<HlsVideoElement | null>(null);
   const [dismissing, setDismissing] = useState(false);
+  const [panel, setPanel] = useState<MiniPanel | null>(null);
+  // The panel last shown, for the mobile expand button to reopen.
+  const [lastPanel, setLastPanel] = useState<MiniPanel>('transcript');
   const miniSlotRef = useRef<HTMLDivElement>(null);
 
   const mode = getPlayerMode(nowPlaying, page);
   const media = nowPlaying?.media;
   const isOpen = mode === 'mini' && !dismissing;
   const { paused, currentTime, duration } = useMediaElementState(mediaEl);
+  const showPanel = isOpen && media?.hasTranscript ? panel : null;
+  // What the panel shows: kept through the collapse animation so the content
+  // doesn't vanish before the card has shrunk.
+  const [closingPanel, setClosingPanel] = useState<MiniPanel | null>(null);
+  // Only while still the mini player: on expanding to (or opening another)
+  // media page the old panel must not remount for whatever plays next.
+  const renderedPanel = showPanel ?? (mode === 'mini' ? closingPanel : null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Every trip into the mini player (and every new media) starts collapsed.
+  useEffect(() => {
+    setPanel(null);
+  }, [mode, media?.id]);
+
+  useEffect(() => {
+    if (showPanel) {
+      setClosingPanel(showPanel);
+      return;
+    }
+    const id = window.setTimeout(() => setClosingPanel(null), PANEL_MS);
+    return () => window.clearTimeout(id);
+  }, [showPanel]);
+
+  const choosePanel = (next: MiniPanel | null) => {
+    setPanel(next);
+    if (next) setLastPanel(next);
+    // Closed from inside the panel (its own toggles, on mobile): the panel
+    // goes inert, so hand focus to the expand button rather than <body>.
+    if (!next && panelRef.current?.contains(document.activeElement)) {
+      requestAnimationFrame(() =>
+        document.getElementById(EXPAND_BUTTON_ID)?.focus(),
+      );
+    }
+  };
 
   // Client-only: there's nothing to play during SSR, and portals don't SSR.
   useEffect(() => {
@@ -437,11 +490,13 @@ export function PersistentPlayerHost() {
     icon: ReactElement,
     onClick: () => void,
     className?: string,
+    buttonProps?: ComponentProps<'button'>,
   ) => (
     <LcTooltip
       content={label}
       render={
         <button
+          {...buttonProps}
           type="button"
           aria-label={label}
           onClick={onClick}
@@ -462,8 +517,8 @@ export function PersistentPlayerHost() {
         aria-label="Now playing"
         inert={!isOpen}
         className={cn(
-          'fixed inset-x-2 bottom-[calc(var(--bottom-tab-bar-height,0px)+0.5rem)] z-30 isolate flex items-center gap-3 p-2',
-          'sm:inset-x-auto sm:right-4 sm:bottom-4 sm:w-90 sm:flex-col sm:items-stretch sm:gap-2',
+          'fixed inset-x-2 bottom-[calc(var(--bottom-tab-bar-height,0px)+0.5rem)] z-30 isolate flex flex-col p-2',
+          'sm:inset-x-auto sm:right-4 sm:bottom-4 sm:w-90',
           !isOpen && 'pointer-events-none',
         )}
       >
@@ -477,101 +532,171 @@ export function PersistentPlayerHost() {
           )}
         />
 
-        <div
-          className={cn(
-            'group relative flex h-12 w-21 shrink-0 items-center justify-center sm:h-auto sm:w-full sm:aspect-video',
-            // Mid-hand-off (left the page before playback started) the player
-            // is parked here for a moment; never show it.
-            mode === 'none' && 'invisible',
-            dismissing && 'opacity-0 transition-opacity duration-200',
-          )}
-        >
+        {/* Order: on mobile the panel opens above the bar; on desktop it opens
+            below the controls. */}
+        <div className="relative order-2 flex items-center gap-3 sm:order-1 sm:flex-col sm:items-stretch sm:gap-2">
           <div
-            ref={miniSlotRef}
-            className="flex size-full items-center justify-center"
-          />
-          {mediaLink ? (
-            // Pointer shortcut to expand; the title link is the accessible one.
-            <Link
-              {...mediaLink}
-              aria-hidden
-              tabIndex={-1}
-              className="absolute inset-0 flex items-start rounded-lg p-1.5 opacity-0 transition-opacity group-hover:opacity-100 max-sm:hidden"
-            >
-              <span className="rounded-md bg-black/60 p-1 text-white">
-                <IconArrowsDiagonal size={16} />
-              </span>
-            </Link>
-          ) : null}
-        </div>
-
-        <div
-          className={cn(
-            'flex min-w-0 flex-1 items-center gap-1 transition-opacity duration-200 sm:px-1',
-            isOpen ? 'opacity-100' : 'opacity-0',
-          )}
-        >
-          {media && mediaLink ? (
-            <>
-              <div className="mr-1 min-w-0 flex-1">
-                <Link
-                  {...mediaLink}
-                  className="text-primary block truncate text-sm font-semibold hover:underline focus-visible:underline"
-                >
-                  {title}
-                </Link>
-                <p className="text-secondary flex items-center gap-1.5 truncate text-xs">
-                  {media.isLive ? (
-                    <span className="rounded bg-red-600 px-1 text-[10px] font-semibold text-white uppercase">
-                      Live
-                    </span>
-                  ) : null}
-                  <span className="truncate">{media.channelName}</span>
-                </p>
-              </div>
-              {media.isLive
-                ? null
-                : controlButton(
-                    'Back 15 seconds',
-                    <IconRewindBackward15 size={20} />,
-                    () => seekBy(-15),
-                    'max-sm:hidden',
-                  )}
-              {controlButton(
-                paused ? 'Play' : 'Pause',
-                paused ? (
-                  <IconPlayerPlayFilled size={20} />
-                ) : (
-                  <IconPlayerPauseFilled size={20} />
-                ),
-                togglePlay,
-              )}
-              {media.isLive
-                ? null
-                : controlButton(
-                    'Forward 15 seconds',
-                    <IconRewindForward15 size={20} />,
-                    () => seekBy(15),
-                    'max-sm:hidden',
-                  )}
-              {controlButton('Close player', <IconX size={18} />, dismiss)}
-            </>
-          ) : null}
-        </div>
-
-        {progress !== null ? (
-          <div
-            aria-hidden
             className={cn(
-              'absolute inset-x-3 bottom-0 h-0.5 overflow-hidden rounded-full bg-zinc-200 transition-opacity duration-200 dark:bg-white/10',
-              isOpen ? 'opacity-100' : 'opacity-0',
+              'group relative flex h-12 w-21 shrink-0 items-center justify-center sm:h-auto sm:w-full sm:aspect-video',
+              // Mid-hand-off (left the page before playback started) the player
+              // is parked here for a moment; never show it.
+              mode === 'none' && 'invisible',
+              dismissing && 'opacity-0 transition-opacity duration-200',
             )}
           >
             <div
-              className="bg-brand h-full"
-              style={{ width: `${progress}%` }}
+              ref={miniSlotRef}
+              className="flex size-full items-center justify-center"
             />
+            {mediaLink ? (
+              // Pointer shortcut to expand; the title link is the accessible one.
+              <Link
+                {...mediaLink}
+                aria-hidden
+                tabIndex={-1}
+                className="absolute inset-0 flex items-start rounded-lg p-1.5 opacity-0 transition-opacity group-hover:opacity-100 max-sm:hidden"
+              >
+                <span className="rounded-md bg-black/60 p-1 text-white">
+                  <IconArrowsDiagonal size={16} />
+                </span>
+              </Link>
+            ) : null}
           </div>
+
+          <div
+            className={cn(
+              'flex min-w-0 flex-1 items-center gap-1 transition-opacity duration-200 sm:px-1',
+              isOpen ? 'opacity-100' : 'opacity-0',
+            )}
+          >
+            {media && mediaLink ? (
+              <>
+                <div className="mr-1 min-w-0 flex-1">
+                  <Link
+                    {...mediaLink}
+                    className="text-primary block truncate text-sm font-semibold hover:underline focus-visible:underline"
+                  >
+                    {title}
+                  </Link>
+                  <p className="text-secondary flex items-center gap-1.5 truncate text-xs">
+                    {media.isLive ? (
+                      <span className="rounded bg-red-600 px-1 text-[10px] font-semibold text-white uppercase">
+                        Live
+                      </span>
+                    ) : null}
+                    <span className="truncate">{media.channelName}</span>
+                  </p>
+                </div>
+                {media.isLive
+                  ? null
+                  : controlButton(
+                      'Back 15 seconds',
+                      <IconRewindBackward15 size={20} />,
+                      () => seekBy(-15),
+                      'max-sm:hidden',
+                    )}
+                {controlButton(
+                  paused ? 'Play' : 'Pause',
+                  paused ? (
+                    <IconPlayerPlayFilled size={20} />
+                  ) : (
+                    <IconPlayerPauseFilled size={20} />
+                  ),
+                  togglePlay,
+                )}
+                {media.isLive
+                  ? null
+                  : controlButton(
+                      'Forward 15 seconds',
+                      <IconRewindForward15 size={20} />,
+                      () => seekBy(15),
+                      'max-sm:hidden',
+                    )}
+                {media.hasTranscript
+                  ? controlButton(
+                      showPanel
+                        ? 'Hide transcript and ask'
+                        : 'Show transcript and ask',
+                      showPanel ? (
+                        <IconChevronDown size={20} />
+                      ) : (
+                        <IconChevronUp size={20} />
+                      ),
+                      () => choosePanel(showPanel ? null : lastPanel),
+                      'sm:hidden',
+                      {
+                        id: EXPAND_BUTTON_ID,
+                        'aria-expanded': Boolean(showPanel),
+                        'aria-controls': PANEL_ID,
+                      },
+                    )
+                  : null}
+                {controlButton('Close player', <IconX size={18} />, dismiss)}
+              </>
+            ) : null}
+          </div>
+
+          {progress !== null ? (
+            <div
+              aria-hidden
+              className={cn(
+                'absolute inset-x-1 -bottom-2 h-0.5 overflow-hidden rounded-full bg-zinc-200 transition-opacity duration-200 dark:bg-white/10',
+                isOpen ? 'opacity-100' : 'opacity-0',
+              )}
+            >
+              <div
+                className="bg-brand h-full"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          ) : null}
+        </div>
+
+        {media?.hasTranscript ? (
+          <>
+            {/* Desktop: always offered under the controls. */}
+            <MiniPanelToggles
+              value={showPanel}
+              onValueChange={choosePanel}
+              className={cn(
+                'mt-2 transition-opacity duration-200 max-sm:hidden sm:order-2',
+                isOpen ? 'opacity-100' : 'opacity-0',
+              )}
+            />
+
+            {/* Grows open by animating its single grid row from 0fr to 1fr,
+                which (unlike height: auto) transitions. No flex gap on the
+                section: spacing lives inside, so it collapses too. */}
+            <div
+              ref={panelRef}
+              id={PANEL_ID}
+              inert={!showPanel}
+              className={cn(
+                'order-1 grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none sm:order-3',
+                showPanel
+                  ? 'grid-rows-[1fr] opacity-100'
+                  : 'grid-rows-[0fr] opacity-0',
+              )}
+            >
+              <div className="min-h-0 overflow-hidden">
+                <div className="flex flex-col gap-2 pb-2 sm:pt-2 sm:pb-0">
+                  {/* Mobile: the toggles head the panel. */}
+                  <MiniPanelToggles
+                    value={showPanel}
+                    onValueChange={choosePanel}
+                    className="sm:hidden"
+                  />
+                  {/* Heights leave room for the rest of the card (and, on mobile, the
+                      tab bar) so short viewports don't push it off-screen. */}
+                  <div className="h-[clamp(6rem,min(60dvh,calc(100dvh-var(--bottom-tab-bar-height,0px)-10rem)),32rem)] overflow-hidden rounded-lg border border-zinc-200 sm:h-[clamp(6rem,calc(100dvh-22rem),26rem)] dark:border-zinc-800">
+                    {media && renderedPanel ? (
+                      <MiniPanelContent panel={renderedPanel} media={media} />
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
         ) : null}
       </section>
 

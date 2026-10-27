@@ -19,6 +19,11 @@ export type NowPlayingMedia = {
   width: number | null;
   height: number | null;
   isLive: boolean;
+  // Whether the media page would show a transcript (and so "Ask") for this
+  // media, and whether it's still being generated. Drives the mini player's
+  // transcript/ask panel.
+  hasTranscript: boolean;
+  isTranscriptProcessing: boolean;
 };
 
 export type NowPlaying = {
