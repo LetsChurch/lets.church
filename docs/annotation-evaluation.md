@@ -2,9 +2,9 @@
 
 ## Purpose
 
-The annotation activity (`packages/temporal/src/activities/background/annotate-transcript.ts`) sends transcripts directly to OpenAI and gets back a markdown-formatted version with section headings and inline scripture/keyword links. The `SYSTEM_PROMPT` constant in that file is the system prompt; changing it changes every uploaded transcript's annotations. Production runs against `openai/gpt-6-luna` using the model's default sampling parameters. The admin eval page routes through OpenRouter so arbitrary models can be compared. Neither path sends `temperature`, because supported overrides vary by model.
+The annotation activity (`packages/temporal/src/activities/background/annotate-transcript.ts`) sends transcripts directly to OpenAI and gets back a markdown-formatted version with section headings and inline scripture/keyword links. The `SYSTEM_PROMPT` constant in that file is the system prompt; changing it changes every uploaded transcript's annotations. Production runs against `openai/gpt-6-luna` with `reasoning_effort: 'high'` (`ANNOTATE_REASONING_EFFORT` in `packages/temporal/src/util/llm.ts`) and otherwise default sampling parameters. On a 235-sermon sample of real uploads, high effort beat the default on headings in a blind comparison, found nearly twice as many Scripture allusions at the same precision, and was refused by the content filter no more often, for about 35% more annotate cost. The content-filter fallback does not receive the reasoning effort. The admin eval page and model-matrix CLI route through OpenRouter so arbitrary models can be compared, and they send no reasoning effort, so a luna eval there reflects the default effort rather than production. Neither path sends `temperature`, because supported overrides vary by model.
 
-This document is the reference for evaluating that prompt — verifying that changes don't regress, and qualifying new candidate models before swapping them into the activity.
+This document is the reference for evaluating that prompt — verifying that changes don't regress, and qualifying new candidate models before swapping them into the activity. Scripture references are also found by deterministic layers merged with the prompt's links; see `docs/scripture-references.md` for those and their gold-set eval (`just eval-scripture-refs`).
 
 There are four evaluation surfaces:
 

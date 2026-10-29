@@ -1,3 +1,7 @@
+import {
+  normalizeSingleChapterRef,
+  SINGLE_CHAPTER_BOOKS,
+} from '@letschurch/temporal/util/scripture/books';
 import { z } from 'zod';
 
 // Base URL for lets.bible (our own scripture reader). Vite inlines VITE_* in
@@ -103,7 +107,11 @@ export type BibleMetadata = z.infer<typeof bibleMetadataSchema>;
 export function parseBibleMetadata(
   metadata: Record<string, unknown>,
 ): BibleMetadata | null {
-  const result = bibleMetadataSchema.safeParse(metadata);
+  // Pins `{Jude, verse 3}` (or `{Jude, chapter 3}`) to Jude 1:3 so links and
+  // labels keep the verse.
+  const result = bibleMetadataSchema.safeParse(
+    normalizeSingleChapterRef(metadata),
+  );
   return result.success ? result.data : null;
 }
 
@@ -143,17 +151,9 @@ export function bibleBookName(book: string): string {
   return BOOKS[book]?.name ?? book;
 }
 
-// OSIS ids of the single-chapter books, which are cited by verse alone
-// ("Jude 2", never "Jude 1:2"). Callers that render a chapter:verse ref can use
-// this to drop the always-1 chapter for these books.
-const SINGLE_CHAPTER_BOOKS = new Set([
-  'Obad',
-  'Phlm',
-  '2John',
-  '3John',
-  'Jude',
-]);
-
+// Single-chapter books are cited by verse alone ("Jude 2", never "Jude 1:2").
+// Callers that render a chapter:verse ref can use this to drop the always-1
+// chapter for these books.
 export function isSingleChapterBook(book: string): boolean {
   return SINGLE_CHAPTER_BOOKS.has(book);
 }
@@ -200,7 +200,14 @@ export function formatVerseRef(token: string): string {
 // already shown above.
 export function formatBibleRefShort(meta: BibleMetadata): string {
   if (meta.chapter == null) return '';
-  if (meta.verse == null) return `${meta.chapter}`;
+  if (meta.verse == null) {
+    return isSingleChapterBook(meta.book) ? '' : `${meta.chapter}`;
+  }
+  if (isSingleChapterBook(meta.book) && meta.endChapter == null) {
+    return meta.endVerse != null
+      ? `${meta.verse}-${meta.endVerse}`
+      : `${meta.verse}`;
+  }
   if (meta.endChapter != null && meta.endVerse != null) {
     return `${meta.chapter}:${meta.verse}-${meta.endChapter}:${meta.endVerse}`;
   }

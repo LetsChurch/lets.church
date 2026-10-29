@@ -8,7 +8,7 @@ import { z } from 'zod';
 
 import { IncomingIdSchema } from '@/schemas/common';
 import type { appRouter } from '@/trpc/router';
-import { formatVerseRef } from '@/util/bible-url';
+import { formatVerseRef, parseBibleMetadata } from '@/util/bible-url';
 import logger from '@/util/logger';
 
 import type {
@@ -433,12 +433,6 @@ export async function getSermon(
 // get_transcript
 // ---------------------------------------------------------------------------
 
-const BibleAnnotationSchema = z.object({
-  book: z.string(),
-  chapter: z.number().int(),
-  verse: z.number().int(),
-});
-
 export async function getTranscript(
   caller: Caller,
   input: Input<typeof getTranscriptTool>,
@@ -489,10 +483,9 @@ export async function getTranscript(
   const scriptureRefs = window.flatMap((p) =>
     p.annotations.flatMap((a) => {
       if (a.kind !== 'BIBLE') return [];
-      const parsed = BibleAnnotationSchema.safeParse(a.metadata);
-      if (!parsed.success) return [];
-      const { book, chapter, verse } = parsed.data;
-      const ref = `${book}.${chapter}.${verse}`;
+      const meta = parseBibleMetadata(a.metadata);
+      if (meta?.chapter == null || meta.verse == null) return [];
+      const ref = `${meta.book}.${meta.chapter}.${meta.verse}`;
       return [{ ref, label: formatVerseRef(ref), paragraph: p.order }];
     }),
   );

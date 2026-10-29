@@ -29,6 +29,12 @@ export {
   backfillOriginalImageUploadStatesBatch,
 } from './backfill-original-image-upload-states';
 export {
+  type BackfillScriptureRefsBatchParams,
+  type BackfillScriptureRefsBatchResult,
+  backfillScriptureRefsBatch,
+  getBackfillScriptureRefsCount,
+} from './backfill-scripture-refs';
+export {
   type BackfillSizesCursor,
   backfillUploadStateSizesBatch,
   getBackfillSizesCount,

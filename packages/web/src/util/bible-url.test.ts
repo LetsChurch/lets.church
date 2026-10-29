@@ -27,3 +27,27 @@ describe('buildLetsBibleUrl', () => {
     );
   });
 });
+
+describe('single-chapter books', () => {
+  test.each([
+    [{ book: 'Jude', verse: 3 }, 'Jude 3', '/jude/1?v=3'],
+    [{ book: 'Jude', chapter: 3 }, 'Jude 3', '/jude/1?v=3'],
+    [
+      { book: 'Phlm', chapter: 1, verse: 17, endVerse: 18 },
+      'Philemon 17-18',
+      '/philemon/1?v=17',
+    ],
+    [{ book: 'Jude' }, 'Jude', '/jude/1'],
+  ])('%j reads as %s', async (metadata, label, path) => {
+    vi.stubEnv('VITE_LETS_BIBLE_URL', 'https://lets.bible');
+    vi.resetModules();
+    const { buildLetsBibleUrl, formatBibleRef, parseBibleMetadata } =
+      await import('./bible-url');
+
+    const meta = parseBibleMetadata(metadata);
+    expect(meta && formatBibleRef(meta)).toBe(label);
+    expect(meta && buildLetsBibleUrl(meta)).toBe(
+      `https://lets.bible/bible${path}`,
+    );
+  });
+});

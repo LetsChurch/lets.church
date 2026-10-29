@@ -27,7 +27,8 @@
     "backfill-diarization-merge": "DB_LOG=0 tsx src/seed/backfill-diarization-merge.ts",
     "backfill-public-sizes": "DB_LOG=0 tsx src/seed/backfill-public-sizes.ts",
     "generate-seed-bible-refs": "DB_LOG=0 tsx src/seed/generate-bible-refs.ts",
-    "eval:annotation-models": "DB_LOG=0 tsx src/seed/eval-annotation-models.ts"
+    "eval:annotation-models": "DB_LOG=0 tsx src/seed/eval-annotation-models.ts",
+    "eval:scripture-refs": "tsx src/seed/eval-scripture-refs.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.42",

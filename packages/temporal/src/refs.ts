@@ -85,6 +85,20 @@ export const getReindexProgressQuery = query<
   'getReindexProgress'
 >('getReindexProgress');
 
+export type BackfillScriptureRefsProgress = {
+  processed: number;
+  changed: number;
+  /** Shards still walking their keyset cursor. */
+  activeShards: number;
+  total: number;
+};
+
+export const getBackfillScriptureRefsProgressQuery = query<
+  BackfillScriptureRefsProgress,
+  [],
+  'getBackfillScriptureRefsProgress'
+>('getBackfillScriptureRefsProgress');
+
 export type BackfillSizesProgress = {
   totalUpdated: number;
   totalSkipped: number;

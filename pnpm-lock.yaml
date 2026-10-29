@@ -703,6 +703,9 @@ importers:
       '@tokenizer/s3':
         specifier: ^1.0.1
         version: 1.0.1(@aws-sdk/client-s3@3.1153.0)(@aws-sdk/credential-providers@3.948.0)
+      bible-passage-reference-parser:
+        specifier: ^4.0.0
+        version: 4.0.0
       blurhash:
         specifier: ^2.0.5
         version: 2.0.5
@@ -5971,6 +5974,9 @@ packages:
     resolution: {integrity: sha512-bA6+tcSLpz2tIEdDXZPpPTIuxBcC4+w6SieaYyfigIa4h8GlFxbA17v22Vx3JUtuZQj9SgOsnbK+aTBzyDyEuw==}
     engines: {node: '>=6.0.0'}
     hasBin: true
+
+  bible-passage-reference-parser@4.0.0:
+    resolution: {integrity: sha512-glCq4RVcvbeNMI2h+XppurZ2zyaelsI23dX1Uv+xXQ2KRjkWRpITyNHD2+qvLG8HSSWYw/71MOEa4DgsY+i1oA==}
 
   binary-extensions@2.3.0:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
@@ -15863,6 +15869,8 @@ snapshots:
   base64-js@1.5.1: {}
 
   baseline-browser-mapping@2.10.33: {}
+
+  bible-passage-reference-parser@4.0.0: {}
 
   binary-extensions@2.3.0: {}
 

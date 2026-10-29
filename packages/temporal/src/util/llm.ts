@@ -83,6 +83,11 @@ export function stripOpenaiPrefix(model: string): string {
 // new output. Override via `OPENROUTER_SUMMARY_MODEL` when needed.
 export const SUMMARY_MODEL = env.OPENROUTER_SUMMARY_MODEL;
 export const ANNOTATE_MODEL = env.OPENROUTER_ANNOTATE_MODEL;
+// Tuned for gpt-6-luna: on a 235-sermon sample, high effort improved headings
+// and nearly doubled Scripture-allusion recall at the same precision and
+// content-filter rate, for ~35% more annotate cost. Revisit when
+// ANNOTATE_MODEL changes; non-reasoning models reject the parameter.
+export const ANNOTATE_REASONING_EFFORT: OpenAI.ReasoningEffort = 'high';
 export const ANNOTATE_FALLBACK_MODEL =
   env.OPENROUTER_ANNOTATE_FALLBACK_MODEL.length > 0
     ? env.OPENROUTER_ANNOTATE_FALLBACK_MODEL
@@ -495,9 +500,12 @@ async function createChatCompletionTrackedAttempt(
     // The recursive call is marked so it disables SDK retries and can classify
     // deterministic output-cap/completeness failures as non-retryable.
     if (result.outcome === 'guard_content_filter' && fallbackModel) {
+      // Reasoning effort is tuned for the primary model; the fallback keeps
+      // its provider default.
+      const { reasoning_effort: _primaryEffort, ...fallbackArgs } = createArgs;
       return createChatCompletionTrackedAttempt(
         {
-          ...createArgs,
+          ...fallbackArgs,
           model: fallbackModel,
           via: 'openrouter',
           tracking,

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { normalizeSingleChapterRef } from './scripture/books';
+
 // Doc-level Bible-verse facet tokens for lc_media_v1. A BIBLE annotation's
 // metadata ({ book (OSIS), chapter?, verse?, endChapter?, endVerse? }) is
 // expanded into one keyword token per cited verse, formatted
@@ -31,7 +33,9 @@ const MAX_RANGE_VERSES = 200;
 export function bibleRefsFromMetadata(
   metadata: Record<string, unknown>,
 ): string[] {
-  const parsed = metaSchema.safeParse(metadata);
+  // Rows written before single-chapter books were pinned to chapter 1 carry
+  // `{Jude, verse 3}`; without a chapter they'd index nothing.
+  const parsed = metaSchema.safeParse(normalizeSingleChapterRef(metadata));
   if (!parsed.success) return [];
   const { book, chapter, verse, endChapter, endVerse } = parsed.data;
   // Need a specific verse to place it on the verse-level facet.

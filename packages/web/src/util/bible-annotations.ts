@@ -1,6 +1,8 @@
 // Pure BIBLE-annotation matching (no DB / server-only imports), so it's safe to
 // import from a shared route module without pulling pg into the client bundle.
 
+import { normalizeSingleChapterRef } from '@letschurch/temporal/util/scripture/books';
+
 export type BibleAnnotationMeta = {
   book?: unknown;
   chapter?: unknown;
@@ -16,11 +18,12 @@ export type BibleAnnotationMeta = {
  * occurrences the `bibleRefs` facet indexed. Book ids are OSIS on both sides.
  */
 export function annotationCoversVerse(
-  meta: BibleAnnotationMeta,
+  raw: BibleAnnotationMeta,
   book: string,
   chapter: number,
   verse: number,
 ): boolean {
+  const meta = normalizeSingleChapterRef(raw);
   if (meta.book !== book) return false;
   const c =
     typeof meta.chapter === 'number' ? meta.chapter : Number(meta.chapter);

@@ -10,6 +10,11 @@ export {
   getBackfillOriginalImagesProgressQuery,
 } from './backfill-original-image-upload-states';
 export {
+  type BackfillScriptureRefsWorkflowParams,
+  backfillScriptureRefsWorkflow,
+  getBackfillScriptureRefsProgressQuery,
+} from './backfill-scripture-refs';
+export {
   type BackfillUploadStateSizesWorkflowParams,
   backfillUploadStateSizesWorkflow,
   getBackfillSizesProgressQuery,

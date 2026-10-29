@@ -15,6 +15,7 @@ vi.mock('@letschurch/db', () => ({
 vi.mock('../../util/llm', () => ({
   ANNOTATE_FALLBACK_MODEL: 'anthropic/test-fallback',
   ANNOTATE_MODEL: 'openai/test-model',
+  ANNOTATE_REASONING_EFFORT: 'high',
   createChatCompletionTracked: mocks.createChatCompletionTracked,
 }));
 
@@ -71,6 +72,32 @@ describe('buildAnnotationChatBody', () => {
     expect(
       mocks.createChatCompletionTracked.mock.calls[0]?.[0],
     ).not.toHaveProperty('service_tier');
+    expect(
+      mocks.createChatCompletionTracked.mock.calls[0]?.[0],
+    ).not.toHaveProperty('reasoning_effort');
+  });
+
+  it('sends the requested reasoning effort to the primary model', async () => {
+    mocks.createChatCompletionTracked.mockResolvedValue({
+      choices: [
+        {
+          finish_reason: 'stop',
+          message: { content: 'Test paragraph' },
+        },
+      ],
+      usage: { prompt_tokens: 10, completion_tokens: 10 },
+    });
+
+    await runAnnotation(
+      [{ id: 'p1', order: 0, text: 'Test paragraph', words: [] }],
+      { channelName: 'Test channel', title: null, description: null },
+      'openai/test-model',
+      { reasoningEffort: 'high' },
+    );
+
+    expect(mocks.createChatCompletionTracked).toHaveBeenCalledWith(
+      expect.objectContaining({ reasoning_effort: 'high' }),
+    );
   });
 
   it('uses Flex for direct OpenAI annotation requests', async () => {

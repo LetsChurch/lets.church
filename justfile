@@ -176,6 +176,14 @@ lb-seed-web:
 lb-build-web-usx:
   cd packages/lets.bible && ./scripts/web/download-web.sh && pnpm exec tsx scripts/web/build-web-usx.ts
 
+# Regenerate the verse-text asset the transcript annotator matches spoken
+# Scripture quotations against (KJV + WEB + BSB, from the seeded lets.bible DB).
+# Commit the result; rerun after re-seeding a translation.
+lb-export-verse-text:
+  docker compose exec -T letsbible sh -c 'cd /usr/src/app && pnpm --silent --filter @letschurch/lets.bible run export:verse-text' > packages/temporal/src/util/scripture/data/verse-text.tsv.gz.tmp
+  gzip -t packages/temporal/src/util/scripture/data/verse-text.tsv.gz.tmp
+  mv packages/temporal/src/util/scripture/data/verse-text.tsv.gz.tmp packages/temporal/src/util/scripture/data/verse-text.tsv.gz
+
 # Seed all Bible translations (BSB + MSB + KJV + WEB) in one step
 lb-seed-bible: lb-seed-bsb lb-seed-msb lb-seed-kjv lb-seed-web
 
@@ -315,6 +323,18 @@ generate-seed-annotations:
 #   just eval-annotation-models --models openai/gpt-6-luna,openai/gpt-6.1-sol --dry-run
 eval-annotation-models *args:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run eval:annotation-models -- {{args}}'
+
+# Score Scripture-reference detection (stored LLM annotations vs. the layered
+# pipeline) against the hand-labeled gold set. No LLM calls.
+#   just eval-scripture-refs [/seed-data/eval/scripture-refs-20261027]
+eval-scripture-refs *args:
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run eval:scripture-refs -- {{args}}'
+
+# Re-derive every transcribed upload's BIBLE annotations with the layered
+# Scripture-reference pipeline (no LLM calls) and reindex the ones that change.
+# Idempotent; progress via the getBackfillScriptureRefsProgress query.
+backfill-scripture-refs:
+  just temporal workflow start --task-queue background --type backfillScriptureRefsWorkflow --workflow-id backfill-scripture-refs --input '{}'
 
 # Re-run the summarize activity against the LLM-seeded uploads using whatever
 # OUTLINE annotations are currently in the DB, then re-embed the resulting

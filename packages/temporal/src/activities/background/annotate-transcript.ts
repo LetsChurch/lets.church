@@ -6,13 +6,15 @@ import {
   UploadRecord,
 } from '@letschurch/db';
 import { diffChars } from 'diff';
-import { asc, count, eq, inArray } from 'drizzle-orm';
+import { asc, count, eq, inArray, sql } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
+import type OpenAI from 'openai';
 import { z } from 'zod';
 
 import {
   ANNOTATE_FALLBACK_MODEL,
   ANNOTATE_MODEL,
+  ANNOTATE_REASONING_EFFORT,
   createChatCompletionTracked,
 } from '../../util/llm';
 import {
@@ -22,6 +24,8 @@ import {
 } from '../../util/llm-completion-guards';
 import { resolveCostUsd } from '../../util/llm-pricing';
 import logger from '../../util/logger';
+import { augmentBibleAnnotations } from '../../util/scripture';
+import { OSIS_BOOKS } from '../../util/scripture/books';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/annotate-transcript',
@@ -58,74 +62,6 @@ const moduleLogger = logger.child({
 // as `skipped_items` in the eval surface rather than as malformed
 // annotation rows in the DB). The frontend renderer can then trust
 // `metadata.book` is one of these values without a defensive lookup.
-const OSIS_BOOKS = [
-  'Gen',
-  'Exod',
-  'Lev',
-  'Num',
-  'Deut',
-  'Josh',
-  'Judg',
-  'Ruth',
-  '1Sam',
-  '2Sam',
-  '1Kgs',
-  '2Kgs',
-  '1Chr',
-  '2Chr',
-  'Ezra',
-  'Neh',
-  'Esth',
-  'Job',
-  'Ps',
-  'Prov',
-  'Eccl',
-  'Song',
-  'Isa',
-  'Jer',
-  'Lam',
-  'Ezek',
-  'Dan',
-  'Hos',
-  'Joel',
-  'Amos',
-  'Obad',
-  'Jonah',
-  'Mic',
-  'Nah',
-  'Hab',
-  'Zeph',
-  'Hag',
-  'Zech',
-  'Mal',
-  'Matt',
-  'Mark',
-  'Luke',
-  'John',
-  'Acts',
-  'Rom',
-  '1Cor',
-  '2Cor',
-  'Gal',
-  'Eph',
-  'Phil',
-  'Col',
-  '1Thess',
-  '2Thess',
-  '1Tim',
-  '2Tim',
-  'Titus',
-  'Phlm',
-  'Heb',
-  'Jas',
-  '1Pet',
-  '2Pet',
-  '1John',
-  '2John',
-  '3John',
-  'Jude',
-  'Rev',
-] as const;
 export const bibleMetadataSchema = z.object({
   book: z.enum(OSIS_BOOKS),
   chapter: z.coerce.number().int().positive().optional(),
@@ -264,6 +200,12 @@ export type RunAnnotationOptions = {
   serviceTier?: 'flex';
   /** Content-filter fallback; null prevents a recursive fallback attempt. */
   fallbackModel?: string | null;
+  /**
+   * OpenAI reasoning effort for the primary model. Production sends
+   * `ANNOTATE_REASONING_EFFORT`; evals leave it unset so arbitrary models
+   * keep their defaults. Not forwarded to the content-filter fallback.
+   */
+  reasoningEffort?: OpenAI.ReasoningEffort;
 };
 
 // One skipped inline annotation: the model asked to wrap this span but
@@ -640,7 +582,7 @@ Headings:
 
 Inline annotations (wrap spans of paragraph text as markdown links):
 - Scripture references (explicit citations, conversational forms, AND clear allusions): \`[verbatim span](#bible?book=OSIS&chapter=N&verse=M)\`. Chapter is optional for whole-book mentions ("the gospel of John"). Verse is optional for whole-chapter refs. For verse ranges add \`&endVerse=M2\`; for chapter ranges add \`&endChapter=N2\`. \`#bible\` is reserved for the 66-book Protestant canon (Genesis through Revelation) — see the non-canonical-works rule below.
-- Key theological terms / phrases AND non-canonical works: \`[verbatim span](#keyword)\`. Sparingly for theological terms — only substantive multi-word concepts a reader might plausibly look up in a theological dictionary or want to search the site for (e.g. "imputed righteousness", "vicarious atonement", "penal substitution", "covenant of works"). Do NOT wrap single ordinary words, common nouns, generic adjectives or intensifiers ("great", "amazing", "powerful", "important", "real", "true"), filler words, or single-word evaluations. If a span isn't a named theological concept on its own, leave it unannotated. You only need to wrap a given keyword once (the FIRST distinctive occurrence is enough); downstream tooling propagates the highlight to every occurrence of that term in the transcript.
+- Key theological terms / phrases AND non-canonical works: \`[verbatim span](#keyword)\`. Sparingly for theological terms — only substantive multi-word concepts a reader might plausibly look up in a theological dictionary or want to search the site for (e.g. "imputed righteousness", "vicarious atonement", "penal substitution", "covenant of works"). Do NOT wrap single ordinary words, common nouns, generic adjectives or intensifiers ("great", "amazing", "powerful", "important", "real", "true"), filler words, or single-word evaluations. Everyday Christian vocabulary that nearly every sermon uses ("gospel", "grace", "faith", "sin", "love", "prayer", "salvation", "the Bible", "the church", "justice") is NOT a keyword on its own; wrap it only inside a more specific concept ("justification by faith", "common grace", "means of grace"). A single word qualifies only when it is a technical term, a named doctrine, movement, or work ("sanctification", "dispensationalism", "Septuagint"). If a span isn't a named theological concept on its own, leave it unannotated. You only need to wrap a given keyword once (the FIRST distinctive occurrence is enough); downstream tooling propagates the highlight to every occurrence of that term in the transcript.
 
 Non-canonical works rule: the Gospel of Thomas, Gospel of Mary, Gospel of Judas, Gospel of Philip, the Nag Hammadi codices, the Apocrypha (Tobit, Judith, Sirach, Wisdom, 1-2 Maccabees, etc.), 1 Enoch, the Book of Mormon, the Quran, and similar apocryphal / gnostic / pseudepigraphal texts MUST be wrapped as \`[verbatim span](#keyword)\`, never as \`[verbatim span](#bible?book=…)\`. Even when the speaker analyzes one of these texts in depth, the link kind stays \`#keyword\` — \`#bible\` is reserved for the 66-book Protestant canon (Genesis through Revelation).
 
@@ -883,6 +825,9 @@ export async function runAnnotation(
     via: options.via ?? 'openai',
     model,
     ...(options.serviceTier ? { service_tier: options.serviceTier } : {}),
+    ...(options.reasoningEffort
+      ? { reasoning_effort: options.reasoningEffort }
+      : {}),
     // Switch to ANNOTATE_FALLBACK_MODEL (defaults to Anthropic Haiku) only
     // when OpenAI's content classifier blocks the response — covers
     // politically/theologically frank content that hits the OpenAI guard
@@ -937,8 +882,13 @@ export async function runAnnotation(
 
   const raw = choice?.message.content;
   invariant(raw, 'Model returned no content');
-  const { annotations, skippedItems, counts, responseText } =
-    parseAnnotationResponse(raw, paragraphs);
+  const parsed = parseAnnotationResponse(raw, paragraphs);
+  const { annotations, counts, skippedItems } = withScriptureLayers(
+    paragraphs,
+    metadata,
+    parsed,
+  );
+  const { responseText } = parsed;
 
   return {
     annotations,
@@ -969,6 +919,67 @@ export async function runAnnotation(
     prompt: { system: SYSTEM_PROMPT, user: userContent },
     responseText,
     skippedItems,
+  };
+}
+
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * Serialize writers of one upload's annotations (this activity and the
+ * Scripture backfill) for the rest of the transaction. Row locks aren't
+ * enough: rows a writer inserts are invisible to a concurrent DELETE that
+ * already took its snapshot, so both writers' rows would survive.
+ */
+export async function lockUploadAnnotations(
+  tx: Transaction,
+  uploadRecordId: string,
+): Promise<void> {
+  await tx.execute(
+    sql`select pg_advisory_xact_lock(hashtextextended(${`annotations:${uploadRecordId}`}, 0))`,
+  );
+}
+
+/**
+ * Merge the deterministic Scripture layers (explicit citations, book-implied
+ * mentions, quotations) into the LLM's BIBLE annotations, and report the LLM
+ * references that name a chapter/verse that doesn't exist as skipped.
+ */
+export function withScriptureLayers(
+  paragraphs: EvalParagraph[],
+  metadata: AnnotationMetadata,
+  parsed: {
+    annotations: ResolvedAnnotation[];
+    skippedItems: SkippedAnnotation[];
+    counts: {
+      outline: number;
+      bible: number;
+      keyword: number;
+      skipped: number;
+    };
+  },
+) {
+  const augmented = augmentBibleAnnotations(
+    paragraphs,
+    metadata,
+    parsed.annotations,
+  );
+  const orderById = new Map(paragraphs.map((p) => [p.id, p.order]));
+  const invalid: SkippedAnnotation[] = augmented.invalid.map((a) => ({
+    paragraphId: a.paragraphId,
+    paragraphOrder: orderById.get(a.paragraphId) ?? -1,
+    kind: 'BIBLE',
+    span: a.rawSpan ?? '',
+    metadata: a.metadata,
+    reason: 'invalid_metadata',
+  }));
+  return {
+    annotations: augmented.annotations,
+    skippedItems: [...parsed.skippedItems, ...invalid],
+    counts: {
+      ...parsed.counts,
+      bible: augmented.counts.total,
+      skipped: parsed.counts.skipped + invalid.length,
+    },
   };
 }
 
@@ -1063,11 +1074,13 @@ export default async function annotateTranscript(
     {
       tracking: { activity: 'annotateTranscript', uploadRecordId },
       serviceTier: 'flex',
+      reasoningEffort: ANNOTATE_REASONING_EFFORT,
     },
   );
 
   const now = new Date();
   await db.transaction(async (tx) => {
+    await lockUploadAnnotations(tx, uploadRecordId);
     await tx
       .delete(Annotation)
       .where(inArray(Annotation.paragraphId, paragraphIds));

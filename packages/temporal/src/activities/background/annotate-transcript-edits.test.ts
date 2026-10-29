@@ -179,6 +179,15 @@ describe('exact-source span annotation', () => {
       errors: [],
     });
     expect(result.annotations).toEqual([
+      // The first citation comes from the deterministic Scripture layer.
+      {
+        paragraphId: 'p1',
+        kind: 'BIBLE',
+        startWord: 0,
+        endWord: 2,
+        rawSpan: 'John 3:16',
+        metadata: { book: 'John', chapter: 3, verse: 16, source: 'detected' },
+      },
       {
         paragraphId: 'p1',
         kind: 'BIBLE',
@@ -255,6 +264,15 @@ describe('exact-source span annotation', () => {
     );
     const result = await annotate([source]);
     expect(result.annotations).toEqual([
+      // The first citation comes from the deterministic Scripture layer.
+      {
+        paragraphId: 'p1',
+        kind: 'BIBLE',
+        startWord: 0,
+        endWord: 2,
+        rawSpan: 'John 3:16',
+        metadata: { book: 'John', chapter: 3, verse: 16, source: 'detected' },
+      },
       {
         paragraphId: 'p1',
         kind: 'BIBLE',
@@ -322,6 +340,15 @@ describe('exact-source span annotation', () => {
     }));
     const result = await annotate([source]);
     expect(result.annotations).toEqual([
+      // The first citation comes from the deterministic Scripture layer.
+      {
+        paragraphId: 'p1',
+        kind: 'BIBLE',
+        startWord: 0,
+        endWord: 2,
+        rawSpan: 'John 3:16',
+        metadata: { book: 'John', chapter: 3, verse: 16, source: 'detected' },
+      },
       {
         paragraphId: 'p1',
         kind: 'BIBLE',

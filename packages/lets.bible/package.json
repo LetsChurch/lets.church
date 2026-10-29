@@ -22,6 +22,7 @@
     "db:studio": "drizzle-kit studio",
     "seed:bible": "LETS_BIBLE_DB_LOG=0 tsx src/db/seed-bible.ts",
     "seed:kjv": "LETS_BIBLE_DB_LOG=0 tsx src/db/seed-kjv.ts",
+    "export:verse-text": "LETS_BIBLE_DB_LOG=0 tsx src/db/export-verse-text.ts",
     "seed:lexicon": "LETS_BIBLE_DB_LOG=0 tsx src/db/seed-lexicon.ts",
     "seed:crossrefs": "LETS_BIBLE_DB_LOG=0 tsx src/db/seed-cross-references.ts",
     "seed:commentaries": "LETS_BIBLE_DB_LOG=0 tsx src/db/seed-commentaries.ts",

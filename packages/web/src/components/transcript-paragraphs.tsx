@@ -1,3 +1,4 @@
+import { normalizeSingleChapterRef } from '@letschurch/temporal/util/scripture/books';
 import { useStore } from '@nanostores/react';
 import {
   IconBible,
@@ -152,13 +153,16 @@ function indexParagraph(paragraph: TranscriptParagraph): {
   // joined span text — distinct keywords get distinct pills, repeated
   // keywords don't duplicate.
   function bibleKey(ann: TranscriptAnnotation): string {
-    const m = ann.metadata as {
-      book?: unknown;
-      chapter?: unknown;
-      verse?: unknown;
-      endChapter?: unknown;
-      endVerse?: unknown;
-    };
+    // Normalized so a stored `{Jude, verse 3}` keys like Jude 1:3.
+    const m = normalizeSingleChapterRef(
+      ann.metadata as {
+        book?: unknown;
+        chapter?: unknown;
+        verse?: unknown;
+        endChapter?: unknown;
+        endVerse?: unknown;
+      },
+    );
     return `BIBLE:${m.book ?? ''}:${m.chapter ?? ''}:${m.verse ?? ''}:${m.endChapter ?? ''}:${m.endVerse ?? ''}`;
   }
 

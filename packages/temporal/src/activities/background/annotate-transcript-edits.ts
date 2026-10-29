@@ -22,6 +22,7 @@ import {
   type ResolvedAnnotation,
   type RunAnnotationResult,
   type RunAnnotationOptions,
+  withScriptureLayers,
 } from './annotate-transcript';
 
 const MAX_RESPONSE_CHARS = 2 * 1024 * 1024;
@@ -1100,7 +1101,16 @@ export async function runAnnotationEdits(
     }
   }
   const valid = errors.length === 0;
-  const annotations = valid ? materialize(accepted) : [];
+  // A failed strategy scores as empty: the deterministic Scripture layers
+  // only join a valid result, so they don't mask the failure.
+  const layered = valid
+    ? withScriptureLayers(paragraphs, metadata, {
+        annotations: materialize(accepted),
+        skippedItems: [],
+        counts: { outline: 0, bible: 0, keyword: 0, skipped: 0 },
+      })
+    : null;
+  const annotations = layered?.annotations ?? [];
   let outline = 0;
   let bible = 0;
   let keyword = 0;
@@ -1116,7 +1126,7 @@ export async function runAnnotationEdits(
       outline,
       bible,
       keyword,
-      skipped: valid ? 0 : errors.length,
+      skipped: valid ? (layered?.counts.skipped ?? 0) : errors.length,
       durationMs,
       promptTokens,
       completionTokens,
@@ -1124,7 +1134,7 @@ export async function runAnnotationEdits(
     },
     prompt,
     responseText,
-    skippedItems: [],
+    skippedItems: layered?.skippedItems ?? [],
     editDiagnostics: {
       valid,
       initialErrors,

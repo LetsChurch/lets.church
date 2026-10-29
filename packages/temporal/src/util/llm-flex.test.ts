@@ -93,7 +93,7 @@ describe('createChatCompletionTracked Flex processing', () => {
     expect(settled).not.toHaveProperty('viaBatch');
   });
 
-  it('does not send the OpenAI service tier to an OpenRouter fallback', async () => {
+  it('does not send the OpenAI service tier or reasoning effort to an OpenRouter fallback', async () => {
     mocks.chatCreate
       .mockResolvedValueOnce({
         choices: [
@@ -111,15 +111,20 @@ describe('createChatCompletionTracked Flex processing', () => {
       model: 'openai/gpt-6-luna',
       messages: [{ role: 'user', content: 'work' }],
       service_tier: 'flex',
+      reasoning_effort: 'high',
       fallbackModel: 'anthropic/claude-haiku-4-5',
       tracking: { activity: 'annotateTranscript' },
     });
 
+    expect(mocks.chatCreate.mock.calls[0]?.[0]).toMatchObject({
+      reasoning_effort: 'high',
+    });
     const fallbackBody = mocks.chatCreate.mock.calls[1]?.[0];
     expect(fallbackBody).toMatchObject({
       model: 'anthropic/claude-haiku-4-5',
     });
     expect(fallbackBody).not.toHaveProperty('service_tier');
+    expect(fallbackBody).not.toHaveProperty('reasoning_effort');
   });
 
   it('disables SDK retries and makes deterministic fallback guards non-retryable', async () => {

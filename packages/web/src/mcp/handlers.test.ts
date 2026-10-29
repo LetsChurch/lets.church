@@ -145,6 +145,13 @@ describe('get_transcript', () => {
               endWord: 2,
               metadata: { book: 'Matt', chapter: 10, verse: 8 },
             },
+            // Stored before single-chapter books were pinned to chapter 1.
+            {
+              kind: 'BIBLE',
+              startWord: 0,
+              endWord: 1,
+              metadata: { book: 'Jude', verse: 3 },
+            },
           ]
         : [],
   }));
@@ -166,6 +173,7 @@ describe('get_transcript', () => {
     expect(page.totalParagraphs).toBe(10);
     expect(page.scriptureRefs).toEqual([
       { ref: 'Matt.10.8', label: 'Matthew 10:8', paragraph: 3 },
+      { ref: 'Jude.1.3', label: 'Jude 3', paragraph: 3 },
     ]);
     // The outline covers the whole sermon, not just the window.
     expect(page.outline).toEqual([
