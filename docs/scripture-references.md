@@ -73,7 +73,15 @@ Starts `backfillScriptureRefsWorkflow`: for every transcribed upload it treats
 the stored BIBLE annotations as the LLM layer (no LLM calls), merges in the
 deterministic layers, replaces the rows if anything changed, and reindexes that
 upload (warm — window embeddings are cached). It is idempotent; a second run
-changes nothing. Progress: the `getBackfillScriptureRefsProgress` query.
+changes nothing. Progress: the `getBackfillScriptureRefsProgress` query, which
+also reports OpenSearch disk usage and whether the run is paused.
+
+Each reindex leaves the old ~2.4 MB media doc on disk until a merge expunges
+it. The first production run (8 shards, ~300 uploads/min) outran merging, filled
+the 300Gi volume and took `lc_media_v1` offline. The workflow now defaults to 2
+shards and checks disk usage (`_cat/allocation`) before every round, sleeping
+5 minutes at a time while it is at or above `maxDiskPercent` (default 80).
+Override with `--input '{"shards":2,"maxDiskPercent":75}'`.
 
 It holds the same per-upload advisory lock as the annotate activity
 (`lockUploadAnnotations`), so a concurrent re-annotate can't interleave with it.

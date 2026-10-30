@@ -33,6 +33,7 @@ export {
   type BackfillScriptureRefsBatchResult,
   backfillScriptureRefsBatch,
   getBackfillScriptureRefsCount,
+  getSearchDiskUsedPercent,
 } from './backfill-scripture-refs';
 export {
   type BackfillSizesCursor,

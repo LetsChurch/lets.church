@@ -91,6 +91,10 @@ export type BackfillScriptureRefsProgress = {
   /** Shards still walking their keyset cursor. */
   activeShards: number;
   total: number;
+  /** OpenSearch disk usage at the last check, in percent (null before it). */
+  diskPercent: number | null;
+  /** Waiting for merges to bring the disk back under `maxDiskPercent`. */
+  paused: boolean;
 };
 
 export const getBackfillScriptureRefsProgressQuery = query<

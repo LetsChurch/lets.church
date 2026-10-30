@@ -4,6 +4,7 @@ import {
   TranscriptParagraph,
   UploadRecord,
 } from '@letschurch/db';
+import { client } from '@letschurch/opensearch';
 import { heartbeat } from '@temporalio/activity';
 import {
   and,
@@ -54,6 +55,24 @@ export async function getBackfillScriptureRefsCount(): Promise<number> {
     .from(UploadRecord)
     .where(isNotNull(UploadRecord.transcribingFinishedAt));
   return row?.count ?? 0;
+}
+
+/**
+ * The fullest OpenSearch data node's disk usage, in percent. Every reindexed
+ * media doc leaves its old copy (~2.4 MB with nested windows) on disk until a
+ * merge expunges it, so a fast backfill can outrun merging and fill the disk;
+ * the workflow pauses on this. Nodes without disk stats (the UNASSIGNED row)
+ * are ignored.
+ */
+export async function getSearchDiskUsedPercent(): Promise<number> {
+  const res = await client.cat.allocation({ format: 'json' });
+  const percents = res.body
+    .map((node) => Number.parseFloat(node['disk.percent'] ?? ''))
+    .filter((p) => Number.isFinite(p));
+  if (percents.length === 0) {
+    throw new Error('OpenSearch reported no node disk usage');
+  }
+  return Math.max(...percents);
 }
 
 // Order-independent identity of a set of BIBLE annotations, to skip writes
