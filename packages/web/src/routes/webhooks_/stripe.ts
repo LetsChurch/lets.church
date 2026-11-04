@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import type Stripe from 'stripe';
 
+import { safeErrorMessage } from '@/donations/safe-error-message';
 import logger from '@/util/logger';
 import {
   readRequestBody,
@@ -65,14 +66,19 @@ export const Route = createFileRoute('/webhooks_/stripe')({
           if (error instanceof RequestBodyTooLargeError) {
             return new Response('webhook rejected', { status: 413 });
           }
-          moduleLogger.error(
+          // An event that beat its checkout is retried on purpose; the
+          // donation webhook logs it and alerts if it keeps failing. Matched
+          // by name so this route doesn't load the database at import.
+          const log =
+            error instanceof Error && error.name === 'CheckoutNotLinkedError'
+              ? moduleLogger.warn.bind(moduleLogger)
+              : moduleLogger.error.bind(moduleLogger);
+          log(
             {
               // Stripe signature errors retain the raw payload and header on
               // enumerable properties. Copy only the diagnostic message so
               // webhook secrets and donor data cannot enter structured logs.
-              err: new Error(
-                error instanceof Error ? error.message : String(error),
-              ),
+              err: new Error(safeErrorMessage(error)),
             },
             'Stripe webhook failed',
           );

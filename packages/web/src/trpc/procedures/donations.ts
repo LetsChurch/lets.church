@@ -1,5 +1,6 @@
 import {
   Donation,
+  DonationAlert,
   DonationBudgetCategory,
   DonationDonor,
   DonationImportBatch,
@@ -16,6 +17,7 @@ import {
   eq,
   ilike,
   inArray,
+  isNull,
   lt,
   or,
   sql,
@@ -24,6 +26,7 @@ import {
 import type Stripe from 'stripe';
 import { z } from 'zod';
 
+import { stripeDashboardUrl } from '@/donations/alerts';
 import { donationAmounts } from '@/donations/amounts';
 import {
   BUDGET_SUBSCRIPTION_STATUSES,
@@ -379,6 +382,75 @@ export const donationProcedures = {
       activeRecurringCount: subscriptionStats?.count ?? 0,
     };
   }),
+
+  getAdminAlertCount: adminProcedure.query(async () =>
+    db
+      .select({ count: count() })
+      .from(DonationAlert)
+      .where(isNull(DonationAlert.resolvedAt))
+      .then((result) => result[0]?.count ?? 0),
+  ),
+
+  getAdminAlerts: adminProcedure.query(async () => {
+    const open = isNull(DonationAlert.resolvedAt);
+    const [rows, total] = await Promise.all([
+      db
+        .select({
+          id: DonationAlert.id,
+          kind: DonationAlert.kind,
+          stripeObjectId: DonationAlert.stripeObjectId,
+          livemode: DonationAlert.livemode,
+          amountCents: DonationAlert.amountCents,
+          currency: DonationAlert.currency,
+          message: DonationAlert.message,
+          occurrences: DonationAlert.occurrences,
+          createdAt: DonationAlert.createdAt,
+          lastSeenAt: DonationAlert.lastSeenAt,
+          donorName: DonationDonor.name,
+          donorEmail: DonationDonor.email,
+        })
+        .from(DonationAlert)
+        .leftJoin(
+          DonationSubscription,
+          eq(DonationSubscription.id, DonationAlert.subscriptionId),
+        )
+        .leftJoin(
+          DonationDonor,
+          eq(DonationDonor.id, DonationSubscription.donorId),
+        )
+        .where(open)
+        .orderBy(desc(DonationAlert.lastSeenAt))
+        .limit(100),
+      db
+        .select({ count: count() })
+        .from(DonationAlert)
+        .where(open)
+        .then((result) => result[0]?.count ?? 0),
+    ]);
+
+    return {
+      total,
+      alerts: rows.map(({ livemode, ...alert }) => ({
+        ...alert,
+        stripeUrl: stripeDashboardUrl(alert.stripeObjectId, livemode),
+      })),
+    };
+  }),
+
+  dismissAdminAlerts: adminProcedure
+    .input(z.object({ ids: z.array(z.uuid()).min(1).max(100) }))
+    .mutation(async ({ input }) => {
+      await db
+        .update(DonationAlert)
+        .set({ resolvedAt: new Date() })
+        .where(
+          and(
+            inArray(DonationAlert.id, input.ids),
+            isNull(DonationAlert.resolvedAt),
+          ),
+        );
+      return { success: true };
+    }),
 
   getAdminImports: adminProcedure.query(async () => {
     const staleBefore = new Date(Date.now() - 30 * 60_000);

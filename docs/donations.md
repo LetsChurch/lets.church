@@ -21,9 +21,14 @@ the checkout email and are scoped to that account's subscription.
 The donation status endpoint does not return the checkout email. The donation
 page keeps the address in same-tab session storage long enough to prefill the
 post-checkout email sign-in form, then removes it. Checkout and email sign-in
-requests are CAPTCHA-protected and rate-limited by keyed, non-plaintext IP and
-normalized-email identifiers. Public failures are generic; operational details
-belong in server logs.
+requests are rate-limited by keyed, non-plaintext IP and normalized-email
+identifiers; email sign-in is also CAPTCHA-protected. Checkout has no CAPTCHA:
+it only opens a Stripe Checkout Session, and donor and checkout rows are written
+only once Stripe reports on the session, from metadata the server set on it.
+For a monthly gift, `checkout.session.completed` also records the paid first
+invoice, so the first gift lands even if `invoice.paid` was applied earlier,
+while the subscription still read as incomplete.
+Public failures are generic; operational details belong in server logs.
 
 ## Stripe setup
 
@@ -110,6 +115,7 @@ In Stripe:
    - `checkout.session.expired`
    - `invoice.paid`
    - `invoice.payment_failed`
+   - `payment_intent.payment_failed`
    - `customer.subscription.created`
    - `customer.subscription.updated`
    - `customer.subscription.deleted`
@@ -219,6 +225,33 @@ the ledger commits) when:
 
 A donor who stops a gift at period end produces two notices: one when they
 schedule it and one when the plan ends.
+
+A Stripe event that fails to apply (the webhook answers with an error and
+Stripe retries it for up to three days) also sends `ADMIN_EMAIL` one notice per
+event (`donation-webhook-failed-admin-notice:<event id>`) with the event type and
+the error, since a gift or plan may be missing from the ledger until it applies.
+The notice waits for the third failed attempt, since a brief Stripe or network
+error clears on Stripe's next retry. A subscription or invoice event that
+arrives before Stripe has linked its Checkout Session is expected: it fails so
+Stripe retries, but raises no alert or notice until it is still failing 15
+minutes after Stripe created the event.
+
+### Needs attention
+
+The top of `/dashboard/admin/donations` lists open `donation_alert` rows, one
+per Stripe object, with a count of repeats and a link to the object in Stripe:
+
+- **Card declined at checkout** (`payment_intent.payment_failed` on a donation
+  Checkout Session): the donor is still on Stripe's page and can try again, so
+  no gift is stored and no email is sent. Resolves when that checkout is paid.
+  A burst of these can be card testing.
+- **Recurring payment failed** (`invoice.payment_failed`, as above). Resolves
+  when the invoice is paid.
+- **Stripe event failed to apply** (as above). Resolves when a retry applies.
+
+Admins can dismiss an alert; a new failure for the same object reopens it.
+Alerts hold Stripe ids, the amount, and Stripe's failure message, not donor
+details: those stay on the Checkout Session or the donor's record.
 
 Donors can open `/dashboard/account/donations` to see gift history, download
 receipts, print annual statements, update billing details, change the amount

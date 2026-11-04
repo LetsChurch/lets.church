@@ -13,7 +13,7 @@ import {
 import { useState } from 'react';
 
 import { Alert, Button, Text } from '@/components/ui';
-import { useAppForm } from '@/components/ui/form';
+import { submitWithCaptcha, useAppForm } from '@/components/ui/form';
 import { loginSchema } from '@/schemas/auth';
 import { useTRPC } from '@/trpc/react';
 import { oidcClientNameFromRedirect } from '@/util/oidc/client-names';
@@ -132,7 +132,7 @@ function LoginRoute() {
         onSubmit={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          form.handleSubmit();
+          void submitWithCaptcha(form);
         }}
         method="post"
       >

@@ -14,7 +14,7 @@ const checkout = {
 };
 
 function statusRequest(
-  sessionId = 'cs_status_route_secret',
+  sessionId = 'cs_test_statusRouteSecret',
   headers?: HeadersInit,
 ) {
   return new Request(
@@ -50,21 +50,76 @@ async function responseBody(response: Response) {
 }
 
 describe('donation checkout status', () => {
-  it('keeps unknown sessions data-minimized without provider work', async () => {
-    const sessionId = 'cs_unknown_secret';
+  it('reconciles an unknown session, since checkouts are stored only once Stripe reports on them', async () => {
+    const findCheckout = vi
+      .fn<DonationStatusDependencies['findCheckout']>()
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(checkout);
+    const findDonation = vi
+      .fn<DonationStatusDependencies['findDonation']>()
+      .mockResolvedValue({ status: 'SUCCEEDED' });
+    const deps = dependencies({ findCheckout, findDonation });
+
+    const response = await handleDonationStatusRequest(statusRequest(), deps);
+
+    expect(deps.enforceRateLimit).toHaveBeenCalledTimes(1);
+    expect(deps.reconcile).toHaveBeenCalledWith('cs_test_statusRouteSecret');
+    expect(await responseBody(response)).toEqual({
+      status: 'SUCCEEDED',
+      frequency: 'ONE_TIME',
+      amountCents: 2_500,
+      currency: 'usd',
+    });
+  });
+
+  it('keeps sessions that stay unknown data-minimized', async () => {
     const deps = dependencies({
       findCheckout: vi.fn(async () => undefined),
     });
 
     const response = await handleDonationStatusRequest(
-      statusRequest(sessionId),
+      statusRequest('cs_test_unknownSecret'),
       deps,
     );
 
     expect(response.status).toBe(200);
     expect(await responseBody(response)).toEqual({ status: 'PROCESSING' });
     expect(deps.findDonation).not.toHaveBeenCalled();
+  });
+
+  it('rejects ids that are not checkout sessions without any lookup', async () => {
+    const deps = dependencies();
+
+    for (const sessionId of [
+      'not-a-session',
+      'cs_test_',
+      'pi_test_abc',
+      'cs_live_a/b',
+    ]) {
+      const response = await handleDonationStatusRequest(
+        statusRequest(sessionId),
+        deps,
+      );
+      expect(response.status).toBe(400);
+    }
+    expect(deps.findCheckout).not.toHaveBeenCalled();
     expect(deps.enforceRateLimit).not.toHaveBeenCalled();
+    expect(deps.reconcile).not.toHaveBeenCalled();
+  });
+
+  it('answers a session-limited poll for an unknown session without provider work', async () => {
+    const deps = dependencies({
+      findCheckout: vi.fn(async () => undefined),
+      enforceRateLimit: vi.fn(async () => ({
+        allowed: false as const,
+        limitedBy: 'session' as const,
+        retryAfterSeconds: 10,
+      })),
+    });
+
+    const response = await handleDonationStatusRequest(statusRequest(), deps);
+
+    expect(await responseBody(response)).toEqual({ status: 'PROCESSING' });
     expect(deps.reconcile).not.toHaveBeenCalled();
   });
 
@@ -171,11 +226,11 @@ describe('donation checkout status', () => {
     const deps = dependencies({ enforceRateLimit });
 
     const first = await handleDonationStatusRequest(
-      statusRequest('cs_first', { 'X-Real-IP': '198.51.100.8' }),
+      statusRequest('cs_test_first', { 'X-Real-IP': '198.51.100.8' }),
       deps,
     );
     const denied = await handleDonationStatusRequest(
-      statusRequest('cs_second', { 'X-Real-IP': '198.51.100.8' }),
+      statusRequest('cs_test_second', { 'X-Real-IP': '198.51.100.8' }),
       deps,
     );
 
@@ -197,12 +252,12 @@ describe('donation checkout status', () => {
 
     expect(deps.enforceRateLimit).toHaveBeenCalledWith(
       request.headers,
-      'cs_status_route_secret',
+      'cs_test_statusRouteSecret',
     );
   });
 
   it('returns PROCESSING when provider reconciliation fails', async () => {
-    const sessionId = 'cs_provider_failure_secret';
+    const sessionId = 'cs_test_providerFailureSecret';
     const deps = dependencies({
       reconcile: vi.fn(async () => {
         throw new Error('provider unavailable');

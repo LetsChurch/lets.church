@@ -13,8 +13,21 @@ import type Stripe from 'stripe';
 import logger from '@/util/logger';
 
 import {
+  CheckoutNotLinkedError,
+  raiseDonationAlert,
+  resolveDonationAlerts,
+  shouldAlertWebhookFailure,
+} from './alerts';
+import {
+  isUuid,
+  parseDonationCheckoutMetadata,
+  parseMetadataCents,
+} from './checkout-metadata';
+import { emailBelongsToVerifiedUser, getOrCreateDonor } from './donor';
+import {
   sendDonationNotifications,
   sendSubscriptionAdminNotice,
+  sendWebhookFailureAdminNotice,
   type SubscriptionAdminNotice,
   type SubscriptionCancellation,
 } from './notifications';
@@ -25,6 +38,7 @@ import {
   resolveSubscriptionAmounts,
   stripeInvoiceExpand,
 } from './reconciliation';
+import { safeErrorMessage } from './safe-error-message';
 import { getStripe } from './stripe-client';
 
 const moduleLogger = logger.child({
@@ -68,8 +82,12 @@ type PreparedEvent = {
   session?: Stripe.Checkout.Session;
   invoice?: Stripe.Invoice;
   subscription?: Stripe.Subscription;
+  // Metadata of the session that created `subscription`, when its checkout
+  // isn't stored yet.
+  checkoutMetadata?: Stripe.Metadata;
   charge?: Stripe.Charge;
   dispute?: Stripe.Dispute;
+  paymentIntent?: Stripe.PaymentIntent;
 };
 
 function stripeId(
@@ -81,6 +99,47 @@ function stripeId(
 
 function invoiceSubscriptionId(invoice: Stripe.Invoice) {
   return stripeId(invoice.parent?.subscription_details?.subscription);
+}
+
+// A subscription from a checkout whose first payment never succeeded: an
+// abandoned gift, which is not stored.
+function isUnpaidSubscription(subscription: Stripe.Subscription) {
+  return (
+    subscription.status === 'incomplete' ||
+    subscription.status === 'incomplete_expired'
+  );
+}
+
+// A value that isn't ours (e.g. edited in the Stripe dashboard) counts as no
+// checkout.
+function subscriptionCheckoutId(subscription: Stripe.Subscription | undefined) {
+  const checkoutId = subscription?.metadata.donationCheckoutId;
+  return isUuid(checkoutId) ? checkoutId : null;
+}
+
+/**
+ * A subscription carries only its checkout id; the donor's details stay on the
+ * Checkout Session that created it. A subscription event can arrive before that
+ * session completes, so fetch them when the checkout isn't stored yet.
+ */
+async function pendingCheckoutMetadata(
+  stripe: Stripe,
+  subscription: Stripe.Subscription | undefined,
+) {
+  const checkoutId = subscriptionCheckoutId(subscription);
+  if (!subscription || !checkoutId || isUnpaidSubscription(subscription)) {
+    return undefined;
+  }
+  const stored = await db.query.DonationCheckout.findFirst({
+    where: (table, { eq }) => eq(table.id, checkoutId),
+    columns: { id: true },
+  });
+  if (stored) return undefined;
+  const sessions = await stripe.checkout.sessions.list({
+    subscription: subscription.id,
+    limit: 1,
+  });
+  return sessions.data[0]?.metadata ?? undefined;
 }
 
 async function prepareEvent(event: Stripe.Event): Promise<PreparedEvent> {
@@ -98,11 +157,16 @@ async function prepareEvent(event: Stripe.Event): Promise<PreparedEvent> {
         expand: ['payment_intent.latest_charge', 'subscription'],
       },
     );
+    const subscription =
+      session.subscription && typeof session.subscription === 'object'
+        ? session.subscription
+        : undefined;
     return {
       session,
-      subscription:
-        session.subscription && typeof session.subscription === 'object'
-          ? session.subscription
+      subscription,
+      invoice:
+        subscription && event.type !== 'checkout.session.expired'
+          ? await retrieveLatestInvoice(stripe, subscription)
           : undefined,
     };
   }
@@ -115,11 +179,13 @@ async function prepareEvent(event: Stripe.Event): Promise<PreparedEvent> {
       expand: [...stripeInvoiceExpand],
     });
     const subscriptionId = invoiceSubscriptionId(invoice);
+    const subscription = subscriptionId
+      ? await stripe.subscriptions.retrieve(subscriptionId)
+      : undefined;
     return {
       invoice,
-      subscription: subscriptionId
-        ? await stripe.subscriptions.retrieve(subscriptionId)
-        : undefined,
+      subscription,
+      checkoutMetadata: await pendingCheckoutMetadata(stripe, subscription),
     };
   }
 
@@ -128,9 +194,26 @@ async function prepareEvent(event: Stripe.Event): Promise<PreparedEvent> {
     event.type === 'customer.subscription.updated' ||
     event.type === 'customer.subscription.deleted'
   ) {
+    const subscription = await stripe.subscriptions.retrieve(
+      event.data.object.id,
+    );
     return {
-      subscription: await stripe.subscriptions.retrieve(event.data.object.id),
+      subscription,
+      checkoutMetadata: await pendingCheckoutMetadata(stripe, subscription),
     };
+  }
+
+  if (event.type === 'payment_intent.payment_failed') {
+    const paymentIntent = await stripe.paymentIntents.retrieve(
+      event.data.object.id,
+    );
+    // A monthly gift's payment intent carries no metadata of its own; the
+    // session it belongs to says whether it is a donation.
+    const sessions = await stripe.checkout.sessions.list({
+      payment_intent: paymentIntent.id,
+      limit: 1,
+    });
+    return { paymentIntent, session: sessions.data[0] };
   }
 
   if (event.type === 'charge.refunded') {
@@ -152,6 +235,16 @@ async function prepareEvent(event: Stripe.Event): Promise<PreparedEvent> {
   return {};
 }
 
+async function retrieveLatestInvoice(
+  stripe: Stripe,
+  subscription: Stripe.Subscription,
+) {
+  const invoiceId = stripeId(subscription.latest_invoice);
+  return invoiceId
+    ? stripe.invoices.retrieve(invoiceId, { expand: [...stripeInvoiceExpand] })
+    : undefined;
+}
+
 export async function reconcileStripeCheckoutSession(sessionId: string) {
   const stripe = getStripe();
   const session = await stripe.checkout.sessions.retrieve(sessionId, {
@@ -163,14 +256,9 @@ export async function reconcileStripeCheckoutSession(sessionId: string) {
     session.subscription && typeof session.subscription === 'object'
       ? session.subscription
       : undefined;
-  const latestInvoiceId = subscription
-    ? stripeId(subscription.latest_invoice)
-    : null;
-  const invoice = latestInvoiceId
-    ? await stripe.invoices.retrieve(latestInvoiceId, {
-        expand: [...stripeInvoiceExpand],
-      })
-    : null;
+  const invoice = subscription
+    ? await retrieveLatestInvoice(stripe, subscription)
+    : undefined;
 
   const succeeded: SucceededDonations = [];
   await db.transaction(async (tx) => {
@@ -224,13 +312,8 @@ function metadataCents(
   subscriptionId: string,
 ) {
   if (input == null) return null;
-  if (!/^\d+$/.test(input)) {
-    throw new Error(
-      `Invalid ${field} metadata on subscription ${subscriptionId}`,
-    );
-  }
-  const result = Number(input);
-  if (!Number.isSafeInteger(result)) {
+  const result = parseMetadataCents(input);
+  if (result == null) {
     throw new Error(
       `Invalid ${field} metadata on subscription ${subscriptionId}`,
     );
@@ -238,24 +321,108 @@ function metadataCents(
   return result;
 }
 
+/**
+ * Load a donation checkout, creating it (and its donor) from the Stripe
+ * metadata on first sight. Checkouts are only stored once Stripe reports on
+ * them, and a subscription event can arrive before the session completes, so
+ * every event that carries the metadata may be the one that creates it.
+ */
+async function findOrCreateCheckout(
+  tx: TransactionClient,
+  checkoutId: string,
+  metadata: Record<string, string> | null | undefined,
+  expiresAt: Date | null,
+) {
+  const existing = await tx.query.DonationCheckout.findFirst({
+    where: (table, { eq }) => eq(table.id, checkoutId),
+  });
+  if (existing) return existing;
+
+  const pending = parseDonationCheckoutMetadata(metadata);
+  if (!pending || pending.checkoutId !== checkoutId) return null;
+
+  // The account link was checked when the checkout started, but the account
+  // may since have been deleted or lost the address; check it again.
+  const appUserId = (await emailBelongsToVerifiedUser(
+    tx,
+    pending.appUserId,
+    pending.email,
+  ))
+    ? pending.appUserId
+    : null;
+  const donor = await getOrCreateDonor(
+    tx,
+    pending.email,
+    pending.name,
+    appUserId,
+  );
+  // A concurrent event for the same checkout may insert it first.
+  const [inserted] = await tx
+    .insert(DonationCheckout)
+    .values({
+      id: checkoutId,
+      donorId: donor.id,
+      frequency: pending.frequency,
+      baseAmountCents: pending.baseAmountCents,
+      feeCoverageCents: pending.feeCoverageCents,
+      amountCents: pending.baseAmountCents + pending.feeCoverageCents,
+      expiresAt,
+      updatedAt: new Date(),
+    })
+    .onConflictDoNothing()
+    .returning();
+
+  return (
+    inserted ??
+    (await tx.query.DonationCheckout.findFirst({
+      where: (table, { eq }) => eq(table.id, checkoutId),
+    })) ??
+    null
+  );
+}
+
 async function upsertSubscription(
   tx: TransactionClient,
   subscription: Stripe.Subscription,
+  checkoutMetadata?: Stripe.Metadata,
 ) {
-  const checkoutId = subscription.metadata.donationCheckoutId || null;
+  const checkoutId = subscriptionCheckoutId(subscription);
   const checkout = checkoutId
-    ? await tx.query.DonationCheckout.findFirst({
-        where: (table, { eq }) => eq(table.id, checkoutId),
-      })
+    ? await findOrCreateCheckout(
+        tx,
+        checkoutId,
+        // Subscriptions created before checkouts moved into session metadata
+        // carry the full metadata themselves.
+        checkoutMetadata ?? subscription.metadata,
+        null,
+      )
     : null;
   const existing = await tx.query.DonationSubscription.findFirst({
     where: (table, { eq }) => eq(table.stripeSubscriptionId, subscription.id),
   });
+  // Our own checkout that can't be created yet (e.g. Stripe hasn't linked the
+  // session to the subscription): fail so Stripe retries the event rather than
+  // marking it processed and dropping the gift. Older subscriptions also carry
+  // their donor id, which is enough on its own, and an unpaid one is skipped.
+  if (
+    checkoutId &&
+    !checkout &&
+    !existing &&
+    !subscription.metadata.donationDonorId &&
+    !isUnpaidSubscription(subscription)
+  ) {
+    throw new CheckoutNotLinkedError(
+      `Donation checkout ${checkoutId} for subscription ${subscription.id} was not found`,
+    );
+  }
   const donorId =
     checkout?.donorId ??
     existing?.donorId ??
     subscription.metadata.donationDonorId;
   if (!donorId) {
+    // An abandoned or declined monthly checkout leaves an unpaid subscription
+    // that never had a donor; only a paid one is worth a warning.
+    if (isUnpaidSubscription(subscription)) return null;
     moduleLogger.warn(
       {
         context: {
@@ -457,13 +624,21 @@ async function applyCheckoutSession(
 ) {
   const checkoutId =
     session.metadata?.donationCheckoutId ?? session.client_reference_id;
-  if (!checkoutId) return;
+  // Our checkout ids are UUIDs; anything else is some other Checkout Session on
+  // the account, and querying the uuid column with it would fail every retry.
+  if (!isUuid(checkoutId)) return;
 
-  const checkout = await tx.query.DonationCheckout.findFirst({
-    where: (table, { eq }) => eq(table.id, checkoutId),
-  });
+  // An abandoned checkout was never stored, and expiring must not create it,
+  // so it gets no metadata to create from.
+  const expired = eventType === 'checkout.session.expired';
+  const checkout = await findOrCreateCheckout(
+    tx,
+    checkoutId,
+    expired ? null : session.metadata,
+    new Date(session.expires_at * 1000),
+  );
   if (!checkout) {
-    if (session.metadata?.donationCheckoutId) {
+    if (!expired && session.metadata?.donationCheckoutId) {
       throw new Error(`Donation checkout ${checkoutId} was not found`);
     }
     return;
@@ -481,7 +656,7 @@ async function applyCheckoutSession(
     throw new Error(`Checkout ${checkoutId} amount does not match Stripe`);
   }
 
-  if (eventType === 'checkout.session.expired') {
+  if (expired) {
     await tx
       .update(DonationCheckout)
       .set({ status: 'EXPIRED', updatedAt: new Date() })
@@ -498,6 +673,10 @@ async function applyCheckoutSession(
       updatedAt: new Date(),
     })
     .where(eq(DonationCheckout.id, checkout.id));
+  // A card declined earlier in this checkout no longer needs attention.
+  if (session.payment_status === 'paid') {
+    await resolveDonationAlerts(tx, { stripeCheckoutSessionId: session.id });
+  }
 
   if (session.mode === 'subscription') {
     if (!subscription) {
@@ -561,9 +740,15 @@ async function applyPaidInvoice(
   invoice: Stripe.Invoice,
   stripeSubscription: Stripe.Subscription,
   succeeded: SucceededDonations,
+  checkoutMetadata?: Stripe.Metadata,
 ) {
-  const subscription = await upsertSubscription(tx, stripeSubscription);
+  const subscription = await upsertSubscription(
+    tx,
+    stripeSubscription,
+    checkoutMetadata,
+  );
   if (!subscription) return;
+  await resolveDonationAlerts(tx, { stripeObjectId: invoice.id });
   if (invoice.amount_paid <= 0) return;
 
   const usesExpectedAmount = invoice.amount_paid === subscription.amountCents;
@@ -605,8 +790,13 @@ async function applyFailedInvoice(
   invoice: Stripe.Invoice,
   stripeSubscription: Stripe.Subscription,
   failedAt: Date,
+  checkoutMetadata?: Stripe.Metadata,
 ): Promise<SubscriptionAdminNotice | null> {
-  const subscription = await upsertSubscription(tx, stripeSubscription);
+  const subscription = await upsertSubscription(
+    tx,
+    stripeSubscription,
+    checkoutMetadata,
+  );
   if (!subscription) return null;
   const newerSuccessfulDonation = await tx.query.Donation.findFirst({
     where: (table, { and, eq, gte }) =>
@@ -626,7 +816,20 @@ async function applyFailedInvoice(
       updatedAt: new Date(),
     })
     .where(eq(DonationSubscription.id, subscription.id));
-  if (recovered) return null;
+  if (recovered) {
+    await resolveDonationAlerts(tx, { stripeObjectId: invoice.id });
+    return null;
+  }
+  const failureMessage = invoiceFailureMessage(invoice);
+  await raiseDonationAlert(tx, {
+    kind: 'RENEWAL_PAYMENT_FAILED',
+    stripeObjectId: invoice.id,
+    subscriptionId: subscription.id,
+    amountCents: invoice.amount_due,
+    currency: invoice.currency,
+    message: failureMessage,
+    livemode: invoice.livemode,
+  });
   return {
     kind: 'PAYMENT_FAILED',
     subscriptionId: subscription.id,
@@ -734,6 +937,81 @@ async function applyDispute(tx: TransactionClient, dispute: Stripe.Dispute) {
   }
 }
 
+/**
+ * A card declined on the Checkout page. The donor can try again there, so the
+ * gift itself is not stored; the admin dashboard lists the decline until the
+ * checkout is paid or an admin dismisses it.
+ */
+async function applyFailedCheckoutPayment(
+  tx: TransactionClient,
+  paymentIntent: Stripe.PaymentIntent,
+  session: Stripe.Checkout.Session | undefined,
+) {
+  if (!session?.metadata?.donationCheckoutId) return;
+  // The donor may already have paid with another card; a late decline event
+  // must not reopen the alert that payment resolved.
+  if (session.payment_status === 'paid') return;
+  // A delayed method (e.g. a bank debit) that fails after the donor finished
+  // checkout is a failed gift, recorded by `async_payment_failed`.
+  if (session.status === 'complete') return;
+  const error = paymentIntent.last_payment_error;
+  const reason = error?.decline_code ?? error?.code;
+  await raiseDonationAlert(tx, {
+    kind: 'CHECKOUT_PAYMENT_FAILED',
+    stripeObjectId: paymentIntent.id,
+    stripeCheckoutSessionId: session.id,
+    amountCents: paymentIntent.amount,
+    currency: paymentIntent.currency,
+    message: error?.message
+      ? `${error.message}${reason ? ` (${reason})` : ''}`
+      : (reason ?? null),
+    livemode: paymentIntent.livemode,
+  });
+}
+
+// Some failures clear on Stripe's next retry (a brief Stripe or network error),
+// so the admin is emailed only once an event has kept failing.
+const WEBHOOK_FAILURE_EMAIL_ATTEMPT = 3;
+
+/**
+ * Put an event that failed to apply on the admin dashboard, and email the
+ * admin if it keeps failing. Stripe retries it; a later success resolves the
+ * alert.
+ */
+async function recordWebhookFailure(event: Stripe.Event, error: unknown) {
+  const message = `${event.type}: ${safeErrorMessage(error)}`;
+  if (!shouldAlertWebhookFailure(error, event.created)) {
+    moduleLogger.info(
+      { targetId: event.id },
+      'Stripe event arrived before its checkout was linked; awaiting retry',
+    );
+    return;
+  }
+  try {
+    const occurrences = await raiseDonationAlert(db, {
+      kind: 'WEBHOOK_FAILED',
+      stripeObjectId: event.id,
+      message,
+      livemode: event.livemode,
+    });
+    if (occurrences === WEBHOOK_FAILURE_EMAIL_ATTEMPT) {
+      await sendWebhookFailureAdminNotice({
+        eventId: event.id,
+        eventType: event.type,
+        message,
+      });
+    }
+  } catch (alertError) {
+    moduleLogger.error(
+      {
+        err: new Error(safeErrorMessage(alertError)),
+        targetId: event.id,
+      },
+      'Failed to record Stripe webhook failure',
+    );
+  }
+}
+
 async function applyEvent(
   tx: TransactionClient,
   event: Stripe.Event,
@@ -754,6 +1032,16 @@ async function applyEvent(
         prepared.subscription,
         succeeded,
       );
+      // The first invoice's own event may have been applied before Stripe
+      // marked the subscription paid, which records no gift, so record it here.
+      if (prepared.invoice?.status === 'paid' && prepared.subscription) {
+        await applyPaidInvoice(
+          tx,
+          prepared.invoice,
+          prepared.subscription,
+          succeeded,
+        );
+      }
       break;
     case 'invoice.paid':
       if (!prepared.invoice) throw new Error('Missing invoice');
@@ -763,6 +1051,7 @@ async function applyEvent(
         prepared.invoice,
         prepared.subscription,
         succeeded,
+        prepared.checkoutMetadata,
       );
       break;
     case 'invoice.payment_failed': {
@@ -773,6 +1062,7 @@ async function applyEvent(
         prepared.invoice,
         prepared.subscription,
         new Date(event.created * 1000),
+        prepared.checkoutMetadata,
       );
       if (notice) notices.push(notice);
       break;
@@ -782,7 +1072,11 @@ async function applyEvent(
     case 'customer.subscription.deleted': {
       const stripeSubscription = prepared.subscription;
       if (!stripeSubscription) throw new Error('Missing subscription');
-      const subscription = await upsertSubscription(tx, stripeSubscription);
+      const subscription = await upsertSubscription(
+        tx,
+        stripeSubscription,
+        prepared.checkoutMetadata,
+      );
       if (!subscription) break;
       // A checkout that was never paid expires as incomplete_expired; that is
       // an abandoned gift, not a canceled plan.
@@ -816,6 +1110,14 @@ async function applyEvent(
       }
       break;
     }
+    case 'payment_intent.payment_failed':
+      if (!prepared.paymentIntent) throw new Error('Missing payment intent');
+      await applyFailedCheckoutPayment(
+        tx,
+        prepared.paymentIntent,
+        prepared.session,
+      );
+      break;
     case 'charge.refunded':
       if (!prepared.charge) throw new Error('Missing refunded charge');
       await applyChargeRefund(tx, prepared.charge);
@@ -836,31 +1138,42 @@ export async function processStripeEvent(event: Stripe.Event) {
     where: (table, { eq }) => eq(table.id, event.id),
     columns: { id: true },
   });
-  if (exists) return { duplicate: true };
+  if (exists) {
+    // A concurrent delivery may have failed after another one applied it.
+    await resolveDonationAlerts(db, { stripeObjectId: event.id });
+    return { duplicate: true };
+  }
 
-  const prepared = await prepareEvent(event);
   let duplicate = false;
   const succeeded: SucceededDonations = [];
   const notices: SubscriptionAdminNotice[] = [];
 
-  await db.transaction(async (tx) => {
-    const [receipt] = await tx
-      .insert(DonationWebhookEvent)
-      .values({
-        id: event.id,
-        type: event.type,
-        stripeCreatedAt: new Date(event.created * 1000),
-      })
-      .onConflictDoNothing()
-      .returning({ id: DonationWebhookEvent.id });
+  try {
+    const prepared = await prepareEvent(event);
+    await db.transaction(async (tx) => {
+      const [receipt] = await tx
+        .insert(DonationWebhookEvent)
+        .values({
+          id: event.id,
+          type: event.type,
+          stripeCreatedAt: new Date(event.created * 1000),
+        })
+        .onConflictDoNothing()
+        .returning({ id: DonationWebhookEvent.id });
 
-    if (!receipt) {
-      duplicate = true;
-      return;
-    }
+      if (!receipt) {
+        duplicate = true;
+        return;
+      }
 
-    await applyEvent(tx, event, prepared, succeeded, notices);
-  });
+      await applyEvent(tx, event, prepared, succeeded, notices);
+      // A retry that applies clears the alert from its earlier failure.
+      await resolveDonationAlerts(tx, { stripeObjectId: event.id });
+    });
+  } catch (error) {
+    await recordWebhookFailure(event, error);
+    throw error;
+  }
 
   for (const donationId of succeeded) {
     await sendDonationNotifications(donationId);

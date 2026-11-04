@@ -146,6 +146,7 @@ slightly-different copy is how a fix silently regresses at one call site.
 | 3 — URL scheme allow-list    | `isSafeUrl`, `safeHttpHref`                                                    | `packages/web/src/util/safe-url.ts`                                                 |
 | 4 — read/write authorization | `isChannelRoutable`, `canViewMedia`, `canViewMediaById`, `getMemberChannelIds` | `packages/web/src/util/media-visibility.ts`                                         |
 | 5 — log redaction            | `redactLogInput`, `redactSensitive`                                            | `packages/web/src/util/redact-log-input.ts`, `packages/web/src/util/trpc-logger.ts` |
+| 5 — query-error messages     | `safeErrorMessage` (drops a failed query's params and quoted values)           | `packages/web/src/donations/safe-error-message.ts`                                  |
 | 5 — error-tracker collection | `initSentry`                                                                   | `packages/temporal/src/util/sentry.ts`                                              |
 | 6 — AI quota admission       | `enforceAiRateLimit`                                                           | `packages/web/src/ai/abuse-control.ts`                                              |
 | 7 — open-redirect            | `safeRedirect`                                                                 | `packages/web/src/util/safe-redirect.ts`                                            |
@@ -303,8 +304,11 @@ Payment details go straight to Stripe Checkout and never pass through the
 application. The application stores donor identity, amounts, Stripe object IDs,
 status, and receipt links.
 
-- Checkout input is schema-validated and amount-bounded. hCaptcha protects the
-  public endpoint.
+- Checkout input is schema-validated and amount-bounded. The public endpoint is
+  rate limited but has no CAPTCHA: it only opens a Stripe Checkout Session (where
+  Stripe screens card testing) and writes no database rows. Donor and checkout
+  rows are written only when Stripe reports on the session, from metadata the
+  server set on it (`src/donations/checkout-metadata.ts`).
 - A signed-in donor can attach a checkout only to an email address already
   verified on that account.
 - Guest gifts are attached to an account only after the matching email address

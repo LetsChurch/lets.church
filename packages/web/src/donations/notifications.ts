@@ -456,6 +456,74 @@ export async function sendDonationNotifications(donationId: string) {
   }
 }
 
+export type WebhookFailureNotice = {
+  eventId: string;
+  eventType: string;
+  message: string;
+};
+
+export function buildAdminWebhookFailureEmail(
+  notice: WebhookFailureNotice,
+  webUrl: string,
+) {
+  const adminUrl = `${webUrl}/dashboard/admin/donations`;
+  const title = 'Stripe event could not be applied';
+  const summary =
+    'A Stripe event for a donation could not be applied, so a gift or plan may be missing from the ledger. Stripe retries it for up to three days, and the donations dashboard lists it until it applies.';
+  const fields = [
+    ['Event', notice.eventType],
+    ['Event ID', notice.eventId],
+    ['Error', notice.message],
+  ] as const;
+
+  const text = stripIndent`
+    ${summary}
+
+    ${fields.map(([label, value]) => `${label}: ${value}`).join('\n')}
+
+    Manage donations: ${adminUrl}
+  `;
+
+  const html = emailHtml(
+    title,
+    stripIndent`
+      ${summary}
+
+      ${fields.map(([label, value]) => `<b>${label}:</b> ${sanitizeForHtml(value)}`).join('<br>')}
+
+      <a href="${sanitizeForHtml(adminUrl)}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">Manage donations</a>
+    `,
+  ).html;
+
+  return { subject: `Stripe event failed: ${notice.eventType}`, text, html };
+}
+
+/**
+ * Tell the site admin that a Stripe event keeps failing to apply. Like the
+ * other notices, failures are logged and swallowed.
+ */
+export async function sendWebhookFailureAdminNotice(
+  notice: WebhookFailureNotice,
+) {
+  const { WEB_URL, ADMIN_EMAIL } = z
+    .object({ WEB_URL: z.url(), ADMIN_EMAIL: z.email().optional() })
+    .parse(process.env);
+  if (!ADMIN_EMAIL) return;
+
+  try {
+    await startDonationEmail(
+      `donation-webhook-failed-admin-notice:${notice.eventId}`,
+      'Stripe webhook failure admin notification email',
+      { to: ADMIN_EMAIL, ...buildAdminWebhookFailureEmail(notice, WEB_URL) },
+    );
+  } catch (err) {
+    moduleLogger.error(
+      { err: asError(err), targetId: notice.eventId },
+      'Failed to send Stripe webhook failure admin notice',
+    );
+  }
+}
+
 function subscriptionNoticeWorkflowId(notice: SubscriptionAdminNotice) {
   switch (notice.kind) {
     case 'PAYMENT_FAILED':

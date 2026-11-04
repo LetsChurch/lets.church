@@ -6,6 +6,7 @@ vi.mock('@/temporal', () => ({ startBackground: vi.fn() }));
 import {
   buildAdminDonationEmail,
   buildAdminSubscriptionNoticeEmail,
+  buildAdminWebhookFailureEmail,
   buildDonorThankYouEmail,
   type DonationEmailDetails,
   type SubscriptionEmailDetails,
@@ -175,5 +176,25 @@ describe('recurring donation admin notices', () => {
     expect(email.text).toContain('ended on October 20, 2026.');
     expect(email.text).toContain('Reason: Payment failed');
     expect(email.text).not.toContain('Donor feedback');
+  });
+});
+
+describe('webhook failure admin notice', () => {
+  it('names the event and keeps markup in the error out of the HTML', () => {
+    const email = buildAdminWebhookFailureEmail(
+      {
+        eventId: 'evt_123',
+        eventType: 'invoice.paid',
+        message: 'invoice.paid: Checkout <x> was not found',
+      },
+      WEB_URL,
+    );
+    expect(email.subject).toBe('Stripe event failed: invoice.paid');
+    expect(email.text).toContain('Event ID: evt_123');
+    expect(email.text).toContain(
+      'https://lets.church/dashboard/admin/donations',
+    );
+    expect(email.html).toContain('was not found');
+    expect(email.html).not.toContain('<x>');
   });
 });

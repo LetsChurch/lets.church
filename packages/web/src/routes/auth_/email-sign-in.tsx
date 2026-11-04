@@ -15,7 +15,7 @@ import { useState } from 'react';
 import { z } from 'zod';
 
 import { Alert, Button, Loader, Text } from '@/components/ui';
-import { useAppForm } from '@/components/ui/form';
+import { submitWithCaptcha, useAppForm } from '@/components/ui/form';
 import { donationEmailFromHistoryState } from '@/donations/sign-in-state';
 import { emailSchema } from '@/schemas/auth';
 import { useTRPC } from '@/trpc/react';
@@ -240,7 +240,7 @@ function RequestEmailSignIn({
           onSubmit={(event) => {
             event.preventDefault();
             event.stopPropagation();
-            form.handleSubmit();
+            void submitWithCaptcha(form);
           }}
         >
           {error ? (

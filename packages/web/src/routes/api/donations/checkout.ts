@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 
+import { safeErrorMessage } from '@/donations/safe-error-message';
 import { donationCheckoutSchema } from '@/schemas/donations';
 import logger from '@/util/logger';
 import {
@@ -52,22 +53,15 @@ export const Route = createFileRoute('/api/donations/checkout')({
           );
         }
 
-        const [{ validateHCaptcha }, { getClientIpAddress }, { getSession }] =
-          await Promise.all([
-            import('@/util/hcaptcha'),
-            import('@/util/request-ip'),
-            import('@/util/auth'),
-          ]);
-        const clientIp = getClientIpAddress(request.headers);
-        if (!(await validateHCaptcha(parsed.data.hcaptchaToken, clientIp))) {
-          return checkoutResponse(
-            { error: 'Complete the CAPTCHA and try again.' },
-            400,
-          );
-        }
-
-        const { enforcePublicActionRateLimit, publicActionRateLimitResponse } =
-          await import('@/util/public-action-rate-limit');
+        // No CAPTCHA here: this only opens a Stripe Checkout Session, and
+        // nothing is stored until Stripe reports on it (donations/webhooks.ts).
+        const [
+          { getSession },
+          { enforcePublicActionRateLimit, publicActionRateLimitResponse },
+        ] = await Promise.all([
+          import('@/util/auth'),
+          import('@/util/public-action-rate-limit'),
+        ]);
         const rateLimit = await enforcePublicActionRateLimit({
           headers: request.headers,
           email: parsed.data.email,
@@ -99,7 +93,7 @@ export const Route = createFileRoute('/api/donations/checkout')({
         } catch (error) {
           moduleLogger.error(
             {
-              err: error instanceof Error ? error : new Error(String(error)),
+              err: new Error(safeErrorMessage(error)),
             },
             'Failed to create donation checkout',
           );

@@ -41,23 +41,20 @@ export const Route = createFileRoute('/_main/donate')({
     ],
   }),
   loader: async ({ context: { queryClient, trpc } }) => {
-    const [env, defaults] = await Promise.all([
-      queryClient.ensureQueryData(trpc.common.getClientEnv.queryOptions()),
+    // getBudget only primes the cache for <DonationBudget />.
+    const [defaults] = await Promise.all([
       queryClient.ensureQueryData(
         trpc.donations.getCheckoutDefaults.queryOptions(),
       ),
       queryClient.ensureQueryData(trpc.donations.getBudget.queryOptions()),
     ]);
-    return { env, defaults };
+    return { defaults };
   },
 });
 
 function DonatePage() {
   const { canceled } = Route.useSearch();
   const trpc = useTRPC();
-  const { data: env } = useSuspenseQuery(
-    trpc.common.getClientEnv.queryOptions(),
-  );
   const { data: defaults } = useSuspenseQuery(
     trpc.donations.getCheckoutDefaults.queryOptions(),
   );
@@ -71,7 +68,6 @@ function DonatePage() {
       coverFees: true,
       email: defaults?.email ?? '',
       name: defaults?.name ?? '',
-      hcaptchaToken: '',
     },
     validators: {
       onSubmit: donationCheckoutSchema,
@@ -91,7 +87,6 @@ function DonatePage() {
         };
         if (!response.ok || !result.url || !result.sessionId) {
           setError(result.error ?? 'We could not start checkout.');
-          form.setFieldValue('hcaptchaToken', '');
           return;
         }
         rememberDonationCheckoutEmail(
@@ -104,7 +99,6 @@ function DonatePage() {
         setError(
           'We could not reach checkout. Check your connection and retry.',
         );
-        form.setFieldValue('hcaptchaToken', '');
       }
     },
   });
@@ -290,14 +284,6 @@ function DonatePage() {
                 />
               )}
             </form.AppField>
-
-            <div className="flex justify-center">
-              <form.AppField name="hcaptchaToken">
-                {(field) => (
-                  <field.HCaptchaField sitekey={env.HCAPTCHA_SITE_KEY} />
-                )}
-              </form.AppField>
-            </div>
 
             <form.Subscribe
               selector={(state) => ({

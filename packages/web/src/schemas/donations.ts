@@ -18,11 +18,14 @@ export const donationCheckoutSchema = z.object({
     .max(320)
     .pipe(z.email('Enter a valid email address')),
   name: z.string().trim().max(120),
-  hcaptchaToken: z.string().min(1, 'Complete the CAPTCHA'),
 });
 
 export const checkoutStatusSchema = z.object({
-  sessionId: z.string().min(1).max(255),
+  // A Stripe Checkout Session id; only these are worth asking Stripe about.
+  sessionId: z
+    .string()
+    .max(255)
+    .regex(/^cs_(?:test|live)_[A-Za-z0-9]+$/),
 });
 
 // $1M/month is far beyond any real line item; it just bounds admin input.

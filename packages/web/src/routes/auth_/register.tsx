@@ -14,7 +14,7 @@ import { useState } from 'react';
 import { z } from 'zod';
 
 import { Alert, Text } from '@/components/ui';
-import { useAppForm } from '@/components/ui/form';
+import { submitWithCaptcha, useAppForm } from '@/components/ui/form';
 import { registerSchema } from '@/schemas/auth';
 import { useTRPC } from '@/trpc/react';
 
@@ -123,7 +123,7 @@ function RouteComponent() {
         onSubmit={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          form.handleSubmit();
+          void submitWithCaptcha(form);
         }}
         method="post"
       >

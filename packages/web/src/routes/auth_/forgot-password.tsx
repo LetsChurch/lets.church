@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { z } from 'zod';
 
 import { Alert, Text } from '@/components/ui';
-import { useAppForm } from '@/components/ui/form';
+import { submitWithCaptcha, useAppForm } from '@/components/ui/form';
 import { useTRPC } from '@/trpc/react';
 
 export const Route = createFileRoute('/auth_/forgot-password')({
@@ -101,7 +101,7 @@ function ForgotPasswordRoute() {
           onSubmit={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            form.handleSubmit();
+            void submitWithCaptcha(form);
           }}
           method="post"
         >

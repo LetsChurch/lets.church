@@ -4,7 +4,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
 
 import { Alert, Text, Title } from '@/components/ui';
-import { useAppForm } from '@/components/ui/form';
+import { submitWithCaptcha, useAppForm } from '@/components/ui/form';
 import { useTRPC } from '@/trpc/react';
 
 export const Route = createFileRoute('/_main/dashboard/account_/newsletter')({
@@ -122,7 +122,7 @@ function NewsletterPage() {
             onSubmit={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              form.handleSubmit();
+              void submitWithCaptcha(form);
             }}
           >
             <div className="flex flex-col gap-4">
@@ -138,7 +138,13 @@ function NewsletterPage() {
               </form.AppField>
 
               <div className="flex flex-col items-center gap-4">
-                <form.AppField name="hcaptchaToken">
+                <form.AppField
+                  name="hcaptchaToken"
+                  validators={{
+                    onSubmit: ({ value }) =>
+                      value ? undefined : 'Please complete the CAPTCHA',
+                  }}
+                >
                   {(field) => (
                     <field.HCaptchaField sitekey={env.HCAPTCHA_SITE_KEY} />
                   )}

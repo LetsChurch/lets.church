@@ -15,7 +15,6 @@ describe('normalizeDonationEmail', () => {
       coverFees: true,
       email: '  Donor@Example.COM  ',
       name: 'Donor',
-      hcaptchaToken: 'token',
     });
 
     expect(parsed.email).toBe('Donor@Example.COM');

@@ -109,6 +109,10 @@ function AdminPage() {
     trpc.dashboard.admin.getMaintenanceSettings.queryOptions(),
   );
 
+  const { data: donationAlertCount } = useQuery(
+    trpc.donations.getAdminAlertCount.queryOptions(),
+  );
+
   return (
     <>
       <DashboardPageHeader
@@ -262,6 +266,11 @@ function AdminPage() {
           <div className="dashboard-card" data-interactive="true">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-4">
               <Text fw={500}>Donations</Text>
+              {donationAlertCount ? (
+                <Badge color="red" size="sm">
+                  {donationAlertCount} need attention
+                </Badge>
+              ) : null}
             </div>
             <Text size="sm" c="dimmed">
               Review gifts, recurring plans, refunds, and disputes

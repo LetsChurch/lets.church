@@ -119,21 +119,21 @@ export async function handleDonationStatusRequest(
     return statusResponse({ error: 'Donation status is unavailable.' }, 400);
   }
 
-  const checkout = await dependencies.findCheckout(parsed.data.sessionId);
-  if (!checkout) {
-    return statusResponse({ status: 'PROCESSING' });
-  }
+  let checkout = await dependencies.findCheckout(parsed.data.sessionId);
+  let donation = checkout ? await dependencies.findDonation(checkout.id) : null;
 
-  let donation = await dependencies.findDonation(checkout.id);
-
-  if (!donation && checkout.status !== 'EXPIRED') {
+  // Checkouts are only stored once Stripe reports on them, so a donor back
+  // from a successful payment can beat the webhook to an unknown session.
+  if (!donation && checkout?.status !== 'EXPIRED') {
     const rateLimit = await dependencies.enforceRateLimit(
       request.headers,
       parsed.data.sessionId,
     );
     if (!rateLimit.allowed) {
       if (rateLimit.limitedBy === 'session') {
-        return checkoutStatusResponse(checkout, donation);
+        return checkout
+          ? checkoutStatusResponse(checkout, donation)
+          : statusResponse({ status: 'PROCESSING' });
       }
       moduleLogger.warn(
         {
@@ -149,18 +149,23 @@ export async function handleDonationStatusRequest(
 
     try {
       await dependencies.reconcile(parsed.data.sessionId);
-      donation = await dependencies.findDonation(checkout.id);
+      checkout ??= await dependencies.findCheckout(parsed.data.sessionId);
+      if (checkout) donation = await dependencies.findDonation(checkout.id);
     } catch (error) {
       moduleLogger.warn(
         {
           context: {
-            checkoutId: checkout.id,
+            checkoutId: checkout?.id ?? null,
             errorName: error instanceof Error ? error.name : 'UnknownError',
           },
         },
         'Stripe checkout status reconciliation failed',
       );
     }
+  }
+
+  if (!checkout) {
+    return statusResponse({ status: 'PROCESSING' });
   }
 
   return checkoutStatusResponse(checkout, donation);

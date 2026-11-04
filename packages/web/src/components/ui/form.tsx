@@ -272,32 +272,127 @@ function DateTimePickerField(props: {
   );
 }
 
+// Invisible hCaptcha has no widget to click, so the token is fetched on submit.
+// Each mounted HCaptchaField registers a token getter under its form's id, and
+// `submitWithCaptcha` runs it before handing off to `form.handleSubmit()`.
+const captchaExecutors = new Map<string, () => Promise<void>>();
+const pendingSubmits = new Map<string, Promise<void>>();
+
+export function submitWithCaptcha(form: {
+  formId: string;
+  handleSubmit: () => unknown;
+}) {
+  // The button isn't disabled until handleSubmit runs, so a double submit while
+  // the challenge is open joins the first rather than reusing its one-time token.
+  const pending = pendingSubmits.get(form.formId);
+  if (pending) return pending;
+
+  const submit = (async () => {
+    // If the user closes the challenge or it errors, the token stays empty and
+    // the form's own validation reports the missing CAPTCHA.
+    await captchaExecutors
+      .get(form.formId)?.()
+      .catch(() => {});
+    await form.handleSubmit();
+  })().finally(() => pendingSubmits.delete(form.formId));
+  pendingSubmits.set(form.formId, submit);
+  return submit;
+}
+
+/** hCaptcha's terms require this notice wherever the widget is invisible. */
+export function HCaptchaNotice({
+  className = 'text-xs text-zinc-500 dark:text-zinc-400',
+}: {
+  className?: string;
+}) {
+  return (
+    <p className={className}>
+      Protected by hCaptcha. Its{' '}
+      <a
+        href="https://www.hcaptcha.com/privacy"
+        target="_blank"
+        rel="noreferrer"
+        className="underline"
+      >
+        Privacy Policy
+      </a>{' '}
+      and{' '}
+      <a
+        href="https://www.hcaptcha.com/terms"
+        target="_blank"
+        rel="noreferrer"
+        className="underline"
+      >
+        Terms of Service
+      </a>{' '}
+      apply.
+    </p>
+  );
+}
+
 function HCaptchaField(
   props: Omit<
     ComponentProps<typeof HCaptcha>,
-    'onVerify' | 'onExpire' | 'onError'
+    'onVerify' | 'onExpire' | 'onError' | 'onReady' | 'size'
   >,
 ) {
   const field = useFieldContext<string>();
   const captchaRef = useRef<HCaptcha>(null);
+  // execute() waits for the hCaptcha script, forever if it is blocked or fails
+  // to load; skip it then and let validation report the missing CAPTCHA.
+  const loadedRef = useRef(false);
+  const formId = field.form.formId;
+
+  // Routes clear the spent token after a server error. With no widget to
+  // complete, hide the empty-token error until the next submit.
+  const [clearedAtAttempt, setClearedAtAttempt] = useState(0);
 
   useEffect(() => {
     if (!field.state.value) {
       captchaRef.current?.resetCaptcha();
+      setClearedAtAttempt(field.form.state.submissionAttempts);
     }
   }, [field.state.value]);
 
-  const error = fieldError(field.state.meta.errors);
+  useEffect(() => {
+    const execute = async () => {
+      if (field.state.value || !loadedRef.current || !captchaRef.current) {
+        return;
+      }
+      const { response } = await captchaRef.current.execute({ async: true });
+      field.setValue(response);
+    };
+    captchaExecutors.set(formId, execute);
+    return () => {
+      if (captchaExecutors.get(formId) === execute) {
+        captchaExecutors.delete(formId);
+      }
+    };
+  }, [field, formId]);
+
+  // Form-level onChange schemas flag the empty token while the user is still
+  // typing; with nothing visible to complete, only surface it after a submit.
+  const submitted = field.form.state.submissionAttempts > clearedAtAttempt;
+  const error = submitted ? fieldError(field.state.meta.errors) : undefined;
 
   return (
     <div>
       <HCaptcha
         {...props}
+        size="invisible"
         ref={captchaRef}
+        // onReady, not onLoad: onLoad only fires when this instance loads the
+        // script, not when an earlier page already did.
+        onReady={() => {
+          loadedRef.current = true;
+        }}
         onVerify={(token) => field.setValue(token)}
-        onExpire={() => field.setValue('')}
-        onError={() => field.setValue('')}
+        // Clearing an already-empty token still counts as a change, which would
+        // wipe the submit error (e.g. onError when the script fails to load).
+        onExpire={() => field.state.value && field.setValue('')}
+        onError={() => field.state.value && field.setValue('')}
       />
+      <HCaptchaNotice />
       {error ? (
         <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>
       ) : null}

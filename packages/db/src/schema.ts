@@ -76,6 +76,12 @@ export const DonationSubscriptionStatus = pgEnum(
   ],
 );
 
+export const DonationAlertKind = pgEnum('donation_alert_kind', [
+  'CHECKOUT_PAYMENT_FAILED',
+  'RENEWAL_PAYMENT_FAILED',
+  'WEBHOOK_FAILED',
+]);
+
 export const DonationImportType = pgEnum('donation_import_type', [
   'TRANSACTION_HISTORY',
   'RECURRING_PLANS',
@@ -677,6 +683,48 @@ export const DonationWebhookEvent = pgTable('donation_webhook_event', {
     .notNull()
     .defaultNow(),
 });
+
+// Problems an admin should see on the donations dashboard: declined checkout
+// payments, failed renewals and webhook events that could not be applied. One
+// row per Stripe object (payment intent, invoice or event); repeats bump
+// `occurrences`. Rows resolve on their own when the problem clears (the
+// checkout completes, the invoice is paid, the event applies) or when an
+// admin dismisses them. Donor details stay in Stripe, not here.
+export const DonationAlert = pgTable(
+  'donation_alert',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    kind: DonationAlertKind('kind').notNull(),
+    stripeObjectId: text('stripe_object_id').notNull().unique(),
+    stripeCheckoutSessionId: text('stripe_checkout_session_id'),
+    subscriptionId: uuid('subscription_id'),
+    amountCents: integer('amount_cents'),
+    currency: text('currency'),
+    message: text('message'),
+    occurrences: integer('occurrences').notNull().default(1),
+    livemode: boolean('livemode').notNull(),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    lastSeenAt: timestamp('last_seen_at', { precision: 3 })
+      .notNull()
+      .defaultNow(),
+    resolvedAt: timestamp('resolved_at', { precision: 3 }),
+  },
+  (DonationAlert) => ({
+    donation_alert_subscription_fkey: foreignKey({
+      name: 'donation_alert_subscription_fkey',
+      columns: [DonationAlert.subscriptionId],
+      foreignColumns: [DonationSubscription.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    donation_alert_checkout_session_idx: index(
+      'donation_alert_checkout_session_idx',
+    ).on(DonationAlert.stripeCheckoutSessionId),
+    donation_alert_resolved_at_idx: index('donation_alert_resolved_at_idx').on(
+      DonationAlert.resolvedAt,
+    ),
+  }),
+);
 
 // Public "where your gift goes" breakdown on the donate page. Each category is
 // a monthly expense line set by admins.

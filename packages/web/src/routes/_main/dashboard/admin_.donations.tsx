@@ -23,6 +23,7 @@ import { formatDonationAmount } from '@/donations/amounts';
 import { formatDonationDate } from '@/donations/dates';
 import { useTRPC } from '@/trpc/react';
 
+import { DonationAlerts } from './-components/donation-alerts';
 import { DonationBudgetAdmin } from './-components/donation-budget-admin';
 import { SubscriptionBudgetToggle } from './-components/subscription-budget-toggle';
 
@@ -61,6 +62,7 @@ export const Route = createFileRoute('/_main/dashboard/admin_/donations')({
         trpc.donations.getAdminImports.queryOptions(),
       ),
       queryClient.ensureQueryData(trpc.donations.getAdminBudget.queryOptions()),
+      queryClient.ensureQueryData(trpc.donations.getAdminAlerts.queryOptions()),
     ]);
     return {
       backNavigation: {
@@ -477,6 +479,8 @@ function AdminDonationsPage() {
           trying it again.
         </Alert>
       ) : null}
+
+      <DonationAlerts />
 
       <div className="mb-8 grid gap-4 sm:grid-cols-3">
         <div className="border-fancy-pants rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
