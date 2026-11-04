@@ -48,6 +48,14 @@ export default defineConfig(() => ({
             routeRules: {
               '/**': { headers: securityHeaders },
             },
+            // Missing build assets must 404 without the year-long immutable
+            // cache header, or the CDN caches the 404 (see the handler).
+            handlers: [
+              {
+                route: '/assets/**',
+                handler: './src/nitro/missing-asset.ts',
+              },
+            ],
           }),
         ]),
     viteReact(),
