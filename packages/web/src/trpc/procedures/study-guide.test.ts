@@ -59,6 +59,7 @@ beforeEach(() => {
   mocks.findUpload.mockResolvedValue({
     summarizedAt: new Date(),
     lengthSeconds: 1800,
+    downloadsEnabled: true,
   });
   mocks.findGuide.mockResolvedValue(undefined);
   mocks.workflowState.mockResolvedValue('none');
@@ -156,7 +157,11 @@ describe('studyGuide.request', () => {
   });
 
   it('waits for the transcript pipeline to finish', async () => {
-    mocks.findUpload.mockResolvedValue({ summarizedAt: null });
+    mocks.findUpload.mockResolvedValue({
+      summarizedAt: null,
+      lengthSeconds: 1800,
+      downloadsEnabled: true,
+    });
 
     await expect(caller().request({ mediaId })).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',
@@ -164,10 +169,25 @@ describe('studyGuide.request', () => {
     expect(mocks.start).not.toHaveBeenCalled();
   });
 
+  it('refuses uploads with downloads turned off', async () => {
+    mocks.findUpload.mockResolvedValue({
+      summarizedAt: new Date(),
+      lengthSeconds: 1800,
+      downloadsEnabled: false,
+    });
+
+    await expect(caller().request({ mediaId })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    expect(mocks.enforceAi).not.toHaveBeenCalled();
+    expect(mocks.start).not.toHaveBeenCalled();
+  });
+
   it('refuses uploads under the minimum length', async () => {
     mocks.findUpload.mockResolvedValue({
       summarizedAt: new Date(),
       lengthSeconds: 9 * 60,
+      downloadsEnabled: true,
     });
 
     await expect(caller().request({ mediaId })).rejects.toMatchObject({

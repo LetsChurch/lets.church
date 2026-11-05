@@ -44,8 +44,8 @@ export function studyGuideUrl(uploadRecordId: string): string {
 }
 
 /**
- * Whether the upload exists, is viewable, is long enough, and has finished
- * its transcript pipeline. Summarize runs after annotation (outline and
+ * Whether the upload exists, is viewable, allows downloads, is long enough,
+ * and has finished its transcript pipeline. Summarize runs after annotation (outline and
  * Scripture links) and skips uploads with no paragraphs, so a summary means
  * the guide has everything it draws on.
  */
@@ -57,9 +57,21 @@ async function assertGuideable(
     throw new TRPCError({ code: 'NOT_FOUND' });
   }
   const upload = await db.query.UploadRecord.findFirst({
-    columns: { summarizedAt: true, lengthSeconds: true },
+    columns: {
+      summarizedAt: true,
+      lengthSeconds: true,
+      downloadsEnabled: true,
+    },
     where: (t, { eq }) => eq(t.id, mediaId),
   });
+  // The guide is a download of the transcript's content, so it follows the
+  // upload's downloads setting like the transcript downloads do.
+  if (upload && !upload.downloadsEnabled) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Downloads are turned off for this media.',
+    });
+  }
   if (!upload?.summarizedAt) {
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',

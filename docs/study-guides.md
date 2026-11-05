@@ -4,8 +4,9 @@ The media page's Download menu offers **Study guide (PDF)** for any upload of
 at least 10 minutes (`STUDY_GUIDE_MIN_SECONDS`; a shorter talk can't fill the
 page) whose transcript pipeline has finished (it has a summary, which runs after the
 outline and Scripture annotations and is skipped for empty transcripts). It
-shows even where the channel has media downloads turned off: the guide
-comes from the transcript, not the media files. It's a two-page US Letter
+follows the upload's downloads setting, like the transcript downloads: with
+downloads off, the menu item is hidden, `studyGuide.request` refuses, and the
+PDF route returns 404. It's a two-page US Letter
 handout: the front follows along with the recording (big idea, key passage,
 fill-in-the-blank outline with timestamps, notes), the back is for afterwards
 (discussion questions, a family box, memory verse, key terms, an optional

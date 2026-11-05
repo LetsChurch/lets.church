@@ -78,6 +78,7 @@ export const Route = createFileRoute('/media/$mediaId/study-guide.pdf')({
             title: UploadRecord.title,
             publishedAt: UploadRecord.publishedAt,
             lengthSeconds: UploadRecord.lengthSeconds,
+            downloadsEnabled: UploadRecord.downloadsEnabled,
             channelName: Channel.name,
           })
           .from(StudyGuide)
@@ -88,7 +89,11 @@ export const Route = createFileRoute('/media/$mediaId/study-guide.pdf')({
           .innerJoin(Channel, eq(Channel.id, UploadRecord.channelId))
           .where(eq(StudyGuide.uploadRecordId, mediaId))
           .then((r) => r[0]);
-        if (!row || row.version < STUDY_GUIDE_VERSION) {
+        if (
+          !row ||
+          !row.downloadsEnabled ||
+          row.version < STUDY_GUIDE_VERSION
+        ) {
           return notFound();
         }
         const content = StudyGuideContentSchema.safeParse(row.content);

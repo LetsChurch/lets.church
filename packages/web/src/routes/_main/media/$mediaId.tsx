@@ -1155,8 +1155,10 @@ function RouteComponent() {
               uploadId={params.mediaId}
               canEditUpload={media.canEdit}
               // Matches the server's gate: a summary means annotation and
-              // summarize have run over a non-empty transcript.
+              // summarize have run over a non-empty transcript. The guide
+              // follows the upload's downloads setting.
               studyGuideAvailable={
+                media.downloadsEnabled &&
                 !hideTranscript &&
                 !media.isLive &&
                 !!media.summary &&
