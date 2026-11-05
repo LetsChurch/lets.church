@@ -1,11 +1,11 @@
 import { db } from '@letschurch/db';
 import { createFileRoute } from '@tanstack/react-router';
-import sanitizeFilename from 'sanitize-filename';
 
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import type { Context } from '@/trpc/context';
 import { appRouter } from '@/trpc/router';
 import { getSession } from '@/util/auth';
+import { attachmentDisposition } from '@/util/content-disposition';
 import logger from '@/util/logger';
 import { canViewMediaById } from '@/util/media-visibility';
 
@@ -22,21 +22,6 @@ function notFound() {
     status: 404,
     headers: { 'Content-Type': 'text/plain' },
   });
-}
-
-// `filename` is the ASCII fallback for old clients; `filename*` carries the
-// real (possibly non-Latin-1) title, which can't go in a header verbatim.
-// encodeURIComponent leaves `'()*!` alone, but RFC 5987 doesn't allow them in
-// an ext-value (`'` is its delimiter), so escape those too.
-function contentDisposition(title: string) {
-  const name =
-    sanitizeFilename(`${title} transcript.json`) || 'transcript.json';
-  const ascii = name.replace(/[^\x20-\x7e]/g, '_');
-  const encoded = encodeURIComponent(name).replace(
-    /['()*!]/g,
-    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
-  );
-  return `attachment; filename="${ascii}"; filename*=UTF-8''${encoded}`;
 }
 
 // Word-level transcript download: paragraphs with speaker names and per-word
@@ -111,8 +96,9 @@ export const Route = createFileRoute('/media/$mediaId/transcript.json')({
         return new Response(JSON.stringify(body, null, 2), {
           headers: {
             'Content-Type': 'application/json; charset=utf-8',
-            'Content-Disposition': contentDisposition(
-              media.title ?? `media_${outgoingId}`,
+            'Content-Disposition': attachmentDisposition(
+              `${media.title ?? `media_${outgoingId}`} transcript.json`,
+              'transcript.json',
             ),
             // Private media is gated per viewer, so never let a shared cache
             // hold it.

@@ -55,6 +55,9 @@ const embedSecurityHeaders: Record<string, string> = {
 // which the bundler can't see.
 const serverExternals = [
   '@node-rs/xxhash',
+  // Its PDF engine (@react-pdf/pdfkit) loads standard fonts through package
+  // `imports` subpaths (#standard-fonts/…) that break once bundled.
+  '@react-pdf/renderer',
   'argon2',
   'blurhash',
   'execa',
@@ -110,7 +113,13 @@ export default defineConfig((_config) => ({
                 handler: './src/nitro/missing-asset.ts',
               },
             ],
-            traceDeps: [...serverExternals, '@temporalio/client'],
+            traceDeps: [
+              ...serverExternals,
+              '@temporalio/client',
+              // Copied whole: it loads its standard fonts through a dynamic
+              // subpath the tracer can't follow (react-pdf study guides).
+              'pdfkit*',
+            ],
           }),
         ]),
     viteReact(),

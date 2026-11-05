@@ -1917,6 +1917,33 @@ export const Annotation = pgTable(
   }),
 );
 
+// A printable study guide for one upload, generated on first request by
+// `generateStudyGuideWorkflow` and rendered to PDF on each download. `content`
+// is the validated `StudyGuideContent` from @letschurch/temporal's
+// util/study-guide, with verse text and timestamps already resolved so the
+// renderer needs nothing else. `version` is the generator's content version;
+// a guide older than the current one is regenerated on its next request.
+export const StudyGuide = pgTable(
+  'study_guide',
+  {
+    uploadRecordId: uuid('upload_record_id').primaryKey(),
+    content: jsonb('content').$type<Record<string, unknown>>().notNull(),
+    version: integer('version').notNull(),
+    model: text('model').notNull(),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+  },
+  (StudyGuide) => ({
+    study_guide_uploadRecord_fkey: foreignKey({
+      name: 'study_guide_uploadRecord_fkey',
+      columns: [StudyGuide.uploadRecordId],
+      foreignColumns: [UploadRecord.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+  }),
+);
+
 // A named speaker identity owned by a channel. Diarized paragraph labels
 // (transcript_paragraph.speaker, e.g. SPEAKER_00) are attributed to these via
 // speaker_attribution; the 192-dim titanet embeddings power kNN candidate

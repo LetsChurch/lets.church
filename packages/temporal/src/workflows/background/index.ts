@@ -48,6 +48,7 @@ export {
 } from './delete-channel';
 export { deleteUploadWorkflow } from './delete-upload';
 export { generatePeaksWorkflow } from './generate-peaks';
+export { generateStudyGuideWorkflow } from './generate-study-guide';
 export { geocodeOrganizationWorkflow } from './geocode-organization';
 export {
   type HandleMultipartMediaUploadParams,

@@ -16,7 +16,8 @@ export type AiRequestKind =
   | 'search-embed'
   | 'search-meta'
   | 'search-suggest'
-  | 'search-warm-embed';
+  | 'search-warm-embed'
+  | 'study-guide';
 
 type BucketScope = 'ip' | 'shared-ip' | 'subject' | 'resource';
 type BucketConsumer = (
@@ -42,6 +43,8 @@ const REQUEST_COST: Record<AiRequestKind, number> = {
   'search-meta': 4,
   'search-suggest': 2,
   'search-warm-embed': 1,
+  // One chat completion, on a guide's first request only.
+  'study-guide': 2,
 };
 
 const IP_BUCKET = {

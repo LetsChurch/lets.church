@@ -11,7 +11,10 @@ vi.mock('@letschurch/db', () => ({
 vi.mock('@letschurch/opensearch', () => ({
   client: { cat: { allocation: mocks.allocation } },
 }));
-vi.mock('./annotate-transcript', () => ({ lockUploadAnnotations: vi.fn() }));
+vi.mock('./annotation-lock', () => ({
+  invalidateStudyGuide: vi.fn(),
+  lockUploadAnnotations: vi.fn(),
+}));
 vi.mock('./index-document', () => ({ default: vi.fn() }));
 
 import { getSearchDiskUsedPercent } from './backfill-scripture-refs';

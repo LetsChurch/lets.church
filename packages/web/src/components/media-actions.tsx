@@ -13,6 +13,7 @@ import {
   IconCode,
   IconDeviceTvOld,
   IconJson,
+  IconNotebook,
   IconDotsVertical,
   IconDownload,
   IconEdit,
@@ -42,6 +43,7 @@ import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { LcTooltip } from '@/components/lc-tooltip';
 import { useAbortController } from '@/hooks/use-abort-controller';
 import { useOverflowItems } from '@/hooks/use-overflow-items';
+import { useStudyGuideDownload } from '@/hooks/use-study-guide-download';
 import { IncomingIdSchema } from '@/schemas/common';
 import { $currentTime } from '@/stores/player';
 import { askVideoQuestion, openVideoAsk } from '@/stores/video-ask';
@@ -95,6 +97,8 @@ type MediaActionsProps = {
   hasAudio?: boolean;
   uploadId?: string;
   canEditUpload?: boolean;
+  /** The upload has a transcript, so a study guide can be made from it. */
+  studyGuideAvailable?: boolean;
   mediaTitle?: string | null;
   publishedAt?: Date | string | null;
   lengthSeconds?: number | null;
@@ -152,6 +156,7 @@ export function MediaActions({
   hasAudio = false,
   uploadId,
   canEditUpload = false,
+  studyGuideAvailable = false,
   mediaTitle,
   publishedAt,
   lengthSeconds,
@@ -367,6 +372,12 @@ export function MediaActions({
   };
 
   const downloads = downloadData?.enabled ? downloadData.urls : [];
+  const studyGuide = useStudyGuideDownload(
+    studyGuideAvailable ? uploadId : undefined,
+  );
+  // The study guide is made from the transcript, not the media files, so it's
+  // offered even where the channel turned media downloads off.
+  const hasDownloadMenu = downloads.length > 0 || studyGuideAvailable;
   // Dashboard routes are keyed by UUID; these ids may be short public ids
   // (and uploadId may be either form, from the URL).
   const editParams =
@@ -384,7 +395,7 @@ export function MediaActions({
         'share',
         'save',
         'ask',
-        ...(downloads.length > 0 ? (['download'] as const) : []),
+        ...(hasDownloadMenu ? (['download'] as const) : []),
         ...(editParams ? (['edit'] as const) : []),
       ],
       ['edit', 'download', 'save', 'share'],
@@ -432,6 +443,21 @@ export function MediaActions({
       Download {download.label}
     </MenuItemLink>
   ));
+  if (studyGuideAvailable) {
+    downloadItems.push(
+      <MenuItemButton
+        key="study-guide"
+        icon={<IconNotebook size={16} />}
+        disabled={studyGuide.preparing}
+        onClick={() => {
+          posthog.capture('media_study_guide_requested', baseEventProps());
+          void studyGuide.start();
+        }}
+      >
+        {studyGuide.preparing ? 'Preparing study guide…' : 'Study guide (PDF)'}
+      </MenuItemButton>,
+    );
+  }
 
   return (
     <LcTooltip.Provider>
@@ -671,7 +697,7 @@ export function MediaActions({
             </LcMenu.Root>
           </div>
 
-          {downloads.length > 0 ? (
+          {hasDownloadMenu ? (
             <div ref={itemRef('download')} {...slotProps('download')}>
               {/* Download */}
               <LcMenu.Root>

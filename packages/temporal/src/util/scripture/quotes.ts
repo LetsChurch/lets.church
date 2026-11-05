@@ -10,13 +10,11 @@
 // ("the LORD your God") never seed a match, and a candidate needs distinctive
 // wording or most of the verse, so stock phrases don't become citations.
 
-import { readFileSync } from 'node:fs';
-import { gunzipSync } from 'node:zlib';
-
 import logger from '../logger';
 import type { FoundRef } from './explicit';
 import { parseOsis } from './implied';
 import type { Token } from './tokens';
+import { readVerseTextTsv } from './verse-text';
 import type { BibleRef } from './versification';
 
 const moduleLogger = logger.child({ module: 'temporal/util/scripture/quotes' });
@@ -161,10 +159,7 @@ let index: VerseIndex | null | undefined;
 function verseIndex(): VerseIndex | null {
   if (index !== undefined) return index;
   try {
-    const gz = readFileSync(
-      new URL('./data/verse-text.tsv.gz', import.meta.url),
-    );
-    index = buildIndex(gunzipSync(gz).toString('utf8'));
+    index = buildIndex(readVerseTextTsv());
   } catch (err) {
     // A bundle that didn't ship the data file (e.g. the web SSR build running
     // an admin eval) degrades to no quote matching rather than failing.

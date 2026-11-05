@@ -14,6 +14,7 @@ import {
   type TranscriptJsonSegment,
   transcriptJsonSchema,
 } from '../../util/transcript-json';
+import { invalidateStudyGuide, lockUploadAnnotations } from './annotation-lock';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/store-transcript-paragraphs',
@@ -161,10 +162,27 @@ export default async function storeTranscriptParagraphs(
           searchSummaryEmbedding: null,
         })
         .where(eq(UploadRecord.id, uploadRecordId));
+      // Committed with the new paragraphs, so a retry that finds them
+      // unchanged can't skip it (the delete after the commit covers a guide
+      // saved concurrently).
+      await invalidateStudyGuide(tx, uploadRecordId);
       return true;
     },
     { isolationLevel: 'serializable' },
   );
+
+  if (changed) {
+    // A study guide quotes and timestamps the old paragraphs; drop it so the
+    // next request generates one from the new transcript. In its own
+    // transaction after the commit, under the annotation lock the generator
+    // also takes to save: the serializable snapshot above could miss a guide
+    // saved meanwhile, and a guide saved after this sees the reset summary
+    // and is discarded.
+    await db.transaction(async (tx) => {
+      await lockUploadAnnotations(tx, uploadRecordId);
+      await invalidateStudyGuide(tx, uploadRecordId);
+    });
+  }
 
   activityLogger.info(
     changed

@@ -13,6 +13,7 @@ import { newsletterProcedures } from './procedures/newsletter';
 import { playlistProcedures } from './procedures/playlist';
 import { searchProcedures } from './procedures/search';
 import { seriesProcedures } from './procedures/series';
+import { studyGuideProcedures } from './procedures/study-guide';
 import { router } from './trpc';
 
 export const appRouter = router({
@@ -31,6 +32,7 @@ export const appRouter = router({
   playlist: playlistProcedures,
   search: searchProcedures,
   series: seriesProcedures,
+  studyGuide: studyGuideProcedures,
 });
 
 // AppRouter type lives in ./types (re-exported from ./index); see trpc/types.ts.

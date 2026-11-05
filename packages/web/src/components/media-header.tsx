@@ -45,6 +45,7 @@ type MediaHeaderProps = {
   hasAudio?: boolean;
   uploadId?: string;
   canEditUpload?: boolean;
+  studyGuideAvailable?: boolean;
   publishedAt?: Date | string | null;
   lengthSeconds?: number | null;
 };
@@ -64,6 +65,7 @@ export function MediaHeader({
   hasAudio,
   uploadId,
   canEditUpload,
+  studyGuideAvailable,
   publishedAt,
   lengthSeconds,
 }: MediaHeaderProps) {
@@ -89,6 +91,7 @@ export function MediaHeader({
         hasAudio={hasAudio}
         uploadId={uploadId}
         canEditUpload={canEditUpload}
+        studyGuideAvailable={studyGuideAvailable}
         mediaTitle={title}
         publishedAt={publishedAt}
         lengthSeconds={lengthSeconds}

@@ -21,10 +21,8 @@ import pRetry from 'p-retry';
 
 import logger from '../../util/logger';
 import { augmentBibleAnnotations } from '../../util/scripture';
-import {
-  lockUploadAnnotations,
-  type ResolvedAnnotation,
-} from './annotate-transcript';
+import type { ResolvedAnnotation } from './annotate-transcript';
+import { invalidateStudyGuide, lockUploadAnnotations } from './annotation-lock';
 import indexDocument from './index-document';
 
 const moduleLogger = logger.child({
@@ -172,6 +170,7 @@ export async function backfillScriptureRefsForUpload(
         .insert(Annotation)
         .values(annotations.map((a) => ({ ...a, updatedAt: now })));
     }
+    await invalidateStudyGuide(tx, uploadRecordId);
     return true;
   });
 }

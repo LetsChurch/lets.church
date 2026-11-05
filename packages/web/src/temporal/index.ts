@@ -27,6 +27,7 @@ import {
   makeCreateUploadRecordWorkflowId,
   makeDeleteStorageAuditReportWorkflowId,
   makeDeleteUploadWorkflowId,
+  makeGenerateStudyGuideWorkflowId,
   makeGeocodeOrganizationWorkflowId,
   makeImportMediaWorkflowId,
   makeInvitationEmailWorkflowId,
@@ -1864,4 +1865,43 @@ export async function getRunningWorkflowCount(): Promise<number> {
   const c = await client;
   const { count } = await c.workflow.count("ExecutionStatus = 'Running'");
   return count;
+}
+
+export type StudyGuideWorkflowState = 'running' | 'failed' | 'none';
+
+/**
+ * Start generating an upload's study guide. One workflow per upload: a
+ * request while one is running joins it, and a failed one may be retried.
+ */
+export async function startGenerateStudyGuide(uploadRecordId: string) {
+  return startBackground('generateStudyGuideWorkflow', {
+    taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_USER },
+    workflowId: makeGenerateStudyGuideWorkflowId(uploadRecordId),
+    workflowIdReusePolicy: 'ALLOW_DUPLICATE',
+    workflowIdConflictPolicy: 'USE_EXISTING',
+    args: [uploadRecordId],
+    typedSearchAttributes: [{ key: UPLOAD_ID_KEY, value: uploadRecordId }],
+  });
+}
+
+/** Where an upload's study-guide workflow stands, for a viewer waiting on it. */
+export async function getStudyGuideWorkflowState(
+  uploadRecordId: string,
+): Promise<StudyGuideWorkflowState> {
+  try {
+    const description = await (
+      await client
+    ).workflow
+      .getHandle(makeGenerateStudyGuideWorkflowId(uploadRecordId))
+      .describe();
+    const status = description.status.name;
+    if (status === 'RUNNING') return 'running';
+    return status === 'COMPLETED' ? 'none' : 'failed';
+  } catch (err) {
+    if (err instanceof Error && err.name === 'WorkflowNotFoundError') {
+      return 'none';
+    }
+    throw err;
+  }
 }

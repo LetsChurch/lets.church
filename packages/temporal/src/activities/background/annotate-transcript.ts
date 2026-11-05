@@ -6,7 +6,7 @@ import {
   UploadRecord,
 } from '@letschurch/db';
 import { diffChars } from 'diff';
-import { asc, count, eq, inArray, sql } from 'drizzle-orm';
+import { asc, count, eq, inArray } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 import type OpenAI from 'openai';
 import { z } from 'zod';
@@ -26,6 +26,7 @@ import { resolveCostUsd } from '../../util/llm-pricing';
 import logger from '../../util/logger';
 import { augmentBibleAnnotations } from '../../util/scripture';
 import { OSIS_BOOKS } from '../../util/scripture/books';
+import { invalidateStudyGuide, lockUploadAnnotations } from './annotation-lock';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/annotate-transcript',
@@ -922,23 +923,6 @@ export async function runAnnotation(
   };
 }
 
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
-/**
- * Serialize writers of one upload's annotations (this activity and the
- * Scripture backfill) for the rest of the transaction. Row locks aren't
- * enough: rows a writer inserts are invisible to a concurrent DELETE that
- * already took its snapshot, so both writers' rows would survive.
- */
-export async function lockUploadAnnotations(
-  tx: Transaction,
-  uploadRecordId: string,
-): Promise<void> {
-  await tx.execute(
-    sql`select pg_advisory_xact_lock(hashtextextended(${`annotations:${uploadRecordId}`}, 0))`,
-  );
-}
-
 /**
  * Merge the deterministic Scripture layers (explicit citations, book-implied
  * mentions, quotations) into the LLM's BIBLE annotations, and report the LLM
@@ -1081,6 +1065,7 @@ export default async function annotateTranscript(
   const now = new Date();
   await db.transaction(async (tx) => {
     await lockUploadAnnotations(tx, uploadRecordId);
+    await invalidateStudyGuide(tx, uploadRecordId);
     await tx
       .delete(Annotation)
       .where(inArray(Annotation.paragraphId, paragraphIds));

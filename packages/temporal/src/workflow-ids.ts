@@ -55,6 +55,10 @@ export function makeSummarizeUploadWorkflowId(uploadRecordId: string) {
   return `summarizeUpload:${uploadRecordId}`;
 }
 
+export function makeGenerateStudyGuideWorkflowId(uploadRecordId: string) {
+  return `generateStudyGuide:${uploadRecordId}`;
+}
+
 // Per-upload run of the annotation pipeline (`annotateTranscriptWorkflow`):
 // outline + scripture + keyword annotations, then a media-doc reindex so the
 // new annotations land in lc_media_v1. Independent of the summary workflow

@@ -25,6 +25,7 @@
     "./util/llm-pricing": "./src/util/llm-pricing.ts",
     "./util/scripture": "./src/util/scripture/index.ts",
     "./util/scripture/books": "./src/util/scripture/books.ts",
+    "./util/study-guide": "./src/util/study-guide.ts",
     "./util/sentry": "./src/util/sentry.ts",
     "./workflow-ids": "./src/workflow-ids.ts",
     "./search-attributes": "./src/search-attributes.ts",

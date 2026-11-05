@@ -1,5 +1,6 @@
 import { AlertDialog } from '@base-ui/react/alert-dialog';
 import { UploadViewSource } from '@letschurch/db/types';
+import { STUDY_GUIDE_MIN_SECONDS } from '@letschurch/temporal/util/study-guide';
 import { useStore } from '@nanostores/react';
 import {
   IconListNumbers,
@@ -1153,6 +1154,14 @@ function RouteComponent() {
               hasAudio={!!media.audioSource}
               uploadId={params.mediaId}
               canEditUpload={media.canEdit}
+              // Matches the server's gate: a summary means annotation and
+              // summarize have run over a non-empty transcript.
+              studyGuideAvailable={
+                !hideTranscript &&
+                !media.isLive &&
+                !!media.summary &&
+                (media.lengthSeconds ?? 0) >= STUDY_GUIDE_MIN_SECONDS
+              }
               publishedAt={media.publishedAt}
               lengthSeconds={media.lengthSeconds}
             />

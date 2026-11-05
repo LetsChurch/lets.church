@@ -78,6 +78,7 @@ export * from './delete-upload-record';
 export { default as embedTranscriptParagraphs } from './embed-transcript-paragraphs';
 export { default as embedUpload } from './embed-upload';
 export { default as finalizeUploadRecord } from './finalize-upload-record';
+export { default as generateStudyGuide } from './generate-study-guide';
 export {
   default as geocodeOrganization,
   validateGeocodeConfig,

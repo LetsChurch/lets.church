@@ -201,7 +201,10 @@ export function formatVerseRef(token: string): string {
 export function formatBibleRefShort(meta: BibleMetadata): string {
   if (meta.chapter == null) return '';
   if (meta.verse == null) {
-    return isSingleChapterBook(meta.book) ? '' : `${meta.chapter}`;
+    if (isSingleChapterBook(meta.book)) return '';
+    return meta.endChapter != null && meta.endChapter !== meta.chapter
+      ? `${meta.chapter}-${meta.endChapter}`
+      : `${meta.chapter}`;
   }
   if (isSingleChapterBook(meta.book) && meta.endChapter == null) {
     return meta.endVerse != null
