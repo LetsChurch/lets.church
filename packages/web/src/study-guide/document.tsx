@@ -41,11 +41,15 @@ const NOTE_LINE = 22;
 // Letter is 612pt wide; the page's side padding leaves 524pt for content.
 const FOOTER_RIGHT_WIDTH = 240;
 const FOOTER_LEFT_WIDTH = 524 - FOOTER_RIGHT_WIDTH - 12;
+// The footer sits in a band below the content area, so content that runs
+// long moves to another page instead of under the footer.
+const FOOTER_BOTTOM = 24;
+const FOOTER_BAND = 42;
 
 const s = StyleSheet.create({
   page: {
     paddingTop: 38,
-    paddingBottom: 34,
+    paddingBottom: FOOTER_BOTTOM + FOOTER_BAND,
     paddingHorizontal: 44,
     fontFamily: SANS,
     fontSize: 10.5,
@@ -62,12 +66,15 @@ const s = StyleSheet.create({
   h2: { fontFamily: SERIF, fontWeight: 600, fontSize: 15, lineHeight: 1.2 },
   muted: { fontSize: 9, color: MUTED },
   footer: {
+    position: 'absolute',
+    bottom: FOOTER_BOTTOM,
+    left: 44,
+    right: 44,
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 0.75,
     borderTopColor: RULE,
     paddingTop: 5,
-    marginTop: 10,
     fontSize: 8,
     color: MUTED,
   },
@@ -150,8 +157,8 @@ function PassageText({
   );
 }
 
-// Page numbers come from the renderer, so a guide that runs long (and wraps
-// onto a third page) still numbers correctly.
+// Page numbers come from the renderer, so a guide that still runs long (see
+// fitStep) numbers correctly.
 function Footer({ left, right }: { left: string; right: string }) {
   return (
     <View style={s.footer} fixed>
@@ -372,9 +379,10 @@ function Front({
   );
 }
 
+// Kept whole, so a heading never ends a page without its content.
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <View style={{ gap: 4 }}>
+    <View style={{ gap: 4 }} wrap={false}>
       <Text style={s.h2}>{title}</Text>
       {children}
     </View>
@@ -397,10 +405,17 @@ function Numbered({ items, start }: { items: string[]; start: number }) {
 function Back({
   content,
   meta,
+  prayLeft,
 }: {
   content: StudyGuideContent;
   meta: StudyGuideMeta;
+  prayLeft: boolean;
 }) {
+  const pray = (
+    <Section title="Pray">
+      <Text>{content.prayer}</Text>
+    </Section>
+  );
   const { observe, interpret, apply } = content.questions;
   const tiers = [
     { label: 'Observe', items: observe },
@@ -518,6 +533,7 @@ function Back({
               </View>
             </Section>
           ) : null}
+          {prayLeft ? pray : null}
         </View>
 
         <View style={{ flex: 5, gap: 13 }}>
@@ -566,9 +582,7 @@ function Back({
             </Section>
           ) : null}
 
-          <Section title="Pray">
-            <Text>{content.prayer}</Text>
-          </Section>
+          {prayLeft ? null : pray}
 
           {content.passages.length > 0 || content.echoes.length > 0 ? (
             <Section title="Go deeper">
@@ -610,12 +624,58 @@ function Back({
   );
 }
 
+function firstVerse(
+  passage: StudyGuidePassage | null,
+): StudyGuidePassage | null {
+  const first = passage?.verses[0];
+  if (!passage || !first) return passage;
+  return {
+    ...passage,
+    ref: { book: passage.ref.book, chapter: first.chapter, verse: first.verse },
+    verses: [first],
+  };
+}
+
+export type StudyGuideLayout = {
+  content: StudyGuideContent;
+  /** Put "Pray" under the left column instead of the right. */
+  prayLeft: boolean;
+};
+
+/**
+ * The guide is meant to fit two pages, but how much text the model writes
+ * varies. Steps alternate between Pray's two places (the right column, then
+ * the left) and, each time round, drop or shorten one more part the guide
+ * can best do without. The renderer tries them in order until the guide
+ * fits; null once there's nothing left to try.
+ */
+export function fitStep(
+  content: StudyGuideContent,
+  step: number,
+): StudyGuideLayout | null {
+  const trims: ((c: StudyGuideContent) => StudyGuideContent)[] = [
+    (c) => ({ ...c, timeline: null }),
+    (c) => ({ ...c, memoryVerse: firstVerse(c.memoryVerse) }),
+    (c) => ({ ...c, keyTerms: c.keyTerms.slice(0, 4) }),
+    (c) => ({ ...c, family: null }),
+    (c) => ({ ...c, quotes: c.quotes.slice(0, 1) }),
+  ];
+  const trimCount = Math.floor(step / 2);
+  if (trimCount > trims.length) return null;
+  return {
+    content: trims.slice(0, trimCount).reduce((c, trim) => trim(c), content),
+    prayLeft: step % 2 === 1,
+  };
+}
+
 export function StudyGuideDocument({
   content,
   meta,
+  prayLeft = false,
 }: {
   content: StudyGuideContent;
   meta: StudyGuideMeta;
+  prayLeft?: boolean;
 }) {
   return (
     <Document
@@ -624,7 +684,7 @@ export function StudyGuideDocument({
       creator="Let's Church"
     >
       <Front content={content} meta={meta} />
-      <Back content={content} meta={meta} />
+      <Back content={content} meta={meta} prayLeft={prayLeft} />
     </Document>
   );
 }

@@ -73,5 +73,12 @@ downloads have their own per-IP bucket (30, then one every 6 seconds).
   subpath that neither bundling nor file tracing follows. Check a production
   build (`NODE_ENV=production`, boot `.output/server/index.mjs`, fetch a PDF)
   after upgrading either.
-- Overflow wraps onto another page rather than clipping; page numbers come
-  from the renderer.
+- The footer sits in its own band at the bottom of each page, and back-page
+  sections are kept whole, so content that runs long moves to another page
+  rather than under the footer or away from its heading.
+- How much text the model writes varies, so a guide that renders past two
+  pages is rendered again with less on the back (`fitStep` in
+  `document.tsx`): Pray moves to the shorter column, then, one at a time,
+  the timeline goes, the memory verse is cut to its first verse, key terms
+  to four, the family box goes, and quotes to one. Page numbers come from the
+  renderer, so a guide that still doesn't fit numbers its pages correctly.

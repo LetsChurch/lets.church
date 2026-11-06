@@ -14,7 +14,7 @@ import type { StudyGuideContent } from '@letschurch/temporal/util/study-guide';
 import { Font, renderToBuffer } from '@react-pdf/renderer';
 import QRCode from 'qrcode';
 
-import { FONT_FAMILIES, StudyGuideDocument } from './document';
+import { FONT_FAMILIES, fitStep, StudyGuideDocument } from './document';
 
 // The fonts are inlined into the server bundle as data URLs (`?inline`), so
 // rendering never reads node_modules at runtime (Nitro bundles the server).
@@ -74,17 +74,36 @@ export async function renderStudyGuidePdf(args: {
       qr(`${args.mediaUrl}#t=${Math.floor(q.startSec)}`),
     ),
   ]);
-  return renderToBuffer(
-    <StudyGuideDocument
-      content={args.content}
-      meta={{
-        channelName: args.channelName,
-        publishedAt: args.publishedAt,
-        lengthSeconds: args.lengthSeconds,
-        mediaUrl: args.mediaUrl,
-        mediaQr: mediaQr as string,
-        quoteQrs,
-      }}
-    />,
+  const meta = {
+    channelName: args.channelName,
+    publishedAt: args.publishedAt,
+    lengthSeconds: args.lengthSeconds,
+    mediaUrl: args.mediaUrl,
+    mediaQr: mediaQr as string,
+    quoteQrs,
+  };
+  // Render, and if it runs past two pages, render again with less on the
+  // back page (see fitStep). A guide that can't be made to fit is served at
+  // its last, shortest step, which still pages cleanly.
+  let pdf: Buffer | null = null;
+  for (let step = 0; ; step += 1) {
+    const layout = fitStep(args.content, step);
+    if (!layout) break;
+    pdf = await renderToBuffer(
+      <StudyGuideDocument
+        content={layout.content}
+        meta={meta}
+        prayLeft={layout.prayLeft}
+      />,
+    );
+    if (pageCount(pdf) <= 2) break;
+  }
+  return pdf as Buffer;
+}
+
+/** Page objects in a rendered PDF (object dictionaries aren't compressed). */
+export function pageCount(pdf: Buffer): number {
+  return (
+    pdf.toString('latin1').match(/\/Type\s*\/Page(?![a-zA-Z])/g)?.length ?? 0
   );
 }

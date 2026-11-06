@@ -41,6 +41,7 @@ import {
 } from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { LcTooltip } from '@/components/lc-tooltip';
+import { Loader } from '@/components/ui';
 import { useAbortController } from '@/hooks/use-abort-controller';
 import { useOverflowItems } from '@/hooks/use-overflow-items';
 import { useStudyGuideDownload } from '@/hooks/use-study-guide-download';
@@ -375,9 +376,11 @@ export function MediaActions({
   const studyGuide = useStudyGuideDownload(
     studyGuideAvailable ? uploadId : undefined,
   );
-  // The study guide is made from the transcript, not the media files, so it's
-  // offered even where the channel turned media downloads off.
   const hasDownloadMenu = downloads.length > 0 || studyGuideAvailable;
+  // Shown in place of the icon on whichever button holds the download menu
+  // while a study guide is being generated (not while a cached one
+  // downloads, which is quick).
+  const preparingSpinner = <Loader size={16} className="text-current" />;
   // Dashboard routes are keyed by UUID; these ids may be short public ids
   // (and uploadId may be either form, from the URL).
   const editParams =
@@ -703,8 +706,20 @@ export function MediaActions({
               <LcMenu.Root>
                 <LcMenu.Trigger
                   render={(props) => (
-                    <LcButton {...props} className="p-2" aria-label="Download">
-                      <IconDownload size={16} />
+                    <LcButton
+                      {...props}
+                      className="p-2"
+                      aria-label={
+                        studyGuide.generating
+                          ? 'Download (preparing study guide)'
+                          : 'Download'
+                      }
+                    >
+                      {studyGuide.generating ? (
+                        preparingSpinner
+                      ) : (
+                        <IconDownload size={16} />
+                      )}
                     </LcButton>
                   )}
                 />
@@ -740,7 +755,11 @@ export function MediaActions({
                     className="p-2"
                     aria-label="More actions"
                   >
-                    <IconDotsVertical size={16} />
+                    {studyGuide.generating && hidden.has('download') ? (
+                      preparingSpinner
+                    ) : (
+                      <IconDotsVertical size={16} />
+                    )}
                   </LcButton>
                 )}
               />

@@ -44,6 +44,10 @@ export function useStudyGuideDownload(mediaId: string | undefined) {
   // earlier guide still downloads when it's ready: the viewer asked for it.
   const [preparingFor, setPreparingFor] = useState<string | null>(null);
   const preparing = mediaId !== undefined && preparingFor === mediaId;
+  // Set only once the server says the guide has to be generated (when the
+  // toast appears), so a cached guide's quick download doesn't flash it.
+  const [generatingFor, setGeneratingFor] = useState<string | null>(null);
+  const generating = mediaId !== undefined && generatingFor === mediaId;
 
   const start = useCallback(async () => {
     if (!mediaId || preparing) return;
@@ -56,6 +60,7 @@ export function useStudyGuideDownload(mediaId: string | undefined) {
       let result = await request.mutateAsync({ mediaId });
       const deadline = Date.now() + GIVE_UP_MS;
       if (result.status === 'pending') {
+        setGeneratingFor(mediaId);
         toastId = showInfo({
           title: 'Preparing your study guide',
           message:
@@ -90,8 +95,9 @@ export function useStudyGuideDownload(mediaId: string | undefined) {
     } finally {
       if (toastId) toastManager.close(toastId);
       setPreparingFor((current) => (current === mediaId ? null : current));
+      setGeneratingFor((current) => (current === mediaId ? null : current));
     }
   }, [mediaId, preparing, request, queryClient, trpc]);
 
-  return { start, preparing };
+  return { start, preparing, generating };
 }
