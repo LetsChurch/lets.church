@@ -40,6 +40,7 @@ type MediaSidebarTabsProps = {
     currentMediaId: string;
     currentPosition: number | null;
     total: number;
+    onShare?: () => void;
   };
   // Slot the media page docks the player into once the inline player scrolls
   // out of view (see useDockedPlayer). Height is 0 while undocked.
@@ -243,6 +244,7 @@ export function MediaSidebarTabs({
                 currentMediaId={playlistContext.currentMediaId}
                 currentPosition={playlistContext.currentPosition}
                 total={playlistContext.total}
+                onShare={playlistContext.onShare}
               />
             </Tabs.Panel>
           ) : null}

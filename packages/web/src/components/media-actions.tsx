@@ -1,3 +1,5 @@
+import { Toggle } from '@base-ui/react/toggle';
+import { ToggleGroup } from '@base-ui/react/toggle-group';
 import { useStore } from '@nanostores/react';
 import {
   IconArticle,
@@ -13,6 +15,7 @@ import {
   IconCode,
   IconDeviceTvOld,
   IconJson,
+  IconListNumbers,
   IconNotebook,
   IconDotsVertical,
   IconDownload,
@@ -28,7 +31,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import posthog from 'posthog-js';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Avatar } from '@/components/avatar';
 import LcButton from '@/components/lc-button';
@@ -47,6 +50,7 @@ import { useOverflowItems } from '@/hooks/use-overflow-items';
 import { useStudyGuideDownload } from '@/hooks/use-study-guide-download';
 import { IncomingIdSchema } from '@/schemas/common';
 import { $currentTime } from '@/stores/player';
+import { $shareSeriesRequest } from '@/stores/share';
 import { askVideoQuestion, openVideoAsk } from '@/stores/video-ask';
 import { useTRPC } from '@/trpc/react';
 import { abortableSetTimeout } from '@/util/abortable-timeout';
@@ -72,6 +76,11 @@ type MediaActionsProps = {
   };
   onRate: (rating: 'LIKE' | 'DISLIKE') => void;
   shareData: {
+    title: string;
+    url: string;
+  };
+  /** The series this media belongs to; offers sharing the whole series. */
+  seriesShareData?: {
     title: string;
     url: string;
   };
@@ -147,6 +156,7 @@ export function MediaActions({
   ratingData,
   onRate,
   shareData,
+  seriesShareData,
   downloadData,
   channelData,
   onFollowToggle,
@@ -165,6 +175,8 @@ export function MediaActions({
   const abortController = useAbortController();
   const currentTime = useStore($currentTime);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareTarget, setShareTarget] = useState<'media' | 'series'>('media');
+  const sharingSeries = shareTarget === 'series' && seriesShareData != null;
 
   const baseEventProps = useCallback(
     () => ({
@@ -240,27 +252,52 @@ export function MediaActions({
     [frozenTime],
   );
 
-  // Get the share URL based on checkbox state
-  const getShareUrl = useCallback(
-    (url: string) => {
-      return includeTimestamp ? getUrlWithTimestamp(url) : url;
-    },
-    [includeTimestamp, getUrlWithTimestamp],
+  // The media URL, with the timestamp when the checkbox asks for it (embeds
+  // always use this, even while the series is selected).
+  const getMediaShareUrl = useCallback(
+    () =>
+      includeTimestamp ? getUrlWithTimestamp(shareData.url) : shareData.url,
+    [includeTimestamp, getUrlWithTimestamp, shareData.url],
   );
+  // What the link/social buttons share: the series page, or this media.
+  const activeShareTitle = sharingSeries
+    ? seriesShareData.title
+    : shareData.title;
+  const getShareUrl = () =>
+    sharingSeries ? seriesShareData.url : getMediaShareUrl();
+  // Shared analytics props for the share target. A series link never carries
+  // a timestamp.
+  const shareEventProps = () => ({
+    share_target: shareTarget,
+    series_title: seriesShareData?.title ?? null,
+    includes_timestamp: includeTimestamp && !sharingSeries,
+    timestamp_seconds:
+      includeTimestamp && !sharingSeries ? Math.floor(frozenTime) : null,
+  });
 
-  const handleShare = async () => {
+  const handleShare = (target: 'media' | 'series' = 'media') => {
     // Freeze the current time when modal opens
     setFrozenTime(currentTime);
     // Reset copy success state
     setCopySuccess(null);
+    setShareTarget(target);
     // Always show modal
     setShareModalOpen(true);
   };
 
+  // The series sidebar's share button opens this dialog on the series.
+  const shareSeriesRequest = useStore($shareSeriesRequest);
+  const handledShareSeriesRequest = useRef(shareSeriesRequest);
+  useEffect(() => {
+    if (shareSeriesRequest === handledShareSeriesRequest.current) return;
+    handledShareSeriesRequest.current = shareSeriesRequest;
+    if (seriesShareData) handleShare('series');
+  }, [shareSeriesRequest]);
+
   const handleNativeShare = async () => {
-    const shareUrl = getShareUrl(shareData.url);
+    const shareUrl = getShareUrl();
     const shareDataToShare = {
-      ...shareData,
+      title: activeShareTitle,
       url: shareUrl,
     };
 
@@ -270,8 +307,7 @@ export function MediaActions({
         ...baseEventProps(),
         platform: 'native',
         share_url: shareUrl,
-        includes_timestamp: includeTimestamp,
-        timestamp_seconds: includeTimestamp ? Math.floor(frozenTime) : null,
+        ...shareEventProps(),
       });
     } catch (error) {
       if ((error as Error).name === 'AbortError') {
@@ -289,23 +325,21 @@ export function MediaActions({
     posthog.capture('media_shared', {
       ...baseEventProps(),
       platform,
-      share_url: getShareUrl(shareData.url),
-      includes_timestamp: includeTimestamp,
-      timestamp_seconds: includeTimestamp ? Math.floor(frozenTime) : null,
+      share_url: getShareUrl(),
+      ...shareEventProps(),
     });
   };
 
   const handleCopy = async () => {
     try {
-      const shareUrl = getShareUrl(shareData.url);
+      const shareUrl = getShareUrl();
       await navigator.clipboard.writeText(shareUrl);
       setCopySuccess('link');
       posthog.capture('media_shared', {
         ...baseEventProps(),
         platform: 'copy_link',
         share_url: shareUrl,
-        includes_timestamp: includeTimestamp,
-        timestamp_seconds: includeTimestamp ? Math.floor(frozenTime) : null,
+        ...shareEventProps(),
       });
       abortableSetTimeout(
         () => {
@@ -322,7 +356,7 @@ export function MediaActions({
   const handleCopyEmbed = async (type: 'video' | 'audio') => {
     try {
       // Get URL based on checkbox state
-      const shareUrl = getShareUrl(shareData.url);
+      const shareUrl = getMediaShareUrl();
 
       // Extract the mediaId from the URL
       const mediaId = shareUrl
@@ -357,8 +391,7 @@ export function MediaActions({
         ...baseEventProps(),
         platform: `embed_${type}`,
         share_url: embedUrl,
-        includes_timestamp: includeTimestamp,
-        timestamp_seconds: includeTimestamp ? Math.floor(frozenTime) : null,
+        ...shareEventProps(),
       });
       abortableSetTimeout(
         () => {
@@ -601,7 +634,12 @@ export function MediaActions({
             <LcTooltip
               content="Share"
               render={(props) => (
-                <LcButton {...props} className="p-2" onClick={handleShare}>
+                <LcButton
+                  {...props}
+                  className="p-2"
+                  aria-label="Share"
+                  onClick={() => handleShare()}
+                >
                   <IconShare2 size={16} />
                 </LcButton>
               )}
@@ -823,18 +861,62 @@ export function MediaActions({
             <ModalHeader title="Share" />
 
             <div className="flex flex-col gap-4 p-6">
+              {/* What to share: this media or its whole series */}
+              {seriesShareData ? (
+                <ToggleGroup
+                  aria-label="What to share"
+                  value={[shareTarget]}
+                  onValueChange={(value) => {
+                    // Ignore deselecting the pressed item; one is always on.
+                    const next = value[0] as 'media' | 'series' | undefined;
+                    if (next) {
+                      setShareTarget(next);
+                      setCopySuccess(null);
+                    }
+                  }}
+                  className="flex rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800"
+                >
+                  {(
+                    [
+                      ['media', 'This one'],
+                      ['series', 'Whole series'],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <Toggle
+                      key={value}
+                      value={value}
+                      className="text-secondary data-[pressed]:text-primary flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-blue-600 data-[pressed]:bg-white data-[pressed]:shadow-sm dark:hover:text-white dark:data-[pressed]:bg-zinc-700"
+                    >
+                      {label}
+                    </Toggle>
+                  ))}
+                </ToggleGroup>
+              ) : null}
+              {sharingSeries ? (
+                <p className="text-secondary -mt-1 truncate text-center text-sm">
+                  <IconListNumbers
+                    size={14}
+                    className="mr-1 inline-block align-[-2px]"
+                  />
+                  {seriesShareData.title}
+                </p>
+              ) : null}
+
               {/* Social Share Buttons */}
               <div className="flex items-center justify-center gap-6">
                 {/* Native Share - only show if available */}
                 {typeof navigator !== 'undefined' &&
-                navigator.canShare?.(shareData) ? (
+                navigator.canShare?.({
+                  title: activeShareTitle,
+                  url: getShareUrl(),
+                }) ? (
                   <button
                     type="button"
                     onClick={handleNativeShare}
                     className="flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
                   >
                     <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-purple-600 to-blue-600">
-                      <IconShare2 size={24} className="text-primary" />
+                      <IconShare2 size={24} className="text-white" />
                     </div>
                     <span className="text-primary text-xs">Share</span>
                   </button>
@@ -843,12 +925,12 @@ export function MediaActions({
                 <button
                   type="button"
                   onClick={() => {
-                    const shareUrl = getShareUrl(shareData.url);
+                    const shareUrl = getShareUrl();
                     openShareWindow(
                       `https://www.facebook.com/sharer/sharer.php?${new URLSearchParams(
                         {
                           u: shareUrl,
-                          quote: shareData.title,
+                          quote: activeShareTitle,
                         },
                       )}`,
                       'facebook',
@@ -857,7 +939,7 @@ export function MediaActions({
                   className="flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
                 >
                   <div className="flex size-12 items-center justify-center rounded-full bg-blue-600">
-                    <IconBrandFacebook size={24} className="text-primary" />
+                    <IconBrandFacebook size={24} className="text-white" />
                   </div>
                   <span className="text-primary text-xs">Facebook</span>
                 </button>
@@ -865,11 +947,11 @@ export function MediaActions({
                 <button
                   type="button"
                   onClick={() => {
-                    const shareUrl = getShareUrl(shareData.url);
+                    const shareUrl = getShareUrl();
                     openShareWindow(
                       `https://twitter.com/share?${new URLSearchParams({
                         url: shareUrl,
-                        text: shareData.title,
+                        text: activeShareTitle,
                       })}`,
                       'x',
                     );
@@ -877,14 +959,14 @@ export function MediaActions({
                   className="flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
                 >
                   <div className="flex size-12 items-center justify-center rounded-full bg-black">
-                    <IconBrandX size={24} className="text-primary" />
+                    <IconBrandX size={24} className="text-white" />
                   </div>
                   <span className="text-primary text-xs">X</span>
                 </button>
               </div>
 
-              {/* Embed Options */}
-              {(hasVideo || hasAudio) && (
+              {/* Embed Options (this media only) */}
+              {!sharingSeries && (hasVideo || hasAudio) && (
                 <div className="flex items-center justify-center gap-6">
                   {hasVideo ? (
                     <button
@@ -901,7 +983,7 @@ export function MediaActions({
                               : 'bg-gradient-to-br from-orange-500 to-pink-600',
                           )}
                         >
-                          <IconCode size={24} className="text-primary" />
+                          <IconCode size={24} className="text-white" />
                         </div>
                         {copySuccess === 'embed-video' ? (
                           <div className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-green-600 ring-2 ring-white dark:ring-zinc-900">
@@ -944,7 +1026,7 @@ export function MediaActions({
                               : 'bg-gradient-to-br from-green-500 to-teal-600',
                           )}
                         >
-                          <IconCode size={24} className="text-primary" />
+                          <IconCode size={24} className="text-white" />
                         </div>
                         {copySuccess === 'embed-audio' ? (
                           <div className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-green-600 ring-2 ring-white dark:ring-zinc-900">
@@ -979,7 +1061,8 @@ export function MediaActions({
                 <input
                   type="text"
                   readOnly
-                  value={getShareUrl(shareData.url)}
+                  aria-label="Share link"
+                  value={getShareUrl()}
                   className="text-primary min-w-0 flex-1 truncate bg-transparent font-mono text-sm outline-none"
                 />
                 <div className="relative">
@@ -1016,7 +1099,7 @@ export function MediaActions({
               </div>
 
               {/* Timestamp Checkbox */}
-              {frozenTime >= 1 ? (
+              {!sharingSeries && frozenTime >= 1 ? (
                 <label className="flex cursor-pointer items-center gap-2">
                   <input
                     type="checkbox"

@@ -33,6 +33,10 @@ type MediaHeaderProps = {
     title: string;
     url: string;
   };
+  seriesShareData?: {
+    title: string;
+    url: string;
+  };
   downloadData?: {
     enabled: boolean;
     urls: Array<{ kind: MediaDownloadKind; label: string; url: string }>;
@@ -59,6 +63,7 @@ export function MediaHeader({
   isSaved,
   onSaveToggle,
   shareData,
+  seriesShareData,
   downloadData,
   mediaDimensions,
   hasVideo,
@@ -81,6 +86,7 @@ export function MediaHeader({
         ratingData={ratingData}
         onRate={onRate}
         shareData={shareData}
+        seriesShareData={seriesShareData}
         downloadData={downloadData}
         channelData={channel}
         onFollowToggle={onFollowToggle}

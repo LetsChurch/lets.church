@@ -1,3 +1,4 @@
+import { IconShare2 } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import {
   useCallback,
@@ -99,6 +100,8 @@ type PlaylistSidebarProps = {
   currentPosition: number | null;
   total: number;
   loadPage?: (cursor: string) => Promise<PlaylistPage | null>;
+  /** Shows a share button in the header (used for series). */
+  onShare?: () => void;
 };
 
 export function PlaylistSidebar({
@@ -109,6 +112,7 @@ export function PlaylistSidebar({
   currentMediaId,
   currentPosition,
   total,
+  onShare,
   loadPage = (cursor) =>
     trpcClient.list.getListContext.query({ listId, cursor }),
 }: PlaylistSidebarProps) {
@@ -174,9 +178,24 @@ export function PlaylistSidebar({
   return (
     <>
       <div className="flex flex-col gap-1 border-b border-zinc-200 px-5 py-2.5 dark:border-zinc-800">
-        <h3 className="text-primary text-sm font-medium">
-          {listTitle ?? (listType === 'playlist' ? 'Playlist' : 'Series')}
-        </h3>
+        <div className="flex items-center gap-3">
+          <h3 className="text-primary min-w-0 flex-1 text-sm font-medium">
+            {listTitle ?? (listType === 'playlist' ? 'Playlist' : 'Series')}
+          </h3>
+          {onShare ? (
+            // Negative margin keeps the pill's padding from growing the title
+            // row, so the button sits centered on the title line.
+            <button
+              type="button"
+              onClick={onShare}
+              aria-label={`Share ${listType === 'series' ? 'series' : 'playlist'}`}
+              className="text-secondary hover:text-primary -my-1 -mr-2.5 flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors hover:bg-gray-950/10 focus-visible:outline-2 focus-visible:outline-blue-600 dark:hover:bg-white/15"
+            >
+              <IconShare2 size={14} />
+              Share
+            </button>
+          ) : null}
+        </div>
         <p className="text-secondary text-xs">
           {currentPosition ?? '?'} / {total}
         </p>

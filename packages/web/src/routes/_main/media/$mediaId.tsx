@@ -55,6 +55,7 @@ import { IncomingIdSchema, idTranslator } from '@/schemas/common';
 import { useBrowserSize } from '@/stores/browser-size';
 import { useSetBackgroundImage } from '@/stores/header';
 import { $nowPlaying, type NowPlayingMedia } from '@/stores/now-playing';
+import { requestShareSeries } from '@/stores/share';
 import {
   $isSearchActive,
   $searchQuery,
@@ -452,6 +453,7 @@ function MobilePlaylistDrawerContent({
   currentMediaId,
   currentPosition,
   total,
+  onShare,
 }: {
   listId: string;
   listType: 'playlist' | 'series';
@@ -460,6 +462,7 @@ function MobilePlaylistDrawerContent({
   currentMediaId: string;
   currentPosition: number | null;
   total: number;
+  onShare?: () => void;
 }) {
   return (
     <>
@@ -487,6 +490,7 @@ function MobilePlaylistDrawerContent({
           currentMediaId={currentMediaId}
           currentPosition={currentPosition}
           total={total}
+          onShare={onShare}
         />
       </div>
     </>
@@ -637,6 +641,17 @@ function RouteComponent() {
   const mediaIdShort = idTranslator.fromUUID(params.mediaId);
   const transcriptLinkPath = mediaPagePath(mediaIdShort, searchParams.list);
   const nextItem = playlistData?.nextItem ?? undefined;
+  // The series to offer in the Share dialog: the series being played through
+  // (the viewer already holds its link, even if unlisted), else the upload's
+  // own series, which getMediaById only exposes when it's publicly listable.
+  const shareSeries =
+    hasPlaylistContext && activeListId && playlistData?.type === 'SERIES'
+      ? { id: activeListId, title: playlistData.title }
+      : media.series
+        ? { id: media.series.id, title: media.series.title }
+        : null;
+  const sidebarListIsSeries =
+    hasPlaylistContext && playlistData?.type === 'SERIES';
 
   // Autoplay
   const autoplay = useAutoplay({
@@ -1141,6 +1156,17 @@ function RouteComponent() {
                 title: media.title ?? 'Untitled',
                 url: typeof window !== 'undefined' ? window.location.href : '',
               }}
+              seriesShareData={
+                shareSeries && typeof window !== 'undefined'
+                  ? {
+                      title: shareSeries.title || 'Series',
+                      url: new URL(
+                        `/series/${shareSeries.id}`,
+                        window.location.origin,
+                      ).toString(),
+                    }
+                  : undefined
+              }
               downloadData={{
                 enabled: media.downloadsEnabled,
                 urls: media.downloadUrls,
@@ -1268,6 +1294,9 @@ function RouteComponent() {
                         currentMediaId: mediaIdShort,
                         currentPosition: playlistData.currentPosition,
                         total: playlistData.total,
+                        onShare: sidebarListIsSeries
+                          ? requestShareSeries
+                          : undefined,
                       }
                     : undefined
                 }
@@ -1311,6 +1340,14 @@ function RouteComponent() {
                 currentMediaId={mediaIdShort}
                 currentPosition={playlistData.currentPosition}
                 total={playlistData.total}
+                onShare={
+                  sidebarListIsSeries
+                    ? () => {
+                        setPlaylistDialogOpen(false);
+                        requestShareSeries();
+                      }
+                    : undefined
+                }
               />
             </MobileDrawer.Content>
           </MobileDrawer.Portal>
