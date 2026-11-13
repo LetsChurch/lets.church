@@ -173,6 +173,9 @@ function RootComponent() {
       persistence: 'memory',
       person_profiles: 'identified_only',
       tracing_headers: [window.location.hostname],
+      // Embeds are the player on other churches' sites: a fifth of all
+      // replays, mostly passive listening. Not worth the replay quota.
+      disable_session_recording: isEmbedRoute,
     });
 
     const canPlay = (type: string) =>
