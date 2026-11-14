@@ -5,6 +5,8 @@ import { imageUrl } from '@/util/server-env';
 
 // Resolve the OIDC claims for a user, gated by the granted scopes. `sub` is the
 // stable AppUser id and is always present; callers set it as the token subject.
+// Returns null for a missing, banned, or deleted user — callers must treat that
+// as a refusal to issue tokens / serve userinfo, not as empty claims.
 export async function buildUserClaims(
   appUserId: string,
   scope: string,
@@ -19,10 +21,12 @@ export async function buildUserClaims(
       fullName: true,
       avatarPath: true,
       avatarLocation: true,
+      bannedAt: true,
+      deletedAt: true,
     },
   });
 
-  if (!user) {
+  if (!user || user.bannedAt || user.deletedAt) {
     return null;
   }
 

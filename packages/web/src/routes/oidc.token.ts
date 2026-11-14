@@ -119,8 +119,15 @@ export const Route = createFileRoute('/oidc/token')({
             return tokenError(400, 'invalid_grant', 'PKCE verification failed');
           }
 
-          const claims =
-            (await buildUserClaims(row.appUserId, row.scope)) ?? {};
+          // Null for a banned/deleted user: refuse to issue tokens.
+          const claims = await buildUserClaims(row.appUserId, row.scope);
+          if (!claims) {
+            return tokenError(
+              400,
+              'invalid_grant',
+              'Invalid authorization code',
+            );
+          }
           const authTime = Math.floor(row.authTime.getTime() / 1000);
 
           const [idToken, accessToken] = await Promise.all([
@@ -184,8 +191,13 @@ export const Route = createFileRoute('/oidc/token')({
             return tokenError(400, 'invalid_grant', 'Invalid refresh token');
           }
 
-          const claims =
-            (await buildUserClaims(rotation.appUserId, rotation.scope)) ?? {};
+          const claims = await buildUserClaims(
+            rotation.appUserId,
+            rotation.scope,
+          );
+          if (!claims) {
+            return tokenError(400, 'invalid_grant', 'Invalid refresh token');
+          }
 
           const [idToken, accessToken] = await Promise.all([
             // No nonce on refresh: it belongs to the original authentication.

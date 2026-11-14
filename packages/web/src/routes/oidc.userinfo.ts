@@ -22,7 +22,12 @@ async function handle(request: Request) {
     return UNAUTHORIZED.clone();
   }
 
-  const claims = (await buildUserClaims(verified.sub, verified.scope)) ?? {};
+  // Null for a banned/deleted user: their outstanding access tokens stop
+  // working immediately rather than at expiry.
+  const claims = await buildUserClaims(verified.sub, verified.scope);
+  if (!claims) {
+    return UNAUTHORIZED.clone();
+  }
 
   return new Response(JSON.stringify({ sub: verified.sub, ...claims }), {
     headers: {

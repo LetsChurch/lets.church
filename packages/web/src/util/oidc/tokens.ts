@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 
 import {
+  AppUser,
   db,
   OidcAuthorizationCode,
   OidcRefreshToken,
@@ -247,7 +248,7 @@ export type RefreshRotation =
 // Rotate a refresh token: validate, mark the presented token rotated, and return
 // the context needed to mint a successor in the same family. Presenting an
 // already-rotated/revoked token is treated as theft and revokes the whole
-// family.
+// family, as is presenting one for a banned or deleted user.
 export async function rotateRefreshToken(
   rawToken: string,
   clientId: string,
@@ -276,6 +277,17 @@ export async function rotateRefreshToken(
     }
 
     if (row.expiresAt <= new Date()) {
+      return { rotation: { ok: false, reason: 'invalid' } };
+    }
+
+    // A ban or deletion ends every refresh-token family the user holds: login
+    // already refuses them, so refresh must not keep minting tokens either.
+    const user = await tx.query.AppUser.findFirst({
+      where: eq(AppUser.id, row.appUserId),
+      columns: { bannedAt: true, deletedAt: true },
+    });
+    if (!user || user.bannedAt || user.deletedAt) {
+      await revokeFamily(row.familyId, tx);
       return { rotation: { ok: false, reason: 'invalid' } };
     }
 

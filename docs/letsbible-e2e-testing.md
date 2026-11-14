@@ -753,6 +753,7 @@ the stage and clicking fills the input or navigates.
 | LB-SEC-04 | Signed in (IdP) | Navigate to `<web URL>/oidc/logout` with **no** `id_token_hint` | SSO session is **NOT** cleared (forged-logout CSRF blocked) — revisiting `/login` round-trips back signed-in. |
 | LB-SEC-05 | Signed in | Real RP logout (sends `id_token_hint`) | SSO session **is** cleared (re-auth required). |
 | LB-SEC-06 | — | Tamper an id_token (wrong signature/alg) in the callback exchange | Verification fails (`algorithms:['ES256']` pinned); login rejected. |
+| LB-SEC-08 | Signed in on lets.bible; an admin bans (or deletes) that user on lets.church | (a) Call `<web URL>/oidc/userinfo` with an access token issued before the ban; (b) POST a `refresh_token` grant with the user's refresh token | (a) `401 invalid_token`; (b) `400 invalid_grant` and the token's whole refresh family is revoked (un-banning doesn't revive it). A code issued just before the ban is likewise refused at `/oidc/token`. |
 
 ---
 
