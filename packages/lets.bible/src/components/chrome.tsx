@@ -1,7 +1,7 @@
 import { Menu } from '@base-ui/react/menu';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import type { MouseEvent, ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 
 import { DEFAULT_BOOK, DEFAULT_CHAPTER } from '@/lib/canon';
 import { clearLocalData } from '@/local/sync';
@@ -29,65 +29,65 @@ export function useAuth() {
   return { signedIn: Boolean(signedIn), me: me ?? null };
 }
 
-// The signed-in account menu. The trigger is the avatar; "Log out" is a plain
-// anchor (full navigation) because /logout is a server route that issues a 302.
+// The signed-in account menu. The trigger is the avatar. "Log out" submits a
+// hidden POST form (full navigation): /logout is a POST-only server route that
+// issues a redirect, so a cross-site GET can't sign the user out. The form lives
+// outside the menu's portal so closing the menu can't unmount it mid-submit.
 function AccountMenu({ name }: { name: string }) {
+  const logoutForm = useRef<HTMLFormElement>(null);
   return (
-    <Menu.Root>
-      <Menu.Trigger className="focus-visible:ring-gold/40 rounded-full outline-none focus-visible:ring-2">
-        <Avatar name={name} className="size-8" />
-      </Menu.Trigger>
-      <Menu.Portal>
-        <Menu.Positioner sideOffset={8} align="end" className="z-30">
-          <Menu.Popup className="border-line-strong bg-paper-raised min-w-[200px] rounded-xl border p-1 shadow-[0_26px_50px_-28px_rgba(40,34,18,0.45)]">
-            <div className="text-muted-2 truncate px-3 py-2 text-[12.5px]">
-              {name}
-            </div>
-            <Menu.Separator className="bg-line my-1 h-px" />
-            <Menu.Item
-              render={(props) => (
-                <Link
-                  {...props}
-                  to="/library"
-                  className="text-ink data-highlighted:bg-paper-soft block cursor-pointer rounded-md px-3 py-2 text-[14px] outline-none"
-                >
-                  Your library
-                </Link>
-              )}
-            />
-            <Menu.Item
-              render={(props) => (
-                <Link
-                  {...props}
-                  to="/settings"
-                  className="text-ink data-highlighted:bg-paper-soft block cursor-pointer rounded-md px-3 py-2 text-[14px] outline-none"
-                >
-                  Settings
-                </Link>
-              )}
-            />
-            <Menu.Item
-              render={(props) => (
-                <a
-                  {...props}
-                  href="/logout"
-                  onClick={(e: MouseEvent<HTMLAnchorElement>) => {
-                    props.onClick?.(e);
-                    // Belt-and-suspenders: wipe on-device data on explicit
-                    // logout before the navigation. The load-based detection in
-                    // LocalSync still covers session expiry / other sign-outs.
-                    clearLocalData();
-                  }}
-                  className="text-ink data-highlighted:bg-paper-soft block cursor-pointer rounded-md px-3 py-2 text-[14px] outline-none"
-                >
-                  Log out
-                </a>
-              )}
-            />
-          </Menu.Popup>
-        </Menu.Positioner>
-      </Menu.Portal>
-    </Menu.Root>
+    <>
+      <form ref={logoutForm} method="post" action="/logout" hidden />
+      <Menu.Root>
+        <Menu.Trigger className="focus-visible:ring-gold/40 rounded-full outline-none focus-visible:ring-2">
+          <Avatar name={name} className="size-8" />
+        </Menu.Trigger>
+        <Menu.Portal>
+          <Menu.Positioner sideOffset={8} align="end" className="z-30">
+            <Menu.Popup className="border-line-strong bg-paper-raised min-w-[200px] rounded-xl border p-1 shadow-[0_26px_50px_-28px_rgba(40,34,18,0.45)]">
+              <div className="text-muted-2 truncate px-3 py-2 text-[12.5px]">
+                {name}
+              </div>
+              <Menu.Separator className="bg-line my-1 h-px" />
+              <Menu.Item
+                render={(props) => (
+                  <Link
+                    {...props}
+                    to="/library"
+                    className="text-ink data-highlighted:bg-paper-soft block cursor-pointer rounded-md px-3 py-2 text-[14px] outline-none"
+                  >
+                    Your library
+                  </Link>
+                )}
+              />
+              <Menu.Item
+                render={(props) => (
+                  <Link
+                    {...props}
+                    to="/settings"
+                    className="text-ink data-highlighted:bg-paper-soft block cursor-pointer rounded-md px-3 py-2 text-[14px] outline-none"
+                  >
+                    Settings
+                  </Link>
+                )}
+              />
+              <Menu.Item
+                onClick={() => {
+                  // Belt-and-suspenders: wipe on-device data on explicit logout
+                  // before the navigation. The load-based detection in LocalSync
+                  // still covers session expiry / other sign-outs.
+                  clearLocalData();
+                  logoutForm.current?.submit();
+                }}
+                className="text-ink data-highlighted:bg-paper-soft block cursor-pointer rounded-md px-3 py-2 text-[14px] outline-none"
+              >
+                Log out
+              </Menu.Item>
+            </Menu.Popup>
+          </Menu.Positioner>
+        </Menu.Portal>
+      </Menu.Root>
+    </>
   );
 }
 
