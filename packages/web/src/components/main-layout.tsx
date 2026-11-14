@@ -17,6 +17,7 @@ type MainLayoutProps = {
   channelSlug?: string;
   containerClassName?: string;
   availableChannels?: Channel[];
+  backgroundImageUrl?: string | null;
 };
 
 export default function MainLayout({
@@ -27,6 +28,7 @@ export default function MainLayout({
   channelSlug,
   containerClassName = 'pb-8 sm:px-16',
   availableChannels = [],
+  backgroundImageUrl,
 }: MainLayoutProps) {
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950">
@@ -35,6 +37,7 @@ export default function MainLayout({
         searchPlaceholder={searchPlaceholder}
         channelSlug={channelSlug}
         availableChannels={availableChannels}
+        backgroundImageUrl={backgroundImageUrl}
       >
         {headerChildren}
       </Header>

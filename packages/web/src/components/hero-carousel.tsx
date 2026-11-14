@@ -125,6 +125,9 @@ export default function HeroCarousel({ items }: HeroCarouselProps) {
     });
   }, [items]);
 
+  // Don't leave the slide image behind the header of the next page.
+  useEffect(() => () => $headerBackgroundImage.set(undefined), []);
+
   useEffect(() => {
     if (!emblaApi) return;
 
@@ -145,6 +148,15 @@ export default function HeroCarousel({ items }: HeroCarouselProps) {
     emblaApi.on('reInit', onInit);
     emblaApi.on('select', onSelect);
 
+    return () => {
+      emblaApi.off('reInit', onInit);
+      emblaApi.off('select', onSelect);
+    };
+  }, [emblaApi, items]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+
     // Apply fade effect to slides
     const applyFadeEffect = () => {
       const slides = emblaApi.slideNodes();
@@ -163,9 +175,10 @@ export default function HeroCarousel({ items }: HeroCarouselProps) {
     emblaApi.on('scroll', applyFadeEffect);
     emblaApi.on('select', applyFadeEffect);
 
-    setTimeout(applyFadeEffect, 100);
+    const fadeTimeout = setTimeout(applyFadeEffect, 100);
 
     return () => {
+      clearTimeout(fadeTimeout);
       emblaApi.off('scroll', applyFadeEffect);
       emblaApi.off('select', applyFadeEffect);
     };

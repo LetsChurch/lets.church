@@ -7,7 +7,7 @@ import {
   useMatches,
 } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
-import posthog from 'posthog-js';
+import posthog, { type CaptureResult } from 'posthog-js';
 import { type ReactNode, useEffect } from 'react';
 import '@fontsource-variable/inter';
 
@@ -23,6 +23,24 @@ const brand = '#6366f1';
 // Brand colors from the translucent gradient over the page background
 const brandColorLight = '#BFBFFF';
 const brandColorDark = '#2B2B6E';
+
+// Exceptions that are expected browser behavior, not bugs, and carry no
+// actionable detail: a play() rejected by autoplay policy (NotAllowedError) or
+// interrupted by pause() (AbortError), mostly from hls-video-element's own
+// unguarded autoplay call, and "Script error.", a cross-origin script (in
+// practice a browser extension) whose details the browser hides. Only the
+// top-level exception is checked, and only playback messages, so permission
+// errors from share/clipboard and aborted fetches are still reported.
+const PLAYBACK_REJECTION = /^(NotAllowedError|AbortError): .*\b(play|pause)\b/i;
+
+function isIgnoredException(event: CaptureResult): boolean {
+  if (event.event !== '$exception') return false;
+  const list = event.properties.$exception_list as
+    | { type?: string; value?: string }[]
+    | undefined;
+  const value = list?.[0]?.value ?? '';
+  return PLAYBACK_REJECTION.test(value) || value === 'Script error.';
+}
 
 const $getHasValidSession = createServerFn({ method: 'GET' }).handler(
   async () => {
@@ -176,6 +194,8 @@ function RootComponent() {
       // Embeds are the player on other churches' sites: a fifth of all
       // replays, mostly passive listening. Not worth the replay quota.
       disable_session_recording: isEmbedRoute,
+      before_send: (event) =>
+        event && isIgnoredException(event) ? null : event,
     });
 
     const canPlay = (type: string) =>
@@ -230,7 +250,9 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
   const theme = isEmbedRoute ? 'light' : getInitialTheme();
 
   return (
-    <html lang="en" data-theme={theme}>
+    // The inline theme script below rewrites data-theme before hydration when
+    // the visitor's OS prefers dark and there's no theme cookie yet.
+    <html lang="en" data-theme={theme} suppressHydrationWarning>
       <head>
         <HeadContent />
         {!isEmbedRoute ? (

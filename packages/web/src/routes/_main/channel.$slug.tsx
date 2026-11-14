@@ -35,7 +35,6 @@ import { MediaGrid } from '@/components/media-grid';
 import { getPillButtonClasses } from '@/components/pill-button';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { idTranslator } from '@/schemas/common';
-import { useSetBackgroundImage } from '@/stores/header';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { formatTime } from '@/util/format';
 import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from '@/util/image-sizes';
@@ -342,8 +341,6 @@ function RouteComponent() {
         : `#${tab}`;
     window.history.replaceState(null, '', url);
   };
-
-  useSetBackgroundImage(channel.defaultThumbnailUrl ?? undefined);
 
   // Infinite scroll observer
   useEffect(() => {

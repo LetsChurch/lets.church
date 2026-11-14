@@ -53,7 +53,6 @@ import { useDockedPlayer } from '@/hooks/use-docked-player';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { IncomingIdSchema, idTranslator } from '@/schemas/common';
 import { useBrowserSize } from '@/stores/browser-size';
-import { useSetBackgroundImage } from '@/stores/header';
 import { $nowPlaying, type NowPlayingMedia } from '@/stores/now-playing';
 import { requestShareSeries } from '@/stores/share';
 import {
@@ -992,8 +991,6 @@ function RouteComponent() {
     });
   };
 
-  useSetBackgroundImage(media.fullSizeThumbnailUrl ?? undefined);
-
   const aspectWidth = media.width ?? 1920;
   const aspectHeight = media.height ?? 1080;
 
@@ -1081,7 +1078,10 @@ function RouteComponent() {
   };
 
   return (
-    <MainLayout containerClassName="mx-4">
+    <MainLayout
+      containerClassName="mx-4"
+      backgroundImageUrl={media.fullSizeThumbnailUrl ?? null}
+    >
       {/* Main Content Area */}
       <div
         className="grid"

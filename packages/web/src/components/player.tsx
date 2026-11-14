@@ -29,6 +29,7 @@ import { WaveformBackground } from '@/components/waveform-background';
 import { $currentTime, $setPlayAt } from '@/stores/player';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
+import { playMedia } from '@/util/play-media';
 import { stopMediaElement } from '@/util/stop-media-element';
 
 declare module 'react' {
@@ -211,7 +212,7 @@ export function Player({
       switch (e.key.toLowerCase()) {
         case 'k':
           if (videoElement.paused) {
-            videoElement.play();
+            playMedia(videoElement);
           } else {
             videoElement.pause();
           }
@@ -279,7 +280,7 @@ export function Player({
     if (!('mediaSession' in navigator)) return;
 
     navigator.mediaSession.setActionHandler('play', () => {
-      videoRef.current?.play();
+      if (videoRef.current) playMedia(videoRef.current);
     });
     navigator.mediaSession.setActionHandler('pause', () => {
       videoRef.current?.pause();
@@ -722,7 +723,7 @@ export function Player({
                     // Only toggle play/pause if clicking the background, not a button
                     if (e.target === e.currentTarget && videoRef.current) {
                       if (videoRef.current.paused) {
-                        videoRef.current.play();
+                        playMedia(videoRef.current);
                       } else {
                         videoRef.current.pause();
                       }

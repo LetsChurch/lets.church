@@ -1,4 +1,3 @@
-import { useStore } from '@nanostores/react';
 import { IconMenu2, IconSearch, IconX } from '@tabler/icons-react';
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
@@ -11,7 +10,7 @@ import {
   MenuItemRouterLink,
 } from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
-import { $headerBackgroundImage } from '@/stores/header';
+import { useCarouselBackgroundImage } from '@/stores/header';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 
@@ -31,6 +30,11 @@ type HeaderProps = PropsWithChildren<{
   searchPlaceholder?: string;
   channelSlug?: string;
   showBlurredBackground?: boolean;
+  /**
+   * Image blurred behind the header. `null` means this page has none; leave it
+   * `undefined` to follow the home carousel's slide.
+   */
+  backgroundImageUrl?: string | null;
   variant?: 'default' | 'light';
   mode?: 'full' | 'fab';
   availableChannels?: Channel[];
@@ -42,6 +46,7 @@ export default function Header({
   searchPlaceholder,
   channelSlug,
   showBlurredBackground = true,
+  backgroundImageUrl: backgroundImageUrlProp,
   variant = 'default',
   availableChannels = [],
   mode = 'full',
@@ -71,7 +76,11 @@ export default function Header({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [channelPickerOpen, setChannelPickerOpen] = useState(false);
-  const backgroundImageUrl = useStore($headerBackgroundImage);
+  const carouselBackgroundImage = useCarouselBackgroundImage();
+  const backgroundImageUrl =
+    backgroundImageUrlProp === undefined
+      ? carouselBackgroundImage
+      : backgroundImageUrlProp;
 
   const hasBackground = showBlurredBackground && Boolean(backgroundImageUrl);
   const hasSearch = Boolean(searchPlaceholder || channelSlug);
