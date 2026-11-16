@@ -8,8 +8,6 @@ import {
   IconBadgeHd,
   IconBookmark,
   IconBookmarkFilled,
-  IconBrandFacebook,
-  IconBrandX,
   IconCheck,
   IconChevronDown,
   IconCode,
@@ -44,6 +42,11 @@ import {
 } from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { LcTooltip } from '@/components/lc-tooltip';
+import {
+  ShareButtons,
+  ShareLinkField,
+  type SharePlatform,
+} from '@/components/share-dialog';
 import { Loader } from '@/components/ui';
 import { useAbortController } from '@/hooks/use-abort-controller';
 import { useOverflowItems } from '@/hooks/use-overflow-items';
@@ -113,22 +116,6 @@ type MediaActionsProps = {
   publishedAt?: Date | string | null;
   lengthSeconds?: number | null;
 };
-
-const windowConfig = Object.entries({
-  width: 550,
-  height: 400,
-  location: 'no',
-  toolbar: 'no',
-  status: 'no',
-  directories: 'no',
-  menubar: 'no',
-  scrollbars: 'yes',
-  resizable: 'no',
-  centerscreen: 'yes',
-  chrome: 'yes',
-})
-  .map(([k, v]) => `${k}=${v}`)
-  .join(',');
 
 function getDownloadIcon(kind: MediaDownloadKind) {
   switch (kind) {
@@ -294,63 +281,13 @@ export function MediaActions({
     if (seriesShareData) handleShare('series');
   }, [shareSeriesRequest]);
 
-  const handleNativeShare = async () => {
-    const shareUrl = getShareUrl();
-    const shareDataToShare = {
-      title: activeShareTitle,
-      url: shareUrl,
-    };
-
-    try {
-      await navigator.share(shareDataToShare);
-      posthog.capture('media_shared', {
-        ...baseEventProps(),
-        platform: 'native',
-        share_url: shareUrl,
-        ...shareEventProps(),
-      });
-    } catch (error) {
-      if ((error as Error).name === 'AbortError') {
-        // User cancelled, keep modal open
-        return;
-      }
-
-      console.error('Error sharing:', error);
-    }
-  };
-
-  const openShareWindow = (url: string, platform: string) => {
-    // Keep modal open after opening share window
-    window.open(url, '', windowConfig);
+  const captureShare = (platform: SharePlatform, shareUrl: string) => {
     posthog.capture('media_shared', {
       ...baseEventProps(),
       platform,
-      share_url: getShareUrl(),
+      share_url: shareUrl,
       ...shareEventProps(),
     });
-  };
-
-  const handleCopy = async () => {
-    try {
-      const shareUrl = getShareUrl();
-      await navigator.clipboard.writeText(shareUrl);
-      setCopySuccess('link');
-      posthog.capture('media_shared', {
-        ...baseEventProps(),
-        platform: 'copy_link',
-        share_url: shareUrl,
-        ...shareEventProps(),
-      });
-      abortableSetTimeout(
-        () => {
-          setCopySuccess(null);
-        },
-        1500,
-        abortController.signal,
-      );
-    } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
-    }
   };
 
   const handleCopyEmbed = async (type: 'video' | 'audio') => {
@@ -902,68 +839,11 @@ export function MediaActions({
                 </p>
               ) : null}
 
-              {/* Social Share Buttons */}
-              <div className="flex items-center justify-center gap-6">
-                {/* Native Share - only show if available */}
-                {typeof navigator !== 'undefined' &&
-                navigator.canShare?.({
-                  title: activeShareTitle,
-                  url: getShareUrl(),
-                }) ? (
-                  <button
-                    type="button"
-                    onClick={handleNativeShare}
-                    className="flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
-                  >
-                    <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-purple-600 to-blue-600">
-                      <IconShare2 size={24} className="text-white" />
-                    </div>
-                    <span className="text-primary text-xs">Share</span>
-                  </button>
-                ) : null}
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const shareUrl = getShareUrl();
-                    openShareWindow(
-                      `https://www.facebook.com/sharer/sharer.php?${new URLSearchParams(
-                        {
-                          u: shareUrl,
-                          quote: activeShareTitle,
-                        },
-                      )}`,
-                      'facebook',
-                    );
-                  }}
-                  className="flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
-                >
-                  <div className="flex size-12 items-center justify-center rounded-full bg-blue-600">
-                    <IconBrandFacebook size={24} className="text-white" />
-                  </div>
-                  <span className="text-primary text-xs">Facebook</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const shareUrl = getShareUrl();
-                    openShareWindow(
-                      `https://twitter.com/share?${new URLSearchParams({
-                        url: shareUrl,
-                        text: activeShareTitle,
-                      })}`,
-                      'x',
-                    );
-                  }}
-                  className="flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
-                >
-                  <div className="flex size-12 items-center justify-center rounded-full bg-black">
-                    <IconBrandX size={24} className="text-white" />
-                  </div>
-                  <span className="text-primary text-xs">X</span>
-                </button>
-              </div>
+              <ShareButtons
+                title={activeShareTitle}
+                url={getShareUrl()}
+                onShare={captureShare}
+              />
 
               {/* Embed Options (this media only) */}
               {!sharingSeries && (hasVideo || hasAudio) && (
@@ -1056,47 +936,11 @@ export function MediaActions({
                 </div>
               )}
 
-              {/* URL Display and Copy */}
-              <div className="flex items-center gap-2 rounded-lg border border-zinc-300 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
-                <input
-                  type="text"
-                  readOnly
-                  aria-label="Share link"
-                  value={getShareUrl()}
-                  className="text-primary min-w-0 flex-1 truncate bg-transparent font-mono text-sm outline-none"
-                />
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={handleCopy}
-                    className={cn(
-                      'relative shrink-0 rounded-md px-4 py-2 font-medium text-sm transition-colors',
-                      copySuccess === 'link'
-                        ? 'bg-green-600 text-white'
-                        : 'bg-blue-600 text-white hover:bg-blue-700',
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        'transition-opacity',
-                        copySuccess === 'link' ? 'opacity-0' : 'opacity-100',
-                      )}
-                    >
-                      Copy
-                    </span>
-                    {copySuccess === 'link' ? (
-                      <span className="absolute inset-0 flex items-center justify-center">
-                        Copied!
-                      </span>
-                    ) : null}
-                  </button>
-                  {copySuccess === 'link' ? (
-                    <div className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-green-600 ring-2 ring-white dark:ring-zinc-900">
-                      <IconCheck size={14} className="text-white" />
-                    </div>
-                  ) : null}
-                </div>
-              </div>
+              <ShareLinkField
+                key={getShareUrl()}
+                url={getShareUrl()}
+                onCopy={(url) => captureShare('copy_link', url)}
+              />
 
               {/* Timestamp Checkbox */}
               {!sharingSeries && frozenTime >= 1 ? (
