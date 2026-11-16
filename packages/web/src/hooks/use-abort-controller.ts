@@ -1,22 +1,32 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /**
- * Creates an AbortController that is automatically aborted when the component unmounts
- * @returns AbortController instance tied to component lifecycle
+ * An abort signal tied to the component's lifecycle: aborted on unmount.
+ *
+ * Read `.signal` when you need it (e.g. in an event handler), not during
+ * render. StrictMode's dev double-mount aborts the first controller on its
+ * simulated unmount; the remount starts a fresh one, and this handle always
+ * returns the live controller's signal.
  */
-export function useAbortController(): AbortController {
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  if (!abortControllerRef.current) {
-    abortControllerRef.current = new AbortController();
-  }
+export function useAbortController(): { readonly signal: AbortSignal } {
+  const controllerRef = useRef<AbortController>(null);
 
   useEffect(() => {
-    const controller = abortControllerRef.current;
+    if (!controllerRef.current || controllerRef.current.signal.aborted) {
+      controllerRef.current = new AbortController();
+    }
+    const controller = controllerRef.current;
     return () => {
-      controller?.abort();
+      controller.abort();
     };
   }, []);
 
-  return abortControllerRef.current;
+  const [handle] = useState(() => ({
+    get signal() {
+      controllerRef.current ??= new AbortController();
+      return controllerRef.current.signal;
+    },
+  }));
+
+  return handle;
 }

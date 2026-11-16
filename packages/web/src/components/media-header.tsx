@@ -34,6 +34,7 @@ type MediaHeaderProps = {
     url: string;
   };
   seriesShareData?: {
+    id: string;
     title: string;
     url: string;
   };

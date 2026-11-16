@@ -42,6 +42,7 @@ import {
   type PlaylistPage,
   PlaylistSidebar,
 } from '@/components/playlist-sidebar';
+import { pageUrl } from '@/components/share-dialog';
 import {
   type TranscriptParagraph,
   TranscriptNoMatches,
@@ -1159,11 +1160,9 @@ function RouteComponent() {
               seriesShareData={
                 shareSeries && typeof window !== 'undefined'
                   ? {
+                      id: shareSeries.id,
                       title: shareSeries.title || 'Series',
-                      url: new URL(
-                        `/series/${shareSeries.id}`,
-                        window.location.origin,
-                      ).toString(),
+                      url: pageUrl(`/series/${shareSeries.id}`),
                     }
                   : undefined
               }

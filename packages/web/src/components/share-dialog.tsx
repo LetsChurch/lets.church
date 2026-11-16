@@ -4,8 +4,10 @@ import {
   IconCheck,
   IconShare2,
 } from '@tabler/icons-react';
+import posthog from 'posthog-js';
 import { useState, type ReactNode } from 'react';
 
+import LcButton from '@/components/lc-button';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { useAbortController } from '@/hooks/use-abort-controller';
 import { abortableSetTimeout } from '@/util/abortable-timeout';
@@ -221,5 +223,89 @@ export function ShareDialog({
         </LcModal.Popup>
       </LcModal.Portal>
     </LcModal.Root>
+  );
+}
+
+/** An absolute link to a site path, on the current origin in the browser. */
+export function pageUrl(path: string): string {
+  return typeof window !== 'undefined'
+    ? new URL(path, window.location.origin).toString()
+    : `https://lets.church${path}`;
+}
+
+export type ShareListKind = 'series' | 'playlist';
+
+/**
+ * Records sharing a series or playlist as `series_shared` /
+ * `playlist_shared`, whichever page it was shared from (`source`).
+ */
+export function captureListShare({
+  kind,
+  id,
+  title,
+  platform,
+  shareUrl,
+  source,
+  uploadId,
+}: {
+  kind: ShareListKind;
+  id: string;
+  title: string;
+  platform: SharePlatform;
+  shareUrl: string;
+  source: 'list_page' | 'media_page';
+  /** The media page it was shared from, when `source` is `media_page`. */
+  uploadId?: string | null;
+}) {
+  posthog.capture(`${kind}_shared`, {
+    [`${kind}_id`]: id,
+    [`${kind}_title`]: title,
+    platform,
+    share_url: shareUrl,
+    source,
+    upload_id: uploadId ?? null,
+  });
+}
+
+/** A Share button that opens the Share dialog for a series or playlist page. */
+export function ListShareButton({
+  kind,
+  id,
+  title,
+}: {
+  kind: ShareListKind;
+  id: string;
+  title: string;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <LcButton
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={`Share ${kind}`}
+        className="mt-1 flex shrink-0 items-center gap-1.5"
+      >
+        <IconShare2 size={16} />
+        Share
+      </LcButton>
+      <ShareDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={title}
+        url={pageUrl(`/${kind}/${id}`)}
+        onShare={(platform, shareUrl) =>
+          captureListShare({
+            kind,
+            id,
+            title,
+            platform,
+            shareUrl,
+            source: 'list_page',
+          })
+        }
+      />
+    </>
   );
 }

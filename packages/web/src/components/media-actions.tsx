@@ -43,6 +43,7 @@ import {
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { LcTooltip } from '@/components/lc-tooltip';
 import {
+  captureListShare,
   ShareButtons,
   ShareLinkField,
   type SharePlatform,
@@ -84,6 +85,7 @@ type MediaActionsProps = {
   };
   /** The series this media belongs to; offers sharing the whole series. */
   seriesShareData?: {
+    id: string;
     title: string;
     url: string;
   };
@@ -250,16 +252,13 @@ export function MediaActions({
   const activeShareTitle = sharingSeries
     ? seriesShareData.title
     : shareData.title;
-  const getShareUrl = () =>
-    sharingSeries ? seriesShareData.url : getMediaShareUrl();
-  // Shared analytics props for the share target. A series link never carries
-  // a timestamp.
-  const shareEventProps = () => ({
-    share_target: shareTarget,
-    series_title: seriesShareData?.title ?? null,
-    includes_timestamp: includeTimestamp && !sharingSeries,
-    timestamp_seconds:
-      includeTimestamp && !sharingSeries ? Math.floor(frozenTime) : null,
+  const shareUrl = sharingSeries ? seriesShareData.url : getMediaShareUrl();
+  // Analytics props for sharing this media. A series share is recorded as
+  // series_shared instead (see captureShare).
+  const mediaShareEventProps = () => ({
+    ...baseEventProps(),
+    includes_timestamp: includeTimestamp,
+    timestamp_seconds: includeTimestamp ? Math.floor(frozenTime) : null,
   });
 
   const handleShare = (target: 'media' | 'series' = 'media') => {
@@ -281,26 +280,37 @@ export function MediaActions({
     if (seriesShareData) handleShare('series');
   }, [shareSeriesRequest]);
 
-  const captureShare = (platform: SharePlatform, shareUrl: string) => {
+  const captureShare = (platform: SharePlatform, url: string) => {
+    if (sharingSeries) {
+      captureListShare({
+        kind: 'series',
+        id: seriesShareData.id,
+        title: seriesShareData.title,
+        platform,
+        shareUrl: url,
+        source: 'media_page',
+        uploadId,
+      });
+      return;
+    }
     posthog.capture('media_shared', {
-      ...baseEventProps(),
+      ...mediaShareEventProps(),
       platform,
-      share_url: shareUrl,
-      ...shareEventProps(),
+      share_url: url,
     });
   };
 
   const handleCopyEmbed = async (type: 'video' | 'audio') => {
     try {
       // Get URL based on checkbox state
-      const shareUrl = getMediaShareUrl();
+      const mediaUrl = getMediaShareUrl();
 
       // Extract the mediaId from the URL
-      const mediaId = shareUrl
+      const mediaId = mediaUrl
         .split('/media/')[1]
         ?.split('?')[0]
         ?.split('#')[0];
-      const baseEmbedUrl = shareUrl.replace(
+      const baseEmbedUrl = mediaUrl.replace(
         `/media/${mediaId}`,
         `/embed/media/${mediaId}`,
       );
@@ -325,10 +335,9 @@ export function MediaActions({
       await navigator.clipboard.writeText(embedCode);
       setCopySuccess(`embed-${type}`);
       posthog.capture('media_shared', {
-        ...baseEventProps(),
+        ...mediaShareEventProps(),
         platform: `embed_${type}`,
         share_url: embedUrl,
-        ...shareEventProps(),
       });
       abortableSetTimeout(
         () => {
@@ -841,7 +850,7 @@ export function MediaActions({
 
               <ShareButtons
                 title={activeShareTitle}
-                url={getShareUrl()}
+                url={shareUrl}
                 onShare={captureShare}
               />
 
@@ -937,8 +946,8 @@ export function MediaActions({
               )}
 
               <ShareLinkField
-                key={getShareUrl()}
-                url={getShareUrl()}
+                key={shareUrl}
+                url={shareUrl}
                 onCopy={(url) => captureShare('copy_link', url)}
               />
 

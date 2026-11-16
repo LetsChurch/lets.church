@@ -1,18 +1,15 @@
-import { IconShare2 } from '@tabler/icons-react';
 import { useInfiniteQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
-import posthog from 'posthog-js';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { Avatar } from '@/components/avatar';
 import { EmptyState } from '@/components/empty-state';
-import LcButton from '@/components/lc-button';
 import LcLink from '@/components/lc-link';
 import MainLayout from '@/components/main-layout';
 import { MediaCard } from '@/components/media-card';
 import { MediaGrid } from '@/components/media-grid';
-import { ShareDialog } from '@/components/share-dialog';
+import { ListShareButton } from '@/components/share-dialog';
 import { useTRPC } from '@/trpc/react';
 import { formatTime } from '@/util/format';
 import { getNextCursor } from '@/util/next-cursor';
@@ -168,7 +165,6 @@ function RouteComponent() {
   const { seriesId } = Route.useParams();
   const trpc = useTRPC();
   const loadMoreRef = useRef<HTMLDivElement>(null);
-  const [shareOpen, setShareOpen] = useState(false);
 
   const { data: series } = useSuspenseQuery(
     trpc.series.getPublicSeries.queryOptions({ seriesId }),
@@ -234,15 +230,7 @@ function RouteComponent() {
           <h1 className="text-primary min-w-0 text-3xl font-bold break-words">
             {series.title}
           </h1>
-          <LcButton
-            type="button"
-            onClick={() => setShareOpen(true)}
-            aria-label="Share series"
-            className="mt-1 flex shrink-0 items-center gap-1.5"
-          >
-            <IconShare2 size={16} />
-            Share
-          </LcButton>
+          <ListShareButton kind="series" id={series.id} title={series.title} />
         </div>
 
         <div className="flex flex-wrap items-center gap-4 text-sm">
@@ -331,24 +319,6 @@ function RouteComponent() {
           emptyCtaHref="/"
         />
       )}
-      <ShareDialog
-        open={shareOpen}
-        onOpenChange={setShareOpen}
-        title={series.title}
-        url={
-          typeof window !== 'undefined'
-            ? new URL(`/series/${series.id}`, window.location.origin).toString()
-            : `https://lets.church/series/${series.id}`
-        }
-        onShare={(platform, shareUrl) =>
-          posthog.capture('series_shared', {
-            series_id: series.id,
-            series_title: series.title,
-            platform,
-            share_url: shareUrl,
-          })
-        }
-      />
     </MainLayout>
   );
 }
