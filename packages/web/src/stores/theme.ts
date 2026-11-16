@@ -28,7 +28,9 @@ export const getInitialTheme = (): Theme =>
 
 export function setTheme(theme: Theme) {
   if (typeof window !== 'undefined') {
-    Cookies.set(THEME_COOKIE_NAME, theme);
+    // Without `expires` this is a session cookie and the choice is forgotten
+    // when the browser closes.
+    Cookies.set(THEME_COOKIE_NAME, theme, { expires: 365, sameSite: 'lax' });
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.setAttribute('data-mantine-color-scheme', theme);
     window.dispatchEvent(
