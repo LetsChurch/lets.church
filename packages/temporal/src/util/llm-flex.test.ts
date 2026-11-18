@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Context } from '@temporalio/activity';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createChatCompletionTracked } from './llm';
 import { DETERMINISTIC_LLM_FALLBACK_FAILURE } from './llm-completion-guards';
@@ -17,6 +18,8 @@ const mocks = vi.hoisted(() => {
     })),
     updateSet: vi.fn((_values: unknown) => ({ where: updateWhere })),
     updateWhere,
+    // Prior output-cap/completeness failures counted from llm_call.
+    guardFailures: vi.fn(async () => [{ n: 0 }]),
   };
 });
 
@@ -24,12 +27,17 @@ vi.mock('@letschurch/db', () => ({
   db: {
     insert: vi.fn(() => ({ values: mocks.insertValues })),
     update: vi.fn(() => ({ set: mocks.updateSet })),
+    select: vi.fn(() => ({ from: () => ({ where: mocks.guardFailures }) })),
   },
   LlmCall: { id: 'llm_call.id' },
 }));
 
 vi.mock('drizzle-orm', () => ({
+  and: vi.fn(),
+  count: vi.fn(),
   eq: vi.fn(() => 'llm_call.id = call-id'),
+  gte: vi.fn(),
+  inArray: vi.fn(),
 }));
 
 vi.mock('openai', () => ({
@@ -157,6 +165,75 @@ describe('createChatCompletionTracked Flex processing', () => {
     expect(mocks.updateSet.mock.calls[1]?.[0]).toEqual(
       expect.objectContaining({ outcome: 'guard_length_truncation' }),
     );
+  });
+
+  it('retries an output-cap failure on early attempts', async () => {
+    mocks.chatCreate.mockResolvedValueOnce({
+      choices: [{ finish_reason: 'length', message: { content: 'partial' } }],
+      usage: { prompt_tokens: 10, completion_tokens: 10 },
+    });
+
+    const err = await createChatCompletionTracked({
+      model: 'openai/gpt-6-luna',
+      messages: [{ role: 'user', content: 'work' }],
+      fallbackModel: 'anthropic/claude-haiku-4-5',
+      tracking: { activity: 'annotateTranscript' },
+    }).catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(Error);
+    expect(err).not.toMatchObject({ nonRetryable: true });
+    // No content-filter, so no fallback model call either.
+    expect(mocks.chatCreate).toHaveBeenCalledOnce();
+  });
+
+  describe('inside an activity', () => {
+    const lengthCompletion = {
+      choices: [{ finish_reason: 'length', message: { content: 'partial' } }],
+      usage: { prompt_tokens: 10, completion_tokens: 10 },
+    };
+    const call = () =>
+      createChatCompletionTracked({
+        model: 'openai/gpt-6-luna',
+        messages: [{ role: 'user', content: 'work' }],
+        tracking: { activity: 'annotateTranscript', uploadRecordId: 'up-1' },
+      });
+    let current: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      current = vi.spyOn(Context, 'current').mockReturnValue({
+        // Late attempt: attempts alone (e.g. after Flex 429s) don't matter.
+        info: { attempt: 9, scheduledTimestampMs: 0 },
+      } as never);
+      mocks.chatCreate.mockResolvedValueOnce(lengthCompletion);
+    });
+
+    afterEach(() => {
+      current.mockRestore();
+      mocks.guardFailures.mockReset().mockResolvedValue([{ n: 0 }]);
+    });
+
+    it('retries while output-cap failures have not repeated', async () => {
+      mocks.guardFailures.mockResolvedValue([{ n: 1 }]);
+
+      const err = await call().catch((e: unknown) => e);
+      expect(err).not.toMatchObject({ nonRetryable: true });
+    });
+
+    it('fails non-retryably once output-cap failures repeat three times', async () => {
+      mocks.guardFailures.mockResolvedValue([{ n: 3 }]);
+
+      await expect(call()).rejects.toMatchObject({
+        nonRetryable: true,
+        type: DETERMINISTIC_LLM_FALLBACK_FAILURE,
+      });
+    });
+
+    it('keeps retrying if the failure count cannot be read', async () => {
+      mocks.guardFailures.mockRejectedValue(new Error('db down'));
+
+      const err = await call().catch((e: unknown) => e);
+      expect(err).not.toMatchObject({ nonRetryable: true });
+    });
   });
 
   it('returns a completed provider response when settling its audit row fails', async () => {

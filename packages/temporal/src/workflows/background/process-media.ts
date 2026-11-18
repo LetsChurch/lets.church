@@ -44,19 +44,35 @@ const { probe } = proxyActivities<typeof probeActivities>({
 // These write files. On cancel, wait for them to actually stop before this
 // workflow closes, so a delete that waits for it to close (see
 // cancelUploadProcessing) doesn't race files still being uploaded.
-const { transcode, createThumbnails } = proxyActivities<
-  typeof transcodeActivities
->({
+const TRANSCODE_ACTIVITY_OPTIONS = {
   cancellationType: ActivityCancellationType.WAIT_CANCELLATION_COMPLETED,
-  startToCloseTimeout: '180 minutes',
   heartbeatTimeout: '10 minutes',
   taskQueue: TRANSCODE_QUEUE,
   retry: { maximumAttempts: 2 },
-});
+} as const;
+
+/**
+ * Transcode/transcribe time limit, scaled to the media's length: a flat 180
+ * minutes timed out a 5.7-hour video on every attempt on slower (software)
+ * encoders. The heartbeat timeout still catches hung work quickly.
+ */
+export function mediaTimeoutMinutes(probeRes: Probe) {
+  const seconds = Number(probeRes.format.duration);
+  if (!Number.isFinite(seconds) || seconds <= 0) return 180;
+  return Math.max(180, Math.ceil((seconds / 60) * 1.5) + 60);
+}
+
+/** transcode and createThumbnails (which decodes the whole video too). */
+function transcodeActivitiesFor(probeRes: Probe) {
+  return proxyActivities<typeof transcodeActivities>({
+    ...TRANSCODE_ACTIVITY_OPTIONS,
+    startToCloseTimeout: `${mediaTimeoutMinutes(probeRes)} minutes`,
+  });
+}
 
 // Served by the Python worker (services/transcribe), so there's no TS module to
 // derive the type from; this mirrors its `transcribe` activity signature.
-const { transcribe } = proxyActivities<{
+type TranscribeActivities = {
   transcribe(
     uploadRecordId: string,
     s3UploadKey: string,
@@ -66,13 +82,17 @@ const { transcribe } = proxyActivities<{
     transcriptJsonKey: string;
     additionalKeys: string[];
   }>;
-}>({
-  cancellationType: ActivityCancellationType.WAIT_CANCELLATION_COMPLETED,
-  startToCloseTimeout: '180 minutes',
-  heartbeatTimeout: '10 minutes',
-  taskQueue: TRANSCRIBE_QUEUE,
-  retry: { maximumAttempts: 2 },
-});
+};
+
+function transcribeFor(probeRes: Probe) {
+  return proxyActivities<TranscribeActivities>({
+    cancellationType: ActivityCancellationType.WAIT_CANCELLATION_COMPLETED,
+    startToCloseTimeout: `${mediaTimeoutMinutes(probeRes)} minutes`,
+    heartbeatTimeout: '10 minutes',
+    taskQueue: TRANSCRIBE_QUEUE,
+    retry: { maximumAttempts: 2 },
+  }).transcribe;
+}
 
 const {
   getFinalizedUploadKey,
@@ -173,6 +193,7 @@ export async function processMediaWorkflow(
   );
   const storageLocationsV1 = patched('storage-locations-v1');
   const stopQuietlyWhenDeleted = patched('process-media-stop-when-deleted-v1');
+  const annotateFailureNonFatal = patched('process-media-annotate-nonfatal-v1');
   // Propagate UploadId to every child / grandchild so the whole tree is
   // searchable in the Temporal UI by upload. Temporal does NOT inherit
   // search attributes automatically — see handle-multipart-media-upload.ts
@@ -219,17 +240,29 @@ export async function processMediaWorkflow(
 
     const transcribePromise =
       scope === 'everything' || scope === 'transcribe'
-        ? transcribe(targetId, s3UploadKey, storageLocation)
+        ? transcribeFor(probeRes)(targetId, s3UploadKey, storageLocation)
         : null;
 
     const work = [
       transcribePromise,
       scope === 'everything' || scope === 'transcode'
-        ? transcode(targetId, s3UploadKey, probeRes, storageLocation)
+        ? transcodeActivitiesFor(probeRes).transcode(
+            targetId,
+            s3UploadKey,
+            probeRes,
+            storageLocation,
+          )
         : null,
       ...((scope === 'everything' || scope === 'transcode') &&
       probeIsVideoFile(probeRes)
-        ? [createThumbnails(targetId, s3UploadKey, probeRes, storageLocation)]
+        ? [
+            transcodeActivitiesFor(probeRes).createThumbnails(
+              targetId,
+              s3UploadKey,
+              probeRes,
+              storageLocation,
+            ),
+          ]
         : []),
     ];
     try {
@@ -275,9 +308,10 @@ export async function processMediaWorkflow(
       // persisted results so a parent retry does not submit duplicate work. The
       // admin "Regenerate" mutations pass `force: true` to bypass that check.
       //
-      // Graceful degradation: if annotate fails, still attempt summarize. A
-      // transient annotation failure may use the parent retry budget; a
-      // deterministic fallback failure is propagated as non-retryable.
+      // Graceful degradation: if annotate fails, still attempt summarize, then
+      // finish the run and page ops (below). Runs from before that patch
+      // instead fail: retryably for a transient annotation failure, or
+      // non-retryably for a deterministic fallback failure.
       let annotateError: unknown = null;
       try {
         setCurrentDetails('Annotating transcript');
@@ -307,7 +341,37 @@ export async function processMediaWorkflow(
         ...staticMeta({ summary: 'Summarize', links }),
       });
 
-      if (annotateError !== null) {
+      if (annotateError !== null && annotateFailureNonFatal) {
+        // Annotations (outline/chapters) are an enhancement: the media is
+        // transcoded, transcribed and summarized, so don't fail the run. A
+        // parent retry would redo hours of transcode/transcribe for nothing
+        // (annotate already retries its own LLM calls for up to 3 days), and
+        // the uploader would be emailed about a working upload. Page ops so
+        // an admin can regenerate annotations once the cause is fixed.
+        const message =
+          annotateError instanceof Error
+            ? annotateError.message
+            : String(annotateError);
+        setCurrentDetails('Annotation failed (media processed)');
+        try {
+          // Deleted meanwhile: nothing to regenerate, so no page.
+          if (
+            isUploadDeletedFailure(annotateError) ||
+            (await uploadIsDeleted(targetId))
+          ) {
+            return;
+          }
+          await triggerPagerDutyAlert({
+            dedupKey: `annotate-transcript:${targetId}`,
+            summary: `Annotating transcript failed for upload ${targetId}: ${message}`,
+            component: 'annotate-transcript',
+            uploadId: targetId,
+            customDetails: { uploadRecordId: targetId, error: message },
+          });
+        } catch {
+          // swallow — alerting is best-effort
+        }
+      } else if (annotateError !== null) {
         const message = `Post-transcribe pipeline: annotate failed — ${
           annotateError instanceof Error
             ? annotateError.message

@@ -15,7 +15,7 @@ import {
   updateUploadRecord,
 } from '../../client';
 import { downloadFromUrl } from '../../util/import';
-import { downloadUrl } from '../../util/import/download';
+import { downloadUrl, THUMBNAIL_DOWNLOAD } from '../../util/import/download';
 import logger from '../../util/logger';
 
 const moduleLogger = logger.child({
@@ -23,9 +23,6 @@ const moduleLogger = logger.child({
 });
 
 const WORK_DIR = process.env.IMPORT_WORKING_DIRECTORY ?? '/data/import';
-
-// Fallback artwork (feed/CSV cover images) has no business being this large.
-const MAX_THUMBNAIL_BYTES = 25 * 1024 * 1024;
 
 export default async function importMedia(
   url: string,
@@ -85,7 +82,7 @@ export default async function importMedia(
           dir,
           activityLogger,
           heartbeat,
-          { maxBytes: MAX_THUMBNAIL_BYTES },
+          THUMBNAIL_DOWNLOAD,
         );
       } catch (e) {
         activityLogger.warn(

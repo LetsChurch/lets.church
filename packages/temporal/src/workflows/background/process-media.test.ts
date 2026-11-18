@@ -8,22 +8,40 @@ const mocks = vi.hoisted(() => ({
   isUploadDeleted: vi.fn(),
   sendUploadErrorNotification: vi.fn(async () => undefined),
   triggerPagerDutyAlert: vi.fn(async () => undefined),
+  executeChild: vi.fn(),
+  proxyOptions: [] as Array<{ startToCloseTimeout?: string }>,
+  // The rest of a successful pipeline, for the annotate tests.
+  getUploadStorageLocation: vi.fn(async () => 'idrive'),
+  probe: vi.fn(),
+  ensureStorageCapacity: vi.fn(async () => ({
+    action: 'proceed',
+    storageLocation: 'idrive',
+  })),
+  transcribe: vi.fn(async () => ({ transcriptJsonKey: 'k/transcript.json' })),
+  transcode: vi.fn(async () => undefined),
+  createThumbnails: vi.fn(async () => undefined),
+  measurePublicUsage: vi.fn(async () => undefined),
+  storeTranscriptParagraphs: vi.fn(async () => undefined),
 }));
 
 vi.mock('@temporalio/workflow', () => {
   class CancelledFailure extends Error {}
   return {
     ActivityCancellationType: { WAIT_CANCELLATION_COMPLETED: 2 },
-    ApplicationFailure: { retryable: vi.fn(), nonRetryable: vi.fn() },
+    ApplicationFailure: {
+      retryable: (message: string) => new Error(message),
+      nonRetryable: (message: string) => new Error(message),
+    },
     CancellationScope: {
       current: () => ({ consideredCancelled: mocks.workflowCancelled }),
     },
     CancelledFailure,
-    executeChild: vi.fn(),
+    executeChild: mocks.executeChild,
     isCancellation: (err: unknown) => err instanceof CancelledFailure,
     patched: mocks.patched,
-    proxyActivities: () =>
-      new Proxy(
+    proxyActivities: (opts: { startToCloseTimeout?: string }) => {
+      mocks.proxyOptions.push(opts);
+      return new Proxy(
         {},
         {
           get: (_t, name: string) =>
@@ -32,7 +50,8 @@ vi.mock('@temporalio/workflow', () => {
               throw new Error(`unexpected activity ${name}`);
             }),
         },
-      ),
+      );
+    },
     setCurrentDetails: vi.fn(),
     sleep: vi.fn(),
     workflowInfo: () => ({
@@ -46,7 +65,8 @@ const { CancelledFailure } =
   (await import('@temporalio/workflow')) as never as {
     CancelledFailure: new (message: string) => Error;
   };
-const { processMediaWorkflow } = await import('./process-media');
+const { processMediaWorkflow, mediaTimeoutMinutes } =
+  await import('./process-media');
 
 const notFound = new Error('Upload record upload-1 not found');
 
@@ -58,6 +78,7 @@ beforeEach(() => {
   mocks.isUploadDeleted.mockReset().mockResolvedValue(true);
   mocks.sendUploadErrorNotification.mockClear();
   mocks.triggerPagerDutyAlert.mockClear();
+  mocks.executeChild.mockReset().mockResolvedValue(undefined);
 });
 
 describe('processMediaWorkflow when the upload is deleted', () => {
@@ -139,5 +160,94 @@ describe('processMediaWorkflow when the upload is deleted', () => {
 
     expect(mocks.isUploadDeleted).not.toHaveBeenCalled();
     expect(mocks.triggerPagerDutyAlert).toHaveBeenCalledOnce();
+  });
+});
+
+const probeOf = (durationSeconds: string) => ({
+  format: { duration: durationSeconds, format_name: 'mov,mp4' },
+  streams: [{ codec_type: 'video' }],
+});
+
+describe('mediaTimeoutMinutes', () => {
+  test('keeps 180 minutes for ordinary lengths', () => {
+    expect(mediaTimeoutMinutes(probeOf('3600') as never)).toBe(180);
+  });
+
+  test('scales with long media', () => {
+    // 5.7 hours: 342 min × 1.5 + 60.
+    expect(mediaTimeoutMinutes(probeOf('20526') as never)).toBe(574);
+  });
+
+  test('falls back to 180 minutes when the duration is unknown', () => {
+    expect(mediaTimeoutMinutes(probeOf('N/A') as never)).toBe(180);
+  });
+});
+
+describe('processMediaWorkflow when annotation fails', () => {
+  const annotateFailure = new Error('Child Workflow execution failed');
+
+  beforeEach(() => {
+    mocks.getFinalizedUploadKey.mockReset().mockResolvedValue('upload-1/key');
+    mocks.probe.mockReset().mockResolvedValue(probeOf('20526'));
+    mocks.proxyOptions.length = 0;
+    mocks.executeChild.mockImplementation(
+      async (_wf: unknown, opts: { workflowId: string }) => {
+        if (opts.workflowId.startsWith('annotateTranscript:')) {
+          throw annotateFailure;
+        }
+      },
+    );
+  });
+
+  test('finishes the run, still summarizes and indexes, and pages without emailing', async () => {
+    mocks.attempt = 1;
+    mocks.isUploadDeleted.mockResolvedValue(false);
+
+    await expect(processMediaWorkflow('upload-1')).resolves.toBeUndefined();
+
+    const children = mocks.executeChild.mock.calls.map(
+      ([, opts]) => (opts as { workflowId: string }).workflowId,
+    );
+    expect(children).toEqual([
+      'annotateTranscript:on-transcribe:upload-1/key',
+      'summarizeUpload:on-transcribe:upload-1/key',
+      'media:upload-1/key',
+    ]);
+    expect(mocks.triggerPagerDutyAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dedupKey: 'annotate-transcript:upload-1',
+        component: 'annotate-transcript',
+      }),
+    );
+    expect(mocks.sendUploadErrorNotification).not.toHaveBeenCalled();
+  });
+
+  test('does not page when the upload was deleted meanwhile', async () => {
+    mocks.isUploadDeleted.mockResolvedValue(true);
+
+    await expect(processMediaWorkflow('upload-1')).resolves.toBeUndefined();
+
+    expect(mocks.triggerPagerDutyAlert).not.toHaveBeenCalled();
+  });
+
+  test('transcodes, thumbnails and transcribes with time limits scaled to the media length', async () => {
+    await processMediaWorkflow('upload-1');
+
+    const scaled = mocks.proxyOptions.filter(
+      (o) => o.startToCloseTimeout === '574 minutes',
+    );
+    // transcode + createThumbnails, and transcribe.
+    expect(scaled).toHaveLength(3);
+  });
+
+  test('runs started before the patch still fail the run', async () => {
+    mocks.patched.mockImplementation(
+      (id: string) => id !== 'process-media-annotate-nonfatal-v1',
+    );
+    mocks.isUploadDeleted.mockResolvedValue(false);
+
+    await expect(processMediaWorkflow('upload-1')).rejects.toThrow(
+      'annotate failed',
+    );
   });
 });

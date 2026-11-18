@@ -4,7 +4,7 @@ import { chromium, type Request } from 'playwright';
 
 import type { DownloadResult } from '.';
 import type { Logger } from '../logger';
-import { downloadUrl } from './download';
+import { downloadUrl, THUMBNAIL_DOWNLOAD } from './download';
 import { USER_AGENT } from './user-agent';
 import { ytdlp } from './yt-dlp';
 
@@ -77,7 +77,7 @@ async function downloadSubsplashThumbnail(
     const thumbUrl = match?.[1] ?? null;
 
     if (thumbUrl) {
-      return downloadUrl(thumbUrl, dir, log);
+      return downloadUrl(thumbUrl, dir, log, undefined, THUMBNAIL_DOWNLOAD);
     }
 
     return null;

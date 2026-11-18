@@ -4,13 +4,19 @@ import { invariant } from 'es-toolkit';
 import type * as activities from '../../activities/background';
 import type * as transcodeActivities from '../../activities/transcode';
 import { BACKGROUND_QUEUE, TRANSCODE_QUEUE } from '../../queues';
+import type { Probe } from '../../util/zod';
+import { mediaTimeoutMinutes } from './process-media';
 
-const { createThumbnails } = proxyActivities<typeof transcodeActivities>({
-  startToCloseTimeout: '180 minutes',
-  heartbeatTimeout: '10 minutes',
-  taskQueue: TRANSCODE_QUEUE,
-  retry: { maximumAttempts: 2 },
-});
+// createThumbnails decodes the whole video, so its time limit scales with
+// length like processMedia's (a flat 180 minutes timed out 5.7-hour videos).
+function createThumbnailsFor(probe: Probe) {
+  return proxyActivities<typeof transcodeActivities>({
+    startToCloseTimeout: `${mediaTimeoutMinutes(probe)} minutes`,
+    heartbeatTimeout: '10 minutes',
+    taskQueue: TRANSCODE_QUEUE,
+    retry: { maximumAttempts: 2 },
+  }).createThumbnails;
+}
 
 const { getProbe, getFinalizedUploadKey, getUploadStorageLocation } =
   proxyActivities<typeof activities>({
@@ -34,7 +40,7 @@ export async function remakeThumbnailsWorkflow(uploadRecordId: string) {
   const storageLocation = patched('storage-locations-v1')
     ? await getUploadStorageLocation(uploadRecordId)
     : undefined;
-  await createThumbnails(
+  await createThumbnailsFor(probe)(
     uploadRecordId,
     finalizedUploadKey,
     probe,

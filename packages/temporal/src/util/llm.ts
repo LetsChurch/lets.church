@@ -1,10 +1,11 @@
 import { db, LlmCall } from '@letschurch/db';
-import { ApplicationFailure } from '@temporalio/activity';
-import { eq } from 'drizzle-orm';
+import { ApplicationFailure, Context } from '@temporalio/activity';
+import { and, count, eq, gte, inArray } from 'drizzle-orm';
 import OpenAI from 'openai';
 import { z } from 'zod';
 
 import {
+  DETERMINISTIC_FALLBACK_OUTCOME_LIST,
   DETERMINISTIC_LLM_FALLBACK_FAILURE,
   getBuiltInCompletionGuard,
   type GuardOutcome,
@@ -378,6 +379,46 @@ export async function createChatCompletionTracked(
   return createChatCompletionTrackedAttempt(args, false);
 }
 
+// Output-cap/completeness failures of one activity (across its retries) before
+// they're treated as deterministic.
+const DETERMINISTIC_GUARD_MAX_FAILURES = 3;
+
+/**
+ * How many output-cap/completeness failures this activity has hit so far
+ * (including the call just settled), counted from llm_call since the activity
+ * was first scheduled. Other failures (Flex 429s, timeouts) don't count, so
+ * they can't make one truncation fatal. 0 outside an activity, without an
+ * upload to attribute calls to, or if the lookup fails: keep retrying.
+ */
+async function repeatedGuardFailures(tracking?: {
+  activity: string;
+  uploadRecordId?: string | null;
+}) {
+  if (!tracking?.uploadRecordId) return 0;
+  let since: Date;
+  try {
+    since = new Date(Context.current().info.scheduledTimestampMs);
+  } catch {
+    return 0;
+  }
+  try {
+    const [row] = await db
+      .select({ n: count() })
+      .from(LlmCall)
+      .where(
+        and(
+          eq(LlmCall.activity, tracking.activity),
+          eq(LlmCall.uploadRecordId, tracking.uploadRecordId),
+          inArray(LlmCall.outcome, DETERMINISTIC_FALLBACK_OUTCOME_LIST),
+          gte(LlmCall.createdAt, since),
+        ),
+      );
+    return row?.n ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 async function createChatCompletionTrackedAttempt(
   args: CreateTrackedChatCompletionArgs,
   isFallbackAttempt: boolean,
@@ -497,8 +538,7 @@ async function createChatCompletionTrackedAttempt(
 
   if (result.errorMessage) {
     // A provider content-filter rejection gets one different-model fallback.
-    // The recursive call is marked so it disables SDK retries and can classify
-    // deterministic output-cap/completeness failures as non-retryable.
+    // The recursive call is marked so it disables SDK retries.
     if (result.outcome === 'guard_content_filter' && fallbackModel) {
       // Reasoning effort is tuned for the primary model; the fallback keeps
       // its provider default.
@@ -515,7 +555,16 @@ async function createChatCompletionTrackedAttempt(
         true,
       );
     }
-    if (isFallbackAttempt && isDeterministicFallbackOutcome(result.outcome)) {
+    // Output-cap/completeness failures mostly repeat for the same prompt, but
+    // can vary run to run, so allow a couple of retries before failing
+    // non-retryably. Retrying them durably (Flex retries for 3 days)
+    // otherwise just burns tokens, as one 5.7-hour sermon did 118 times.
+    if (
+      isDeterministicFallbackOutcome(result.outcome) &&
+      (isFallbackAttempt ||
+        (await repeatedGuardFailures(tracking)) >=
+          DETERMINISTIC_GUARD_MAX_FAILURES)
+    ) {
       throw ApplicationFailure.nonRetryable(
         result.errorMessage,
         DETERMINISTIC_LLM_FALLBACK_FAILURE,

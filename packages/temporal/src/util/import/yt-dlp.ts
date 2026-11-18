@@ -4,7 +4,7 @@ import { execa } from 'execa';
 import fastGlob from 'fast-glob';
 import * as z from 'zod';
 
-import { downloadUrl } from './download';
+import { downloadUrl, THUMBNAIL_DOWNLOAD } from './download';
 import { assertPublicUrl } from './safe-url';
 
 const baseYtDlpArgs = [
@@ -72,7 +72,13 @@ export async function ytdlp(
 
   try {
     thumbnailPath = parsed.success
-      ? await downloadUrl(parsed.data.thumbnail, dir, log, heartbeat)
+      ? await downloadUrl(
+          parsed.data.thumbnail,
+          dir,
+          log,
+          heartbeat,
+          THUMBNAIL_DOWNLOAD,
+        )
       : null;
   } catch (e) {
     log.error(`Error downloading thumbnail: ${e}`);

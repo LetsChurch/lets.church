@@ -11,6 +11,11 @@ const DETERMINISTIC_FALLBACK_OUTCOMES: Record<string, true> = {
   guard_silent_summarization: true,
 };
 
+/** The outcomes `isDeterministicFallbackOutcome` accepts. */
+export const DETERMINISTIC_FALLBACK_OUTCOME_LIST = Object.keys(
+  DETERMINISTIC_FALLBACK_OUTCOMES,
+);
+
 export function isDeterministicFallbackOutcome(outcome: string): boolean {
   return DETERMINISTIC_FALLBACK_OUTCOMES[outcome] === true;
 }
