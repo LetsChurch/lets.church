@@ -1,5 +1,7 @@
 import {
+  CancellationScope,
   condition,
+  log,
   ParentClosePolicy,
   patched,
   proxyActivities,
@@ -13,6 +15,7 @@ import { BACKGROUND_QUEUE, IMPORT_QUEUE, PRIORITY_IMPORT } from '../../queues';
 import { muxRenditionReadySignal } from '../../refs';
 import { CHANNEL_SLUG_KEY, UPLOAD_ID_KEY } from '../../search-attributes';
 import { processMediaWorkflow } from './process-media';
+import { uploadIsDeleted } from './upload-deleted';
 
 // How long to wait for the rendition-ready signal before importing anyway (the
 // activity retries also cover a rendition that's nearly-but-not-quite ready).
@@ -73,6 +76,7 @@ export async function muxImportRecordingWorkflow({
   channelSlug,
   title,
 }: MuxImportRecordingWorkflowParams): Promise<string> {
+  const stopWhenDeleted = patched('mux-import-stop-when-deleted-v1');
   let renditionReady = false;
   setHandler(muxRenditionReadySignal, () => {
     renditionReady = true;
@@ -130,6 +134,29 @@ export async function muxImportRecordingWorkflow({
 
     return uploadRecordId;
   } catch (error) {
+    // The recording was deleted (deleteUploadWorkflow tombstones it and
+    // cancels our processMedia child; the import may also just fail against
+    // the deleted record). Not a failure, so don't retry against a deleted
+    // record or page; just drop the Mux copy, which nothing serves anymore.
+    if (
+      stopWhenDeleted &&
+      // Unless this workflow itself was cancelled (an operator cancel of the
+      // import should end CANCELED and leave the asset alone).
+      !CancellationScope.current().consideredCancelled &&
+      (await uploadIsDeleted(uploadRecordId))
+    ) {
+      try {
+        await deleteMuxAsset(muxAssetId);
+      } catch (err) {
+        log.warn('Could not delete Mux asset of a deleted recording', {
+          uploadRecordId,
+          muxAssetId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+      return uploadRecordId;
+    }
+
     const errorMessage = error instanceof Error ? error.message : String(error);
 
     // The workflow is started with a multi-attempt retry policy (see

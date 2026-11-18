@@ -11,7 +11,7 @@ import {
 } from '@letschurch/opensearch';
 import { listLocations } from '@letschurch/s3/locations';
 import { Context } from '@temporalio/activity';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 import logger from '../../util/logger';
 
@@ -41,6 +41,24 @@ export async function markUploadPrivate(id: string) {
   }
 
   return true;
+}
+
+/**
+ * First step of a delete: hide the upload and tombstone it (`deletedAt`), so
+ * processing that is running or starts later can tell it's being deleted and
+ * stop quietly instead of failing (and alerting) once its files vanish. Unlike
+ * markUploadPrivate this throws: the rest of the delete relies on it.
+ */
+export async function markUploadDeleted(id: string) {
+  moduleLogger.info(`Tombstoning upload record ${id}`);
+  await db
+    .update(UploadRecord)
+    .set({
+      visibility: 'PRIVATE',
+      deletedAt: sql`coalesce(${UploadRecord.deletedAt}, now())`,
+      updatedAt: new Date(),
+    })
+    .where(eq(UploadRecord.id, id));
 }
 
 export async function deleteUploadRecordSearch(id: string) {

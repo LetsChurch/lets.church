@@ -575,52 +575,11 @@ export async function postUserRegistration(
   });
 }
 
-export async function cancelUploadProcessing(uploadRecordId: string) {
-  // Fetch the upload record to get the finalized upload key
-  const upload = await db
-    .select({ finalizedUploadKey: UploadRecord.finalizedUploadKey })
-    .from(UploadRecord)
-    .where(eq(UploadRecord.id, uploadRecordId))
-    .then((r) => r[0] ?? null);
-
-  if (!upload?.finalizedUploadKey) {
-    moduleLogger.info(
-      { uploadRecordId },
-      'No finalized upload key found, skipping workflow cancellation',
-    );
-    return;
-  }
-
-  const workflowIds = [
-    makeProcessMediaWorkflowId(upload.finalizedUploadKey),
-    makeBackupToGlacierWorkflowId(upload.finalizedUploadKey),
-  ];
-
-  // Try to cancel each workflow, ignoring errors if they don't exist or are already completed
-  for (const workflowId of workflowIds) {
-    try {
-      const handle = (await client).workflow.getHandle(workflowId);
-      await handle.cancel();
-      moduleLogger.info({ workflowId }, 'Cancelled workflow');
-    } catch (error) {
-      // Workflow might not exist or already be completed, which is fine
-      moduleLogger.debug(
-        {
-          workflowId,
-          context: {
-            error: error instanceof Error ? error.message : String(error),
-          },
-        },
-        'Failed to cancel workflow (may not exist or already completed)',
-      );
-    }
-  }
-}
-
 export async function deleteUpload(uploadRecordId: string) {
-  // Cancel any active processing workflows before starting delete
-  await cancelUploadProcessing(uploadRecordId);
-
+  // Cancelling the upload's processMedia/backupToGlacier runs happens inside
+  // deleteUploadWorkflow, after it tombstones the upload and before it deletes
+  // files. Cancelling here instead raced a processMedia that started just
+  // after the delete request.
   const meta = await db
     .select({
       channelId: UploadRecord.channelId,

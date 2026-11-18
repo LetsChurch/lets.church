@@ -1,5 +1,7 @@
 import {
+  ActivityCancellationType,
   ApplicationFailure,
+  CancellationScope,
   executeChild,
   patched,
   proxyActivities,
@@ -30,6 +32,7 @@ import { annotateTranscriptWorkflow } from './annotate-transcript';
 import { indexDocumentWorkflow } from './index-document';
 import { moveUploadRecordWorkflow } from './storage-move';
 import { summarizeUploadWorkflow } from './summarize-upload';
+import { isUploadDeletedFailure, uploadIsDeleted } from './upload-deleted';
 
 const { probe } = proxyActivities<typeof probeActivities>({
   startToCloseTimeout: '20 minutes',
@@ -38,9 +41,13 @@ const { probe } = proxyActivities<typeof probeActivities>({
   retry: { maximumAttempts: 2 },
 });
 
+// These write files. On cancel, wait for them to actually stop before this
+// workflow closes, so a delete that waits for it to close (see
+// cancelUploadProcessing) doesn't race files still being uploaded.
 const { transcode, createThumbnails } = proxyActivities<
   typeof transcodeActivities
 >({
+  cancellationType: ActivityCancellationType.WAIT_CANCELLATION_COMPLETED,
   startToCloseTimeout: '180 minutes',
   heartbeatTimeout: '10 minutes',
   taskQueue: TRANSCODE_QUEUE,
@@ -60,6 +67,7 @@ const { transcribe } = proxyActivities<{
     additionalKeys: string[];
   }>;
 }>({
+  cancellationType: ActivityCancellationType.WAIT_CANCELLATION_COMPLETED,
   startToCloseTimeout: '180 minutes',
   heartbeatTimeout: '10 minutes',
   taskQueue: TRANSCRIBE_QUEUE,
@@ -164,6 +172,7 @@ export async function processMediaWorkflow(
     'inherit-process-media-child-priority-v1',
   );
   const storageLocationsV1 = patched('storage-locations-v1');
+  const stopQuietlyWhenDeleted = patched('process-media-stop-when-deleted-v1');
   // Propagate UploadId to every child / grandchild so the whole tree is
   // searchable in the Temporal UI by upload. Temporal does NOT inherit
   // search attributes automatically — see handle-multipart-media-upload.ts
@@ -213,7 +222,7 @@ export async function processMediaWorkflow(
         ? transcribe(targetId, s3UploadKey, storageLocation)
         : null;
 
-    await Promise.all([
+    const work = [
       transcribePromise,
       scope === 'everything' || scope === 'transcode'
         ? transcode(targetId, s3UploadKey, probeRes, storageLocation)
@@ -222,7 +231,18 @@ export async function processMediaWorkflow(
       probeIsVideoFile(probeRes)
         ? [createThumbnails(targetId, s3UploadKey, probeRes, storageLocation)]
         : []),
-    ]);
+    ];
+    try {
+      await Promise.all(work);
+    } catch (err) {
+      // When cancelled, wait for every writer to acknowledge (see the
+      // WAIT_CANCELLATION_COMPLETED proxies) before closing, not just the
+      // first; otherwise fail fast as before.
+      if (CancellationScope.current().consideredCancelled) {
+        await Promise.allSettled(work);
+      }
+      throw err;
+    }
 
     if (storageLocationsV1) {
       await measurePublicUsage(targetId);
@@ -322,6 +342,23 @@ export async function processMediaWorkflow(
       retry: { maximumAttempts: 2 },
     });
   } catch (err) {
+    // This workflow was cancelled (e.g. the upload is being deleted): not a
+    // failure, so no error email or page. Cancellation isn't retried, so just
+    // propagate. Checks the scope, not the error: a cancelled child or activity
+    // alone is still a real failure of this run.
+    if (CancellationScope.current().consideredCancelled) throw err;
+    // The upload is being (or was) deleted: its files and record are going
+    // away, so this run and every retry would fail. Also not a failure.
+    // deleteUploadWorkflow tombstones the record and cancels this workflow;
+    // a run that slips past the cancel lands here. Finish without retrying,
+    // emailing, or paging.
+    if (
+      stopQuietlyWhenDeleted &&
+      (isUploadDeletedFailure(err) || (await uploadIsDeleted(targetId)))
+    ) {
+      setCurrentDetails('Upload deleted — stopped');
+      return;
+    }
     const { attempt, retryPolicy } = workflowInfo();
     const maxAttempts = retryPolicy?.maximumAttempts ?? 1;
     const terminal =

@@ -74,6 +74,7 @@ export {
   deleteUploadStateAndBackup,
 } from './delete-glacier-backup';
 export { default as deleteOldThumbnails } from './delete-old-thumbnails';
+export { cancelUploadProcessing } from './cancel-upload-processing';
 export * from './delete-upload-record';
 export { default as embedTranscriptParagraphs } from './embed-transcript-paragraphs';
 export { default as embedUpload } from './embed-upload';
@@ -83,7 +84,10 @@ export {
   default as geocodeOrganization,
   validateGeocodeConfig,
 } from './geocode-organization';
-export { default as getFinalizedUploadKey } from './get-finalized-upload-key';
+export {
+  default as getFinalizedUploadKey,
+  isUploadDeleted,
+} from './get-finalized-upload-key';
 export { default as getProbe } from './get-probe';
 export {
   getNoParagraphsUploadCount,
