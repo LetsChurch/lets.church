@@ -8,7 +8,10 @@ import { getClientIpAddress } from '@/util/request-ip';
 
 import { normalizeEmail } from './normalize-email';
 
-export type PublicActionKind = 'donation-checkout' | 'email-sign-in';
+export type PublicActionKind =
+  | 'donation-checkout'
+  | 'email-sign-in'
+  | 'email-change';
 type BucketScope = 'ip' | 'email';
 type DonationStatusBucketScope = 'ip' | 'session';
 
@@ -42,6 +45,12 @@ const BUCKETS: Record<
   'email-sign-in': {
     ip: { capacity: 10, refillTokensPerSecond: 1 / 60 },
     email: { capacity: 3, refillTokensPerSecond: 1 / 600 },
+  },
+  // A profile email change mails a verification link to the new address, so
+  // without a bound a signed-in user could use it to mail arbitrary inboxes.
+  'email-change': {
+    ip: { capacity: 5, refillTokensPerSecond: 1 / 600 },
+    email: { capacity: 2, refillTokensPerSecond: 1 / 3600 },
   },
 };
 

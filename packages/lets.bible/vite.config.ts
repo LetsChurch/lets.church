@@ -28,6 +28,10 @@ const securityHeaders: Record<string, string> = {
 export default defineConfig(() => ({
   server: {
     port: 3000,
+    // Let web's OIDC back-channel logout reach this dev server at its
+    // per-checkout alias `letsbible.<worktree>.internal` without Vite's host
+    // check rejecting it (see docs/worktrees.md).
+    allowedHosts: ['.internal'],
   },
   resolve: {
     tsconfigPaths: true,

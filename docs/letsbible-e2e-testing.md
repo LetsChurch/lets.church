@@ -280,7 +280,9 @@ In scope (everything implemented to date):
   (`manifest.webmanifest`); the SW is dev-aware (network-first in dev so HMR is
   never served stale; cache-first content in prod).
 - Forms built on TanStack Form (the verse note editor) with validation.
-- Homepage (signed-out + returning) and the OIDC sign-in/out flow.
+- Homepage (signed-out + returning) and the OIDC sign-in/out flow, including
+  OIDC back-channel logout (`POST /backchannel-logout`): lets.church drops a
+  user's lets.bible sessions when it revokes their credentials.
 - Mobile responsiveness: below `lg` the study panel and the book/chapter/
   translation pickers become **Base UI Drawer** bottom-sheet drawers; the study
   sheet is **non-modal with no backdrop** so the text stays visible/tappable
@@ -755,6 +757,8 @@ the stage and clicking fills the input or navigates.
 | LB-SEC-06 | — | Tamper an id_token (wrong signature/alg) in the callback exchange | Verification fails (`algorithms:['ES256']` pinned); login rejected. |
 | LB-SEC-07 | Signed in | Navigate (GET) to `/logout` directly, or load it from another origin (link / `<img>`) | `303` to `/`; the `sid` cookie and `oidc_session` row are untouched — still signed in (logout-CSRF blocked; `/logout` only acts on POST, which the account menu's "Log out" sends via a hidden form). |
 | LB-SEC-08 | Signed in on lets.bible; an admin bans (or deletes) that user on lets.church | (a) Call `<web URL>/oidc/userinfo` with an access token issued before the ban; (b) POST a `refresh_token` grant with the user's refresh token | (a) `401 invalid_token`; (b) `400 invalid_grant` and the token's whole refresh family is revoked (un-banning doesn't revive it). A code issued just before the ban is likewise refused at `/oidc/token`. |
+| LB-SEC-09 | Signed in on lets.bible as user U (an `oidc_session` row with `sub` = U). U's lets.church email is **unverified** (e.g. someone registered it). | On lets.church, complete an email sign-in (magic link) for that address — this is a takeover: lets.church revokes U's credentials and POSTs a signed `logout_token` to lets.bible. | Every `oidc_session` row for `sub` = U created before the token is deleted; reloading lets.bible shows signed-out. The sign-in response carries `passwordCleared: true` when U had a password. Also triggered by completing a password reset and by an admin ban or delete. *Manually verified 2026-11-19 (curl + DB inspection); not automated.* |
+| LB-SEC-10 | — | `POST /backchannel-logout` with no body, a malformed token, a token signed by another key, wrong `aud`, missing the back-channel `events` claim, a `nonce` claim, or `iat` older than 2 minutes | `400`, `Cache-Control: no-store`; no `oidc_session` rows touched. (No body → `400` manually verified 2026-11-19.) |
 
 ---
 
@@ -1181,6 +1185,7 @@ A fast pass to run after any change:
 14a. Signed in: account menu → **Log out** → signed out (POST `/logout`); a plain GET to `/logout` just redirects home and leaves you signed in.
 14b. Phone viewport (≈390px): select a verse → study panel is a bottom-sheet drawer that is **non-modal with no backdrop** (the text behind isn't dimmed and stays tappable — tapping another verse stacks it) and **rests at ~34dvh** (snap point) so it doesn't grow as verses are added; drag the grab handle up → snaps to ~full height; press-and-hold a word → word-study drawer; tap the version trigger → picker drawer with Compare + interlinear (Aα) buttons per row; compare + homepage fit without horizontal scroll. Desktop (≥1024px): study panel is a non-modal overlay rail that doesn't shift the reading; two-click word study; reading centered while idle.
 14c. Header `Aα` toggle → `?view=interlinear`. **Original** (default): true source order — John 3 starts Ἦν δὲ ἄνθρωπος; toggle **Parsing** on → morph codes + decoded hover; Genesis 1 flows RTL (בְּרֵאשִׁית rightmost). **English (reverse)**: reading order (English over lemmas), Parsing chip inert. MSB John 3:16 includes αὐτοῦ (Byzantine); BSB omits it. Tapping a word opens the study panel (with a Parsing section) — rail desktop / drawer mobile.
+14d. Signed in on lets.bible; on lets.church, reset that user's password (or an admin bans/deletes them) → lets.bible reload shows signed-out (back-channel logout).
 15. `tsc` + `oxlint`/`oxfmt` clean; no console errors on the main routes.
 ```
 docker compose exec letsbible sh -c 'cd /usr/src/app/packages/lets.bible && pnpm exec tsc'

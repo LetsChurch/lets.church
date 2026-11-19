@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-import { eq } from 'drizzle-orm';
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { eq, inArray } from 'drizzle-orm';
+import { createRemoteJWKSet, decodeJwt, jwtVerify } from 'jose';
 
 import { db, oidcLoginRequest, oidcSession } from '@/db';
 
@@ -326,4 +326,99 @@ export async function buildLogout(
     url.searchParams.set('id_token_hint', idToken);
   }
   return { location: url.toString(), setCookie: clearSessionCookie() };
+}
+
+const BACKCHANNEL_LOGOUT_EVENT =
+  'http://schemas.openid.net/event/backchannel-logout';
+
+// OIDC Back-Channel Logout 1.0: lets.church POSTs a signed logout_token here
+// (server-to-server) when a user's credentials are revoked there, e.g. an
+// account takeover or a password reset. Our sessions are our own and never
+// re-check with the provider, so without this a revoked user would keep a
+// lets.bible session for up to its 30-day TTL. Validation per spec §2.6:
+// signature + iss + aud + iat/exp, the logout event present, no nonce, and a
+// subject. Only sessions whose login happened before the token was issued are
+// dropped, so a late or replayed token can't sign the account's new owner out.
+// "Before" is judged by the stored ID token's `iat`, which the provider stamped
+// with the same clock as the logout token's `iat` — not our row's createdAt,
+// which lands after the code-exchange round trip and could postdate a takeover
+// that happened mid-login.
+export async function handleBackchannelLogout(req: Request): Promise<Response> {
+  const headers = { 'cache-control': 'no-store' };
+  const bad = () => new Response(null, { status: 400, headers });
+
+  let logoutToken: string | null = null;
+  try {
+    logoutToken = new URLSearchParams(await req.text()).get('logout_token');
+  } catch {
+    return bad();
+  }
+  if (!logoutToken) return bad();
+
+  let sub: string;
+  let issuedAt: number;
+  try {
+    const { payload } = await jwtVerify(logoutToken, jwks, {
+      issuer: ISSUER,
+      audience: CLIENT_ID,
+      algorithms: ['ES256'],
+      typ: 'logout+jwt',
+      requiredClaims: ['iat', 'exp', 'jti', 'sub', 'events'],
+      maxTokenAge: '2m',
+      // Pods' clocks drift a little; without slack a logout token whose `iat`
+      // is a second "in the future" would be rejected and the session kept.
+      clockTolerance: '30s',
+    });
+    const events = payload.events as Record<string, unknown> | undefined;
+    if (
+      !events ||
+      typeof events !== 'object' ||
+      !(BACKCHANNEL_LOGOUT_EVENT in events) ||
+      'nonce' in payload ||
+      typeof payload.sub !== 'string' ||
+      !payload.sub ||
+      typeof payload.iat !== 'number'
+    ) {
+      return bad();
+    }
+    sub = payload.sub;
+    issuedAt = payload.iat;
+  } catch {
+    return bad();
+  }
+
+  const sessions = await db
+    .select({
+      id: oidcSession.id,
+      idToken: oidcSession.idToken,
+      createdAt: oidcSession.createdAt,
+    })
+    .from(oidcSession)
+    .where(eq(oidcSession.sub, sub));
+  const stale = sessions
+    .filter((session) => loginIssuedAt(session) <= issuedAt)
+    .map((session) => session.id);
+  if (stale.length > 0) {
+    await db.delete(oidcSession).where(inArray(oidcSession.id, stale));
+  }
+  return new Response(null, { status: 200, headers });
+}
+
+// When the provider issued this session's login, in seconds. The ID token is
+// one we verified at login and stored ourselves, so decoding (not
+// re-verifying) it is fine. Sessions without one (none are written that way
+// today) fall back to the row's creation time.
+function loginIssuedAt(session: {
+  idToken: string | null;
+  createdAt: Date;
+}): number {
+  if (session.idToken) {
+    try {
+      const { iat } = decodeJwt(session.idToken);
+      if (typeof iat === 'number') return iat;
+    } catch {
+      // fall through
+    }
+  }
+  return Math.floor(session.createdAt.getTime() / 1000);
 }

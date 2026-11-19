@@ -1,5 +1,8 @@
 import { AppUser, AppUserEmail, db } from '@letschurch/db';
 import { PART_SIZE } from '@letschurch/s3';
+import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
+import { staticMeta } from '@letschurch/temporal/util/dashboard-links';
+import { getRequest } from '@tanstack/react-start/server';
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
 import { eq } from 'drizzle-orm';
@@ -15,11 +18,16 @@ import {
 import {
   completeMultipartMediaUpload,
   handleMultipartMediaUpload,
+  startBackground,
 } from '@/temporal';
 import { normalizeAuthEmail } from '@/util/auth-token';
 import { mantineAvatarLg2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { hasAcceptedParticipationAgreements } from '@/util/participation';
+import {
+  enforcePublicActionRateLimit,
+  PUBLIC_ACTION_RATE_LIMIT_MESSAGE,
+} from '@/util/public-action-rate-limit';
 import { imageUrl } from '@/util/server-env';
 import { placeImageUpload } from '@/util/storage';
 import testPassword from '@/util/zxcvbn';
@@ -166,7 +174,31 @@ export const accountProcedures = {
           return { error: 'Email is already taken' };
         }
 
-        await db.transaction(async (tx) => {
+        const heldEmail = await db.query.AppUserEmail.findFirst({
+          where: (t, { eq }) => eq(t.appUserId, ctx.session.appUserId),
+          columns: { email: true },
+        });
+        if (!heldEmail || normalizeAuthEmail(heldEmail.email) !== email) {
+          const rateLimit = await enforcePublicActionRateLimit({
+            headers: getRequest().headers,
+            email,
+            kind: 'email-change',
+          });
+          if (!rateLimit.allowed) {
+            moduleLogger.warn(
+              {
+                context: {
+                  userId: ctx.session.appUserId,
+                  limitedBy: rateLimit.limitedBy,
+                },
+              },
+              'Profile update failed - email change rate limited',
+            );
+            return { error: PUBLIC_ACTION_RATE_LIMIT_MESSAGE };
+          }
+        }
+
+        const emailChanged = await db.transaction(async (tx) => {
           await tx
             .update(AppUser)
             .set({
@@ -199,8 +231,46 @@ export const accountProcedures = {
               email,
               appUserId: ctx.session.appUserId,
             });
+            return true;
           }
+          return false;
         });
+
+        // A changed address starts unverified. Send the verification link
+        // right away so it doesn't stay that way: until it's verified, an
+        // email sign-in to it is treated as an account takeover (password
+        // cleared, other devices signed out), and donations to it aren't
+        // linked to the account.
+        if (emailChanged) {
+          try {
+            await startBackground('postUserRegistrationWorkflow', {
+              ...staticMeta({
+                summary: `Verify changed email — @${input.username}`,
+              }),
+              args: [
+                {
+                  userId: ctx.session.appUserId,
+                  username: input.username,
+                  email,
+                  subscribeToNewsletter: false,
+                  verificationKind: 'email-change',
+                },
+              ],
+              workflowId: `email-change-verification:${ctx.session.appUserId}:${Date.now()}`,
+              taskQueue: BACKGROUND_QUEUE,
+            });
+          } catch (error) {
+            moduleLogger.error(
+              {
+                context: {
+                  userId: ctx.session.appUserId,
+                  error: error instanceof Error ? error.message : String(error),
+                },
+              },
+              'Profile email changed, but the verification email could not be scheduled',
+            );
+          }
+        }
 
         moduleLogger.info(
           {

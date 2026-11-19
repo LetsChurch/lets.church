@@ -22,6 +22,10 @@ const mocks = vi.hoisted(() => ({
   userWhere: vi.fn(),
 }));
 
+vi.mock('@/util/oidc/backchannel-logout', () => ({
+  sendBackchannelLogout: vi.fn(async () => {}),
+}));
+
 vi.mock('@letschurch/db', async () => {
   // The hoisted mock needs the real schema objects without importing the
   // connection-bearing package entry before DATABASE_URL can be replaced.

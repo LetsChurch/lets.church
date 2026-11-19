@@ -71,6 +71,30 @@ export async function mintIdToken(params: {
     .sign(privateKey);
 }
 
+export const BACKCHANNEL_LOGOUT_EVENT =
+  'http://schemas.openid.net/event/backchannel-logout';
+const LOGOUT_TOKEN_TTL_SECONDS = 2 * 60;
+
+// OIDC Back-Channel Logout 1.0 §2.4 logout token: identifies the user (`sub`)
+// and carries the logout event; never a `nonce`, so it can't be replayed as an
+// ID token. `typ: logout+jwt` stops it being mistaken for any other JWT.
+export async function mintLogoutToken(params: {
+  sub: string;
+  clientId: string;
+}): Promise<string> {
+  const { kid, privateKey } = await getActiveSigningKey();
+  const iat = nowSeconds();
+  return new SignJWT({ events: { [BACKCHANNEL_LOGOUT_EVENT]: {} } })
+    .setProtectedHeader({ alg: SIGNING_ALG, kid, typ: 'logout+jwt' })
+    .setIssuer(getIssuer())
+    .setSubject(params.sub)
+    .setAudience(params.clientId)
+    .setIssuedAt(iat)
+    .setExpirationTime(iat + LOGOUT_TOKEN_TTL_SECONDS)
+    .setJti(crypto.randomUUID())
+    .sign(privateKey);
+}
+
 export async function mintAccessToken(params: {
   sub: string;
   clientId: string;

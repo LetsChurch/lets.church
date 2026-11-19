@@ -58,6 +58,8 @@ function EmailSignInRoute() {
 
 function CompleteEmailSignIn({ token }: { token: string }) {
   const [error, setError] = useState<string | false>(false);
+  // Where to go once the user has read the "password removed" notice.
+  const [securedRedirect, setSecuredRedirect] = useState<string | null>(null);
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const details = useQuery(
@@ -71,6 +73,10 @@ function CompleteEmailSignIn({ token }: { token: string }) {
           return;
         }
         await queryClient.invalidateQueries();
+        if (data.passwordCleared) {
+          setSecuredRedirect(data.redirect ?? '/');
+          return;
+        }
         window.location.assign(data.redirect ?? '/');
       },
       onError: () => {
@@ -78,6 +84,41 @@ function CompleteEmailSignIn({ token }: { token: string }) {
       },
     }),
   );
+
+  if (securedRedirect) {
+    return (
+      <div className="border-fancy-pants rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+        <Text size="lg" fw={600}>
+          You&apos;re signed in
+        </Text>
+        <Alert
+          title="Your password was removed"
+          icon={<IconInfoCircle />}
+          className="mt-4"
+        >
+          This email address hadn&apos;t been confirmed on the account yet, so
+          we treated this sign-in as a security check. We removed the
+          account&apos;s password and signed out every other device. If you use
+          a password to sign in, set a new one now.
+        </Alert>
+        <Button
+          fullWidth
+          className="mt-5"
+          onClick={() => window.location.assign('/dashboard/account/security')}
+        >
+          Set a new password
+        </Button>
+        <Button
+          fullWidth
+          variant="default"
+          className="mt-3"
+          onClick={() => window.location.assign(securedRedirect)}
+        >
+          Continue without a password
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="border-fancy-pants rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
@@ -131,6 +172,18 @@ function CompleteEmailSignIn({ token }: { token: string }) {
 
       {details.data?.valid ? (
         <>
+          {details.data.removesPassword ? (
+            <Alert
+              title="This will reset the account's password"
+              icon={<IconInfoCircle />}
+              className="mt-4"
+            >
+              This email address hasn&apos;t been confirmed on its account yet.
+              Continuing confirms it, removes the account&apos;s current
+              password, and signs out every other device. You can set a new
+              password afterwards.
+            </Alert>
+          ) : null}
           <Button
             fullWidth
             className="mt-5"

@@ -15,6 +15,7 @@
 //   OIDC_CLIENT_LETS_BIBLE_REDIRECT_URIS
 //   OIDC_CLIENT_LETS_BIBLE_POST_LOGOUT_REDIRECT_URIS
 //   OIDC_CLIENT_LETS_BIBLE_SCOPES
+//   OIDC_CLIENT_LETS_BIBLE_BACKCHANNEL_LOGOUT_URI (single URI; unset = none)
 //
 // All clients are **public**: they authenticate with PKCE (required) rather than
 // a client secret. ID/access tokens are verified by clients against the public
@@ -30,6 +31,11 @@ export type OidcClient = {
   redirectUris: string[];
   postLogoutRedirectUris: string[];
   allowedScopes: string[];
+  // OIDC Back-Channel Logout 1.0 endpoint. lets.church POSTs a signed
+  // logout_token here when a user's credentials are revoked, so the client
+  // drops its own sessions for that user. Server-to-server, so it's normally
+  // an internal URL; null disables it.
+  backchannelLogoutUri: string | null;
 };
 
 const DEFAULT_SCOPES = [...SUPPORTED_SCOPES];
@@ -45,6 +51,7 @@ const clientDefaults: OidcClient[] = [
     redirectUris: ['http://localhost:4001/callback'],
     postLogoutRedirectUris: ['http://localhost:4001/'],
     allowedScopes: DEFAULT_SCOPES,
+    backchannelLogoutUri: null,
   },
 ];
 
@@ -80,6 +87,9 @@ export const clients: OidcClient[] = clientDefaults.map((d) => ({
   allowedScopes: (envList(d.clientId, 'SCOPES') ?? d.allowedScopes).filter(
     (s) => supportedScopes.has(s),
   ),
+  backchannelLogoutUri:
+    envList(d.clientId, 'BACKCHANNEL_LOGOUT_URI')?.[0] ??
+    d.backchannelLogoutUri,
 }));
 
 export function getClient(clientId: string): OidcClient | null {

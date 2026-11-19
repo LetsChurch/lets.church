@@ -12,6 +12,7 @@ const client: OidcClient = {
   redirectUris: ['https://app.example.com/auth/callback'],
   postLogoutRedirectUris: ['https://app.example.com/'],
   allowedScopes: ['openid', 'profile', 'email', 'offline_access'],
+  backchannelLogoutUri: null,
 };
 
 describe('isRegisteredRedirectUri', () => {

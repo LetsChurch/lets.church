@@ -29,6 +29,8 @@ export default async function sendVerificationEmailActivity(
   userId: string,
   username: string,
   email: string,
+  // Optional so workflows already in flight (three args) keep working.
+  kind: 'registration' | 'email-change' = 'registration',
 ) {
   moduleLogger.info(`Sending verification email for user ${userId}`);
 
@@ -46,16 +48,26 @@ export default async function sendVerificationEmailActivity(
     emailKey: uuidTranslator.fromUUID(emailObj.key),
   })}`;
 
-  const subject = `Welcome to Let's Church! Please verify your email.`;
+  const isChange = kind === 'email-change';
+  const subject = isChange
+    ? `Please verify your new Let's Church email address`
+    : `Welcome to Let's Church! Please verify your email.`;
+  const greeting = isChange
+    ? `Hi ${username}, you changed the email address on your Let's Church account.`
+    : `Welcome to Let's Church, ${username}!`;
   const text = stripIndent`
-    Welcome to Let's Church, ${username}!
+    ${greeting}
 
     Please visit the following link to verify your email: ${verifyUrl}
   `;
   const html = emailHtml(
-    'Welcome!',
+    isChange ? 'Verify your email' : 'Welcome!',
     stripIndent`
-        <p>Welcome to Let's Church, <b>${sanitizeForHtml(username)}</b>!</p>
+        <p>${
+          isChange
+            ? `Hi <b>${sanitizeForHtml(username)}</b>, you changed the email address on your Let's Church account.`
+            : `Welcome to Let's Church, <b>${sanitizeForHtml(username)}</b>!`
+        }</p>
 
         <p>Please click the button below to verify your email address:</p>
 

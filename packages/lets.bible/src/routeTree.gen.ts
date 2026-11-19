@@ -9,54 +9,25 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as SearchRouteImport } from './routes/search'
-import { Route as LogoutRouteImport } from './routes/logout'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as ListenRouteImport } from './routes/listen'
-import { Route as LibraryRouteImport } from './routes/library'
-import { Route as CallbackRouteImport } from './routes/callback'
-import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as BackchannelLogoutRouteImport } from './routes/backchannel-logout'
+import { Route as CallbackRouteImport } from './routes/callback'
+import { Route as LibraryRouteImport } from './routes/library'
+import { Route as ListenRouteImport } from './routes/listen'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as LogoutRouteImport } from './routes/logout'
+import { Route as SearchRouteImport } from './routes/search'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ApiAnswerRouteImport } from './routes/api/answer'
 import { Route as BibleIndexRouteImport } from './routes/bible.index'
 import { Route as TrpcSplatRouteImport } from './routes/trpc.$'
-import { Route as ApiAnswerRouteImport } from './routes/api/answer'
-import { Route as CompareBookChapterRouteImport } from './routes/compare.$book.$chapter'
 import { Route as BibleBookChapterRouteImport } from './routes/bible.$book.$chapter'
+import { Route as CompareBookChapterRouteImport } from './routes/compare.$book.$chapter'
 
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SearchRoute = SearchRouteImport.update({
-  id: '/search',
-  path: '/search',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LogoutRoute = LogoutRouteImport.update({
-  id: '/logout',
-  path: '/logout',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ListenRoute = ListenRouteImport.update({
-  id: '/listen',
-  path: '/listen',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LibraryRoute = LibraryRouteImport.update({
-  id: '/library',
-  path: '/library',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CallbackRoute = CallbackRouteImport.update({
-  id: '/callback',
-  path: '/callback',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -64,9 +35,49 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const BackchannelLogoutRoute = BackchannelLogoutRouteImport.update({
+  id: '/backchannel-logout',
+  path: '/backchannel-logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CallbackRoute = CallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LibraryRoute = LibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ListenRoute = ListenRouteImport.update({
+  id: '/listen',
+  path: '/listen',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LogoutRoute = LogoutRouteImport.update({
+  id: '/logout',
+  path: '/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAnswerRoute = ApiAnswerRouteImport.update({
+  id: '/api/answer',
+  path: '/api/answer',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BibleIndexRoute = BibleIndexRouteImport.update({
@@ -79,9 +90,9 @@ const TrpcSplatRoute = TrpcSplatRouteImport.update({
   path: '/trpc/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAnswerRoute = ApiAnswerRouteImport.update({
-  id: '/api/answer',
-  path: '/api/answer',
+const BibleBookChapterRoute = BibleBookChapterRouteImport.update({
+  id: '/bible/$book/$chapter',
+  path: '/bible/$book/$chapter',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompareBookChapterRoute = CompareBookChapterRouteImport.update({
@@ -89,15 +100,11 @@ const CompareBookChapterRoute = CompareBookChapterRouteImport.update({
   path: '/compare/$book/$chapter',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BibleBookChapterRoute = BibleBookChapterRouteImport.update({
-  id: '/bible/$book/$chapter',
-  path: '/bible/$book/$chapter',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/backchannel-logout': typeof BackchannelLogoutRoute
   '/callback': typeof CallbackRoute
   '/library': typeof LibraryRoute
   '/listen': typeof ListenRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/backchannel-logout': typeof BackchannelLogoutRoute
   '/callback': typeof CallbackRoute
   '/library': typeof LibraryRoute
   '/listen': typeof ListenRoute
@@ -131,6 +139,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/backchannel-logout': typeof BackchannelLogoutRoute
   '/callback': typeof CallbackRoute
   '/library': typeof LibraryRoute
   '/listen': typeof ListenRoute
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/backchannel-logout'
     | '/callback'
     | '/library'
     | '/listen'
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/backchannel-logout'
     | '/callback'
     | '/library'
     | '/listen'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
+    | '/backchannel-logout'
     | '/callback'
     | '/library'
     | '/listen'
@@ -198,6 +210,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  BackchannelLogoutRoute: typeof BackchannelLogoutRoute
   CallbackRoute: typeof CallbackRoute
   LibraryRoute: typeof LibraryRoute
   ListenRoute: typeof ListenRoute
@@ -214,53 +227,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/search': {
-      id: '/search'
-      path: '/search'
-      fullPath: '/search'
-      preLoaderRoute: typeof SearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/logout': {
-      id: '/logout'
-      path: '/logout'
-      fullPath: '/logout'
-      preLoaderRoute: typeof LogoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/listen': {
-      id: '/listen'
-      path: '/listen'
-      fullPath: '/listen'
-      preLoaderRoute: typeof ListenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/library': {
-      id: '/library'
-      path: '/library'
-      fullPath: '/library'
-      preLoaderRoute: typeof LibraryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/callback': {
-      id: '/callback'
-      path: '/callback'
-      fullPath: '/callback'
-      preLoaderRoute: typeof CallbackRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -270,11 +241,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/backchannel-logout': {
+      id: '/backchannel-logout'
+      path: '/backchannel-logout'
+      fullPath: '/backchannel-logout'
+      preLoaderRoute: typeof BackchannelLogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/callback': {
+      id: '/callback'
+      path: '/callback'
+      fullPath: '/callback'
+      preLoaderRoute: typeof CallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/library': {
+      id: '/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof LibraryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/listen': {
+      id: '/listen'
+      path: '/listen'
+      fullPath: '/listen'
+      preLoaderRoute: typeof ListenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/logout': {
+      id: '/logout'
+      path: '/logout'
+      fullPath: '/logout'
+      preLoaderRoute: typeof LogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/answer': {
+      id: '/api/answer'
+      path: '/api/answer'
+      fullPath: '/api/answer'
+      preLoaderRoute: typeof ApiAnswerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/bible/': {
@@ -291,11 +318,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TrpcSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/answer': {
-      id: '/api/answer'
-      path: '/api/answer'
-      fullPath: '/api/answer'
-      preLoaderRoute: typeof ApiAnswerRouteImport
+    '/bible/$book/$chapter': {
+      id: '/bible/$book/$chapter'
+      path: '/bible/$book/$chapter'
+      fullPath: '/bible/$book/$chapter'
+      preLoaderRoute: typeof BibleBookChapterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/compare/$book/$chapter': {
@@ -305,19 +332,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CompareBookChapterRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/bible/$book/$chapter': {
-      id: '/bible/$book/$chapter'
-      path: '/bible/$book/$chapter'
-      fullPath: '/bible/$book/$chapter'
-      preLoaderRoute: typeof BibleBookChapterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  BackchannelLogoutRoute: BackchannelLogoutRoute,
   CallbackRoute: CallbackRoute,
   LibraryRoute: LibraryRoute,
   ListenRoute: ListenRoute,

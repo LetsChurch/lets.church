@@ -8,6 +8,8 @@ import {
 import { TRPCError } from '@trpc/server';
 import { and, eq, isNull } from 'drizzle-orm';
 
+import { sendBackchannelLogout } from '@/util/oidc/backchannel-logout';
+
 export async function deleteUserAccount({
   actingAdminId,
   appUserId,
@@ -58,4 +60,8 @@ export async function deleteUserAccount({
         ),
       );
   });
+
+  // End the user's sessions on first-party sites (lets.bible) too; they keep
+  // their own and don't re-check with us.
+  await sendBackchannelLogout(appUserId);
 }

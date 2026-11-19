@@ -123,6 +123,9 @@ services:
       OIDC_SIGNING_JWK: ${OIDC_SIGNING_JWK}
       OIDC_CLIENT_LETS_BIBLE_REDIRECT_URIS: ${OIDC_LETS_BIBLE_REDIRECT_URI}
       OIDC_CLIENT_LETS_BIBLE_POST_LOGOUT_REDIRECT_URIS: ${OIDC_LETS_BIBLE_POST_LOGOUT_URI}
+      # Server-to-server: tells lets.bible to drop a user's sessions when their
+      # lets.church credentials are revoked (account takeover, password reset).
+      OIDC_CLIENT_LETS_BIBLE_BACKCHANNEL_LOGOUT_URI: http://letsbible.${LC_WT:?run inside direnv}.internal:3000/backchannel-logout
       # Production LLM calls (search parse/suggest/related, the Q&A agent,
       # query-time embeddings) go direct to OpenAI from this container.
       OPENAI_API_KEY: ${OPENAI_API_KEY}
@@ -181,6 +184,10 @@ services:
     depends_on:
       web:
         condition: service_started
+    networks:
+      default:
+        # Per-checkout alias for web's OIDC back-channel logout calls.
+        aliases: ['letsbible.${LC_WT:?run inside direnv}.internal']
     labels:
       - traefik.enable=true
       - traefik.http.routers.${LC_WT}-letsbible.rule=Host(`${LC_LB_HOST}`)

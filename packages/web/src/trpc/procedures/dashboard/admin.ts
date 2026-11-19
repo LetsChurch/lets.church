@@ -124,6 +124,7 @@ import {
   setMaintenanceConfig,
 } from '@/util/maintenance';
 import { escapeLikePattern } from '@/util/misc';
+import { sendBackchannelLogout } from '@/util/oidc/backchannel-logout';
 import { sendPasswordResetEmail } from '@/util/password-reset';
 import {
   reindexOrganizations,
@@ -1993,6 +1994,8 @@ export const adminRouter = router({
               ),
             );
         });
+        // lets.bible keeps its own session and never re-checks the ban.
+        await sendBackchannelLogout(input.appUserId);
 
         moduleLogger.info(
           {

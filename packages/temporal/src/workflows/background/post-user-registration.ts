@@ -16,6 +16,8 @@ export type PostUserRegistrationArgs = {
   username: string;
   email: string;
   subscribeToNewsletter: boolean;
+  /** Defaults to 'registration' (welcome wording). */
+  verificationKind?: 'registration' | 'email-change';
 };
 
 export async function postUserRegistrationWorkflow(
@@ -23,7 +25,12 @@ export async function postUserRegistrationWorkflow(
 ) {
   await Promise.all(
     [
-      sendVerificationEmail(args.userId, args.username, args.email),
+      sendVerificationEmail(
+        args.userId,
+        args.username,
+        args.email,
+        args.verificationKind ?? 'registration',
+      ),
       args.subscribeToNewsletter && subscribeNewsletter(args.email),
     ].filter(Boolean),
   );

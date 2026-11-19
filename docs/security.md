@@ -283,10 +283,38 @@ recipient's inbox.
 
 The sign-in landing page requires a POST action before consuming the token so
 email link scanners do not use it accidentally. Email sign-in can create a
-passwordless account and verifies the address in the same transaction. Normal
-registration still requires a password. Passwordless users can set one from
+passwordless account and verifies the address in the same transaction. An
+address attached to an account **unverified** proves nothing about who set that
+account up (anyone can type a stranger's email into registration or their
+profile). So when email sign-in or a password reset proves control of such an
+address, it is treated as a takeover: every prior credential on the account
+(password for email sign-in, all web sessions, and all first-party OIDC refresh
+tokens and unredeemed authorization codes) is revoked in the same transaction
+that marks the address verified, before any new session is issued. A squatter who
+pre-registered someone else's address loses their lets.church sessions and
+password the moment the real owner signs in by email or resets the password.
+After that transaction commits, `sendBackchannelLogout`
+(`src/util/oidc/backchannel-logout.ts`) POSTs a signed `logout_token` (OIDC
+Back-Channel Logout 1.0, `typ: logout+jwt`, 2-minute lifetime) to each
+first-party client's configured back-channel URI, so relying parties drop their
+own sessions too. lets.bible validates it (`/backchannel-logout`) and deletes
+only sessions created before the token was issued, so a late or replayed token
+can't sign out the account's new owner. Delivery is best effort (logged on
+failure); already-issued access tokens (10 minutes) are not revoked. When email
+sign-in removes a password, the response says so and the page tells the user
+and offers to set a new one.
+
+The `/auth/verify` link (sent at registration, and again whenever a user changes
+their email) verifies only for a visitor **signed in as that account**: a click
+proves control of the inbox, not that the clicker set up the account. Anyone
+else, including a mail scanner prefetching the link, is sent to log in (and
+back) or changes nothing. A stranger who receives a squatter's verification mail
+reclaims the address through email sign-in instead, which revokes the squatter.
+Email sign-in refuses banned and deleted accounts before any of this; password
+reset refuses deleted accounts only. Normal registration still requires a password. Passwordless users can set one from
 account security, and the password-reset flow works for both account types.
-Completing a password reset revokes every existing session.
+Completing a password reset revokes every existing session, OIDC refresh
+token, and unredeemed authorization code.
 
 Sign-in emails include both a visibly styled action and the escaped URL as a
 linked copy-and-paste fallback; the plain-text part also includes the URL. This
@@ -313,7 +341,10 @@ status, and receipt links.
 - A signed-in donor can attach a checkout only to an email address already
   verified on that account.
 - Guest gifts are attached to an account only after the matching email address
-  is verified.
+  is verified. This includes the email-change path: `releaseDonorEmailForUser`
+  adopts unclaimed donor rows only when the address being released was verified
+  on the account; for an unverified address it touches only rows the user
+  already owns.
 - Stripe webhook signatures are verified against the raw request body. Event IDs
   are stored before processing so retries do not create duplicate ledger rows.
 - Stripe webhooks, not browser redirects, set payment and subscription state.

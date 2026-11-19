@@ -1,10 +1,18 @@
 import { randomUUID } from 'node:crypto';
 
-import { AppSession, AppUser, AppUserEmail, db } from '@letschurch/db';
+import {
+  AppSession,
+  AppUser,
+  AppUserEmail,
+  db,
+  OidcAuthorizationCode,
+  OidcRefreshToken,
+  type TransactionClient,
+} from '@letschurch/db';
 import { getRequest, setCookie } from '@tanstack/react-start/server';
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { emailSchema, loginSchema, registerSchema } from '@/schemas/auth';
@@ -20,6 +28,7 @@ import {
 import { validateHCaptcha } from '@/util/hcaptcha';
 import { createSessionJwt } from '@/util/jwt';
 import logger from '@/util/logger';
+import { sendBackchannelLogout } from '@/util/oidc/backchannel-logout';
 import { sendPasswordResetEmail } from '@/util/password-reset';
 import {
   enforcePublicActionRateLimit,
@@ -39,6 +48,49 @@ const moduleLogger = logger.child({
 
 type HandleLoginResponse = { error: false } | { error: string };
 type HandleRegisterResponse = { error: false } | { error: string };
+
+/**
+ * Ends every way back into an account that existed before an inbox-proven
+ * takeover (email sign-in into an unverified account, or password reset):
+ * web sessions, first-party OIDC authorization codes and refresh tokens, and
+ * optionally the password. Runs before the new session is issued.
+ *
+ * Relying parties' own sessions (lets.bible's) are ended separately, after
+ * the transaction commits, by `sendBackchannelLogout`. Already-issued access
+ * tokens (10-minute TTL) are not revoked.
+ */
+async function revokeAccountCredentials(
+  tx: TransactionClient,
+  appUserId: string,
+  { clearPassword }: { clearPassword: boolean },
+) {
+  const now = new Date();
+  if (clearPassword) {
+    await tx
+      .update(AppUser)
+      .set({ password: null, updatedAt: now })
+      .where(eq(AppUser.id, appUserId));
+  }
+  await tx
+    .update(AppSession)
+    .set({ deletedAt: now, updatedAt: now })
+    .where(
+      and(eq(AppSession.appUserId, appUserId), isNull(AppSession.deletedAt)),
+    );
+  // An unredeemed code would mint a fresh refresh-token family after this.
+  await tx
+    .delete(OidcAuthorizationCode)
+    .where(eq(OidcAuthorizationCode.appUserId, appUserId));
+  await tx
+    .update(OidcRefreshToken)
+    .set({ revokedAt: now })
+    .where(
+      and(
+        eq(OidcRefreshToken.appUserId, appUserId),
+        isNull(OidcRefreshToken.revokedAt),
+      ),
+    );
+}
 
 function emailAccountUsername(email: string, userId: string) {
   const prefix =
@@ -363,17 +415,35 @@ export const authProcedures = {
           }
           user = newUser;
           emailRecord = newEmail;
-        } else if (!emailRecord.verifiedAt) {
-          await tx
-            .update(AppUserEmail)
-            .set({ verifiedAt: new Date() })
-            .where(eq(AppUserEmail.id, emailRecord.id));
         }
 
         if (!user || user.deletedAt) {
           return { denied: true as const, reason: null };
         }
         if (user.bannedAt) return { denied: true as const, reason: null };
+
+        // Set when this sign-in removed a password the account had, so the
+        // page can say so instead of the next password login failing
+        // unexplained.
+        let passwordCleared = false;
+        let credentialsRevoked = false;
+        if (!emailRecord.verifiedAt) {
+          // An unverified address proves nothing about who set up this
+          // account: anyone can type a stranger's email into register or
+          // their profile. Whoever holds this token has now proven control
+          // of the inbox, so they take the account over the same way a
+          // password reset does: every credential the account had before is
+          // revoked, so if a squatter created it they lose all access. A
+          // legitimate holder who never verified just lands in their own
+          // account and can set a new password from account security.
+          await revokeAccountCredentials(tx, user.id, { clearPassword: true });
+          await tx
+            .update(AppUserEmail)
+            .set({ verifiedAt: new Date() })
+            .where(eq(AppUserEmail.id, emailRecord.id));
+          passwordCleared = user.password !== null;
+          credentialsRevoked = true;
+        }
 
         const [session] = await tx
           .insert(AppSession)
@@ -387,6 +457,8 @@ export const authProcedures = {
           appUserId: user.id,
           sessionId: session.id,
           returnTo: tokenRecord.returnTo,
+          passwordCleared,
+          credentialsRevoked,
         };
       });
 
@@ -402,6 +474,11 @@ export const authProcedures = {
         await createSessionJwt({ sub: result.sessionId }),
         sessionCookieOptions,
       );
+      if (result.credentialsRevoked) {
+        // The new lets.bible session (if any) is created after this, so only
+        // sessions from before the takeover are dropped.
+        await sendBackchannelLogout(result.appUserId);
+      }
       const { claimDonorsForVerifiedUser } =
         await import('@/donations/identity');
       try {
@@ -419,6 +496,7 @@ export const authProcedures = {
       return {
         error: false as const,
         redirect: safeRedirect(result.returnTo ?? undefined) ?? '/',
+        passwordCleared: result.passwordCleared,
       };
     }),
 
@@ -431,7 +509,20 @@ export const authProcedures = {
       );
       if (!tokenRecord) return { valid: false as const };
 
-      return { valid: true as const };
+      // Warn up front when continuing will be a takeover that removes a
+      // password (see completeEmailSignIn). Only the inbox owner holds this
+      // token, so telling them about the account on their own address leaks
+      // nothing new.
+      const emailRecord = await db.query.AppUserEmail.findFirst({
+        where: (t, { eq }) => eq(t.email, tokenRecord.email),
+        columns: { verifiedAt: true },
+        with: { appUser: { columns: { password: true } } },
+      });
+      const removesPassword = Boolean(
+        emailRecord && !emailRecord.verifiedAt && emailRecord.appUser?.password,
+      );
+
+      return { valid: true as const, removesPassword };
     }),
 
   forgotPassword: anonProcedure
@@ -605,15 +696,15 @@ export const authProcedures = {
             .update(AppUserEmail)
             .set({ verifiedAt: new Date() })
             .where(eq(AppUserEmail.id, emailRecord.id));
-          await tx
-            .update(AppSession)
-            .set({ deletedAt: new Date(), updatedAt: new Date() })
-            .where(eq(AppSession.appUserId, user.id));
-          return true;
+          await revokeAccountCredentials(tx, user.id, {
+            clearPassword: false,
+          });
+          return { appUserId: user.id };
         });
         if (!reset) {
           return { error: 'Invalid or expired password reset link.' };
         }
+        await sendBackchannelLogout(reset.appUserId);
 
         moduleLogger.info('Password reset completed');
 
