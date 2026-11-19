@@ -47,6 +47,10 @@ export {
   getDeleteChannelProgressQuery,
 } from './delete-channel';
 export { deleteUploadWorkflow } from './delete-upload';
+export {
+  donationYearEndStatementsWorkflow,
+  donationYearEndStatementWorkflow,
+} from './donation-year-end-statements';
 export { generatePeaksWorkflow } from './generate-peaks';
 export { generateStudyGuideWorkflow } from './generate-study-guide';
 export { geocodeOrganizationWorkflow } from './geocode-organization';

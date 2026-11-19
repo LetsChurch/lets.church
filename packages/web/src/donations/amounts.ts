@@ -32,9 +32,4 @@ export function donationAmounts(baseAmountCents: number, coverFees: boolean) {
   };
 }
 
-export function formatDonationAmount(amountCents: number, currency = 'usd') {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency.toUpperCase(),
-  }).format(amountCents / 100);
-}
+export { formatDonationAmount } from '@letschurch/util/donations';

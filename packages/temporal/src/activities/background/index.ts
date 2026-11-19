@@ -88,6 +88,12 @@ export {
   default as getFinalizedUploadKey,
   isUploadDeleted,
 } from './get-finalized-upload-key';
+export {
+  listDonationYearEndStatementRecipients,
+  recordDonationYearEndStatement,
+  sendDonationYearEndStatement,
+  sendDonationYearEndStatementsAdminSummary,
+} from './donation-year-end-statements';
 export { default as getProbe } from './get-probe';
 export {
   getNoParagraphsUploadCount,

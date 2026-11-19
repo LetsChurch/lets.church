@@ -82,6 +82,13 @@ export const DonationAlertKind = pgEnum('donation_alert_kind', [
   'WEBHOOK_FAILED',
 ]);
 
+// UNDELIVERABLE: the mail server rejected the address outright (bad mailbox),
+// recorded so reruns don't keep trying it.
+export const DonationYearEndStatementStatus = pgEnum(
+  'donation_year_end_statement_status',
+  ['SENT', 'UNDELIVERABLE'],
+);
+
 export const DonationImportType = pgEnum('donation_import_type', [
   'TRANSACTION_HISTORY',
   'RECURRING_PLANS',
@@ -723,6 +730,35 @@ export const DonationAlert = pgTable(
     donation_alert_resolved_at_idx: index('donation_alert_resolved_at_idx').on(
       DonationAlert.resolvedAt,
     ),
+  }),
+);
+
+// One row per donor per year whose year-end giving statement email went out,
+// so a rerun of the January job never emails a donor twice, however long ago
+// the earlier run was.
+export const DonationYearEndStatement = pgTable(
+  'donation_year_end_statement',
+  {
+    donorId: uuid('donor_id').notNull(),
+    year: integer('year').notNull(),
+    status: DonationYearEndStatementStatus('status').notNull().default('SENT'),
+    sentAt: timestamp('sent_at', { precision: 3 }).notNull().defaultNow(),
+  },
+  (DonationYearEndStatement) => ({
+    donation_year_end_statement_donor_fkey: foreignKey({
+      name: 'donation_year_end_statement_donor_fkey',
+      columns: [DonationYearEndStatement.donorId],
+      foreignColumns: [DonationDonor.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    DonationYearEndStatement_cpk: primaryKey({
+      name: 'DonationYearEndStatement_cpk',
+      columns: [
+        DonationYearEndStatement.donorId,
+        DonationYearEndStatement.year,
+      ],
+    }),
   }),
 );
 

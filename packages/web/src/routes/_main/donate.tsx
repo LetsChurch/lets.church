@@ -1,3 +1,4 @@
+import { DONATION_EIN } from '@letschurch/util/donations';
 import { IconHeartFilled, IconLock } from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
@@ -332,7 +333,7 @@ function DonatePage() {
             in exchange for your gift.
           </Text>
           <Text size="sm" c="dimmed" className="mt-3 leading-relaxed">
-            EIN 92-3744006
+            EIN {DONATION_EIN}
           </Text>
         </div>
         <Text size="sm" c="dimmed" className="max-w-xl">

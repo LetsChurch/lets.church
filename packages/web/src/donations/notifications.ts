@@ -2,6 +2,7 @@ import { db, type Donation } from '@letschurch/db';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
 import { staticMeta } from '@letschurch/temporal/util/dashboard-links';
 import { emailHtml, sanitizeForHtml } from '@letschurch/temporal/util/email';
+import { DONATION_EIN } from '@letschurch/util/donations';
 import { encryptPayload } from '@letschurch/util/server/encrypted-payload';
 import { stripIndent } from 'proper-tags';
 import { z } from 'zod';
@@ -77,7 +78,7 @@ export function buildDonorThankYouEmail(
     ${receiptUrl ? `Receipt: ${receiptUrl}` : ''}
 
     ${RECEIPT_STATEMENT}
-    Let's Church Inc. is a tax-exempt organization, EIN 92-3744006.
+    Let's Church Inc. is a tax-exempt organization, EIN ${DONATION_EIN}.
 
     You can view your giving history and annual statements at ${historyUrl} after signing in with this email address.
 
@@ -98,7 +99,7 @@ export function buildDonorThankYouEmail(
           : ''
       }
 
-      ${RECEIPT_STATEMENT}<br>Let's Church Inc. is a tax-exempt organization, EIN 92-3744006.
+      ${RECEIPT_STATEMENT}<br>Let's Church Inc. is a tax-exempt organization, EIN ${DONATION_EIN}.
 
       You can view your <a href="${sanitizeForHtml(historyUrl)}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">giving history and annual statements</a> after signing in with this email address.
 

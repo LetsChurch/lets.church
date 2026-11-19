@@ -1,3 +1,8 @@
+import {
+  DONATION_EIN,
+  donationNetCents,
+  isStatementDonationStatus,
+} from '@letschurch/util/donations';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { z } from 'zod';
@@ -46,11 +51,10 @@ function DonationStatementPage() {
   const donations = data.donations.filter(
     (donation) =>
       donationStatementYear(donation.donatedAt) === year &&
-      ['SUCCEEDED', 'REFUNDED', 'PARTIALLY_REFUNDED'].includes(donation.status),
+      isStatementDonationStatus(donation.status),
   );
   const totalCents = donations.reduce(
-    (total, donation) =>
-      total + donation.amountCents - donation.refundedAmountCents,
+    (total, donation) => total + donationNetCents(donation),
     0,
   );
 
@@ -68,7 +72,7 @@ function DonationStatementPage() {
           Let&apos;s Church Inc.
         </Text>
         <Text size="sm" className="print:text-black">
-          EIN 92-3744006
+          EIN {DONATION_EIN}
         </Text>
       </header>
 
@@ -93,7 +97,7 @@ function DonationStatementPage() {
               <Table.Td>{donation.externalId}</Table.Td>
               <Table.Td>
                 {formatDonationAmount(
-                  donation.amountCents - donation.refundedAmountCents,
+                  donationNetCents(donation),
                   donation.currency,
                 )}
               </Table.Td>

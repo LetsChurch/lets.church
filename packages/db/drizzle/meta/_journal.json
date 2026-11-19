@@ -281,6 +281,13 @@
       "when": 1793762219417,
       "tag": "0039_study_guide",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1795101402945,
+      "tag": "0040_donation-year-end-statement",
+      "breakpoints": true
     }
   ]
 }

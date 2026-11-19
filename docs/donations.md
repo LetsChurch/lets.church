@@ -236,6 +236,66 @@ arrives before Stripe has linked its Checkout Session is expected: it fails so
 Stripe retries, but raises no alert or notice until it is still failing 15
 minutes after Stripe created the event.
 
+### Year-end giving statements
+
+Every January 8 at 15:00 UTC the `donation-year-end-statements` Temporal
+schedule runs `donationYearEndStatementsWorkflow`, which emails donors a summary
+of the previous UTC calendar year: total given, one line per gift, the "no
+goods or services" statement and EIN, and a link to the printable statement at
+`/dashboard/account/donations/<year>`. Years are UTC like the rest of the
+donation records: Stripe timestamps are UTC instants and its exports label
+dates UTC. The date leaves time for late-December bank payments to settle, so
+the workflow refuses to send a year's statements before January 8 of the next
+year.
+
+Statements go to one recipient per account, like the statement page:
+
+- Donor records linked to an account that isn't deleted and has a verified
+  email get one combined statement, sent to the account's most recently
+  verified email (the address the donate form prefills). This also covers
+  linked donor records with no email of their own.
+- Other donor records get their own statement, sent to the donor record's
+  email. Donor records with neither are left out.
+
+It counts the same gifts as the page (`SUCCEEDED`, `REFUNDED`, and
+`PARTIALLY_REFUNDED`, net of refunds, including imported gifts; the status
+list, refund netting, amount formatting, and EIN are shared through
+`@letschurch/util/donations`), except that fully refunded gifts are left out
+rather than shown at $0 and totals are kept per currency.
+
+Each statement's result is recorded in `donation_year_end_statement` (donor
+record, year, status), one row per donor record it covered, and donor records
+with a row are never emailed again for that year. The status is `SENT`, or
+`UNDELIVERABLE` when the mail server rejected the address outright (a 5.1.x
+bad-mailbox reply); rejected addresses aren't retried by later runs. To try
+one again after fixing the address, delete its row and rerun. Bounces that
+arrive later as a returned email aren't seen. If a donor record is linked to an
+account after its own statement went out, the account's statement on a rerun
+covers every donor record on the account again.
+
+The record is written by its own activity after the send, so a database error
+while recording is retried without sending the email again. The workflow pages
+through recipients 200 at a time, continuing as new after each page, and sends
+through one child workflow per recipient
+(`donation-year-end-statement:<year>:user:<account id>` or
+`…:donor:<donor id>`), ten at a time. Children are abandoned rather than
+terminated or cancelled with the parent, so a send that has started always
+finishes and is recorded. The email is built and sent inside the child's
+activity with an encrypted payload, so names and addresses stay out of
+workflow history and logs; SMTP errors are rethrown without the server's reply,
+which quotes the recipient. When the run finishes, `ADMIN_EMAIL` gets a
+summary: sent, already sent, skipped (email removed or gifts refunded after
+listing), address rejected, still running in another run, failed, and the
+year's donor records on record by status. If listing recipients keeps failing
+(its retries span about two hours), the run stops and the summary says so and
+why, since the schedule won't fire again for a year; missing mail or `WEB_URL`
+configuration stops the run at once.
+
+To retry failures or send a past year by hand, start
+`donationYearEndStatementsWorkflow` on the `background` queue with input
+`{ "year": 2026 }`. Only donor records without a statement on record are
+emailed.
+
 ### Needs attention
 
 The top of `/dashboard/admin/donations` lists open `donation_alert` rows, one

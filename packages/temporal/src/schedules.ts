@@ -40,6 +40,14 @@ export const SCHEDULES: ScheduleDefinition[] = [
     workflowType: 'organizationChannelLinkDigestWorkflow',
     spec: { cronExpressions: ['0 13 * * 1'] },
   },
+  {
+    // January 8, 15:00 UTC: last year's statements, after late-December bank
+    // payments have settled. Start donationYearEndStatementsWorkflow by hand
+    // with { year } to retry failures or backfill a year.
+    scheduleId: 'donation-year-end-statements',
+    workflowType: 'donationYearEndStatementsWorkflow',
+    spec: { cronExpressions: ['0 15 8 1 *'] },
+  },
 ];
 
 function isNamedError(err: unknown, name: string) {

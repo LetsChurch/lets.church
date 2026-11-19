@@ -335,6 +335,14 @@ Donation thank-you and admin notification emails go through the encrypted
 `sendEmailWorkflow` payload so donor names and addresses stay out of Temporal
 history, and the send-email activity does not log recipients for encrypted
 payloads.
+For encrypted payloads the send-email activity also rethrows SMTP failures
+with only PII-free codes (nodemailer, reply, and enhanced status codes; server
+replies quote the recipient) and returns no
+send result (it echoes recipients), so neither reaches workflow history.
+Year-end giving statements (`donation-year-end-statements.ts`) pass only
+account and donor ids through workflows; the activity loads the name and
+address and sends with the same encrypted payload, so neither reaches history
+or logs. A rejected address is logged by its SMTP codes only.
 
 ---
 
