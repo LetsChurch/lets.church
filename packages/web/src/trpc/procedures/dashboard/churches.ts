@@ -53,6 +53,7 @@ import {
   mantineAvatarSm2x,
   mantineAvatarXl2x,
 } from '@/util/avatar-sizes';
+import { creatorEmailLabel } from '@/util/creator-email';
 import logger from '@/util/logger';
 import { reindexOrganizations } from '@/util/search-sync';
 import { imageUrl } from '@/util/server-env';
@@ -95,14 +96,12 @@ async function sendOrganizationApprovalRequestEmail(
     with: {
       emails: {
         columns: { email: true, verifiedAt: true },
-        where: (t, { isNotNull }) => isNotNull(t.verifiedAt),
-        limit: 1,
       },
     },
   });
 
   const creator = user?.fullName || user?.username || 'Unknown';
-  const creatorEmail = user?.emails[0]?.email ?? null;
+  const creatorEmail = creatorEmailLabel(user?.emails);
   const approvalUrl = `${WEB_URL}/dashboard/admin/organizations?filter=pending`;
   const safeApprovalUrl = sanitizeForHtml(approvalUrl);
 

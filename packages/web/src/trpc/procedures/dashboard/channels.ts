@@ -119,6 +119,7 @@ import {
   mantineAvatarSm2x,
   mantineAvatarXl2x,
 } from '@/util/avatar-sizes';
+import { creatorEmailLabel } from '@/util/creator-email';
 import { coverImageFull, thumbnailMedium } from '@/util/image-sizes';
 import logger from '@/util/logger';
 import { startMultipartUpload } from '@/util/media-multipart';
@@ -405,13 +406,11 @@ export const channelRouter = router({
             with: {
               emails: {
                 columns: { email: true, verifiedAt: true },
-                where: (t, { isNotNull }) => isNotNull(t.verifiedAt),
-                limit: 1,
               },
             },
           });
 
-          const verifiedEmail = user?.emails[0] ?? null;
+          const creatorEmail = creatorEmailLabel(user?.emails);
 
           const approvalUrl = `${WEB_URL}/dashboard/admin/channels?filter=pending`;
           const subject = `New Channel Approval Request: ${channel.name}`;
@@ -421,7 +420,7 @@ export const channelRouter = router({
             Channel Name: ${channel.name}
             Channel Slug: ${channel.slug}
             Creator: ${user?.fullName || user?.username || 'Unknown'}
-            ${verifiedEmail?.email ? `Creator Email: ${verifiedEmail.email}` : ''}
+            ${creatorEmail ? `Creator Email: ${creatorEmail}` : ''}
 
             Please visit ${approvalUrl} to review and approve this channel.
           `;
@@ -433,7 +432,7 @@ export const channelRouter = router({
               <b>Channel Name:</b> ${sanitizeForHtml(channel.name)}<br>
               <b>Channel Slug:</b> ${sanitizeForHtml(channel.slug)}<br>
               <b>Creator:</b> ${sanitizeForHtml(user?.fullName || user?.username || 'Unknown')}<br>
-              ${verifiedEmail?.email ? `<b>Creator Email:</b> ${sanitizeForHtml(verifiedEmail.email)}<br>` : ''}
+              ${creatorEmail ? `<b>Creator Email:</b> ${sanitizeForHtml(creatorEmail)}<br>` : ''}
 
               Please <a href="${approvalUrl}">click here</a> to review and approve this channel.
 
