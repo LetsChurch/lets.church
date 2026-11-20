@@ -288,6 +288,20 @@
       "when": 1795101402945,
       "tag": "0040_donation-year-end-statement",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1795134418270,
+      "tag": "0041_pending-email-change",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1795139497212,
+      "tag": "0042_registration-token",
+      "breakpoints": true
     }
   ]
 }

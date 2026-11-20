@@ -285,8 +285,9 @@ The sign-in landing page requires a POST action before consuming the token so
 email link scanners do not use it accidentally. Email sign-in can create a
 passwordless account and verifies the address in the same transaction. An
 address attached to an account **unverified** proves nothing about who set that
-account up (anyone can type a stranger's email into registration or their
-profile). So when email sign-in or a password reset proves control of such an
+account up. Registration no longer attaches an address before its inbox
+confirms (see below), but accounts registered before that change can still
+hold someone else's address unverified. So when email sign-in or a password reset proves control of such an
 address, it is treated as a takeover: every prior credential on the account
 (password for email sign-in, all web sessions, and all first-party OIDC refresh
 tokens and unredeemed authorization codes) is revoked in the same transaction
@@ -304,14 +305,48 @@ failure); already-issued access tokens (10 minutes) are not revoked. When email
 sign-in removes a password, the response says so and the page tells the user
 and offers to set a new one.
 
-The `/auth/verify` link (sent at registration, and again whenever a user changes
+The `/auth/verify` link (sent for older unverified registrations, and whenever a user changes
 their email) verifies only for a visitor **signed in as that account**: a click
 proves control of the inbox, not that the clicker set up the account. Anyone
 else, including a mail scanner prefetching the link, is sent to log in (and
 back) or changes nothing. A stranger who receives a squatter's verification mail
 reclaims the address through email sign-in instead, which revokes the squatter.
+
+Changing an account's email never touches its current address. The new one
+waits in `AppUserPendingEmail` (one per user, not unique on email, so it can't
+block anyone's registration) until its owner clicks the `/auth/verify` link
+while signed in as the account, within 7 days. Only then is it swapped in,
+verified, under the same advisory lock email sign-in takes. If another account
+holds the address by then, the change is dropped and the page says so. Only the
+inbox's owner reaches that result: the profile save itself never checks
+whether the address is taken and always answers the same way, so it can't be
+used to find out which addresses are registered. The verified address is
+emailed when the change is requested (so the owner can cancel it and change
+their password) and again when it's confirmed
+(`src/util/email-change-notice.ts`), so a change made from a stolen session
+doesn't go unnoticed. Email sign-in, OIDC claims and donor linking read only
+`AppUserEmail`, so a mistyped or stranger's address never gains access to the
+account, and the user keeps signing in and recovering through the address they
+already have. That also lets a passwordless user confirm on another device:
+they sign in by email to their current address (an ordinary sign-in, not a
+takeover), and the login page says so for verify links.
+
 Email sign-in refuses banned and deleted accounts before any of this; password
-reset refuses deleted accounts only. Normal registration still requires a password. Passwordless users can set one from
+reset refuses deleted accounts only.
+
+Registration creates nothing until the address confirms. The form (username,
+argon2 password hash, agreements, newsletter choice) is stored encrypted in a
+single-use `REGISTRATION` auth token (24 hours), and the address is emailed
+either a link to finish creating the account or, if it already has one, a "you
+already have an account" note with sign-in and reset links. The form shows the
+same "check your email" result in both cases, and the server does the same
+work in both (the token is issued either way), so registration can't be used
+to find out which addresses are registered. Usernames are public, so a taken
+username is still reported. The finish page creates the account only on a
+button press (POST), never on the GET, so mail scanners can't use the link; it
+re-checks the address and username under the email sign-in advisory lock,
+creates the account with the address already verified, consumes every other
+registration link for that address, and signs the user in. Normal registration still requires a password. Passwordless users can set one from
 account security, and the password-reset flow works for both account types.
 Completing a password reset revokes every existing session, OIDC refresh
 token, and unredeemed authorization code.

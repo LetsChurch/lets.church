@@ -11,7 +11,8 @@ import { normalizeEmail } from './normalize-email';
 export type PublicActionKind =
   | 'donation-checkout'
   | 'email-sign-in'
-  | 'email-change';
+  | 'email-change'
+  | 'registration';
 type BucketScope = 'ip' | 'email';
 type DonationStatusBucketScope = 'ip' | 'session';
 
@@ -51,6 +52,12 @@ const BUCKETS: Record<
   'email-change': {
     ip: { capacity: 5, refillTokensPerSecond: 1 / 600 },
     email: { capacity: 2, refillTokensPerSecond: 1 / 3600 },
+  },
+  // Registering mails the address (a link to finish, or "you already have an
+  // account"), so bound it the same way as email sign-in.
+  registration: {
+    ip: { capacity: 10, refillTokensPerSecond: 1 / 60 },
+    email: { capacity: 3, refillTokensPerSecond: 1 / 600 },
   },
 };
 

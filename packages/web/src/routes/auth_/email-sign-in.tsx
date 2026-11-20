@@ -19,7 +19,7 @@ import { submitWithCaptcha, useAppForm } from '@/components/ui/form';
 import { donationEmailFromHistoryState } from '@/donations/sign-in-state';
 import { emailSchema } from '@/schemas/auth';
 import { useTRPC } from '@/trpc/react';
-import { safeRedirect } from '@/util/safe-redirect';
+import { isVerifyEmailRedirect, safeRedirect } from '@/util/safe-redirect';
 
 const emailSignInSearchSchema = z.object({
   token: z.string().optional(),
@@ -263,6 +263,12 @@ function RequestEmailSignIn({
         We&apos;ll email you a secure link. You can use it to access an existing
         account, or create one without choosing a password.
       </Text>
+      {isVerifyEmailRedirect(redirectTo) ? (
+        <Text size="sm" fw={500} className="mt-3">
+          To confirm your new email address, enter the address your account uses
+          now. A link sent to the new address would create a separate account.
+        </Text>
+      ) : null}
 
       {sent ? (
         <>

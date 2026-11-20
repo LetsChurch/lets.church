@@ -9,21 +9,27 @@ import {
   OidcRefreshToken,
   type TransactionClient,
 } from '@letschurch/db';
+import {
+  decryptPayload,
+  encryptPayload,
+} from '@letschurch/util/server/encrypted-payload';
+import type { EncryptedPayload } from '@letschurch/util/server/encrypted-payload-types';
 import { getRequest, setCookie } from '@tanstack/react-start/server';
-import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { emailSchema, loginSchema, registerSchema } from '@/schemas/auth';
-import { postUserRegistration } from '@/temporal';
+import { postUserRegistration, sendEmail } from '@/temporal';
 import { BannedError, login } from '@/util/auth';
 import {
   consumeAuthToken,
   getUsableAuthToken,
   getUsableAuthTokenInTransaction,
   hasUsableAuthToken,
+  issueAuthToken,
   normalizeAuthEmail,
+  REGISTRATION_TTL_MINUTES,
 } from '@/util/auth-token';
 import { validateHCaptcha } from '@/util/hcaptcha';
 import { createSessionJwt } from '@/util/jwt';
@@ -34,6 +40,10 @@ import {
   enforcePublicActionRateLimit,
   PUBLIC_ACTION_RATE_LIMIT_MESSAGE,
 } from '@/util/public-action-rate-limit';
+import {
+  generateAccountExistsEmail,
+  generateFinishRegistrationEmail,
+} from '@/util/registration-email';
 import { sendEmailSignInLink } from '@/util/request-email-sign-in';
 import { getClientIpAddress } from '@/util/request-ip';
 import { safeRedirect } from '@/util/safe-redirect';
@@ -48,6 +58,17 @@ const moduleLogger = logger.child({
 
 type HandleLoginResponse = { error: false } | { error: string };
 type HandleRegisterResponse = { error: false } | { error: string };
+
+// The sign-up form, held (encrypted) in the REGISTRATION token until the
+// emailed link is used.
+const PendingRegistrationSchema = z.object({
+  username: z.string(),
+  fullName: z.string().nullable(),
+  passwordHash: z.string(),
+  subscribeNewsletter: z.boolean(),
+  acceptedAt: z.iso.datetime(),
+});
+type PendingRegistration = z.infer<typeof PendingRegistrationSchema>;
 
 /**
  * Ends every way back into an account that existed before an inbox-proven
@@ -207,73 +228,78 @@ export const authProcedures = {
         return { error: passwordTest };
       }
 
+      // Usernames are public (profile URLs), so saying one is taken leaks
+      // nothing. Whether the email has an account is never said here.
+      const usernameHolder = await db.query.AppUser.findFirst({
+        where: (t, { eq }) => eq(t.username, value.username),
+        columns: { id: true },
+      });
+      if (usernameHolder) {
+        return { error: 'Username is already taken' };
+      }
+
+      const rateLimit = await enforcePublicActionRateLimit({
+        headers: getRequest().headers,
+        email,
+        kind: 'registration',
+      });
+      if (!rateLimit.allowed) {
+        moduleLogger.warn(
+          { context: { limitedBy: rateLimit.limitedBy } },
+          'Registration rate limited',
+        );
+        return { error: PUBLIC_ACTION_RATE_LIMIT_MESSAGE };
+      }
+
+      // Nothing is created yet. The address gets a link to finish creating
+      // the account, or, if it already has one, an email saying so, and the
+      // form shows the same "check your email" result either way. That
+      // keeps registration from revealing which addresses are registered,
+      // and means only the inbox owner can create an account for an
+      // address (no pre-registering someone else's email).
       try {
         const hash = await argon2.hash(value.password, {
           type: argon2.argon2id,
         });
-        const acceptedAt = new Date();
-
-        const registration = await db.transaction(async (tx) => {
-          const [newUser] = await tx
-            .insert(AppUser)
-            .values({
-              username: value.username,
-              fullName: value.fullName || null,
-              password: hash,
-              statementOfTheologyAcceptedAt: acceptedAt,
-              termsAcceptedAt: acceptedAt,
-              updatedAt: new Date(),
-            })
-            .returning();
-          if (!newUser) {
-            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
-          }
-          await tx.insert(AppUserEmail).values({
-            email,
-            appUserId: newUser.id,
-          });
-          const [newSession] = await tx
-            .insert(AppSession)
-            .values({ appUserId: newUser.id, updatedAt: new Date() })
-            .returning({ id: AppSession.id });
-          if (!newSession) {
-            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
-          }
-          return { user: newUser, session: newSession };
+        const registration: PendingRegistration = {
+          username: value.username,
+          fullName: value.fullName || null,
+          passwordHash: hash,
+          subscribeNewsletter: value.subscribeNewsletter,
+          acceptedAt: new Date().toISOString(),
+        };
+        // Issued whether or not the address is taken, so both paths do the
+        // same work; an unsent token just expires.
+        const issued = await issueAuthToken({
+          type: 'REGISTRATION',
+          email,
+          payload: encryptPayload(JSON.stringify(registration)),
+          ttlMinutes: REGISTRATION_TTL_MINUTES,
+          replaceExisting: false,
         });
-        setCookie(
-          SESSION_COOKIE,
-          await createSessionJwt({ sub: registration.session.id }),
-          sessionCookieOptions,
-        );
-
-        try {
-          await postUserRegistration(registration.user.id, {
-            userId: registration.user.id,
-            username: value.username,
-            email,
-            subscribeToNewsletter: value.subscribeNewsletter,
-          });
-        } catch (error) {
-          moduleLogger.error(
-            {
-              appUserId: registration.user.id,
-              err: error instanceof Error ? error : new Error(String(error)),
-            },
-            'Registration follow-up could not be scheduled',
-          );
-        }
+        const holder = await db.query.AppUserEmail.findFirst({
+          where: (t, { eq }) => eq(t.email, email),
+          columns: { id: true },
+        });
+        const message = {
+          from: 'hello@lets.church',
+          to: email,
+          ...(holder
+            ? generateAccountExistsEmail()
+            : generateFinishRegistrationEmail({
+                token: issued.token,
+                username: value.username,
+              })),
+        };
+        await sendEmail(`registration:${issued.id}`, {
+          kind: 'encrypted',
+          payload: encryptPayload(JSON.stringify(message)),
+        });
 
         moduleLogger.info(
-          {
-            appUserId: registration.user.id,
-            context: {
-              username: value.username,
-            },
-          },
-          'Registration successful',
+          { context: { username: value.username } },
+          'Registration email sent',
         );
-
         return { error: false };
       } catch (e) {
         moduleLogger.error(
@@ -283,10 +309,161 @@ export const authProcedures = {
               error: e instanceof Error ? e.message : String(e),
             },
           },
-          'Registration failed - database error',
+          'Registration failed',
         );
         return { error: 'Error registering a new account, please try again!' };
       }
+    }),
+
+  getRegistrationDetails: anonProcedure
+    .input(z.object({ token: z.string().min(32).max(512) }))
+    .query(async ({ input }) => ({
+      valid: await hasUsableAuthToken(input.token, 'REGISTRATION'),
+    })),
+
+  completeRegistration: anonProcedure
+    .input(z.object({ token: z.string().min(32).max(512) }))
+    .mutation(async ({ input }) => {
+      const result = await db.transaction(async (tx) => {
+        const available = await getUsableAuthTokenInTransaction(
+          tx,
+          input.token,
+          'REGISTRATION',
+        );
+        if (!available) return { error: 'invalid' as const };
+
+        // Same lock email sign-in takes, so the two can't both create an
+        // account for this address.
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(hashtextextended(${available.email}, 0))`,
+        );
+        const record = await consumeAuthToken(tx, input.token, 'REGISTRATION', {
+          consumeSiblings: true,
+        });
+        if (!record) return { error: 'invalid' as const };
+
+        const registration = PendingRegistrationSchema.parse(
+          JSON.parse(decryptPayload(record.payload as EncryptedPayload)),
+        );
+
+        const holder = await tx.query.AppUserEmail.findFirst({
+          where: (t, { eq }) => eq(t.email, record.email),
+          columns: { id: true },
+        });
+        if (holder) return { error: 'exists' as const };
+
+        const usernameHolder = await tx.query.AppUser.findFirst({
+          where: (t, { eq }) => eq(t.username, registration.username),
+          columns: { id: true },
+        });
+        if (usernameHolder) {
+          return {
+            error: 'username' as const,
+            username: registration.username,
+          };
+        }
+
+        const acceptedAt = new Date(registration.acceptedAt);
+        const [newUser] = await tx
+          .insert(AppUser)
+          .values({
+            username: registration.username,
+            fullName: registration.fullName,
+            password: registration.passwordHash,
+            statementOfTheologyAcceptedAt: acceptedAt,
+            termsAcceptedAt: acceptedAt,
+            updatedAt: new Date(),
+          })
+          .returning({ id: AppUser.id });
+        if (!newUser) throw new Error('Failed to create account');
+        // Using the emailed link proves the inbox, so the address starts
+        // verified.
+        await tx.insert(AppUserEmail).values({
+          appUserId: newUser.id,
+          email: record.email,
+          verifiedAt: new Date(),
+        });
+        const [session] = await tx
+          .insert(AppSession)
+          .values({ appUserId: newUser.id, updatedAt: new Date() })
+          .returning({ id: AppSession.id });
+        if (!session) throw new Error('Failed to create session');
+
+        return {
+          error: null,
+          appUserId: newUser.id,
+          sessionId: session.id,
+          email: record.email,
+          returnTo: record.returnTo,
+          registration,
+        };
+      });
+
+      if (result.error === 'invalid') {
+        return {
+          error: 'This link is invalid, has expired, or was already used.',
+        };
+      }
+      if (result.error === 'exists') {
+        return {
+          error:
+            'This email address already has an account. Sign in to it instead.',
+        };
+      }
+      if (result.error === 'username') {
+        return {
+          error: `Someone took the username "${result.username}" after you signed up. Register again with a different username.`,
+        };
+      }
+
+      setCookie(
+        SESSION_COOKIE,
+        await createSessionJwt({ sub: result.sessionId }),
+        sessionCookieOptions,
+      );
+
+      const { claimDonorsForVerifiedUser } =
+        await import('@/donations/identity');
+      try {
+        await claimDonorsForVerifiedUser(result.appUserId);
+      } catch (error) {
+        moduleLogger.error(
+          {
+            appUserId: result.appUserId,
+            err: error instanceof Error ? error : new Error(String(error)),
+          },
+          'Registered, but donation history could not be linked',
+        );
+      }
+
+      if (result.registration.subscribeNewsletter) {
+        try {
+          await postUserRegistration(result.appUserId, {
+            userId: result.appUserId,
+            username: result.registration.username,
+            email: result.email,
+            subscribeToNewsletter: true,
+            sendVerification: false,
+          });
+        } catch (error) {
+          moduleLogger.error(
+            {
+              appUserId: result.appUserId,
+              err: error instanceof Error ? error : new Error(String(error)),
+            },
+            'Registration follow-up could not be scheduled',
+          );
+        }
+      }
+
+      moduleLogger.info(
+        { appUserId: result.appUserId },
+        'Registration completed',
+      );
+      return {
+        error: false as const,
+        redirect: safeRedirect(result.returnTo ?? undefined) ?? '/',
+      };
     }),
 
   requestEmailSignIn: anonProcedure

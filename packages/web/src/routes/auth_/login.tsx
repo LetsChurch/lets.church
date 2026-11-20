@@ -17,7 +17,7 @@ import { submitWithCaptcha, useAppForm } from '@/components/ui/form';
 import { loginSchema } from '@/schemas/auth';
 import { useTRPC } from '@/trpc/react';
 import { oidcClientNameFromRedirect } from '@/util/oidc/client-names';
-import { safeRedirect } from '@/util/safe-redirect';
+import { isVerifyEmailRedirect, safeRedirect } from '@/util/safe-redirect';
 
 export const Route = createFileRoute('/auth_/login')({
   component: LoginRoute,
@@ -47,6 +47,7 @@ function LoginRoute() {
   // lets.bible), name it so the cross-site handoff isn't a jarring, contextless
   // "Let's Church" page.
   const clientName = oidcClientNameFromRedirect(redirectTo);
+  const confirmingEmail = isVerifyEmailRedirect(redirectTo);
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const { data: env } = useSuspenseQuery(
@@ -112,6 +113,12 @@ function LoginRoute() {
       {clientName ? (
         <Text size="sm" c="dimmed" className="mt-[4px]">
           to continue to {clientName}
+        </Text>
+      ) : null}
+      {confirmingEmail ? (
+        <Text size="sm" c="dimmed" className="mt-[4px]">
+          to confirm your email address. No password? Choose &ldquo;Email me a
+          sign-in link&rdquo; and enter the address your account uses now.
         </Text>
       ) : null}
 

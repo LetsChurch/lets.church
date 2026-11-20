@@ -35,6 +35,7 @@ export const AppUserRole = pgEnum('app_user_role', ['USER', 'ADMIN']);
 export const AppAuthTokenType = pgEnum('app_auth_token_type', [
   'EMAIL_SIGN_IN',
   'PASSWORD_RESET',
+  'REGISTRATION',
 ]);
 
 export const DonationFrequency = pgEnum('donation_frequency', [
@@ -351,6 +352,32 @@ export const AppUserEmail = pgTable(
   }),
 );
 
+// An email change the user asked for but hasn't confirmed yet. It lives apart
+// from AppUserEmail so the account's verified address keeps working (sign-in,
+// recovery, donations) until the new inbox confirms, and so a typo'd or
+// stranger's address is never attached to the account: email sign-in, OIDC
+// claims and donor linking only read AppUserEmail. One per user; not unique
+// on email, so a pending change can't block anyone from registering.
+export const AppUserPendingEmail = pgTable(
+  'app_user_pending_email',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    appUserId: uuid('app_user_id').notNull().unique(),
+    email: citext('email').notNull(),
+    key: uuid('key').notNull().defaultRandom(),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+  },
+  (AppUserPendingEmail) => ({
+    app_user_pending_email_appUser_fkey: foreignKey({
+      name: 'app_user_pending_email_appUser_fkey',
+      columns: [AppUserPendingEmail.appUserId],
+      foreignColumns: [AppUser.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+  }),
+);
+
 export const AppSession = pgTable(
   'app_session',
   {
@@ -385,6 +412,9 @@ export const AppAuthToken = pgTable(
     email: citext('email').notNull(),
     appUserId: uuid('app_user_id'),
     returnTo: text('return_to'),
+    // REGISTRATION tokens carry the sign-up form (username, password hash,
+    // …) here, encrypted, until the inbox owner finishes registering.
+    payload: jsonb('payload'),
     expiresAt: timestamp('expires_at', { precision: 3 }).notNull(),
     consumedAt: timestamp('consumed_at', { precision: 3 }),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),

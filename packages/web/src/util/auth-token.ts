@@ -7,6 +7,7 @@ import { normalizeEmail } from './normalize-email';
 
 export const EMAIL_SIGN_IN_TTL_MINUTES = 20;
 export const PASSWORD_RESET_TTL_MINUTES = 20;
+export const REGISTRATION_TTL_MINUTES = 24 * 60;
 
 export const normalizeAuthEmail = normalizeEmail;
 
@@ -19,6 +20,7 @@ export async function issueAuthToken(input: {
   email: string;
   appUserId?: string | null;
   returnTo?: string | null;
+  payload?: unknown;
   ttlMinutes: number;
   replaceExisting?: boolean;
 }) {
@@ -52,6 +54,7 @@ export async function issueAuthToken(input: {
         email,
         appUserId: input.appUserId ?? null,
         returnTo: input.returnTo ?? null,
+        payload: input.payload ?? null,
         expiresAt: new Date(now.getTime() + input.ttlMinutes * 60_000),
       })
       .returning({ id: AppAuthToken.id });

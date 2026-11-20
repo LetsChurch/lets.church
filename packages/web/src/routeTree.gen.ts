@@ -9,145 +9,140 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as McpRouteImport } from './routes/mcp'
-import { Route as MaintenanceRouteImport } from './routes/maintenance'
-import { Route as AuthRouteImport } from './routes/auth_'
 import { Route as MainRouteImport } from './routes/_main'
-import { Route as MainIndexRouteImport } from './routes/_main/index'
-import { Route as WebhooksStripeRouteImport } from './routes/webhooks_/stripe'
-import { Route as WebhooksMuxRouteImport } from './routes/webhooks_/mux'
-import { Route as TrpcSplatRouteImport } from './routes/trpc.$'
-import { Route as OidcUserinfoRouteImport } from './routes/oidc.userinfo'
-import { Route as OidcTokenRouteImport } from './routes/oidc.token'
-import { Route as OidcLogoutRouteImport } from './routes/oidc.logout'
-import { Route as OidcAuthorizeRouteImport } from './routes/oidc.authorize'
-import { Route as MediaRssDotxmlRouteImport } from './routes/media.rss[.]xml'
-import { Route as InvitationsInvalidRouteImport } from './routes/invitations_.invalid'
-import { Route as InvitationsExpiredRouteImport } from './routes/invitations_.expired'
-import { Route as InvitationsAcceptRouteImport } from './routes/invitations_.accept'
-import { Route as EmbedChurchesRouteImport } from './routes/embed.churches'
-import { Route as AuthVerifyRouteImport } from './routes/auth_/verify'
-import { Route as AuthResetPasswordRouteImport } from './routes/auth_/reset-password'
-import { Route as AuthRegisterRouteImport } from './routes/auth_/register'
-import { Route as AuthLogoutRouteImport } from './routes/auth_/logout'
-import { Route as AuthLoginRouteImport } from './routes/auth_/login'
-import { Route as AuthForgotPasswordRouteImport } from './routes/auth_/forgot-password'
-import { Route as AuthEmailSignInRouteImport } from './routes/auth_/email-sign-in'
-import { Route as MainSearchRouteImport } from './routes/_main/search'
-import { Route as MainLibraryRouteImport } from './routes/_main/library'
-import { Route as MainHistoryRouteImport } from './routes/_main/history'
-import { Route as MainFollowingRouteImport } from './routes/_main/following'
-import { Route as MainDonateRouteImport } from './routes/_main/donate'
-import { Route as MainDigDeeperRouteImport } from './routes/_main/dig-deeper'
-import { Route as MainDashboardRouteImport } from './routes/_main/dashboard'
-import { Route as MainChurchesRouteImport } from './routes/_main/churches'
-import { Route as MainChannelsRouteImport } from './routes/_main/channels'
-import { Route as MainAboutRouteImport } from './routes/_main.about'
-import { Route as MainSlugRouteImport } from './routes/_main/$slug'
-import { Route as DotwellKnownOpenidConfigurationRouteImport } from './routes/[.]well-known.openid-configuration'
-import { Route as DotwellKnownOpenaiAppsChallengeRouteImport } from './routes/[.]well-known.openai-apps-challenge'
+import { Route as AuthRouteImport } from './routes/auth_'
+import { Route as MaintenanceRouteImport } from './routes/maintenance'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as DotwellKnownJwksDotjsonRouteImport } from './routes/[.]well-known.jwks[.]json'
-import { Route as MainDashboardIndexRouteImport } from './routes/_main/dashboard/index'
+import { Route as DotwellKnownOpenaiAppsChallengeRouteImport } from './routes/[.]well-known.openai-apps-challenge'
+import { Route as DotwellKnownOpenidConfigurationRouteImport } from './routes/[.]well-known.openid-configuration'
+import { Route as MainIndexRouteImport } from './routes/_main/index'
+import { Route as MainSlugRouteImport } from './routes/_main/$slug'
+import { Route as MainAboutRouteImport } from './routes/_main.about'
+import { Route as MainChannelsRouteImport } from './routes/_main/channels'
+import { Route as MainChurchesRouteImport } from './routes/_main/churches'
+import { Route as MainDashboardRouteImport } from './routes/_main/dashboard'
+import { Route as MainDigDeeperRouteImport } from './routes/_main/dig-deeper'
+import { Route as MainDonateRouteImport } from './routes/_main/donate'
+import { Route as MainFollowingRouteImport } from './routes/_main/following'
+import { Route as MainHistoryRouteImport } from './routes/_main/history'
+import { Route as MainLibraryRouteImport } from './routes/_main/library'
+import { Route as MainSearchRouteImport } from './routes/_main/search'
+import { Route as AuthEmailSignInRouteImport } from './routes/auth_/email-sign-in'
+import { Route as AuthFinishRegistrationRouteImport } from './routes/auth_/finish-registration'
+import { Route as AuthForgotPasswordRouteImport } from './routes/auth_/forgot-password'
+import { Route as AuthLoginRouteImport } from './routes/auth_/login'
+import { Route as AuthLogoutRouteImport } from './routes/auth_/logout'
+import { Route as AuthRegisterRouteImport } from './routes/auth_/register'
+import { Route as AuthResetPasswordRouteImport } from './routes/auth_/reset-password'
+import { Route as AuthVerifyRouteImport } from './routes/auth_/verify'
+import { Route as EmbedChurchesRouteImport } from './routes/embed.churches'
+import { Route as InvitationsAcceptRouteImport } from './routes/invitations_.accept'
+import { Route as InvitationsExpiredRouteImport } from './routes/invitations_.expired'
+import { Route as InvitationsInvalidRouteImport } from './routes/invitations_.invalid'
+import { Route as MediaRssDotxmlRouteImport } from './routes/media.rss[.]xml'
+import { Route as OidcAuthorizeRouteImport } from './routes/oidc.authorize'
+import { Route as OidcLogoutRouteImport } from './routes/oidc.logout'
+import { Route as OidcTokenRouteImport } from './routes/oidc.token'
+import { Route as OidcUserinfoRouteImport } from './routes/oidc.userinfo'
+import { Route as TrpcSplatRouteImport } from './routes/trpc.$'
+import { Route as WebhooksMuxRouteImport } from './routes/webhooks_/mux'
+import { Route as WebhooksStripeRouteImport } from './routes/webhooks_/stripe'
+import { Route as MainSlugLiveRouteImport } from './routes/_main/$slug_.live'
 import { Route as MainAboutIndexRouteImport } from './routes/_main/about/index'
-import { Route as SeriesSeriesIdRssDotxmlRouteImport } from './routes/series.$seriesId.rss[.]xml'
-import { Route as PlaylistPlaylistIdRssDotxmlRouteImport } from './routes/playlist.$playlistId.rss[.]xml'
-import { Route as OidcDotwellKnownOpenidConfigurationRouteImport } from './routes/oidc.[.]well-known.openid-configuration'
+import { Route as MainAboutAddChurchRouteImport } from './routes/_main/about/add-church'
+import { Route as MainAboutAddContentRouteImport } from './routes/_main/about/add-content'
+import { Route as MainAboutDmcaRouteImport } from './routes/_main/about/dmca'
+import { Route as MainAboutDoreanRouteImport } from './routes/_main/about/dorean'
+import { Route as MainAboutMcpRouteImport } from './routes/_main/about/mcp'
+import { Route as MainAboutPrivacyRouteImport } from './routes/_main/about/privacy'
+import { Route as MainAboutTermsRouteImport } from './routes/_main/about/terms'
+import { Route as MainAboutTheologyRouteImport } from './routes/_main/about/theology'
+import { Route as MainChannelSlugRouteImport } from './routes/_main/channel.$slug'
+import { Route as MainChurchesSlugRouteImport } from './routes/_main/churches_.$slug'
+import { Route as MainDashboardIndexRouteImport } from './routes/_main/dashboard/index'
+import { Route as MainDashboardAccountRouteImport } from './routes/_main/dashboard/account'
+import { Route as MainDashboardAdminRouteImport } from './routes/_main/dashboard/admin'
+import { Route as MainDashboardChannelsRouteImport } from './routes/_main/dashboard/channels'
+import { Route as MainDashboardChurchesRouteImport } from './routes/_main/dashboard/churches'
+import { Route as MainDashboardInvitationsRouteImport } from './routes/_main/dashboard/invitations'
+import { Route as MainDashboardOrganizationsRouteImport } from './routes/_main/dashboard/organizations'
+import { Route as MainDonateSuccessRouteImport } from './routes/_main/donate_.success'
+import { Route as MainMediaMediaIdRouteImport } from './routes/_main/media/$mediaId'
+import { Route as MainPlaylistPlaylistIdRouteImport } from './routes/_main/playlist.$playlistId'
+import { Route as MainSeriesSeriesIdRouteImport } from './routes/_main/series.$seriesId'
+import { Route as ApiDonationsAdminExportRouteImport } from './routes/api/donations/admin-export'
+import { Route as ApiDonationsCheckoutRouteImport } from './routes/api/donations/checkout'
+import { Route as ApiDonationsImportsRouteImport } from './routes/api/donations/imports'
+import { Route as ApiDonationsStatusRouteImport } from './routes/api/donations/status'
+import { Route as ApiInternalMediaForVerseRouteImport } from './routes/api/internal/media-for-verse'
+import { Route as ChannelSlugPodcastDotxmlRouteImport } from './routes/channel.$slug.podcast[.]xml'
+import { Route as ChannelSlugRssDotxmlRouteImport } from './routes/channel.$slug.rss[.]xml'
+import { Route as EmbedChannelSlugRouteImport } from './routes/embed.channel.$slug'
+import { Route as EmbedMediaMediaIdRouteImport } from './routes/embed.media.$mediaId'
 import { Route as MediaMediaIdStudyGuideDotpdfRouteImport } from './routes/media.$mediaId.study-guide[.]pdf'
 import { Route as MediaMediaIdTranscriptDotjsonRouteImport } from './routes/media.$mediaId.transcript[.]json'
-import { Route as EmbedMediaMediaIdRouteImport } from './routes/embed.media.$mediaId'
-import { Route as EmbedChannelSlugRouteImport } from './routes/embed.channel.$slug'
-import { Route as ChannelSlugRssDotxmlRouteImport } from './routes/channel.$slug.rss[.]xml'
-import { Route as ChannelSlugPodcastDotxmlRouteImport } from './routes/channel.$slug.podcast[.]xml'
-import { Route as ApiInternalMediaForVerseRouteImport } from './routes/api/internal/media-for-verse'
-import { Route as ApiDonationsStatusRouteImport } from './routes/api/donations/status'
-import { Route as ApiDonationsImportsRouteImport } from './routes/api/donations/imports'
-import { Route as ApiDonationsCheckoutRouteImport } from './routes/api/donations/checkout'
-import { Route as ApiDonationsAdminExportRouteImport } from './routes/api/donations/admin-export'
-import { Route as MainSeriesSeriesIdRouteImport } from './routes/_main/series.$seriesId'
-import { Route as MainPlaylistPlaylistIdRouteImport } from './routes/_main/playlist.$playlistId'
-import { Route as MainMediaMediaIdRouteImport } from './routes/_main/media/$mediaId'
-import { Route as MainDonateSuccessRouteImport } from './routes/_main/donate_.success'
-import { Route as MainDashboardOrganizationsRouteImport } from './routes/_main/dashboard/organizations'
-import { Route as MainDashboardInvitationsRouteImport } from './routes/_main/dashboard/invitations'
-import { Route as MainDashboardChurchesRouteImport } from './routes/_main/dashboard/churches'
-import { Route as MainDashboardChannelsRouteImport } from './routes/_main/dashboard/channels'
-import { Route as MainDashboardAdminRouteImport } from './routes/_main/dashboard/admin'
-import { Route as MainDashboardAccountRouteImport } from './routes/_main/dashboard/account'
-import { Route as MainChurchesSlugRouteImport } from './routes/_main/churches_.$slug'
-import { Route as MainChannelSlugRouteImport } from './routes/_main/channel.$slug'
-import { Route as MainAboutTheologyRouteImport } from './routes/_main/about/theology'
-import { Route as MainAboutTermsRouteImport } from './routes/_main/about/terms'
-import { Route as MainAboutPrivacyRouteImport } from './routes/_main/about/privacy'
-import { Route as MainAboutMcpRouteImport } from './routes/_main/about/mcp'
-import { Route as MainAboutDoreanRouteImport } from './routes/_main/about/dorean'
-import { Route as MainAboutDmcaRouteImport } from './routes/_main/about/dmca'
-import { Route as MainAboutAddContentRouteImport } from './routes/_main/about/add-content'
-import { Route as MainAboutAddChurchRouteImport } from './routes/_main/about/add-church'
-import { Route as MainSlugLiveRouteImport } from './routes/_main/$slug_.live'
-import { Route as MainDashboardOrganizationsOrgIdRouteImport } from './routes/_main/dashboard/organizations_.$orgId'
-import { Route as MainDashboardInvitationsAcceptRouteImport } from './routes/_main/dashboard/invitations_/accept'
-import { Route as MainDashboardChurchesNewRouteImport } from './routes/_main/dashboard/churches_.new'
-import { Route as MainDashboardChurchesChurchIdRouteImport } from './routes/_main/dashboard/churches_.$churchId'
-import { Route as MainDashboardChannelsNewRouteImport } from './routes/_main/dashboard/channels_.new'
-import { Route as MainDashboardChannelsChannelIdRouteImport } from './routes/_main/dashboard/channels_.$channelId'
-import { Route as MainDashboardAdminUsersRouteImport } from './routes/_main/dashboard/admin_.users'
-import { Route as MainDashboardAdminUploadBackupsRouteImport } from './routes/_main/dashboard/admin_.upload-backups'
-import { Route as MainDashboardAdminStorageAuditRouteImport } from './routes/_main/dashboard/admin_.storage-audit'
-import { Route as MainDashboardAdminStorageRouteImport } from './routes/_main/dashboard/admin_.storage'
-import { Route as MainDashboardAdminSpeakersRouteImport } from './routes/_main/dashboard/admin_.speakers'
-import { Route as MainDashboardAdminSpeakerQueueRouteImport } from './routes/_main/dashboard/admin_.speaker-queue'
-import { Route as MainDashboardAdminSearchesRouteImport } from './routes/_main/dashboard/admin_/searches'
-import { Route as MainDashboardAdminReprocessRouteImport } from './routes/_main/dashboard/admin_.reprocess'
-import { Route as MainDashboardAdminReindexRouteImport } from './routes/_main/dashboard/admin_.reindex'
-import { Route as MainDashboardAdminProcessingUploadsRouteImport } from './routes/_main/dashboard/admin_.processing-uploads'
-import { Route as MainDashboardAdminOrganizationsRouteImport } from './routes/_main/dashboard/admin_.organizations'
-import { Route as MainDashboardAdminOrganizationTagsRouteImport } from './routes/_main/dashboard/admin_.organization-tags'
-import { Route as MainDashboardAdminNewsletterListsRouteImport } from './routes/_main/dashboard/admin_.newsletter-lists'
-import { Route as MainDashboardAdminMaintenanceRouteImport } from './routes/_main/dashboard/admin_/maintenance'
-import { Route as MainDashboardAdminLlmEvalRouteImport } from './routes/_main/dashboard/admin_.llm-eval'
-import { Route as MainDashboardAdminImportSourcesRouteImport } from './routes/_main/dashboard/admin_.import-sources'
-import { Route as MainDashboardAdminFeaturedRouteImport } from './routes/_main/dashboard/admin_/featured'
-import { Route as MainDashboardAdminFailedUploadsRouteImport } from './routes/_main/dashboard/admin_.failed-uploads'
-import { Route as MainDashboardAdminFailedSummariesRouteImport } from './routes/_main/dashboard/admin_.failed-summaries'
-import { Route as MainDashboardAdminFailedAnnotationsRouteImport } from './routes/_main/dashboard/admin_.failed-annotations'
-import { Route as MainDashboardAdminDuplicateUploadsRouteImport } from './routes/_main/dashboard/admin_.duplicate-uploads'
-import { Route as MainDashboardAdminLinkSuggestionsRouteImport } from './routes/_main/dashboard/admin_.link-suggestions'
-import { Route as MainDashboardAdminDonationsRouteImport } from './routes/_main/dashboard/admin_.donations'
-import { Route as MainDashboardAdminDeletingUploadsRouteImport } from './routes/_main/dashboard/admin_.deleting-uploads'
-import { Route as MainDashboardAdminChannelsRouteImport } from './routes/_main/dashboard/admin_.channels'
-import { Route as MainDashboardAdminBackfillFilenamesRouteImport } from './routes/_main/dashboard/admin_.backfill-filenames'
-import { Route as MainDashboardAccountSecurityRouteImport } from './routes/_main/dashboard/account_.security'
-import { Route as MainDashboardAccountProfileRouteImport } from './routes/_main/dashboard/account_.profile'
-import { Route as MainDashboardAccountParticipationRouteImport } from './routes/_main/dashboard/account_.participation'
-import { Route as MainDashboardAccountNewsletterRouteImport } from './routes/_main/dashboard/account_.newsletter'
-import { Route as MainDashboardAccountDonationsRouteImport } from './routes/_main/dashboard/account_.donations'
+import { Route as OidcDotwellKnownOpenidConfigurationRouteImport } from './routes/oidc.[.]well-known.openid-configuration'
+import { Route as PlaylistPlaylistIdRssDotxmlRouteImport } from './routes/playlist.$playlistId.rss[.]xml'
+import { Route as SeriesSeriesIdRssDotxmlRouteImport } from './routes/series.$seriesId.rss[.]xml'
 import { Route as MainChannelSlugLiveRouteImport } from './routes/_main/channel.$slug_.live'
-import { Route as MainDashboardOrganizationsOrgIdMembersRouteImport } from './routes/_main/dashboard/organizations_.$orgId_.members'
-import { Route as MainDashboardOrganizationsOrgIdEditRouteImport } from './routes/_main/dashboard/organizations_.$orgId_.edit'
-import { Route as MainDashboardOrganizationsOrgIdAssociationsRouteImport } from './routes/_main/dashboard/organizations_.$orgId_.associations'
-import { Route as MainDashboardChurchesChurchIdMembersRouteImport } from './routes/_main/dashboard/churches_.$churchId_.members'
-import { Route as MainDashboardChurchesChurchIdLeadersRouteImport } from './routes/_main/dashboard/churches_.$churchId_.leaders'
-import { Route as MainDashboardChurchesChurchIdEditRouteImport } from './routes/_main/dashboard/churches_.$churchId_.edit'
-import { Route as MainDashboardChurchesChurchIdChannelsRouteImport } from './routes/_main/dashboard/churches_.$churchId_.channels'
-import { Route as MainDashboardChannelsChannelIdUploadsRouteImport } from './routes/_main/dashboard/channels_.$channelId_.uploads'
-import { Route as MainDashboardChannelsChannelIdSpeakersRouteImport } from './routes/_main/dashboard/channels_.$channelId_.speakers'
-import { Route as MainDashboardChannelsChannelIdSpeakerQueueRouteImport } from './routes/_main/dashboard/channels_.$channelId_.speaker-queue'
-import { Route as MainDashboardChannelsChannelIdPlaylistsRouteImport } from './routes/_main/dashboard/channels_.$channelId_.playlists'
-import { Route as MainDashboardChannelsChannelIdMembersRouteImport } from './routes/_main/dashboard/channels_.$channelId_.members'
-import { Route as MainDashboardChannelsChannelIdLiveRouteImport } from './routes/_main/dashboard/channels_.$channelId_.live'
-import { Route as MainDashboardChannelsChannelIdEditRouteImport } from './routes/_main/dashboard/channels_.$channelId_.edit'
+import { Route as MainDashboardAccountDonationsRouteImport } from './routes/_main/dashboard/account_.donations'
+import { Route as MainDashboardAccountNewsletterRouteImport } from './routes/_main/dashboard/account_.newsletter'
+import { Route as MainDashboardAccountParticipationRouteImport } from './routes/_main/dashboard/account_.participation'
+import { Route as MainDashboardAccountProfileRouteImport } from './routes/_main/dashboard/account_.profile'
+import { Route as MainDashboardAccountSecurityRouteImport } from './routes/_main/dashboard/account_.security'
+import { Route as MainDashboardAdminBackfillFilenamesRouteImport } from './routes/_main/dashboard/admin_.backfill-filenames'
+import { Route as MainDashboardAdminChannelsRouteImport } from './routes/_main/dashboard/admin_.channels'
+import { Route as MainDashboardAdminDeletingUploadsRouteImport } from './routes/_main/dashboard/admin_.deleting-uploads'
+import { Route as MainDashboardAdminDonationsRouteImport } from './routes/_main/dashboard/admin_.donations'
+import { Route as MainDashboardAdminDuplicateUploadsRouteImport } from './routes/_main/dashboard/admin_.duplicate-uploads'
+import { Route as MainDashboardAdminFailedAnnotationsRouteImport } from './routes/_main/dashboard/admin_.failed-annotations'
+import { Route as MainDashboardAdminFailedSummariesRouteImport } from './routes/_main/dashboard/admin_.failed-summaries'
+import { Route as MainDashboardAdminFailedUploadsRouteImport } from './routes/_main/dashboard/admin_.failed-uploads'
+import { Route as MainDashboardAdminFeaturedRouteImport } from './routes/_main/dashboard/admin_/featured'
+import { Route as MainDashboardAdminImportSourcesRouteImport } from './routes/_main/dashboard/admin_.import-sources'
+import { Route as MainDashboardAdminLinkSuggestionsRouteImport } from './routes/_main/dashboard/admin_.link-suggestions'
+import { Route as MainDashboardAdminLlmEvalRouteImport } from './routes/_main/dashboard/admin_.llm-eval'
+import { Route as MainDashboardAdminMaintenanceRouteImport } from './routes/_main/dashboard/admin_/maintenance'
+import { Route as MainDashboardAdminNewsletterListsRouteImport } from './routes/_main/dashboard/admin_.newsletter-lists'
+import { Route as MainDashboardAdminOrganizationTagsRouteImport } from './routes/_main/dashboard/admin_.organization-tags'
+import { Route as MainDashboardAdminOrganizationsRouteImport } from './routes/_main/dashboard/admin_.organizations'
+import { Route as MainDashboardAdminProcessingUploadsRouteImport } from './routes/_main/dashboard/admin_.processing-uploads'
+import { Route as MainDashboardAdminReindexRouteImport } from './routes/_main/dashboard/admin_.reindex'
+import { Route as MainDashboardAdminReprocessRouteImport } from './routes/_main/dashboard/admin_.reprocess'
+import { Route as MainDashboardAdminSearchesRouteImport } from './routes/_main/dashboard/admin_/searches'
+import { Route as MainDashboardAdminSpeakerQueueRouteImport } from './routes/_main/dashboard/admin_.speaker-queue'
+import { Route as MainDashboardAdminSpeakersRouteImport } from './routes/_main/dashboard/admin_.speakers'
+import { Route as MainDashboardAdminStorageRouteImport } from './routes/_main/dashboard/admin_.storage'
+import { Route as MainDashboardAdminStorageAuditRouteImport } from './routes/_main/dashboard/admin_.storage-audit'
+import { Route as MainDashboardAdminUploadBackupsRouteImport } from './routes/_main/dashboard/admin_.upload-backups'
+import { Route as MainDashboardAdminUsersRouteImport } from './routes/_main/dashboard/admin_.users'
+import { Route as MainDashboardChannelsChannelIdRouteImport } from './routes/_main/dashboard/channels_.$channelId'
+import { Route as MainDashboardChannelsNewRouteImport } from './routes/_main/dashboard/channels_.new'
+import { Route as MainDashboardChurchesChurchIdRouteImport } from './routes/_main/dashboard/churches_.$churchId'
+import { Route as MainDashboardChurchesNewRouteImport } from './routes/_main/dashboard/churches_.new'
+import { Route as MainDashboardInvitationsAcceptRouteImport } from './routes/_main/dashboard/invitations_/accept'
+import { Route as MainDashboardOrganizationsOrgIdRouteImport } from './routes/_main/dashboard/organizations_.$orgId'
 import { Route as MainDashboardAccountDonationsYearRouteImport } from './routes/_main/dashboard/account_.donations_.$year'
-import { Route as MainDashboardChannelsChannelIdUploadsUploadIdRouteImport } from './routes/_main/dashboard/channels_.$channelId_.uploads_.$uploadId'
+import { Route as MainDashboardChannelsChannelIdEditRouteImport } from './routes/_main/dashboard/channels_.$channelId_.edit'
+import { Route as MainDashboardChannelsChannelIdLiveRouteImport } from './routes/_main/dashboard/channels_.$channelId_.live'
+import { Route as MainDashboardChannelsChannelIdMembersRouteImport } from './routes/_main/dashboard/channels_.$channelId_.members'
+import { Route as MainDashboardChannelsChannelIdPlaylistsRouteImport } from './routes/_main/dashboard/channels_.$channelId_.playlists'
+import { Route as MainDashboardChannelsChannelIdSpeakerQueueRouteImport } from './routes/_main/dashboard/channels_.$channelId_.speaker-queue'
+import { Route as MainDashboardChannelsChannelIdSpeakersRouteImport } from './routes/_main/dashboard/channels_.$channelId_.speakers'
+import { Route as MainDashboardChannelsChannelIdUploadsRouteImport } from './routes/_main/dashboard/channels_.$channelId_.uploads'
+import { Route as MainDashboardChurchesChurchIdChannelsRouteImport } from './routes/_main/dashboard/churches_.$churchId_.channels'
+import { Route as MainDashboardChurchesChurchIdEditRouteImport } from './routes/_main/dashboard/churches_.$churchId_.edit'
+import { Route as MainDashboardChurchesChurchIdLeadersRouteImport } from './routes/_main/dashboard/churches_.$churchId_.leaders'
+import { Route as MainDashboardChurchesChurchIdMembersRouteImport } from './routes/_main/dashboard/churches_.$churchId_.members'
+import { Route as MainDashboardOrganizationsOrgIdAssociationsRouteImport } from './routes/_main/dashboard/organizations_.$orgId_.associations'
+import { Route as MainDashboardOrganizationsOrgIdEditRouteImport } from './routes/_main/dashboard/organizations_.$orgId_.edit'
+import { Route as MainDashboardOrganizationsOrgIdMembersRouteImport } from './routes/_main/dashboard/organizations_.$orgId_.members'
 import { Route as MainDashboardChannelsChannelIdPlaylistsPlaylistIdRouteImport } from './routes/_main/dashboard/channels_.$channelId_.playlists_.$playlistId'
+import { Route as MainDashboardChannelsChannelIdUploadsUploadIdRouteImport } from './routes/_main/dashboard/channels_.$channelId_.uploads_.$uploadId'
 
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MaintenanceRoute = MaintenanceRouteImport.update({
-  id: '/maintenance',
-  path: '/maintenance',
+const MainRoute = MainRouteImport.update({
+  id: '/_main',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -155,158 +150,36 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MainRoute = MainRouteImport.update({
-  id: '/_main',
+const MaintenanceRoute = MaintenanceRouteImport.update({
+  id: '/maintenance',
+  path: '/maintenance',
   getParentRoute: () => rootRouteImport,
 } as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DotwellKnownJwksDotjsonRoute = DotwellKnownJwksDotjsonRouteImport.update({
+  id: '/.well-known/jwks.json',
+  path: '/.well-known/jwks.json',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DotwellKnownOpenaiAppsChallengeRoute =
+  DotwellKnownOpenaiAppsChallengeRouteImport.update({
+    id: '/.well-known/openai-apps-challenge',
+    path: '/.well-known/openai-apps-challenge',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DotwellKnownOpenidConfigurationRoute =
+  DotwellKnownOpenidConfigurationRouteImport.update({
+    id: '/.well-known/openid-configuration',
+    path: '/.well-known/openid-configuration',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const MainIndexRoute = MainIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => MainRoute,
-} as any)
-const WebhooksStripeRoute = WebhooksStripeRouteImport.update({
-  id: '/webhooks_/stripe',
-  path: '/webhooks/stripe',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const WebhooksMuxRoute = WebhooksMuxRouteImport.update({
-  id: '/webhooks_/mux',
-  path: '/webhooks/mux',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TrpcSplatRoute = TrpcSplatRouteImport.update({
-  id: '/trpc/$',
-  path: '/trpc/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OidcUserinfoRoute = OidcUserinfoRouteImport.update({
-  id: '/oidc/userinfo',
-  path: '/oidc/userinfo',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OidcTokenRoute = OidcTokenRouteImport.update({
-  id: '/oidc/token',
-  path: '/oidc/token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OidcLogoutRoute = OidcLogoutRouteImport.update({
-  id: '/oidc/logout',
-  path: '/oidc/logout',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OidcAuthorizeRoute = OidcAuthorizeRouteImport.update({
-  id: '/oidc/authorize',
-  path: '/oidc/authorize',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MediaRssDotxmlRoute = MediaRssDotxmlRouteImport.update({
-  id: '/media/rss.xml',
-  path: '/media/rss.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InvitationsInvalidRoute = InvitationsInvalidRouteImport.update({
-  id: '/invitations_/invalid',
-  path: '/invitations/invalid',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InvitationsExpiredRoute = InvitationsExpiredRouteImport.update({
-  id: '/invitations_/expired',
-  path: '/invitations/expired',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InvitationsAcceptRoute = InvitationsAcceptRouteImport.update({
-  id: '/invitations_/accept',
-  path: '/invitations/accept',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EmbedChurchesRoute = EmbedChurchesRouteImport.update({
-  id: '/embed/churches',
-  path: '/embed/churches',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthVerifyRoute = AuthVerifyRouteImport.update({
-  id: '/verify',
-  path: '/verify',
-  getParentRoute: () => AuthRoute,
-} as any)
-const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => AuthRoute,
-} as any)
-const AuthRegisterRoute = AuthRegisterRouteImport.update({
-  id: '/register',
-  path: '/register',
-  getParentRoute: () => AuthRoute,
-} as any)
-const AuthLogoutRoute = AuthLogoutRouteImport.update({
-  id: '/logout',
-  path: '/logout',
-  getParentRoute: () => AuthRoute,
-} as any)
-const AuthLoginRoute = AuthLoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => AuthRoute,
-} as any)
-const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
-  id: '/forgot-password',
-  path: '/forgot-password',
-  getParentRoute: () => AuthRoute,
-} as any)
-const AuthEmailSignInRoute = AuthEmailSignInRouteImport.update({
-  id: '/email-sign-in',
-  path: '/email-sign-in',
-  getParentRoute: () => AuthRoute,
-} as any)
-const MainSearchRoute = MainSearchRouteImport.update({
-  id: '/search',
-  path: '/search',
-  getParentRoute: () => MainRoute,
-} as any)
-const MainLibraryRoute = MainLibraryRouteImport.update({
-  id: '/library',
-  path: '/library',
-  getParentRoute: () => MainRoute,
-} as any)
-const MainHistoryRoute = MainHistoryRouteImport.update({
-  id: '/history',
-  path: '/history',
-  getParentRoute: () => MainRoute,
-} as any)
-const MainFollowingRoute = MainFollowingRouteImport.update({
-  id: '/following',
-  path: '/following',
-  getParentRoute: () => MainRoute,
-} as any)
-const MainDonateRoute = MainDonateRouteImport.update({
-  id: '/donate',
-  path: '/donate',
-  getParentRoute: () => MainRoute,
-} as any)
-const MainDigDeeperRoute = MainDigDeeperRouteImport.update({
-  id: '/dig-deeper',
-  path: '/dig-deeper',
-  getParentRoute: () => MainRoute,
-} as any)
-const MainDashboardRoute = MainDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => MainRoute,
-} as any)
-const MainChurchesRoute = MainChurchesRouteImport.update({
-  id: '/churches',
-  path: '/churches',
-  getParentRoute: () => MainRoute,
-} as any)
-const MainChannelsRoute = MainChannelsRouteImport.update({
-  id: '/channels',
-  path: '/channels',
-  getParentRoute: () => MainRoute,
-} as any)
-const MainAboutRoute = MainAboutRouteImport.update({
-  id: '/about',
-  path: '/about',
   getParentRoute: () => MainRoute,
 } as any)
 const MainSlugRoute = MainSlugRouteImport.update({
@@ -314,50 +187,320 @@ const MainSlugRoute = MainSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => MainRoute,
 } as any)
-const DotwellKnownOpenidConfigurationRoute =
-  DotwellKnownOpenidConfigurationRouteImport.update({
-    id: '/.well-known/openid-configuration',
-    path: '/.well-known/openid-configuration',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const DotwellKnownOpenaiAppsChallengeRoute =
-  DotwellKnownOpenaiAppsChallengeRouteImport.update({
-    id: '/.well-known/openai-apps-challenge',
-    path: '/.well-known/openai-apps-challenge',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const DotwellKnownJwksDotjsonRoute = DotwellKnownJwksDotjsonRouteImport.update({
-  id: '/.well-known/jwks.json',
-  path: '/.well-known/jwks.json',
+const MainAboutRoute = MainAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainChannelsRoute = MainChannelsRouteImport.update({
+  id: '/channels',
+  path: '/channels',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainChurchesRoute = MainChurchesRouteImport.update({
+  id: '/churches',
+  path: '/churches',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainDashboardRoute = MainDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainDigDeeperRoute = MainDigDeeperRouteImport.update({
+  id: '/dig-deeper',
+  path: '/dig-deeper',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainDonateRoute = MainDonateRouteImport.update({
+  id: '/donate',
+  path: '/donate',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainFollowingRoute = MainFollowingRouteImport.update({
+  id: '/following',
+  path: '/following',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainHistoryRoute = MainHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainLibraryRoute = MainLibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainSearchRoute = MainSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => MainRoute,
+} as any)
+const AuthEmailSignInRoute = AuthEmailSignInRouteImport.update({
+  id: '/email-sign-in',
+  path: '/email-sign-in',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthFinishRegistrationRoute = AuthFinishRegistrationRouteImport.update({
+  id: '/finish-registration',
+  path: '/finish-registration',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthLoginRoute = AuthLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthLogoutRoute = AuthLogoutRouteImport.update({
+  id: '/logout',
+  path: '/logout',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthRegisterRoute = AuthRegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthVerifyRoute = AuthVerifyRouteImport.update({
+  id: '/verify',
+  path: '/verify',
+  getParentRoute: () => AuthRoute,
+} as any)
+const EmbedChurchesRoute = EmbedChurchesRouteImport.update({
+  id: '/embed/churches',
+  path: '/embed/churches',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MainDashboardIndexRoute = MainDashboardIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => MainDashboardRoute,
+const InvitationsAcceptRoute = InvitationsAcceptRouteImport.update({
+  id: '/invitations_/accept',
+  path: '/invitations/accept',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvitationsExpiredRoute = InvitationsExpiredRouteImport.update({
+  id: '/invitations_/expired',
+  path: '/invitations/expired',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvitationsInvalidRoute = InvitationsInvalidRouteImport.update({
+  id: '/invitations_/invalid',
+  path: '/invitations/invalid',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MediaRssDotxmlRoute = MediaRssDotxmlRouteImport.update({
+  id: '/media/rss.xml',
+  path: '/media/rss.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OidcAuthorizeRoute = OidcAuthorizeRouteImport.update({
+  id: '/oidc/authorize',
+  path: '/oidc/authorize',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OidcLogoutRoute = OidcLogoutRouteImport.update({
+  id: '/oidc/logout',
+  path: '/oidc/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OidcTokenRoute = OidcTokenRouteImport.update({
+  id: '/oidc/token',
+  path: '/oidc/token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OidcUserinfoRoute = OidcUserinfoRouteImport.update({
+  id: '/oidc/userinfo',
+  path: '/oidc/userinfo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrpcSplatRoute = TrpcSplatRouteImport.update({
+  id: '/trpc/$',
+  path: '/trpc/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WebhooksMuxRoute = WebhooksMuxRouteImport.update({
+  id: '/webhooks_/mux',
+  path: '/webhooks/mux',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WebhooksStripeRoute = WebhooksStripeRouteImport.update({
+  id: '/webhooks_/stripe',
+  path: '/webhooks/stripe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MainSlugLiveRoute = MainSlugLiveRouteImport.update({
+  id: '/$slug_/live',
+  path: '/$slug/live',
+  getParentRoute: () => MainRoute,
 } as any)
 const MainAboutIndexRoute = MainAboutIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => MainAboutRoute,
 } as any)
-const SeriesSeriesIdRssDotxmlRoute = SeriesSeriesIdRssDotxmlRouteImport.update({
-  id: '/series/$seriesId/rss.xml',
-  path: '/series/$seriesId/rss.xml',
+const MainAboutAddChurchRoute = MainAboutAddChurchRouteImport.update({
+  id: '/add-church',
+  path: '/add-church',
+  getParentRoute: () => MainAboutRoute,
+} as any)
+const MainAboutAddContentRoute = MainAboutAddContentRouteImport.update({
+  id: '/add-content',
+  path: '/add-content',
+  getParentRoute: () => MainAboutRoute,
+} as any)
+const MainAboutDmcaRoute = MainAboutDmcaRouteImport.update({
+  id: '/dmca',
+  path: '/dmca',
+  getParentRoute: () => MainAboutRoute,
+} as any)
+const MainAboutDoreanRoute = MainAboutDoreanRouteImport.update({
+  id: '/dorean',
+  path: '/dorean',
+  getParentRoute: () => MainAboutRoute,
+} as any)
+const MainAboutMcpRoute = MainAboutMcpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => MainAboutRoute,
+} as any)
+const MainAboutPrivacyRoute = MainAboutPrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => MainAboutRoute,
+} as any)
+const MainAboutTermsRoute = MainAboutTermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => MainAboutRoute,
+} as any)
+const MainAboutTheologyRoute = MainAboutTheologyRouteImport.update({
+  id: '/theology',
+  path: '/theology',
+  getParentRoute: () => MainAboutRoute,
+} as any)
+const MainChannelSlugRoute = MainChannelSlugRouteImport.update({
+  id: '/channel/$slug',
+  path: '/channel/$slug',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainChurchesSlugRoute = MainChurchesSlugRouteImport.update({
+  id: '/churches_/$slug',
+  path: '/churches/$slug',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainDashboardIndexRoute = MainDashboardIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MainDashboardRoute,
+} as any)
+const MainDashboardAccountRoute = MainDashboardAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => MainDashboardRoute,
+} as any)
+const MainDashboardAdminRoute = MainDashboardAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => MainDashboardRoute,
+} as any)
+const MainDashboardChannelsRoute = MainDashboardChannelsRouteImport.update({
+  id: '/channels',
+  path: '/channels',
+  getParentRoute: () => MainDashboardRoute,
+} as any)
+const MainDashboardChurchesRoute = MainDashboardChurchesRouteImport.update({
+  id: '/churches',
+  path: '/churches',
+  getParentRoute: () => MainDashboardRoute,
+} as any)
+const MainDashboardInvitationsRoute =
+  MainDashboardInvitationsRouteImport.update({
+    id: '/invitations',
+    path: '/invitations',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardOrganizationsRoute =
+  MainDashboardOrganizationsRouteImport.update({
+    id: '/organizations',
+    path: '/organizations',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDonateSuccessRoute = MainDonateSuccessRouteImport.update({
+  id: '/donate_/success',
+  path: '/donate/success',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainMediaMediaIdRoute = MainMediaMediaIdRouteImport.update({
+  id: '/media/$mediaId',
+  path: '/media/$mediaId',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainPlaylistPlaylistIdRoute = MainPlaylistPlaylistIdRouteImport.update({
+  id: '/playlist/$playlistId',
+  path: '/playlist/$playlistId',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainSeriesSeriesIdRoute = MainSeriesSeriesIdRouteImport.update({
+  id: '/series/$seriesId',
+  path: '/series/$seriesId',
+  getParentRoute: () => MainRoute,
+} as any)
+const ApiDonationsAdminExportRoute = ApiDonationsAdminExportRouteImport.update({
+  id: '/api/donations/admin-export',
+  path: '/api/donations/admin-export',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PlaylistPlaylistIdRssDotxmlRoute =
-  PlaylistPlaylistIdRssDotxmlRouteImport.update({
-    id: '/playlist/$playlistId/rss.xml',
-    path: '/playlist/$playlistId/rss.xml',
+const ApiDonationsCheckoutRoute = ApiDonationsCheckoutRouteImport.update({
+  id: '/api/donations/checkout',
+  path: '/api/donations/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDonationsImportsRoute = ApiDonationsImportsRouteImport.update({
+  id: '/api/donations/imports',
+  path: '/api/donations/imports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDonationsStatusRoute = ApiDonationsStatusRouteImport.update({
+  id: '/api/donations/status',
+  path: '/api/donations/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiInternalMediaForVerseRoute =
+  ApiInternalMediaForVerseRouteImport.update({
+    id: '/api/internal/media-for-verse',
+    path: '/api/internal/media-for-verse',
     getParentRoute: () => rootRouteImport,
   } as any)
-const OidcDotwellKnownOpenidConfigurationRoute =
-  OidcDotwellKnownOpenidConfigurationRouteImport.update({
-    id: '/oidc/.well-known/openid-configuration',
-    path: '/oidc/.well-known/openid-configuration',
+const ChannelSlugPodcastDotxmlRoute =
+  ChannelSlugPodcastDotxmlRouteImport.update({
+    id: '/channel/$slug/podcast.xml',
+    path: '/channel/$slug/podcast.xml',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ChannelSlugRssDotxmlRoute = ChannelSlugRssDotxmlRouteImport.update({
+  id: '/channel/$slug/rss.xml',
+  path: '/channel/$slug/rss.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmbedChannelSlugRoute = EmbedChannelSlugRouteImport.update({
+  id: '/embed/channel/$slug',
+  path: '/embed/channel/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmbedMediaMediaIdRoute = EmbedMediaMediaIdRouteImport.update({
+  id: '/embed/media/$mediaId',
+  path: '/embed/media/$mediaId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MediaMediaIdStudyGuideDotpdfRoute =
   MediaMediaIdStudyGuideDotpdfRouteImport.update({
     id: '/media/$mediaId/study-guide.pdf',
@@ -370,367 +513,32 @@ const MediaMediaIdTranscriptDotjsonRoute =
     path: '/media/$mediaId/transcript.json',
     getParentRoute: () => rootRouteImport,
   } as any)
-const EmbedMediaMediaIdRoute = EmbedMediaMediaIdRouteImport.update({
-  id: '/embed/media/$mediaId',
-  path: '/embed/media/$mediaId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EmbedChannelSlugRoute = EmbedChannelSlugRouteImport.update({
-  id: '/embed/channel/$slug',
-  path: '/embed/channel/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ChannelSlugRssDotxmlRoute = ChannelSlugRssDotxmlRouteImport.update({
-  id: '/channel/$slug/rss.xml',
-  path: '/channel/$slug/rss.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ChannelSlugPodcastDotxmlRoute =
-  ChannelSlugPodcastDotxmlRouteImport.update({
-    id: '/channel/$slug/podcast.xml',
-    path: '/channel/$slug/podcast.xml',
+const OidcDotwellKnownOpenidConfigurationRoute =
+  OidcDotwellKnownOpenidConfigurationRouteImport.update({
+    id: '/oidc/.well-known/openid-configuration',
+    path: '/oidc/.well-known/openid-configuration',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiInternalMediaForVerseRoute =
-  ApiInternalMediaForVerseRouteImport.update({
-    id: '/api/internal/media-for-verse',
-    path: '/api/internal/media-for-verse',
+const PlaylistPlaylistIdRssDotxmlRoute =
+  PlaylistPlaylistIdRssDotxmlRouteImport.update({
+    id: '/playlist/$playlistId/rss.xml',
+    path: '/playlist/$playlistId/rss.xml',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiDonationsStatusRoute = ApiDonationsStatusRouteImport.update({
-  id: '/api/donations/status',
-  path: '/api/donations/status',
+const SeriesSeriesIdRssDotxmlRoute = SeriesSeriesIdRssDotxmlRouteImport.update({
+  id: '/series/$seriesId/rss.xml',
+  path: '/series/$seriesId/rss.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiDonationsImportsRoute = ApiDonationsImportsRouteImport.update({
-  id: '/api/donations/imports',
-  path: '/api/donations/imports',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiDonationsCheckoutRoute = ApiDonationsCheckoutRouteImport.update({
-  id: '/api/donations/checkout',
-  path: '/api/donations/checkout',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiDonationsAdminExportRoute = ApiDonationsAdminExportRouteImport.update({
-  id: '/api/donations/admin-export',
-  path: '/api/donations/admin-export',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MainSeriesSeriesIdRoute = MainSeriesSeriesIdRouteImport.update({
-  id: '/series/$seriesId',
-  path: '/series/$seriesId',
+const MainChannelSlugLiveRoute = MainChannelSlugLiveRouteImport.update({
+  id: '/channel/$slug_/live',
+  path: '/channel/$slug/live',
   getParentRoute: () => MainRoute,
 } as any)
-const MainPlaylistPlaylistIdRoute = MainPlaylistPlaylistIdRouteImport.update({
-  id: '/playlist/$playlistId',
-  path: '/playlist/$playlistId',
-  getParentRoute: () => MainRoute,
-} as any)
-const MainMediaMediaIdRoute = MainMediaMediaIdRouteImport.update({
-  id: '/media/$mediaId',
-  path: '/media/$mediaId',
-  getParentRoute: () => MainRoute,
-} as any)
-const MainDonateSuccessRoute = MainDonateSuccessRouteImport.update({
-  id: '/donate_/success',
-  path: '/donate/success',
-  getParentRoute: () => MainRoute,
-} as any)
-const MainDashboardOrganizationsRoute =
-  MainDashboardOrganizationsRouteImport.update({
-    id: '/organizations',
-    path: '/organizations',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardInvitationsRoute =
-  MainDashboardInvitationsRouteImport.update({
-    id: '/invitations',
-    path: '/invitations',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardChurchesRoute = MainDashboardChurchesRouteImport.update({
-  id: '/churches',
-  path: '/churches',
-  getParentRoute: () => MainDashboardRoute,
-} as any)
-const MainDashboardChannelsRoute = MainDashboardChannelsRouteImport.update({
-  id: '/channels',
-  path: '/channels',
-  getParentRoute: () => MainDashboardRoute,
-} as any)
-const MainDashboardAdminRoute = MainDashboardAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => MainDashboardRoute,
-} as any)
-const MainDashboardAccountRoute = MainDashboardAccountRouteImport.update({
-  id: '/account',
-  path: '/account',
-  getParentRoute: () => MainDashboardRoute,
-} as any)
-const MainChurchesSlugRoute = MainChurchesSlugRouteImport.update({
-  id: '/churches_/$slug',
-  path: '/churches/$slug',
-  getParentRoute: () => MainRoute,
-} as any)
-const MainChannelSlugRoute = MainChannelSlugRouteImport.update({
-  id: '/channel/$slug',
-  path: '/channel/$slug',
-  getParentRoute: () => MainRoute,
-} as any)
-const MainAboutTheologyRoute = MainAboutTheologyRouteImport.update({
-  id: '/theology',
-  path: '/theology',
-  getParentRoute: () => MainAboutRoute,
-} as any)
-const MainAboutTermsRoute = MainAboutTermsRouteImport.update({
-  id: '/terms',
-  path: '/terms',
-  getParentRoute: () => MainAboutRoute,
-} as any)
-const MainAboutPrivacyRoute = MainAboutPrivacyRouteImport.update({
-  id: '/privacy',
-  path: '/privacy',
-  getParentRoute: () => MainAboutRoute,
-} as any)
-const MainAboutMcpRoute = MainAboutMcpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
-  getParentRoute: () => MainAboutRoute,
-} as any)
-const MainAboutDoreanRoute = MainAboutDoreanRouteImport.update({
-  id: '/dorean',
-  path: '/dorean',
-  getParentRoute: () => MainAboutRoute,
-} as any)
-const MainAboutDmcaRoute = MainAboutDmcaRouteImport.update({
-  id: '/dmca',
-  path: '/dmca',
-  getParentRoute: () => MainAboutRoute,
-} as any)
-const MainAboutAddContentRoute = MainAboutAddContentRouteImport.update({
-  id: '/add-content',
-  path: '/add-content',
-  getParentRoute: () => MainAboutRoute,
-} as any)
-const MainAboutAddChurchRoute = MainAboutAddChurchRouteImport.update({
-  id: '/add-church',
-  path: '/add-church',
-  getParentRoute: () => MainAboutRoute,
-} as any)
-const MainSlugLiveRoute = MainSlugLiveRouteImport.update({
-  id: '/$slug_/live',
-  path: '/$slug/live',
-  getParentRoute: () => MainRoute,
-} as any)
-const MainDashboardOrganizationsOrgIdRoute =
-  MainDashboardOrganizationsOrgIdRouteImport.update({
-    id: '/organizations_/$orgId',
-    path: '/organizations/$orgId',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardInvitationsAcceptRoute =
-  MainDashboardInvitationsAcceptRouteImport.update({
-    id: '/invitations_/accept',
-    path: '/invitations/accept',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardChurchesNewRoute =
-  MainDashboardChurchesNewRouteImport.update({
-    id: '/churches_/new',
-    path: '/churches/new',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardChurchesChurchIdRoute =
-  MainDashboardChurchesChurchIdRouteImport.update({
-    id: '/churches_/$churchId',
-    path: '/churches/$churchId',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardChannelsNewRoute =
-  MainDashboardChannelsNewRouteImport.update({
-    id: '/channels_/new',
-    path: '/channels/new',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardChannelsChannelIdRoute =
-  MainDashboardChannelsChannelIdRouteImport.update({
-    id: '/channels_/$channelId',
-    path: '/channels/$channelId',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminUsersRoute = MainDashboardAdminUsersRouteImport.update({
-  id: '/admin_/users',
-  path: '/admin/users',
-  getParentRoute: () => MainDashboardRoute,
-} as any)
-const MainDashboardAdminUploadBackupsRoute =
-  MainDashboardAdminUploadBackupsRouteImport.update({
-    id: '/admin_/upload-backups',
-    path: '/admin/upload-backups',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminStorageAuditRoute =
-  MainDashboardAdminStorageAuditRouteImport.update({
-    id: '/admin_/storage-audit',
-    path: '/admin/storage-audit',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminStorageRoute =
-  MainDashboardAdminStorageRouteImport.update({
-    id: '/admin_/storage',
-    path: '/admin/storage',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminSpeakersRoute =
-  MainDashboardAdminSpeakersRouteImport.update({
-    id: '/admin_/speakers',
-    path: '/admin/speakers',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminSpeakerQueueRoute =
-  MainDashboardAdminSpeakerQueueRouteImport.update({
-    id: '/admin_/speaker-queue',
-    path: '/admin/speaker-queue',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminSearchesRoute =
-  MainDashboardAdminSearchesRouteImport.update({
-    id: '/admin_/searches',
-    path: '/admin/searches',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminReprocessRoute =
-  MainDashboardAdminReprocessRouteImport.update({
-    id: '/admin_/reprocess',
-    path: '/admin/reprocess',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminReindexRoute =
-  MainDashboardAdminReindexRouteImport.update({
-    id: '/admin_/reindex',
-    path: '/admin/reindex',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminProcessingUploadsRoute =
-  MainDashboardAdminProcessingUploadsRouteImport.update({
-    id: '/admin_/processing-uploads',
-    path: '/admin/processing-uploads',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminOrganizationsRoute =
-  MainDashboardAdminOrganizationsRouteImport.update({
-    id: '/admin_/organizations',
-    path: '/admin/organizations',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminOrganizationTagsRoute =
-  MainDashboardAdminOrganizationTagsRouteImport.update({
-    id: '/admin_/organization-tags',
-    path: '/admin/organization-tags',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminNewsletterListsRoute =
-  MainDashboardAdminNewsletterListsRouteImport.update({
-    id: '/admin_/newsletter-lists',
-    path: '/admin/newsletter-lists',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminMaintenanceRoute =
-  MainDashboardAdminMaintenanceRouteImport.update({
-    id: '/admin_/maintenance',
-    path: '/admin/maintenance',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminLlmEvalRoute =
-  MainDashboardAdminLlmEvalRouteImport.update({
-    id: '/admin_/llm-eval',
-    path: '/admin/llm-eval',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminImportSourcesRoute =
-  MainDashboardAdminImportSourcesRouteImport.update({
-    id: '/admin_/import-sources',
-    path: '/admin/import-sources',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminFeaturedRoute =
-  MainDashboardAdminFeaturedRouteImport.update({
-    id: '/admin_/featured',
-    path: '/admin/featured',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminFailedUploadsRoute =
-  MainDashboardAdminFailedUploadsRouteImport.update({
-    id: '/admin_/failed-uploads',
-    path: '/admin/failed-uploads',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminFailedSummariesRoute =
-  MainDashboardAdminFailedSummariesRouteImport.update({
-    id: '/admin_/failed-summaries',
-    path: '/admin/failed-summaries',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminFailedAnnotationsRoute =
-  MainDashboardAdminFailedAnnotationsRouteImport.update({
-    id: '/admin_/failed-annotations',
-    path: '/admin/failed-annotations',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminDuplicateUploadsRoute =
-  MainDashboardAdminDuplicateUploadsRouteImport.update({
-    id: '/admin_/duplicate-uploads',
-    path: '/admin/duplicate-uploads',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminLinkSuggestionsRoute =
-  MainDashboardAdminLinkSuggestionsRouteImport.update({
-    id: '/admin_/link-suggestions',
-    path: '/admin/link-suggestions',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminDonationsRoute =
-  MainDashboardAdminDonationsRouteImport.update({
-    id: '/admin_/donations',
-    path: '/admin/donations',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminDeletingUploadsRoute =
-  MainDashboardAdminDeletingUploadsRouteImport.update({
-    id: '/admin_/deleting-uploads',
-    path: '/admin/deleting-uploads',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminChannelsRoute =
-  MainDashboardAdminChannelsRouteImport.update({
-    id: '/admin_/channels',
-    path: '/admin/channels',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAdminBackfillFilenamesRoute =
-  MainDashboardAdminBackfillFilenamesRouteImport.update({
-    id: '/admin_/backfill-filenames',
-    path: '/admin/backfill-filenames',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAccountSecurityRoute =
-  MainDashboardAccountSecurityRouteImport.update({
-    id: '/account_/security',
-    path: '/account/security',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAccountProfileRoute =
-  MainDashboardAccountProfileRouteImport.update({
-    id: '/account_/profile',
-    path: '/account/profile',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardAccountParticipationRoute =
-  MainDashboardAccountParticipationRouteImport.update({
-    id: '/account_/participation',
-    path: '/account/participation',
+const MainDashboardAccountDonationsRoute =
+  MainDashboardAccountDonationsRouteImport.update({
+    id: '/account_/donations',
+    path: '/account/donations',
     getParentRoute: () => MainDashboardRoute,
   } as any)
 const MainDashboardAccountNewsletterRoute =
@@ -739,99 +547,213 @@ const MainDashboardAccountNewsletterRoute =
     path: '/account/newsletter',
     getParentRoute: () => MainDashboardRoute,
   } as any)
-const MainDashboardAccountDonationsRoute =
-  MainDashboardAccountDonationsRouteImport.update({
-    id: '/account_/donations',
-    path: '/account/donations',
+const MainDashboardAccountParticipationRoute =
+  MainDashboardAccountParticipationRouteImport.update({
+    id: '/account_/participation',
+    path: '/account/participation',
     getParentRoute: () => MainDashboardRoute,
   } as any)
-const MainChannelSlugLiveRoute = MainChannelSlugLiveRouteImport.update({
-  id: '/channel/$slug_/live',
-  path: '/channel/$slug/live',
-  getParentRoute: () => MainRoute,
+const MainDashboardAccountProfileRoute =
+  MainDashboardAccountProfileRouteImport.update({
+    id: '/account_/profile',
+    path: '/account/profile',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAccountSecurityRoute =
+  MainDashboardAccountSecurityRouteImport.update({
+    id: '/account_/security',
+    path: '/account/security',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminBackfillFilenamesRoute =
+  MainDashboardAdminBackfillFilenamesRouteImport.update({
+    id: '/admin_/backfill-filenames',
+    path: '/admin/backfill-filenames',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminChannelsRoute =
+  MainDashboardAdminChannelsRouteImport.update({
+    id: '/admin_/channels',
+    path: '/admin/channels',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminDeletingUploadsRoute =
+  MainDashboardAdminDeletingUploadsRouteImport.update({
+    id: '/admin_/deleting-uploads',
+    path: '/admin/deleting-uploads',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminDonationsRoute =
+  MainDashboardAdminDonationsRouteImport.update({
+    id: '/admin_/donations',
+    path: '/admin/donations',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminDuplicateUploadsRoute =
+  MainDashboardAdminDuplicateUploadsRouteImport.update({
+    id: '/admin_/duplicate-uploads',
+    path: '/admin/duplicate-uploads',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminFailedAnnotationsRoute =
+  MainDashboardAdminFailedAnnotationsRouteImport.update({
+    id: '/admin_/failed-annotations',
+    path: '/admin/failed-annotations',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminFailedSummariesRoute =
+  MainDashboardAdminFailedSummariesRouteImport.update({
+    id: '/admin_/failed-summaries',
+    path: '/admin/failed-summaries',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminFailedUploadsRoute =
+  MainDashboardAdminFailedUploadsRouteImport.update({
+    id: '/admin_/failed-uploads',
+    path: '/admin/failed-uploads',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminFeaturedRoute =
+  MainDashboardAdminFeaturedRouteImport.update({
+    id: '/admin_/featured',
+    path: '/admin/featured',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminImportSourcesRoute =
+  MainDashboardAdminImportSourcesRouteImport.update({
+    id: '/admin_/import-sources',
+    path: '/admin/import-sources',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminLinkSuggestionsRoute =
+  MainDashboardAdminLinkSuggestionsRouteImport.update({
+    id: '/admin_/link-suggestions',
+    path: '/admin/link-suggestions',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminLlmEvalRoute =
+  MainDashboardAdminLlmEvalRouteImport.update({
+    id: '/admin_/llm-eval',
+    path: '/admin/llm-eval',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminMaintenanceRoute =
+  MainDashboardAdminMaintenanceRouteImport.update({
+    id: '/admin_/maintenance',
+    path: '/admin/maintenance',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminNewsletterListsRoute =
+  MainDashboardAdminNewsletterListsRouteImport.update({
+    id: '/admin_/newsletter-lists',
+    path: '/admin/newsletter-lists',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminOrganizationTagsRoute =
+  MainDashboardAdminOrganizationTagsRouteImport.update({
+    id: '/admin_/organization-tags',
+    path: '/admin/organization-tags',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminOrganizationsRoute =
+  MainDashboardAdminOrganizationsRouteImport.update({
+    id: '/admin_/organizations',
+    path: '/admin/organizations',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminProcessingUploadsRoute =
+  MainDashboardAdminProcessingUploadsRouteImport.update({
+    id: '/admin_/processing-uploads',
+    path: '/admin/processing-uploads',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminReindexRoute =
+  MainDashboardAdminReindexRouteImport.update({
+    id: '/admin_/reindex',
+    path: '/admin/reindex',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminReprocessRoute =
+  MainDashboardAdminReprocessRouteImport.update({
+    id: '/admin_/reprocess',
+    path: '/admin/reprocess',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminSearchesRoute =
+  MainDashboardAdminSearchesRouteImport.update({
+    id: '/admin_/searches',
+    path: '/admin/searches',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminSpeakerQueueRoute =
+  MainDashboardAdminSpeakerQueueRouteImport.update({
+    id: '/admin_/speaker-queue',
+    path: '/admin/speaker-queue',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminSpeakersRoute =
+  MainDashboardAdminSpeakersRouteImport.update({
+    id: '/admin_/speakers',
+    path: '/admin/speakers',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminStorageRoute =
+  MainDashboardAdminStorageRouteImport.update({
+    id: '/admin_/storage',
+    path: '/admin/storage',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminStorageAuditRoute =
+  MainDashboardAdminStorageAuditRouteImport.update({
+    id: '/admin_/storage-audit',
+    path: '/admin/storage-audit',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminUploadBackupsRoute =
+  MainDashboardAdminUploadBackupsRouteImport.update({
+    id: '/admin_/upload-backups',
+    path: '/admin/upload-backups',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardAdminUsersRoute = MainDashboardAdminUsersRouteImport.update({
+  id: '/admin_/users',
+  path: '/admin/users',
+  getParentRoute: () => MainDashboardRoute,
 } as any)
-const MainDashboardOrganizationsOrgIdMembersRoute =
-  MainDashboardOrganizationsOrgIdMembersRouteImport.update({
-    id: '/organizations_/$orgId_/members',
-    path: '/organizations/$orgId/members',
+const MainDashboardChannelsChannelIdRoute =
+  MainDashboardChannelsChannelIdRouteImport.update({
+    id: '/channels_/$channelId',
+    path: '/channels/$channelId',
     getParentRoute: () => MainDashboardRoute,
   } as any)
-const MainDashboardOrganizationsOrgIdEditRoute =
-  MainDashboardOrganizationsOrgIdEditRouteImport.update({
-    id: '/organizations_/$orgId_/edit',
-    path: '/organizations/$orgId/edit',
+const MainDashboardChannelsNewRoute =
+  MainDashboardChannelsNewRouteImport.update({
+    id: '/channels_/new',
+    path: '/channels/new',
     getParentRoute: () => MainDashboardRoute,
   } as any)
-const MainDashboardOrganizationsOrgIdAssociationsRoute =
-  MainDashboardOrganizationsOrgIdAssociationsRouteImport.update({
-    id: '/organizations_/$orgId_/associations',
-    path: '/organizations/$orgId/associations',
+const MainDashboardChurchesChurchIdRoute =
+  MainDashboardChurchesChurchIdRouteImport.update({
+    id: '/churches_/$churchId',
+    path: '/churches/$churchId',
     getParentRoute: () => MainDashboardRoute,
   } as any)
-const MainDashboardChurchesChurchIdMembersRoute =
-  MainDashboardChurchesChurchIdMembersRouteImport.update({
-    id: '/churches_/$churchId_/members',
-    path: '/churches/$churchId/members',
+const MainDashboardChurchesNewRoute =
+  MainDashboardChurchesNewRouteImport.update({
+    id: '/churches_/new',
+    path: '/churches/new',
     getParentRoute: () => MainDashboardRoute,
   } as any)
-const MainDashboardChurchesChurchIdLeadersRoute =
-  MainDashboardChurchesChurchIdLeadersRouteImport.update({
-    id: '/churches_/$churchId_/leaders',
-    path: '/churches/$churchId/leaders',
+const MainDashboardInvitationsAcceptRoute =
+  MainDashboardInvitationsAcceptRouteImport.update({
+    id: '/invitations_/accept',
+    path: '/invitations/accept',
     getParentRoute: () => MainDashboardRoute,
   } as any)
-const MainDashboardChurchesChurchIdEditRoute =
-  MainDashboardChurchesChurchIdEditRouteImport.update({
-    id: '/churches_/$churchId_/edit',
-    path: '/churches/$churchId/edit',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardChurchesChurchIdChannelsRoute =
-  MainDashboardChurchesChurchIdChannelsRouteImport.update({
-    id: '/churches_/$churchId_/channels',
-    path: '/churches/$churchId/channels',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardChannelsChannelIdUploadsRoute =
-  MainDashboardChannelsChannelIdUploadsRouteImport.update({
-    id: '/channels_/$channelId_/uploads',
-    path: '/channels/$channelId/uploads',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardChannelsChannelIdSpeakersRoute =
-  MainDashboardChannelsChannelIdSpeakersRouteImport.update({
-    id: '/channels_/$channelId_/speakers',
-    path: '/channels/$channelId/speakers',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardChannelsChannelIdSpeakerQueueRoute =
-  MainDashboardChannelsChannelIdSpeakerQueueRouteImport.update({
-    id: '/channels_/$channelId_/speaker-queue',
-    path: '/channels/$channelId/speaker-queue',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardChannelsChannelIdPlaylistsRoute =
-  MainDashboardChannelsChannelIdPlaylistsRouteImport.update({
-    id: '/channels_/$channelId_/playlists',
-    path: '/channels/$channelId/playlists',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardChannelsChannelIdMembersRoute =
-  MainDashboardChannelsChannelIdMembersRouteImport.update({
-    id: '/channels_/$channelId_/members',
-    path: '/channels/$channelId/members',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardChannelsChannelIdLiveRoute =
-  MainDashboardChannelsChannelIdLiveRouteImport.update({
-    id: '/channels_/$channelId_/live',
-    path: '/channels/$channelId/live',
-    getParentRoute: () => MainDashboardRoute,
-  } as any)
-const MainDashboardChannelsChannelIdEditRoute =
-  MainDashboardChannelsChannelIdEditRouteImport.update({
-    id: '/channels_/$channelId_/edit',
-    path: '/channels/$channelId/edit',
+const MainDashboardOrganizationsOrgIdRoute =
+  MainDashboardOrganizationsOrgIdRouteImport.update({
+    id: '/organizations_/$orgId',
+    path: '/organizations/$orgId',
     getParentRoute: () => MainDashboardRoute,
   } as any)
 const MainDashboardAccountDonationsYearRoute =
@@ -840,16 +762,100 @@ const MainDashboardAccountDonationsYearRoute =
     path: '/account/donations/$year',
     getParentRoute: () => MainDashboardRoute,
   } as any)
-const MainDashboardChannelsChannelIdUploadsUploadIdRoute =
-  MainDashboardChannelsChannelIdUploadsUploadIdRouteImport.update({
-    id: '/channels_/$channelId_/uploads_/$uploadId',
-    path: '/channels/$channelId/uploads/$uploadId',
+const MainDashboardChannelsChannelIdEditRoute =
+  MainDashboardChannelsChannelIdEditRouteImport.update({
+    id: '/channels_/$channelId_/edit',
+    path: '/channels/$channelId/edit',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardChannelsChannelIdLiveRoute =
+  MainDashboardChannelsChannelIdLiveRouteImport.update({
+    id: '/channels_/$channelId_/live',
+    path: '/channels/$channelId/live',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardChannelsChannelIdMembersRoute =
+  MainDashboardChannelsChannelIdMembersRouteImport.update({
+    id: '/channels_/$channelId_/members',
+    path: '/channels/$channelId/members',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardChannelsChannelIdPlaylistsRoute =
+  MainDashboardChannelsChannelIdPlaylistsRouteImport.update({
+    id: '/channels_/$channelId_/playlists',
+    path: '/channels/$channelId/playlists',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardChannelsChannelIdSpeakerQueueRoute =
+  MainDashboardChannelsChannelIdSpeakerQueueRouteImport.update({
+    id: '/channels_/$channelId_/speaker-queue',
+    path: '/channels/$channelId/speaker-queue',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardChannelsChannelIdSpeakersRoute =
+  MainDashboardChannelsChannelIdSpeakersRouteImport.update({
+    id: '/channels_/$channelId_/speakers',
+    path: '/channels/$channelId/speakers',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardChannelsChannelIdUploadsRoute =
+  MainDashboardChannelsChannelIdUploadsRouteImport.update({
+    id: '/channels_/$channelId_/uploads',
+    path: '/channels/$channelId/uploads',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardChurchesChurchIdChannelsRoute =
+  MainDashboardChurchesChurchIdChannelsRouteImport.update({
+    id: '/churches_/$churchId_/channels',
+    path: '/churches/$churchId/channels',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardChurchesChurchIdEditRoute =
+  MainDashboardChurchesChurchIdEditRouteImport.update({
+    id: '/churches_/$churchId_/edit',
+    path: '/churches/$churchId/edit',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardChurchesChurchIdLeadersRoute =
+  MainDashboardChurchesChurchIdLeadersRouteImport.update({
+    id: '/churches_/$churchId_/leaders',
+    path: '/churches/$churchId/leaders',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardChurchesChurchIdMembersRoute =
+  MainDashboardChurchesChurchIdMembersRouteImport.update({
+    id: '/churches_/$churchId_/members',
+    path: '/churches/$churchId/members',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardOrganizationsOrgIdAssociationsRoute =
+  MainDashboardOrganizationsOrgIdAssociationsRouteImport.update({
+    id: '/organizations_/$orgId_/associations',
+    path: '/organizations/$orgId/associations',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardOrganizationsOrgIdEditRoute =
+  MainDashboardOrganizationsOrgIdEditRouteImport.update({
+    id: '/organizations_/$orgId_/edit',
+    path: '/organizations/$orgId/edit',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardOrganizationsOrgIdMembersRoute =
+  MainDashboardOrganizationsOrgIdMembersRouteImport.update({
+    id: '/organizations_/$orgId_/members',
+    path: '/organizations/$orgId/members',
     getParentRoute: () => MainDashboardRoute,
   } as any)
 const MainDashboardChannelsChannelIdPlaylistsPlaylistIdRoute =
   MainDashboardChannelsChannelIdPlaylistsPlaylistIdRouteImport.update({
     id: '/channels_/$channelId_/playlists_/$playlistId',
     path: '/channels/$channelId/playlists/$playlistId',
+    getParentRoute: () => MainDashboardRoute,
+  } as any)
+const MainDashboardChannelsChannelIdUploadsUploadIdRoute =
+  MainDashboardChannelsChannelIdUploadsUploadIdRouteImport.update({
+    id: '/channels_/$channelId_/uploads_/$uploadId',
+    path: '/channels/$channelId/uploads/$uploadId',
     getParentRoute: () => MainDashboardRoute,
   } as any)
 
@@ -873,6 +879,7 @@ export interface FileRoutesByFullPath {
   '/library': typeof MainLibraryRoute
   '/search': typeof MainSearchRoute
   '/auth/email-sign-in': typeof AuthEmailSignInRoute
+  '/auth/finish-registration': typeof AuthFinishRegistrationRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
@@ -939,12 +946,12 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin/deleting-uploads': typeof MainDashboardAdminDeletingUploadsRoute
   '/dashboard/admin/donations': typeof MainDashboardAdminDonationsRoute
   '/dashboard/admin/duplicate-uploads': typeof MainDashboardAdminDuplicateUploadsRoute
-  '/dashboard/admin/link-suggestions': typeof MainDashboardAdminLinkSuggestionsRoute
   '/dashboard/admin/failed-annotations': typeof MainDashboardAdminFailedAnnotationsRoute
   '/dashboard/admin/failed-summaries': typeof MainDashboardAdminFailedSummariesRoute
   '/dashboard/admin/failed-uploads': typeof MainDashboardAdminFailedUploadsRoute
   '/dashboard/admin/featured': typeof MainDashboardAdminFeaturedRoute
   '/dashboard/admin/import-sources': typeof MainDashboardAdminImportSourcesRoute
+  '/dashboard/admin/link-suggestions': typeof MainDashboardAdminLinkSuggestionsRoute
   '/dashboard/admin/llm-eval': typeof MainDashboardAdminLlmEvalRoute
   '/dashboard/admin/maintenance': typeof MainDashboardAdminMaintenanceRoute
   '/dashboard/admin/newsletter-lists': typeof MainDashboardAdminNewsletterListsRoute
@@ -1001,6 +1008,7 @@ export interface FileRoutesByTo {
   '/library': typeof MainLibraryRoute
   '/search': typeof MainSearchRoute
   '/auth/email-sign-in': typeof AuthEmailSignInRoute
+  '/auth/finish-registration': typeof AuthFinishRegistrationRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
@@ -1068,12 +1076,12 @@ export interface FileRoutesByTo {
   '/dashboard/admin/deleting-uploads': typeof MainDashboardAdminDeletingUploadsRoute
   '/dashboard/admin/donations': typeof MainDashboardAdminDonationsRoute
   '/dashboard/admin/duplicate-uploads': typeof MainDashboardAdminDuplicateUploadsRoute
-  '/dashboard/admin/link-suggestions': typeof MainDashboardAdminLinkSuggestionsRoute
   '/dashboard/admin/failed-annotations': typeof MainDashboardAdminFailedAnnotationsRoute
   '/dashboard/admin/failed-summaries': typeof MainDashboardAdminFailedSummariesRoute
   '/dashboard/admin/failed-uploads': typeof MainDashboardAdminFailedUploadsRoute
   '/dashboard/admin/featured': typeof MainDashboardAdminFeaturedRoute
   '/dashboard/admin/import-sources': typeof MainDashboardAdminImportSourcesRoute
+  '/dashboard/admin/link-suggestions': typeof MainDashboardAdminLinkSuggestionsRoute
   '/dashboard/admin/llm-eval': typeof MainDashboardAdminLlmEvalRoute
   '/dashboard/admin/maintenance': typeof MainDashboardAdminMaintenanceRoute
   '/dashboard/admin/newsletter-lists': typeof MainDashboardAdminNewsletterListsRoute
@@ -1134,6 +1142,7 @@ export interface FileRoutesById {
   '/_main/library': typeof MainLibraryRoute
   '/_main/search': typeof MainSearchRoute
   '/auth_/email-sign-in': typeof AuthEmailSignInRoute
+  '/auth_/finish-registration': typeof AuthFinishRegistrationRoute
   '/auth_/forgot-password': typeof AuthForgotPasswordRoute
   '/auth_/login': typeof AuthLoginRoute
   '/auth_/logout': typeof AuthLogoutRoute
@@ -1201,12 +1210,12 @@ export interface FileRoutesById {
   '/_main/dashboard/admin_/deleting-uploads': typeof MainDashboardAdminDeletingUploadsRoute
   '/_main/dashboard/admin_/donations': typeof MainDashboardAdminDonationsRoute
   '/_main/dashboard/admin_/duplicate-uploads': typeof MainDashboardAdminDuplicateUploadsRoute
-  '/_main/dashboard/admin_/link-suggestions': typeof MainDashboardAdminLinkSuggestionsRoute
   '/_main/dashboard/admin_/failed-annotations': typeof MainDashboardAdminFailedAnnotationsRoute
   '/_main/dashboard/admin_/failed-summaries': typeof MainDashboardAdminFailedSummariesRoute
   '/_main/dashboard/admin_/failed-uploads': typeof MainDashboardAdminFailedUploadsRoute
   '/_main/dashboard/admin_/featured': typeof MainDashboardAdminFeaturedRoute
   '/_main/dashboard/admin_/import-sources': typeof MainDashboardAdminImportSourcesRoute
+  '/_main/dashboard/admin_/link-suggestions': typeof MainDashboardAdminLinkSuggestionsRoute
   '/_main/dashboard/admin_/llm-eval': typeof MainDashboardAdminLlmEvalRoute
   '/_main/dashboard/admin_/maintenance': typeof MainDashboardAdminMaintenanceRoute
   '/_main/dashboard/admin_/newsletter-lists': typeof MainDashboardAdminNewsletterListsRoute
@@ -1268,6 +1277,7 @@ export interface FileRouteTypes {
     | '/library'
     | '/search'
     | '/auth/email-sign-in'
+    | '/auth/finish-registration'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/logout'
@@ -1334,12 +1344,12 @@ export interface FileRouteTypes {
     | '/dashboard/admin/deleting-uploads'
     | '/dashboard/admin/donations'
     | '/dashboard/admin/duplicate-uploads'
-    | '/dashboard/admin/link-suggestions'
     | '/dashboard/admin/failed-annotations'
     | '/dashboard/admin/failed-summaries'
     | '/dashboard/admin/failed-uploads'
     | '/dashboard/admin/featured'
     | '/dashboard/admin/import-sources'
+    | '/dashboard/admin/link-suggestions'
     | '/dashboard/admin/llm-eval'
     | '/dashboard/admin/maintenance'
     | '/dashboard/admin/newsletter-lists'
@@ -1396,6 +1406,7 @@ export interface FileRouteTypes {
     | '/library'
     | '/search'
     | '/auth/email-sign-in'
+    | '/auth/finish-registration'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/logout'
@@ -1463,12 +1474,12 @@ export interface FileRouteTypes {
     | '/dashboard/admin/deleting-uploads'
     | '/dashboard/admin/donations'
     | '/dashboard/admin/duplicate-uploads'
-    | '/dashboard/admin/link-suggestions'
     | '/dashboard/admin/failed-annotations'
     | '/dashboard/admin/failed-summaries'
     | '/dashboard/admin/failed-uploads'
     | '/dashboard/admin/featured'
     | '/dashboard/admin/import-sources'
+    | '/dashboard/admin/link-suggestions'
     | '/dashboard/admin/llm-eval'
     | '/dashboard/admin/maintenance'
     | '/dashboard/admin/newsletter-lists'
@@ -1528,6 +1539,7 @@ export interface FileRouteTypes {
     | '/_main/library'
     | '/_main/search'
     | '/auth_/email-sign-in'
+    | '/auth_/finish-registration'
     | '/auth_/forgot-password'
     | '/auth_/login'
     | '/auth_/logout'
@@ -1595,12 +1607,12 @@ export interface FileRouteTypes {
     | '/_main/dashboard/admin_/deleting-uploads'
     | '/_main/dashboard/admin_/donations'
     | '/_main/dashboard/admin_/duplicate-uploads'
-    | '/_main/dashboard/admin_/link-suggestions'
     | '/_main/dashboard/admin_/failed-annotations'
     | '/_main/dashboard/admin_/failed-summaries'
     | '/_main/dashboard/admin_/failed-uploads'
     | '/_main/dashboard/admin_/featured'
     | '/_main/dashboard/admin_/import-sources'
+    | '/_main/dashboard/admin_/link-suggestions'
     | '/_main/dashboard/admin_/llm-eval'
     | '/_main/dashboard/admin_/maintenance'
     | '/_main/dashboard/admin_/newsletter-lists'
@@ -1679,18 +1691,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/maintenance': {
-      id: '/maintenance'
-      path: '/maintenance'
-      fullPath: '/maintenance'
-      preLoaderRoute: typeof MaintenanceRouteImport
+    '/_main': {
+      id: '/_main'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof MainRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth_': {
@@ -1700,242 +1705,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_main': {
-      id: '/_main'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof MainRouteImport
+    '/maintenance': {
+      id: '/maintenance'
+      path: '/maintenance'
+      fullPath: '/maintenance'
+      preLoaderRoute: typeof MaintenanceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_main/': {
-      id: '/_main/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof MainIndexRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/webhooks_/stripe': {
-      id: '/webhooks_/stripe'
-      path: '/webhooks/stripe'
-      fullPath: '/webhooks/stripe'
-      preLoaderRoute: typeof WebhooksStripeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/webhooks_/mux': {
-      id: '/webhooks_/mux'
-      path: '/webhooks/mux'
-      fullPath: '/webhooks/mux'
-      preLoaderRoute: typeof WebhooksMuxRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/trpc/$': {
-      id: '/trpc/$'
-      path: '/trpc/$'
-      fullPath: '/trpc/$'
-      preLoaderRoute: typeof TrpcSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/oidc/userinfo': {
-      id: '/oidc/userinfo'
-      path: '/oidc/userinfo'
-      fullPath: '/oidc/userinfo'
-      preLoaderRoute: typeof OidcUserinfoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/oidc/token': {
-      id: '/oidc/token'
-      path: '/oidc/token'
-      fullPath: '/oidc/token'
-      preLoaderRoute: typeof OidcTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/oidc/logout': {
-      id: '/oidc/logout'
-      path: '/oidc/logout'
-      fullPath: '/oidc/logout'
-      preLoaderRoute: typeof OidcLogoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/oidc/authorize': {
-      id: '/oidc/authorize'
-      path: '/oidc/authorize'
-      fullPath: '/oidc/authorize'
-      preLoaderRoute: typeof OidcAuthorizeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/media/rss.xml': {
-      id: '/media/rss.xml'
-      path: '/media/rss.xml'
-      fullPath: '/media/rss.xml'
-      preLoaderRoute: typeof MediaRssDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/invitations_/invalid': {
-      id: '/invitations_/invalid'
-      path: '/invitations/invalid'
-      fullPath: '/invitations/invalid'
-      preLoaderRoute: typeof InvitationsInvalidRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/invitations_/expired': {
-      id: '/invitations_/expired'
-      path: '/invitations/expired'
-      fullPath: '/invitations/expired'
-      preLoaderRoute: typeof InvitationsExpiredRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/invitations_/accept': {
-      id: '/invitations_/accept'
-      path: '/invitations/accept'
-      fullPath: '/invitations/accept'
-      preLoaderRoute: typeof InvitationsAcceptRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/embed/churches': {
-      id: '/embed/churches'
-      path: '/embed/churches'
-      fullPath: '/embed/churches'
-      preLoaderRoute: typeof EmbedChurchesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth_/verify': {
-      id: '/auth_/verify'
-      path: '/verify'
-      fullPath: '/auth/verify'
-      preLoaderRoute: typeof AuthVerifyRouteImport
-      parentRoute: typeof AuthRoute
-    }
-    '/auth_/reset-password': {
-      id: '/auth_/reset-password'
-      path: '/reset-password'
-      fullPath: '/auth/reset-password'
-      preLoaderRoute: typeof AuthResetPasswordRouteImport
-      parentRoute: typeof AuthRoute
-    }
-    '/auth_/register': {
-      id: '/auth_/register'
-      path: '/register'
-      fullPath: '/auth/register'
-      preLoaderRoute: typeof AuthRegisterRouteImport
-      parentRoute: typeof AuthRoute
-    }
-    '/auth_/logout': {
-      id: '/auth_/logout'
-      path: '/logout'
-      fullPath: '/auth/logout'
-      preLoaderRoute: typeof AuthLogoutRouteImport
-      parentRoute: typeof AuthRoute
-    }
-    '/auth_/login': {
-      id: '/auth_/login'
-      path: '/login'
-      fullPath: '/auth/login'
-      preLoaderRoute: typeof AuthLoginRouteImport
-      parentRoute: typeof AuthRoute
-    }
-    '/auth_/forgot-password': {
-      id: '/auth_/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/auth/forgot-password'
-      preLoaderRoute: typeof AuthForgotPasswordRouteImport
-      parentRoute: typeof AuthRoute
-    }
-    '/auth_/email-sign-in': {
-      id: '/auth_/email-sign-in'
-      path: '/email-sign-in'
-      fullPath: '/auth/email-sign-in'
-      preLoaderRoute: typeof AuthEmailSignInRouteImport
-      parentRoute: typeof AuthRoute
-    }
-    '/_main/search': {
-      id: '/_main/search'
-      path: '/search'
-      fullPath: '/search'
-      preLoaderRoute: typeof MainSearchRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/library': {
-      id: '/_main/library'
-      path: '/library'
-      fullPath: '/library'
-      preLoaderRoute: typeof MainLibraryRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/history': {
-      id: '/_main/history'
-      path: '/history'
-      fullPath: '/history'
-      preLoaderRoute: typeof MainHistoryRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/following': {
-      id: '/_main/following'
-      path: '/following'
-      fullPath: '/following'
-      preLoaderRoute: typeof MainFollowingRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/donate': {
-      id: '/_main/donate'
-      path: '/donate'
-      fullPath: '/donate'
-      preLoaderRoute: typeof MainDonateRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/dig-deeper': {
-      id: '/_main/dig-deeper'
-      path: '/dig-deeper'
-      fullPath: '/dig-deeper'
-      preLoaderRoute: typeof MainDigDeeperRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/dashboard': {
-      id: '/_main/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof MainDashboardRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/churches': {
-      id: '/_main/churches'
-      path: '/churches'
-      fullPath: '/churches'
-      preLoaderRoute: typeof MainChurchesRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/channels': {
-      id: '/_main/channels'
-      path: '/channels'
-      fullPath: '/channels'
-      preLoaderRoute: typeof MainChannelsRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/about': {
-      id: '/_main/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof MainAboutRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/$slug': {
-      id: '/_main/$slug'
-      path: '/$slug'
-      fullPath: '/$slug'
-      preLoaderRoute: typeof MainSlugRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/.well-known/openid-configuration': {
-      id: '/.well-known/openid-configuration'
-      path: '/.well-known/openid-configuration'
-      fullPath: '/.well-known/openid-configuration'
-      preLoaderRoute: typeof DotwellKnownOpenidConfigurationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.well-known/openai-apps-challenge': {
-      id: '/.well-known/openai-apps-challenge'
-      path: '/.well-known/openai-apps-challenge'
-      fullPath: '/.well-known/openai-apps-challenge'
-      preLoaderRoute: typeof DotwellKnownOpenaiAppsChallengeRouteImport
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.well-known/jwks.json': {
@@ -1945,12 +1726,250 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DotwellKnownJwksDotjsonRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_main/dashboard/': {
-      id: '/_main/dashboard/'
+    '/.well-known/openai-apps-challenge': {
+      id: '/.well-known/openai-apps-challenge'
+      path: '/.well-known/openai-apps-challenge'
+      fullPath: '/.well-known/openai-apps-challenge'
+      preLoaderRoute: typeof DotwellKnownOpenaiAppsChallengeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/openid-configuration': {
+      id: '/.well-known/openid-configuration'
+      path: '/.well-known/openid-configuration'
+      fullPath: '/.well-known/openid-configuration'
+      preLoaderRoute: typeof DotwellKnownOpenidConfigurationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_main/': {
+      id: '/_main/'
       path: '/'
-      fullPath: '/dashboard/'
-      preLoaderRoute: typeof MainDashboardIndexRouteImport
-      parentRoute: typeof MainDashboardRoute
+      fullPath: '/'
+      preLoaderRoute: typeof MainIndexRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/$slug': {
+      id: '/_main/$slug'
+      path: '/$slug'
+      fullPath: '/$slug'
+      preLoaderRoute: typeof MainSlugRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/about': {
+      id: '/_main/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof MainAboutRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/channels': {
+      id: '/_main/channels'
+      path: '/channels'
+      fullPath: '/channels'
+      preLoaderRoute: typeof MainChannelsRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/churches': {
+      id: '/_main/churches'
+      path: '/churches'
+      fullPath: '/churches'
+      preLoaderRoute: typeof MainChurchesRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/dashboard': {
+      id: '/_main/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof MainDashboardRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/dig-deeper': {
+      id: '/_main/dig-deeper'
+      path: '/dig-deeper'
+      fullPath: '/dig-deeper'
+      preLoaderRoute: typeof MainDigDeeperRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/donate': {
+      id: '/_main/donate'
+      path: '/donate'
+      fullPath: '/donate'
+      preLoaderRoute: typeof MainDonateRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/following': {
+      id: '/_main/following'
+      path: '/following'
+      fullPath: '/following'
+      preLoaderRoute: typeof MainFollowingRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/history': {
+      id: '/_main/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof MainHistoryRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/library': {
+      id: '/_main/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof MainLibraryRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/search': {
+      id: '/_main/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof MainSearchRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/auth_/email-sign-in': {
+      id: '/auth_/email-sign-in'
+      path: '/email-sign-in'
+      fullPath: '/auth/email-sign-in'
+      preLoaderRoute: typeof AuthEmailSignInRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/auth_/finish-registration': {
+      id: '/auth_/finish-registration'
+      path: '/finish-registration'
+      fullPath: '/auth/finish-registration'
+      preLoaderRoute: typeof AuthFinishRegistrationRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/auth_/forgot-password': {
+      id: '/auth_/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/auth/forgot-password'
+      preLoaderRoute: typeof AuthForgotPasswordRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/auth_/login': {
+      id: '/auth_/login'
+      path: '/login'
+      fullPath: '/auth/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/auth_/logout': {
+      id: '/auth_/logout'
+      path: '/logout'
+      fullPath: '/auth/logout'
+      preLoaderRoute: typeof AuthLogoutRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/auth_/register': {
+      id: '/auth_/register'
+      path: '/register'
+      fullPath: '/auth/register'
+      preLoaderRoute: typeof AuthRegisterRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/auth_/reset-password': {
+      id: '/auth_/reset-password'
+      path: '/reset-password'
+      fullPath: '/auth/reset-password'
+      preLoaderRoute: typeof AuthResetPasswordRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/auth_/verify': {
+      id: '/auth_/verify'
+      path: '/verify'
+      fullPath: '/auth/verify'
+      preLoaderRoute: typeof AuthVerifyRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/embed/churches': {
+      id: '/embed/churches'
+      path: '/embed/churches'
+      fullPath: '/embed/churches'
+      preLoaderRoute: typeof EmbedChurchesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invitations_/accept': {
+      id: '/invitations_/accept'
+      path: '/invitations/accept'
+      fullPath: '/invitations/accept'
+      preLoaderRoute: typeof InvitationsAcceptRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invitations_/expired': {
+      id: '/invitations_/expired'
+      path: '/invitations/expired'
+      fullPath: '/invitations/expired'
+      preLoaderRoute: typeof InvitationsExpiredRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invitations_/invalid': {
+      id: '/invitations_/invalid'
+      path: '/invitations/invalid'
+      fullPath: '/invitations/invalid'
+      preLoaderRoute: typeof InvitationsInvalidRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/media/rss.xml': {
+      id: '/media/rss.xml'
+      path: '/media/rss.xml'
+      fullPath: '/media/rss.xml'
+      preLoaderRoute: typeof MediaRssDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oidc/authorize': {
+      id: '/oidc/authorize'
+      path: '/oidc/authorize'
+      fullPath: '/oidc/authorize'
+      preLoaderRoute: typeof OidcAuthorizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oidc/logout': {
+      id: '/oidc/logout'
+      path: '/oidc/logout'
+      fullPath: '/oidc/logout'
+      preLoaderRoute: typeof OidcLogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oidc/token': {
+      id: '/oidc/token'
+      path: '/oidc/token'
+      fullPath: '/oidc/token'
+      preLoaderRoute: typeof OidcTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oidc/userinfo': {
+      id: '/oidc/userinfo'
+      path: '/oidc/userinfo'
+      fullPath: '/oidc/userinfo'
+      preLoaderRoute: typeof OidcUserinfoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trpc/$': {
+      id: '/trpc/$'
+      path: '/trpc/$'
+      fullPath: '/trpc/$'
+      preLoaderRoute: typeof TrpcSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/webhooks_/mux': {
+      id: '/webhooks_/mux'
+      path: '/webhooks/mux'
+      fullPath: '/webhooks/mux'
+      preLoaderRoute: typeof WebhooksMuxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/webhooks_/stripe': {
+      id: '/webhooks_/stripe'
+      path: '/webhooks/stripe'
+      fullPath: '/webhooks/stripe'
+      preLoaderRoute: typeof WebhooksStripeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_main/$slug_/live': {
+      id: '/_main/$slug_/live'
+      path: '/$slug/live'
+      fullPath: '/$slug/live'
+      preLoaderRoute: typeof MainSlugLiveRouteImport
+      parentRoute: typeof MainRoute
     }
     '/_main/about/': {
       id: '/_main/about/'
@@ -1959,25 +1978,214 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAboutIndexRouteImport
       parentRoute: typeof MainAboutRoute
     }
-    '/series/$seriesId/rss.xml': {
-      id: '/series/$seriesId/rss.xml'
-      path: '/series/$seriesId/rss.xml'
-      fullPath: '/series/$seriesId/rss.xml'
-      preLoaderRoute: typeof SeriesSeriesIdRssDotxmlRouteImport
+    '/_main/about/add-church': {
+      id: '/_main/about/add-church'
+      path: '/add-church'
+      fullPath: '/about/add-church'
+      preLoaderRoute: typeof MainAboutAddChurchRouteImport
+      parentRoute: typeof MainAboutRoute
+    }
+    '/_main/about/add-content': {
+      id: '/_main/about/add-content'
+      path: '/add-content'
+      fullPath: '/about/add-content'
+      preLoaderRoute: typeof MainAboutAddContentRouteImport
+      parentRoute: typeof MainAboutRoute
+    }
+    '/_main/about/dmca': {
+      id: '/_main/about/dmca'
+      path: '/dmca'
+      fullPath: '/about/dmca'
+      preLoaderRoute: typeof MainAboutDmcaRouteImport
+      parentRoute: typeof MainAboutRoute
+    }
+    '/_main/about/dorean': {
+      id: '/_main/about/dorean'
+      path: '/dorean'
+      fullPath: '/about/dorean'
+      preLoaderRoute: typeof MainAboutDoreanRouteImport
+      parentRoute: typeof MainAboutRoute
+    }
+    '/_main/about/mcp': {
+      id: '/_main/about/mcp'
+      path: '/mcp'
+      fullPath: '/about/mcp'
+      preLoaderRoute: typeof MainAboutMcpRouteImport
+      parentRoute: typeof MainAboutRoute
+    }
+    '/_main/about/privacy': {
+      id: '/_main/about/privacy'
+      path: '/privacy'
+      fullPath: '/about/privacy'
+      preLoaderRoute: typeof MainAboutPrivacyRouteImport
+      parentRoute: typeof MainAboutRoute
+    }
+    '/_main/about/terms': {
+      id: '/_main/about/terms'
+      path: '/terms'
+      fullPath: '/about/terms'
+      preLoaderRoute: typeof MainAboutTermsRouteImport
+      parentRoute: typeof MainAboutRoute
+    }
+    '/_main/about/theology': {
+      id: '/_main/about/theology'
+      path: '/theology'
+      fullPath: '/about/theology'
+      preLoaderRoute: typeof MainAboutTheologyRouteImport
+      parentRoute: typeof MainAboutRoute
+    }
+    '/_main/channel/$slug': {
+      id: '/_main/channel/$slug'
+      path: '/channel/$slug'
+      fullPath: '/channel/$slug'
+      preLoaderRoute: typeof MainChannelSlugRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/churches_/$slug': {
+      id: '/_main/churches_/$slug'
+      path: '/churches/$slug'
+      fullPath: '/churches/$slug'
+      preLoaderRoute: typeof MainChurchesSlugRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/dashboard/': {
+      id: '/_main/dashboard/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof MainDashboardIndexRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/account': {
+      id: '/_main/dashboard/account'
+      path: '/account'
+      fullPath: '/dashboard/account'
+      preLoaderRoute: typeof MainDashboardAccountRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/admin': {
+      id: '/_main/dashboard/admin'
+      path: '/admin'
+      fullPath: '/dashboard/admin'
+      preLoaderRoute: typeof MainDashboardAdminRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/channels': {
+      id: '/_main/dashboard/channels'
+      path: '/channels'
+      fullPath: '/dashboard/channels'
+      preLoaderRoute: typeof MainDashboardChannelsRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/churches': {
+      id: '/_main/dashboard/churches'
+      path: '/churches'
+      fullPath: '/dashboard/churches'
+      preLoaderRoute: typeof MainDashboardChurchesRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/invitations': {
+      id: '/_main/dashboard/invitations'
+      path: '/invitations'
+      fullPath: '/dashboard/invitations'
+      preLoaderRoute: typeof MainDashboardInvitationsRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/organizations': {
+      id: '/_main/dashboard/organizations'
+      path: '/organizations'
+      fullPath: '/dashboard/organizations'
+      preLoaderRoute: typeof MainDashboardOrganizationsRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/donate_/success': {
+      id: '/_main/donate_/success'
+      path: '/donate/success'
+      fullPath: '/donate/success'
+      preLoaderRoute: typeof MainDonateSuccessRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/media/$mediaId': {
+      id: '/_main/media/$mediaId'
+      path: '/media/$mediaId'
+      fullPath: '/media/$mediaId'
+      preLoaderRoute: typeof MainMediaMediaIdRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/playlist/$playlistId': {
+      id: '/_main/playlist/$playlistId'
+      path: '/playlist/$playlistId'
+      fullPath: '/playlist/$playlistId'
+      preLoaderRoute: typeof MainPlaylistPlaylistIdRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/series/$seriesId': {
+      id: '/_main/series/$seriesId'
+      path: '/series/$seriesId'
+      fullPath: '/series/$seriesId'
+      preLoaderRoute: typeof MainSeriesSeriesIdRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/api/donations/admin-export': {
+      id: '/api/donations/admin-export'
+      path: '/api/donations/admin-export'
+      fullPath: '/api/donations/admin-export'
+      preLoaderRoute: typeof ApiDonationsAdminExportRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/playlist/$playlistId/rss.xml': {
-      id: '/playlist/$playlistId/rss.xml'
-      path: '/playlist/$playlistId/rss.xml'
-      fullPath: '/playlist/$playlistId/rss.xml'
-      preLoaderRoute: typeof PlaylistPlaylistIdRssDotxmlRouteImport
+    '/api/donations/checkout': {
+      id: '/api/donations/checkout'
+      path: '/api/donations/checkout'
+      fullPath: '/api/donations/checkout'
+      preLoaderRoute: typeof ApiDonationsCheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/oidc/.well-known/openid-configuration': {
-      id: '/oidc/.well-known/openid-configuration'
-      path: '/oidc/.well-known/openid-configuration'
-      fullPath: '/oidc/.well-known/openid-configuration'
-      preLoaderRoute: typeof OidcDotwellKnownOpenidConfigurationRouteImport
+    '/api/donations/imports': {
+      id: '/api/donations/imports'
+      path: '/api/donations/imports'
+      fullPath: '/api/donations/imports'
+      preLoaderRoute: typeof ApiDonationsImportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/donations/status': {
+      id: '/api/donations/status'
+      path: '/api/donations/status'
+      fullPath: '/api/donations/status'
+      preLoaderRoute: typeof ApiDonationsStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/media-for-verse': {
+      id: '/api/internal/media-for-verse'
+      path: '/api/internal/media-for-verse'
+      fullPath: '/api/internal/media-for-verse'
+      preLoaderRoute: typeof ApiInternalMediaForVerseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/channel/$slug/podcast.xml': {
+      id: '/channel/$slug/podcast.xml'
+      path: '/channel/$slug/podcast.xml'
+      fullPath: '/channel/$slug/podcast.xml'
+      preLoaderRoute: typeof ChannelSlugPodcastDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/channel/$slug/rss.xml': {
+      id: '/channel/$slug/rss.xml'
+      path: '/channel/$slug/rss.xml'
+      fullPath: '/channel/$slug/rss.xml'
+      preLoaderRoute: typeof ChannelSlugRssDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/embed/channel/$slug': {
+      id: '/embed/channel/$slug'
+      path: '/embed/channel/$slug'
+      fullPath: '/embed/channel/$slug'
+      preLoaderRoute: typeof EmbedChannelSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/embed/media/$mediaId': {
+      id: '/embed/media/$mediaId'
+      path: '/embed/media/$mediaId'
+      fullPath: '/embed/media/$mediaId'
+      preLoaderRoute: typeof EmbedMediaMediaIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/media/$mediaId/study-guide.pdf': {
@@ -1994,459 +2202,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MediaMediaIdTranscriptDotjsonRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/embed/media/$mediaId': {
-      id: '/embed/media/$mediaId'
-      path: '/embed/media/$mediaId'
-      fullPath: '/embed/media/$mediaId'
-      preLoaderRoute: typeof EmbedMediaMediaIdRouteImport
+    '/oidc/.well-known/openid-configuration': {
+      id: '/oidc/.well-known/openid-configuration'
+      path: '/oidc/.well-known/openid-configuration'
+      fullPath: '/oidc/.well-known/openid-configuration'
+      preLoaderRoute: typeof OidcDotwellKnownOpenidConfigurationRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/embed/channel/$slug': {
-      id: '/embed/channel/$slug'
-      path: '/embed/channel/$slug'
-      fullPath: '/embed/channel/$slug'
-      preLoaderRoute: typeof EmbedChannelSlugRouteImport
+    '/playlist/$playlistId/rss.xml': {
+      id: '/playlist/$playlistId/rss.xml'
+      path: '/playlist/$playlistId/rss.xml'
+      fullPath: '/playlist/$playlistId/rss.xml'
+      preLoaderRoute: typeof PlaylistPlaylistIdRssDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/channel/$slug/rss.xml': {
-      id: '/channel/$slug/rss.xml'
-      path: '/channel/$slug/rss.xml'
-      fullPath: '/channel/$slug/rss.xml'
-      preLoaderRoute: typeof ChannelSlugRssDotxmlRouteImport
+    '/series/$seriesId/rss.xml': {
+      id: '/series/$seriesId/rss.xml'
+      path: '/series/$seriesId/rss.xml'
+      fullPath: '/series/$seriesId/rss.xml'
+      preLoaderRoute: typeof SeriesSeriesIdRssDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/channel/$slug/podcast.xml': {
-      id: '/channel/$slug/podcast.xml'
-      path: '/channel/$slug/podcast.xml'
-      fullPath: '/channel/$slug/podcast.xml'
-      preLoaderRoute: typeof ChannelSlugPodcastDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/internal/media-for-verse': {
-      id: '/api/internal/media-for-verse'
-      path: '/api/internal/media-for-verse'
-      fullPath: '/api/internal/media-for-verse'
-      preLoaderRoute: typeof ApiInternalMediaForVerseRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/donations/status': {
-      id: '/api/donations/status'
-      path: '/api/donations/status'
-      fullPath: '/api/donations/status'
-      preLoaderRoute: typeof ApiDonationsStatusRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/donations/imports': {
-      id: '/api/donations/imports'
-      path: '/api/donations/imports'
-      fullPath: '/api/donations/imports'
-      preLoaderRoute: typeof ApiDonationsImportsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/donations/checkout': {
-      id: '/api/donations/checkout'
-      path: '/api/donations/checkout'
-      fullPath: '/api/donations/checkout'
-      preLoaderRoute: typeof ApiDonationsCheckoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/donations/admin-export': {
-      id: '/api/donations/admin-export'
-      path: '/api/donations/admin-export'
-      fullPath: '/api/donations/admin-export'
-      preLoaderRoute: typeof ApiDonationsAdminExportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_main/series/$seriesId': {
-      id: '/_main/series/$seriesId'
-      path: '/series/$seriesId'
-      fullPath: '/series/$seriesId'
-      preLoaderRoute: typeof MainSeriesSeriesIdRouteImport
+    '/_main/channel/$slug_/live': {
+      id: '/_main/channel/$slug_/live'
+      path: '/channel/$slug/live'
+      fullPath: '/channel/$slug/live'
+      preLoaderRoute: typeof MainChannelSlugLiveRouteImport
       parentRoute: typeof MainRoute
     }
-    '/_main/playlist/$playlistId': {
-      id: '/_main/playlist/$playlistId'
-      path: '/playlist/$playlistId'
-      fullPath: '/playlist/$playlistId'
-      preLoaderRoute: typeof MainPlaylistPlaylistIdRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/media/$mediaId': {
-      id: '/_main/media/$mediaId'
-      path: '/media/$mediaId'
-      fullPath: '/media/$mediaId'
-      preLoaderRoute: typeof MainMediaMediaIdRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/donate_/success': {
-      id: '/_main/donate_/success'
-      path: '/donate/success'
-      fullPath: '/donate/success'
-      preLoaderRoute: typeof MainDonateSuccessRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/dashboard/organizations': {
-      id: '/_main/dashboard/organizations'
-      path: '/organizations'
-      fullPath: '/dashboard/organizations'
-      preLoaderRoute: typeof MainDashboardOrganizationsRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/invitations': {
-      id: '/_main/dashboard/invitations'
-      path: '/invitations'
-      fullPath: '/dashboard/invitations'
-      preLoaderRoute: typeof MainDashboardInvitationsRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/churches': {
-      id: '/_main/dashboard/churches'
-      path: '/churches'
-      fullPath: '/dashboard/churches'
-      preLoaderRoute: typeof MainDashboardChurchesRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/channels': {
-      id: '/_main/dashboard/channels'
-      path: '/channels'
-      fullPath: '/dashboard/channels'
-      preLoaderRoute: typeof MainDashboardChannelsRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin': {
-      id: '/_main/dashboard/admin'
-      path: '/admin'
-      fullPath: '/dashboard/admin'
-      preLoaderRoute: typeof MainDashboardAdminRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/account': {
-      id: '/_main/dashboard/account'
-      path: '/account'
-      fullPath: '/dashboard/account'
-      preLoaderRoute: typeof MainDashboardAccountRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/churches_/$slug': {
-      id: '/_main/churches_/$slug'
-      path: '/churches/$slug'
-      fullPath: '/churches/$slug'
-      preLoaderRoute: typeof MainChurchesSlugRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/channel/$slug': {
-      id: '/_main/channel/$slug'
-      path: '/channel/$slug'
-      fullPath: '/channel/$slug'
-      preLoaderRoute: typeof MainChannelSlugRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/about/theology': {
-      id: '/_main/about/theology'
-      path: '/theology'
-      fullPath: '/about/theology'
-      preLoaderRoute: typeof MainAboutTheologyRouteImport
-      parentRoute: typeof MainAboutRoute
-    }
-    '/_main/about/terms': {
-      id: '/_main/about/terms'
-      path: '/terms'
-      fullPath: '/about/terms'
-      preLoaderRoute: typeof MainAboutTermsRouteImport
-      parentRoute: typeof MainAboutRoute
-    }
-    '/_main/about/privacy': {
-      id: '/_main/about/privacy'
-      path: '/privacy'
-      fullPath: '/about/privacy'
-      preLoaderRoute: typeof MainAboutPrivacyRouteImport
-      parentRoute: typeof MainAboutRoute
-    }
-    '/_main/about/mcp': {
-      id: '/_main/about/mcp'
-      path: '/mcp'
-      fullPath: '/about/mcp'
-      preLoaderRoute: typeof MainAboutMcpRouteImport
-      parentRoute: typeof MainAboutRoute
-    }
-    '/_main/about/dorean': {
-      id: '/_main/about/dorean'
-      path: '/dorean'
-      fullPath: '/about/dorean'
-      preLoaderRoute: typeof MainAboutDoreanRouteImport
-      parentRoute: typeof MainAboutRoute
-    }
-    '/_main/about/dmca': {
-      id: '/_main/about/dmca'
-      path: '/dmca'
-      fullPath: '/about/dmca'
-      preLoaderRoute: typeof MainAboutDmcaRouteImport
-      parentRoute: typeof MainAboutRoute
-    }
-    '/_main/about/add-content': {
-      id: '/_main/about/add-content'
-      path: '/add-content'
-      fullPath: '/about/add-content'
-      preLoaderRoute: typeof MainAboutAddContentRouteImport
-      parentRoute: typeof MainAboutRoute
-    }
-    '/_main/about/add-church': {
-      id: '/_main/about/add-church'
-      path: '/add-church'
-      fullPath: '/about/add-church'
-      preLoaderRoute: typeof MainAboutAddChurchRouteImport
-      parentRoute: typeof MainAboutRoute
-    }
-    '/_main/$slug_/live': {
-      id: '/_main/$slug_/live'
-      path: '/$slug/live'
-      fullPath: '/$slug/live'
-      preLoaderRoute: typeof MainSlugLiveRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/dashboard/organizations_/$orgId': {
-      id: '/_main/dashboard/organizations_/$orgId'
-      path: '/organizations/$orgId'
-      fullPath: '/dashboard/organizations/$orgId'
-      preLoaderRoute: typeof MainDashboardOrganizationsOrgIdRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/invitations_/accept': {
-      id: '/_main/dashboard/invitations_/accept'
-      path: '/invitations/accept'
-      fullPath: '/dashboard/invitations/accept'
-      preLoaderRoute: typeof MainDashboardInvitationsAcceptRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/churches_/new': {
-      id: '/_main/dashboard/churches_/new'
-      path: '/churches/new'
-      fullPath: '/dashboard/churches/new'
-      preLoaderRoute: typeof MainDashboardChurchesNewRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/churches_/$churchId': {
-      id: '/_main/dashboard/churches_/$churchId'
-      path: '/churches/$churchId'
-      fullPath: '/dashboard/churches/$churchId'
-      preLoaderRoute: typeof MainDashboardChurchesChurchIdRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/channels_/new': {
-      id: '/_main/dashboard/channels_/new'
-      path: '/channels/new'
-      fullPath: '/dashboard/channels/new'
-      preLoaderRoute: typeof MainDashboardChannelsNewRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/channels_/$channelId': {
-      id: '/_main/dashboard/channels_/$channelId'
-      path: '/channels/$channelId'
-      fullPath: '/dashboard/channels/$channelId'
-      preLoaderRoute: typeof MainDashboardChannelsChannelIdRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/users': {
-      id: '/_main/dashboard/admin_/users'
-      path: '/admin/users'
-      fullPath: '/dashboard/admin/users'
-      preLoaderRoute: typeof MainDashboardAdminUsersRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/upload-backups': {
-      id: '/_main/dashboard/admin_/upload-backups'
-      path: '/admin/upload-backups'
-      fullPath: '/dashboard/admin/upload-backups'
-      preLoaderRoute: typeof MainDashboardAdminUploadBackupsRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/storage-audit': {
-      id: '/_main/dashboard/admin_/storage-audit'
-      path: '/admin/storage-audit'
-      fullPath: '/dashboard/admin/storage-audit'
-      preLoaderRoute: typeof MainDashboardAdminStorageAuditRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/storage': {
-      id: '/_main/dashboard/admin_/storage'
-      path: '/admin/storage'
-      fullPath: '/dashboard/admin/storage'
-      preLoaderRoute: typeof MainDashboardAdminStorageRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/speakers': {
-      id: '/_main/dashboard/admin_/speakers'
-      path: '/admin/speakers'
-      fullPath: '/dashboard/admin/speakers'
-      preLoaderRoute: typeof MainDashboardAdminSpeakersRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/speaker-queue': {
-      id: '/_main/dashboard/admin_/speaker-queue'
-      path: '/admin/speaker-queue'
-      fullPath: '/dashboard/admin/speaker-queue'
-      preLoaderRoute: typeof MainDashboardAdminSpeakerQueueRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/searches': {
-      id: '/_main/dashboard/admin_/searches'
-      path: '/admin/searches'
-      fullPath: '/dashboard/admin/searches'
-      preLoaderRoute: typeof MainDashboardAdminSearchesRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/reprocess': {
-      id: '/_main/dashboard/admin_/reprocess'
-      path: '/admin/reprocess'
-      fullPath: '/dashboard/admin/reprocess'
-      preLoaderRoute: typeof MainDashboardAdminReprocessRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/reindex': {
-      id: '/_main/dashboard/admin_/reindex'
-      path: '/admin/reindex'
-      fullPath: '/dashboard/admin/reindex'
-      preLoaderRoute: typeof MainDashboardAdminReindexRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/processing-uploads': {
-      id: '/_main/dashboard/admin_/processing-uploads'
-      path: '/admin/processing-uploads'
-      fullPath: '/dashboard/admin/processing-uploads'
-      preLoaderRoute: typeof MainDashboardAdminProcessingUploadsRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/organizations': {
-      id: '/_main/dashboard/admin_/organizations'
-      path: '/admin/organizations'
-      fullPath: '/dashboard/admin/organizations'
-      preLoaderRoute: typeof MainDashboardAdminOrganizationsRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/organization-tags': {
-      id: '/_main/dashboard/admin_/organization-tags'
-      path: '/admin/organization-tags'
-      fullPath: '/dashboard/admin/organization-tags'
-      preLoaderRoute: typeof MainDashboardAdminOrganizationTagsRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/newsletter-lists': {
-      id: '/_main/dashboard/admin_/newsletter-lists'
-      path: '/admin/newsletter-lists'
-      fullPath: '/dashboard/admin/newsletter-lists'
-      preLoaderRoute: typeof MainDashboardAdminNewsletterListsRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/maintenance': {
-      id: '/_main/dashboard/admin_/maintenance'
-      path: '/admin/maintenance'
-      fullPath: '/dashboard/admin/maintenance'
-      preLoaderRoute: typeof MainDashboardAdminMaintenanceRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/llm-eval': {
-      id: '/_main/dashboard/admin_/llm-eval'
-      path: '/admin/llm-eval'
-      fullPath: '/dashboard/admin/llm-eval'
-      preLoaderRoute: typeof MainDashboardAdminLlmEvalRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/import-sources': {
-      id: '/_main/dashboard/admin_/import-sources'
-      path: '/admin/import-sources'
-      fullPath: '/dashboard/admin/import-sources'
-      preLoaderRoute: typeof MainDashboardAdminImportSourcesRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/featured': {
-      id: '/_main/dashboard/admin_/featured'
-      path: '/admin/featured'
-      fullPath: '/dashboard/admin/featured'
-      preLoaderRoute: typeof MainDashboardAdminFeaturedRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/failed-uploads': {
-      id: '/_main/dashboard/admin_/failed-uploads'
-      path: '/admin/failed-uploads'
-      fullPath: '/dashboard/admin/failed-uploads'
-      preLoaderRoute: typeof MainDashboardAdminFailedUploadsRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/failed-summaries': {
-      id: '/_main/dashboard/admin_/failed-summaries'
-      path: '/admin/failed-summaries'
-      fullPath: '/dashboard/admin/failed-summaries'
-      preLoaderRoute: typeof MainDashboardAdminFailedSummariesRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/failed-annotations': {
-      id: '/_main/dashboard/admin_/failed-annotations'
-      path: '/admin/failed-annotations'
-      fullPath: '/dashboard/admin/failed-annotations'
-      preLoaderRoute: typeof MainDashboardAdminFailedAnnotationsRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/duplicate-uploads': {
-      id: '/_main/dashboard/admin_/duplicate-uploads'
-      path: '/admin/duplicate-uploads'
-      fullPath: '/dashboard/admin/duplicate-uploads'
-      preLoaderRoute: typeof MainDashboardAdminDuplicateUploadsRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/link-suggestions': {
-      id: '/_main/dashboard/admin_/link-suggestions'
-      path: '/admin/link-suggestions'
-      fullPath: '/dashboard/admin/link-suggestions'
-      preLoaderRoute: typeof MainDashboardAdminLinkSuggestionsRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/donations': {
-      id: '/_main/dashboard/admin_/donations'
-      path: '/admin/donations'
-      fullPath: '/dashboard/admin/donations'
-      preLoaderRoute: typeof MainDashboardAdminDonationsRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/deleting-uploads': {
-      id: '/_main/dashboard/admin_/deleting-uploads'
-      path: '/admin/deleting-uploads'
-      fullPath: '/dashboard/admin/deleting-uploads'
-      preLoaderRoute: typeof MainDashboardAdminDeletingUploadsRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/channels': {
-      id: '/_main/dashboard/admin_/channels'
-      path: '/admin/channels'
-      fullPath: '/dashboard/admin/channels'
-      preLoaderRoute: typeof MainDashboardAdminChannelsRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/admin_/backfill-filenames': {
-      id: '/_main/dashboard/admin_/backfill-filenames'
-      path: '/admin/backfill-filenames'
-      fullPath: '/dashboard/admin/backfill-filenames'
-      preLoaderRoute: typeof MainDashboardAdminBackfillFilenamesRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/account_/security': {
-      id: '/_main/dashboard/account_/security'
-      path: '/account/security'
-      fullPath: '/dashboard/account/security'
-      preLoaderRoute: typeof MainDashboardAccountSecurityRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/account_/profile': {
-      id: '/_main/dashboard/account_/profile'
-      path: '/account/profile'
-      fullPath: '/dashboard/account/profile'
-      preLoaderRoute: typeof MainDashboardAccountProfileRouteImport
-      parentRoute: typeof MainDashboardRoute
-    }
-    '/_main/dashboard/account_/participation': {
-      id: '/_main/dashboard/account_/participation'
-      path: '/account/participation'
-      fullPath: '/dashboard/account/participation'
-      preLoaderRoute: typeof MainDashboardAccountParticipationRouteImport
+    '/_main/dashboard/account_/donations': {
+      id: '/_main/dashboard/account_/donations'
+      path: '/account/donations'
+      fullPath: '/dashboard/account/donations'
+      preLoaderRoute: typeof MainDashboardAccountDonationsRouteImport
       parentRoute: typeof MainDashboardRoute
     }
     '/_main/dashboard/account_/newsletter': {
@@ -2456,116 +2244,249 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainDashboardAccountNewsletterRouteImport
       parentRoute: typeof MainDashboardRoute
     }
-    '/_main/dashboard/account_/donations': {
-      id: '/_main/dashboard/account_/donations'
-      path: '/account/donations'
-      fullPath: '/dashboard/account/donations'
-      preLoaderRoute: typeof MainDashboardAccountDonationsRouteImport
+    '/_main/dashboard/account_/participation': {
+      id: '/_main/dashboard/account_/participation'
+      path: '/account/participation'
+      fullPath: '/dashboard/account/participation'
+      preLoaderRoute: typeof MainDashboardAccountParticipationRouteImport
       parentRoute: typeof MainDashboardRoute
     }
-    '/_main/channel/$slug_/live': {
-      id: '/_main/channel/$slug_/live'
-      path: '/channel/$slug/live'
-      fullPath: '/channel/$slug/live'
-      preLoaderRoute: typeof MainChannelSlugLiveRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/dashboard/organizations_/$orgId_/members': {
-      id: '/_main/dashboard/organizations_/$orgId_/members'
-      path: '/organizations/$orgId/members'
-      fullPath: '/dashboard/organizations/$orgId/members'
-      preLoaderRoute: typeof MainDashboardOrganizationsOrgIdMembersRouteImport
+    '/_main/dashboard/account_/profile': {
+      id: '/_main/dashboard/account_/profile'
+      path: '/account/profile'
+      fullPath: '/dashboard/account/profile'
+      preLoaderRoute: typeof MainDashboardAccountProfileRouteImport
       parentRoute: typeof MainDashboardRoute
     }
-    '/_main/dashboard/organizations_/$orgId_/edit': {
-      id: '/_main/dashboard/organizations_/$orgId_/edit'
-      path: '/organizations/$orgId/edit'
-      fullPath: '/dashboard/organizations/$orgId/edit'
-      preLoaderRoute: typeof MainDashboardOrganizationsOrgIdEditRouteImport
+    '/_main/dashboard/account_/security': {
+      id: '/_main/dashboard/account_/security'
+      path: '/account/security'
+      fullPath: '/dashboard/account/security'
+      preLoaderRoute: typeof MainDashboardAccountSecurityRouteImport
       parentRoute: typeof MainDashboardRoute
     }
-    '/_main/dashboard/organizations_/$orgId_/associations': {
-      id: '/_main/dashboard/organizations_/$orgId_/associations'
-      path: '/organizations/$orgId/associations'
-      fullPath: '/dashboard/organizations/$orgId/associations'
-      preLoaderRoute: typeof MainDashboardOrganizationsOrgIdAssociationsRouteImport
+    '/_main/dashboard/admin_/backfill-filenames': {
+      id: '/_main/dashboard/admin_/backfill-filenames'
+      path: '/admin/backfill-filenames'
+      fullPath: '/dashboard/admin/backfill-filenames'
+      preLoaderRoute: typeof MainDashboardAdminBackfillFilenamesRouteImport
       parentRoute: typeof MainDashboardRoute
     }
-    '/_main/dashboard/churches_/$churchId_/members': {
-      id: '/_main/dashboard/churches_/$churchId_/members'
-      path: '/churches/$churchId/members'
-      fullPath: '/dashboard/churches/$churchId/members'
-      preLoaderRoute: typeof MainDashboardChurchesChurchIdMembersRouteImport
+    '/_main/dashboard/admin_/channels': {
+      id: '/_main/dashboard/admin_/channels'
+      path: '/admin/channels'
+      fullPath: '/dashboard/admin/channels'
+      preLoaderRoute: typeof MainDashboardAdminChannelsRouteImport
       parentRoute: typeof MainDashboardRoute
     }
-    '/_main/dashboard/churches_/$churchId_/leaders': {
-      id: '/_main/dashboard/churches_/$churchId_/leaders'
-      path: '/churches/$churchId/leaders'
-      fullPath: '/dashboard/churches/$churchId/leaders'
-      preLoaderRoute: typeof MainDashboardChurchesChurchIdLeadersRouteImport
+    '/_main/dashboard/admin_/deleting-uploads': {
+      id: '/_main/dashboard/admin_/deleting-uploads'
+      path: '/admin/deleting-uploads'
+      fullPath: '/dashboard/admin/deleting-uploads'
+      preLoaderRoute: typeof MainDashboardAdminDeletingUploadsRouteImport
       parentRoute: typeof MainDashboardRoute
     }
-    '/_main/dashboard/churches_/$churchId_/edit': {
-      id: '/_main/dashboard/churches_/$churchId_/edit'
-      path: '/churches/$churchId/edit'
-      fullPath: '/dashboard/churches/$churchId/edit'
-      preLoaderRoute: typeof MainDashboardChurchesChurchIdEditRouteImport
+    '/_main/dashboard/admin_/donations': {
+      id: '/_main/dashboard/admin_/donations'
+      path: '/admin/donations'
+      fullPath: '/dashboard/admin/donations'
+      preLoaderRoute: typeof MainDashboardAdminDonationsRouteImport
       parentRoute: typeof MainDashboardRoute
     }
-    '/_main/dashboard/churches_/$churchId_/channels': {
-      id: '/_main/dashboard/churches_/$churchId_/channels'
-      path: '/churches/$churchId/channels'
-      fullPath: '/dashboard/churches/$churchId/channels'
-      preLoaderRoute: typeof MainDashboardChurchesChurchIdChannelsRouteImport
+    '/_main/dashboard/admin_/duplicate-uploads': {
+      id: '/_main/dashboard/admin_/duplicate-uploads'
+      path: '/admin/duplicate-uploads'
+      fullPath: '/dashboard/admin/duplicate-uploads'
+      preLoaderRoute: typeof MainDashboardAdminDuplicateUploadsRouteImport
       parentRoute: typeof MainDashboardRoute
     }
-    '/_main/dashboard/channels_/$channelId_/uploads': {
-      id: '/_main/dashboard/channels_/$channelId_/uploads'
-      path: '/channels/$channelId/uploads'
-      fullPath: '/dashboard/channels/$channelId/uploads'
-      preLoaderRoute: typeof MainDashboardChannelsChannelIdUploadsRouteImport
+    '/_main/dashboard/admin_/failed-annotations': {
+      id: '/_main/dashboard/admin_/failed-annotations'
+      path: '/admin/failed-annotations'
+      fullPath: '/dashboard/admin/failed-annotations'
+      preLoaderRoute: typeof MainDashboardAdminFailedAnnotationsRouteImport
       parentRoute: typeof MainDashboardRoute
     }
-    '/_main/dashboard/channels_/$channelId_/speakers': {
-      id: '/_main/dashboard/channels_/$channelId_/speakers'
-      path: '/channels/$channelId/speakers'
-      fullPath: '/dashboard/channels/$channelId/speakers'
-      preLoaderRoute: typeof MainDashboardChannelsChannelIdSpeakersRouteImport
+    '/_main/dashboard/admin_/failed-summaries': {
+      id: '/_main/dashboard/admin_/failed-summaries'
+      path: '/admin/failed-summaries'
+      fullPath: '/dashboard/admin/failed-summaries'
+      preLoaderRoute: typeof MainDashboardAdminFailedSummariesRouteImport
       parentRoute: typeof MainDashboardRoute
     }
-    '/_main/dashboard/channels_/$channelId_/speaker-queue': {
-      id: '/_main/dashboard/channels_/$channelId_/speaker-queue'
-      path: '/channels/$channelId/speaker-queue'
-      fullPath: '/dashboard/channels/$channelId/speaker-queue'
-      preLoaderRoute: typeof MainDashboardChannelsChannelIdSpeakerQueueRouteImport
+    '/_main/dashboard/admin_/failed-uploads': {
+      id: '/_main/dashboard/admin_/failed-uploads'
+      path: '/admin/failed-uploads'
+      fullPath: '/dashboard/admin/failed-uploads'
+      preLoaderRoute: typeof MainDashboardAdminFailedUploadsRouteImport
       parentRoute: typeof MainDashboardRoute
     }
-    '/_main/dashboard/channels_/$channelId_/playlists': {
-      id: '/_main/dashboard/channels_/$channelId_/playlists'
-      path: '/channels/$channelId/playlists'
-      fullPath: '/dashboard/channels/$channelId/playlists'
-      preLoaderRoute: typeof MainDashboardChannelsChannelIdPlaylistsRouteImport
+    '/_main/dashboard/admin_/featured': {
+      id: '/_main/dashboard/admin_/featured'
+      path: '/admin/featured'
+      fullPath: '/dashboard/admin/featured'
+      preLoaderRoute: typeof MainDashboardAdminFeaturedRouteImport
       parentRoute: typeof MainDashboardRoute
     }
-    '/_main/dashboard/channels_/$channelId_/members': {
-      id: '/_main/dashboard/channels_/$channelId_/members'
-      path: '/channels/$channelId/members'
-      fullPath: '/dashboard/channels/$channelId/members'
-      preLoaderRoute: typeof MainDashboardChannelsChannelIdMembersRouteImport
+    '/_main/dashboard/admin_/import-sources': {
+      id: '/_main/dashboard/admin_/import-sources'
+      path: '/admin/import-sources'
+      fullPath: '/dashboard/admin/import-sources'
+      preLoaderRoute: typeof MainDashboardAdminImportSourcesRouteImport
       parentRoute: typeof MainDashboardRoute
     }
-    '/_main/dashboard/channels_/$channelId_/live': {
-      id: '/_main/dashboard/channels_/$channelId_/live'
-      path: '/channels/$channelId/live'
-      fullPath: '/dashboard/channels/$channelId/live'
-      preLoaderRoute: typeof MainDashboardChannelsChannelIdLiveRouteImport
+    '/_main/dashboard/admin_/link-suggestions': {
+      id: '/_main/dashboard/admin_/link-suggestions'
+      path: '/admin/link-suggestions'
+      fullPath: '/dashboard/admin/link-suggestions'
+      preLoaderRoute: typeof MainDashboardAdminLinkSuggestionsRouteImport
       parentRoute: typeof MainDashboardRoute
     }
-    '/_main/dashboard/channels_/$channelId_/edit': {
-      id: '/_main/dashboard/channels_/$channelId_/edit'
-      path: '/channels/$channelId/edit'
-      fullPath: '/dashboard/channels/$channelId/edit'
-      preLoaderRoute: typeof MainDashboardChannelsChannelIdEditRouteImport
+    '/_main/dashboard/admin_/llm-eval': {
+      id: '/_main/dashboard/admin_/llm-eval'
+      path: '/admin/llm-eval'
+      fullPath: '/dashboard/admin/llm-eval'
+      preLoaderRoute: typeof MainDashboardAdminLlmEvalRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/admin_/maintenance': {
+      id: '/_main/dashboard/admin_/maintenance'
+      path: '/admin/maintenance'
+      fullPath: '/dashboard/admin/maintenance'
+      preLoaderRoute: typeof MainDashboardAdminMaintenanceRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/admin_/newsletter-lists': {
+      id: '/_main/dashboard/admin_/newsletter-lists'
+      path: '/admin/newsletter-lists'
+      fullPath: '/dashboard/admin/newsletter-lists'
+      preLoaderRoute: typeof MainDashboardAdminNewsletterListsRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/admin_/organization-tags': {
+      id: '/_main/dashboard/admin_/organization-tags'
+      path: '/admin/organization-tags'
+      fullPath: '/dashboard/admin/organization-tags'
+      preLoaderRoute: typeof MainDashboardAdminOrganizationTagsRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/admin_/organizations': {
+      id: '/_main/dashboard/admin_/organizations'
+      path: '/admin/organizations'
+      fullPath: '/dashboard/admin/organizations'
+      preLoaderRoute: typeof MainDashboardAdminOrganizationsRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/admin_/processing-uploads': {
+      id: '/_main/dashboard/admin_/processing-uploads'
+      path: '/admin/processing-uploads'
+      fullPath: '/dashboard/admin/processing-uploads'
+      preLoaderRoute: typeof MainDashboardAdminProcessingUploadsRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/admin_/reindex': {
+      id: '/_main/dashboard/admin_/reindex'
+      path: '/admin/reindex'
+      fullPath: '/dashboard/admin/reindex'
+      preLoaderRoute: typeof MainDashboardAdminReindexRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/admin_/reprocess': {
+      id: '/_main/dashboard/admin_/reprocess'
+      path: '/admin/reprocess'
+      fullPath: '/dashboard/admin/reprocess'
+      preLoaderRoute: typeof MainDashboardAdminReprocessRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/admin_/searches': {
+      id: '/_main/dashboard/admin_/searches'
+      path: '/admin/searches'
+      fullPath: '/dashboard/admin/searches'
+      preLoaderRoute: typeof MainDashboardAdminSearchesRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/admin_/speaker-queue': {
+      id: '/_main/dashboard/admin_/speaker-queue'
+      path: '/admin/speaker-queue'
+      fullPath: '/dashboard/admin/speaker-queue'
+      preLoaderRoute: typeof MainDashboardAdminSpeakerQueueRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/admin_/speakers': {
+      id: '/_main/dashboard/admin_/speakers'
+      path: '/admin/speakers'
+      fullPath: '/dashboard/admin/speakers'
+      preLoaderRoute: typeof MainDashboardAdminSpeakersRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/admin_/storage': {
+      id: '/_main/dashboard/admin_/storage'
+      path: '/admin/storage'
+      fullPath: '/dashboard/admin/storage'
+      preLoaderRoute: typeof MainDashboardAdminStorageRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/admin_/storage-audit': {
+      id: '/_main/dashboard/admin_/storage-audit'
+      path: '/admin/storage-audit'
+      fullPath: '/dashboard/admin/storage-audit'
+      preLoaderRoute: typeof MainDashboardAdminStorageAuditRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/admin_/upload-backups': {
+      id: '/_main/dashboard/admin_/upload-backups'
+      path: '/admin/upload-backups'
+      fullPath: '/dashboard/admin/upload-backups'
+      preLoaderRoute: typeof MainDashboardAdminUploadBackupsRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/admin_/users': {
+      id: '/_main/dashboard/admin_/users'
+      path: '/admin/users'
+      fullPath: '/dashboard/admin/users'
+      preLoaderRoute: typeof MainDashboardAdminUsersRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/channels_/$channelId': {
+      id: '/_main/dashboard/channels_/$channelId'
+      path: '/channels/$channelId'
+      fullPath: '/dashboard/channels/$channelId'
+      preLoaderRoute: typeof MainDashboardChannelsChannelIdRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/channels_/new': {
+      id: '/_main/dashboard/channels_/new'
+      path: '/channels/new'
+      fullPath: '/dashboard/channels/new'
+      preLoaderRoute: typeof MainDashboardChannelsNewRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/churches_/$churchId': {
+      id: '/_main/dashboard/churches_/$churchId'
+      path: '/churches/$churchId'
+      fullPath: '/dashboard/churches/$churchId'
+      preLoaderRoute: typeof MainDashboardChurchesChurchIdRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/churches_/new': {
+      id: '/_main/dashboard/churches_/new'
+      path: '/churches/new'
+      fullPath: '/dashboard/churches/new'
+      preLoaderRoute: typeof MainDashboardChurchesNewRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/invitations_/accept': {
+      id: '/_main/dashboard/invitations_/accept'
+      path: '/invitations/accept'
+      fullPath: '/dashboard/invitations/accept'
+      preLoaderRoute: typeof MainDashboardInvitationsAcceptRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/organizations_/$orgId': {
+      id: '/_main/dashboard/organizations_/$orgId'
+      path: '/organizations/$orgId'
+      fullPath: '/dashboard/organizations/$orgId'
+      preLoaderRoute: typeof MainDashboardOrganizationsOrgIdRouteImport
       parentRoute: typeof MainDashboardRoute
     }
     '/_main/dashboard/account_/donations_/$year': {
@@ -2575,11 +2496,102 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainDashboardAccountDonationsYearRouteImport
       parentRoute: typeof MainDashboardRoute
     }
-    '/_main/dashboard/channels_/$channelId_/uploads_/$uploadId': {
-      id: '/_main/dashboard/channels_/$channelId_/uploads_/$uploadId'
-      path: '/channels/$channelId/uploads/$uploadId'
-      fullPath: '/dashboard/channels/$channelId/uploads/$uploadId'
-      preLoaderRoute: typeof MainDashboardChannelsChannelIdUploadsUploadIdRouteImport
+    '/_main/dashboard/channels_/$channelId_/edit': {
+      id: '/_main/dashboard/channels_/$channelId_/edit'
+      path: '/channels/$channelId/edit'
+      fullPath: '/dashboard/channels/$channelId/edit'
+      preLoaderRoute: typeof MainDashboardChannelsChannelIdEditRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/channels_/$channelId_/live': {
+      id: '/_main/dashboard/channels_/$channelId_/live'
+      path: '/channels/$channelId/live'
+      fullPath: '/dashboard/channels/$channelId/live'
+      preLoaderRoute: typeof MainDashboardChannelsChannelIdLiveRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/channels_/$channelId_/members': {
+      id: '/_main/dashboard/channels_/$channelId_/members'
+      path: '/channels/$channelId/members'
+      fullPath: '/dashboard/channels/$channelId/members'
+      preLoaderRoute: typeof MainDashboardChannelsChannelIdMembersRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/channels_/$channelId_/playlists': {
+      id: '/_main/dashboard/channels_/$channelId_/playlists'
+      path: '/channels/$channelId/playlists'
+      fullPath: '/dashboard/channels/$channelId/playlists'
+      preLoaderRoute: typeof MainDashboardChannelsChannelIdPlaylistsRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/channels_/$channelId_/speaker-queue': {
+      id: '/_main/dashboard/channels_/$channelId_/speaker-queue'
+      path: '/channels/$channelId/speaker-queue'
+      fullPath: '/dashboard/channels/$channelId/speaker-queue'
+      preLoaderRoute: typeof MainDashboardChannelsChannelIdSpeakerQueueRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/channels_/$channelId_/speakers': {
+      id: '/_main/dashboard/channels_/$channelId_/speakers'
+      path: '/channels/$channelId/speakers'
+      fullPath: '/dashboard/channels/$channelId/speakers'
+      preLoaderRoute: typeof MainDashboardChannelsChannelIdSpeakersRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/channels_/$channelId_/uploads': {
+      id: '/_main/dashboard/channels_/$channelId_/uploads'
+      path: '/channels/$channelId/uploads'
+      fullPath: '/dashboard/channels/$channelId/uploads'
+      preLoaderRoute: typeof MainDashboardChannelsChannelIdUploadsRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/churches_/$churchId_/channels': {
+      id: '/_main/dashboard/churches_/$churchId_/channels'
+      path: '/churches/$churchId/channels'
+      fullPath: '/dashboard/churches/$churchId/channels'
+      preLoaderRoute: typeof MainDashboardChurchesChurchIdChannelsRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/churches_/$churchId_/edit': {
+      id: '/_main/dashboard/churches_/$churchId_/edit'
+      path: '/churches/$churchId/edit'
+      fullPath: '/dashboard/churches/$churchId/edit'
+      preLoaderRoute: typeof MainDashboardChurchesChurchIdEditRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/churches_/$churchId_/leaders': {
+      id: '/_main/dashboard/churches_/$churchId_/leaders'
+      path: '/churches/$churchId/leaders'
+      fullPath: '/dashboard/churches/$churchId/leaders'
+      preLoaderRoute: typeof MainDashboardChurchesChurchIdLeadersRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/churches_/$churchId_/members': {
+      id: '/_main/dashboard/churches_/$churchId_/members'
+      path: '/churches/$churchId/members'
+      fullPath: '/dashboard/churches/$churchId/members'
+      preLoaderRoute: typeof MainDashboardChurchesChurchIdMembersRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/organizations_/$orgId_/associations': {
+      id: '/_main/dashboard/organizations_/$orgId_/associations'
+      path: '/organizations/$orgId/associations'
+      fullPath: '/dashboard/organizations/$orgId/associations'
+      preLoaderRoute: typeof MainDashboardOrganizationsOrgIdAssociationsRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/organizations_/$orgId_/edit': {
+      id: '/_main/dashboard/organizations_/$orgId_/edit'
+      path: '/organizations/$orgId/edit'
+      fullPath: '/dashboard/organizations/$orgId/edit'
+      preLoaderRoute: typeof MainDashboardOrganizationsOrgIdEditRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/organizations_/$orgId_/members': {
+      id: '/_main/dashboard/organizations_/$orgId_/members'
+      path: '/organizations/$orgId/members'
+      fullPath: '/dashboard/organizations/$orgId/members'
+      preLoaderRoute: typeof MainDashboardOrganizationsOrgIdMembersRouteImport
       parentRoute: typeof MainDashboardRoute
     }
     '/_main/dashboard/channels_/$channelId_/playlists_/$playlistId': {
@@ -2587,6 +2599,13 @@ declare module '@tanstack/react-router' {
       path: '/channels/$channelId/playlists/$playlistId'
       fullPath: '/dashboard/channels/$channelId/playlists/$playlistId'
       preLoaderRoute: typeof MainDashboardChannelsChannelIdPlaylistsPlaylistIdRouteImport
+      parentRoute: typeof MainDashboardRoute
+    }
+    '/_main/dashboard/channels_/$channelId_/uploads_/$uploadId': {
+      id: '/_main/dashboard/channels_/$channelId_/uploads_/$uploadId'
+      path: '/channels/$channelId/uploads/$uploadId'
+      fullPath: '/dashboard/channels/$channelId/uploads/$uploadId'
+      preLoaderRoute: typeof MainDashboardChannelsChannelIdUploadsUploadIdRouteImport
       parentRoute: typeof MainDashboardRoute
     }
   }
@@ -2638,12 +2657,12 @@ interface MainDashboardRouteChildren {
   MainDashboardAdminDeletingUploadsRoute: typeof MainDashboardAdminDeletingUploadsRoute
   MainDashboardAdminDonationsRoute: typeof MainDashboardAdminDonationsRoute
   MainDashboardAdminDuplicateUploadsRoute: typeof MainDashboardAdminDuplicateUploadsRoute
-  MainDashboardAdminLinkSuggestionsRoute: typeof MainDashboardAdminLinkSuggestionsRoute
   MainDashboardAdminFailedAnnotationsRoute: typeof MainDashboardAdminFailedAnnotationsRoute
   MainDashboardAdminFailedSummariesRoute: typeof MainDashboardAdminFailedSummariesRoute
   MainDashboardAdminFailedUploadsRoute: typeof MainDashboardAdminFailedUploadsRoute
   MainDashboardAdminFeaturedRoute: typeof MainDashboardAdminFeaturedRoute
   MainDashboardAdminImportSourcesRoute: typeof MainDashboardAdminImportSourcesRoute
+  MainDashboardAdminLinkSuggestionsRoute: typeof MainDashboardAdminLinkSuggestionsRoute
   MainDashboardAdminLlmEvalRoute: typeof MainDashboardAdminLlmEvalRoute
   MainDashboardAdminMaintenanceRoute: typeof MainDashboardAdminMaintenanceRoute
   MainDashboardAdminNewsletterListsRoute: typeof MainDashboardAdminNewsletterListsRoute
@@ -2706,8 +2725,6 @@ const MainDashboardRouteChildren: MainDashboardRouteChildren = {
   MainDashboardAdminDonationsRoute: MainDashboardAdminDonationsRoute,
   MainDashboardAdminDuplicateUploadsRoute:
     MainDashboardAdminDuplicateUploadsRoute,
-  MainDashboardAdminLinkSuggestionsRoute:
-    MainDashboardAdminLinkSuggestionsRoute,
   MainDashboardAdminFailedAnnotationsRoute:
     MainDashboardAdminFailedAnnotationsRoute,
   MainDashboardAdminFailedSummariesRoute:
@@ -2715,6 +2732,8 @@ const MainDashboardRouteChildren: MainDashboardRouteChildren = {
   MainDashboardAdminFailedUploadsRoute: MainDashboardAdminFailedUploadsRoute,
   MainDashboardAdminFeaturedRoute: MainDashboardAdminFeaturedRoute,
   MainDashboardAdminImportSourcesRoute: MainDashboardAdminImportSourcesRoute,
+  MainDashboardAdminLinkSuggestionsRoute:
+    MainDashboardAdminLinkSuggestionsRoute,
   MainDashboardAdminLlmEvalRoute: MainDashboardAdminLlmEvalRoute,
   MainDashboardAdminMaintenanceRoute: MainDashboardAdminMaintenanceRoute,
   MainDashboardAdminNewsletterListsRoute:
@@ -2829,6 +2848,7 @@ const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren)
 
 interface AuthRouteChildren {
   AuthEmailSignInRoute: typeof AuthEmailSignInRoute
+  AuthFinishRegistrationRoute: typeof AuthFinishRegistrationRoute
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthLogoutRoute: typeof AuthLogoutRoute
@@ -2839,6 +2859,7 @@ interface AuthRouteChildren {
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthEmailSignInRoute: AuthEmailSignInRoute,
+  AuthFinishRegistrationRoute: AuthFinishRegistrationRoute,
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthLogoutRoute: AuthLogoutRoute,

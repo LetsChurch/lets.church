@@ -1,4 +1,6 @@
-import { AppUser, AppUserEmail, db } from '@letschurch/db';
+import { randomUUID } from 'node:crypto';
+
+import { AppUser, AppUserPendingEmail, db } from '@letschurch/db';
 import { PART_SIZE } from '@letschurch/s3';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
 import { staticMeta } from '@letschurch/temporal/util/dashboard-links';
@@ -9,7 +11,6 @@ import { eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 import { z } from 'zod';
 
-import { releaseDonorEmailForUser } from '@/donations/identity';
 import { passwordChangeSchema, profileUpdateSchema } from '@/schemas/account';
 import {
   finalizeMultipartUploadSchema,
@@ -22,8 +23,10 @@ import {
 } from '@/temporal';
 import { normalizeAuthEmail } from '@/util/auth-token';
 import { mantineAvatarLg2x } from '@/util/avatar-sizes';
+import { sendEmailChangeNotice } from '@/util/email-change-notice';
 import logger from '@/util/logger';
 import { hasAcceptedParticipationAgreements } from '@/util/participation';
+import { isPendingEmailExpired } from '@/util/pending-email';
 import {
   enforcePublicActionRateLimit,
   PUBLIC_ACTION_RATE_LIMIT_MESSAGE,
@@ -38,7 +41,13 @@ const moduleLogger = logger.child({
   module: 'trpc/procedures/account',
 });
 
-type ProfileUpdateResponse = { error: false } | { error: string };
+type ProfileUpdateResponse =
+  | {
+      error: false;
+      /** Set when the new address waits for its confirmation link. */
+      pendingEmail: string | null;
+    }
+  | { error: string };
 type PasswordChangeResponse = { error: false } | { error: string };
 
 export const accountProcedures = {
@@ -105,6 +114,11 @@ export const accountProcedures = {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
     }
 
+    const pending = await db.query.AppUserPendingEmail.findFirst({
+      where: (t, { eq }) => eq(t.appUserId, ctx.session.appUserId),
+      columns: { email: true, createdAt: true },
+    });
+
     const primaryEmail = user.emails[0]?.email || '';
     const avatarUrl = imageUrl(user.avatarLocation, user.avatarPath, {
       resize: mantineAvatarLg2x,
@@ -115,6 +129,10 @@ export const accountProcedures = {
       username: user.username,
       fullName: user.fullName || '',
       email: primaryEmail,
+      pendingEmail:
+        pending && !isPendingEmailExpired(pending.createdAt)
+          ? pending.email
+          : null,
       avatarUrl,
     };
   }),
@@ -155,24 +173,11 @@ export const accountProcedures = {
           return { error: 'Username is already taken' };
         }
 
-        const existingEmailRecord = await db.query.AppUserEmail.findFirst({
-          where: (t, { eq }) => eq(t.email, email),
-        });
-
-        if (
-          existingEmailRecord &&
-          existingEmailRecord.appUserId !== ctx.session.appUserId
-        ) {
-          moduleLogger.warn(
-            {
-              context: {
-                userId: ctx.session.appUserId,
-              },
-            },
-            'Profile update failed - email taken',
-          );
-          return { error: 'Email is already taken' };
-        }
+        // Whether another account already uses the address is deliberately
+        // not checked here: answering "taken" would let any signed-in user
+        // test which addresses are registered. Every change waits for the
+        // new inbox to confirm, and the confirmation step (which only that
+        // inbox's owner reaches) refuses an address another account holds.
 
         const heldEmail = await db.query.AppUserEmail.findFirst({
           where: (t, { eq }) => eq(t.appUserId, ctx.session.appUserId),
@@ -198,7 +203,7 @@ export const accountProcedures = {
           }
         }
 
-        const emailChanged = await db.transaction(async (tx) => {
+        const emailChange = await db.transaction(async (tx) => {
           await tx
             .update(AppUser)
             .set({
@@ -213,35 +218,62 @@ export const accountProcedures = {
           });
 
           if (
-            !currentEmail ||
-            normalizeAuthEmail(currentEmail.email) !== email
+            currentEmail &&
+            normalizeAuthEmail(currentEmail.email) === email
           ) {
-            if (currentEmail) {
-              await releaseDonorEmailForUser(
-                tx,
-                ctx.session.appUserId,
-                currentEmail.email,
-              );
-              await tx
-                .delete(AppUserEmail)
-                .where(eq(AppUserEmail.id, currentEmail.id));
-            }
-
-            await tx.insert(AppUserEmail).values({
-              email,
-              appUserId: ctx.session.appUserId,
-            });
-            return true;
+            // Saving the current address again cancels any pending change.
+            await tx
+              .delete(AppUserPendingEmail)
+              .where(eq(AppUserPendingEmail.appUserId, ctx.session.appUserId));
+            return null;
           }
-          return false;
+
+          // Keep the current address until the new inbox confirms. If the
+          // new address is mistyped, isn't the user's, or belongs to another
+          // account, it never joins this one: its owner can't sign in to the
+          // account by email, and the user keeps signing in and recovering
+          // through the address they have. Every change takes this path, so
+          // the response is the same whether or not the address is free. A
+          // new request replaces any older one, with a fresh key so earlier
+          // links stop working.
+          await tx
+            .insert(AppUserPendingEmail)
+            .values({ appUserId: ctx.session.appUserId, email })
+            .onConflictDoUpdate({
+              target: AppUserPendingEmail.appUserId,
+              set: { email, key: randomUUID(), createdAt: new Date() },
+            });
+          return {
+            // Only a proven inbox is worth warning.
+            oldEmail: currentEmail?.verifiedAt ? currentEmail.email : null,
+          };
         });
 
-        // A changed address starts unverified. Send the verification link
-        // right away so it doesn't stay that way: until it's verified, an
-        // email sign-in to it is treated as an account takeover (password
-        // cleared, other devices signed out), and donations to it aren't
-        // linked to the account.
-        if (emailChanged) {
+        // Tell the verified address that's being replaced, so a change made
+        // from a stolen session doesn't go unnoticed.
+        if (emailChange?.oldEmail) {
+          try {
+            await sendEmailChangeNotice({
+              stage: 'requested',
+              appUserId: ctx.session.appUserId,
+              username: input.username,
+              oldEmail: emailChange.oldEmail,
+              newEmail: email,
+            });
+          } catch (error) {
+            moduleLogger.error(
+              {
+                context: {
+                  userId: ctx.session.appUserId,
+                  error: error instanceof Error ? error.message : String(error),
+                },
+              },
+              'Email change requested, but the notice to the old address could not be scheduled',
+            );
+          }
+        }
+
+        if (emailChange) {
           try {
             await startBackground('postUserRegistrationWorkflow', {
               ...staticMeta({
@@ -282,7 +314,10 @@ export const accountProcedures = {
           'Profile update successful',
         );
 
-        return { error: false };
+        return {
+          error: false,
+          pendingEmail: emailChange ? email : null,
+        };
       } catch (e) {
         moduleLogger.error(
           {
@@ -297,6 +332,13 @@ export const accountProcedures = {
         return { error: 'Error updating profile, please try again!' };
       }
     }),
+
+  cancelEmailChange: authProcedure.mutation(async ({ ctx }) => {
+    await db
+      .delete(AppUserPendingEmail)
+      .where(eq(AppUserPendingEmail.appUserId, ctx.session.appUserId));
+    return { cancelled: true as const };
+  }),
 
   changePassword: authProcedure
     .input(passwordChangeSchema)

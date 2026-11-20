@@ -1,15 +1,6 @@
-import { IconInfoCircle } from '@tabler/icons-react';
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from '@tanstack/react-query';
-import {
-  createFileRoute,
-  Link,
-  redirect,
-  useRouter,
-} from '@tanstack/react-router';
+import { IconInfoCircle, IconMail } from '@tabler/icons-react';
+import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
+import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
 import { z } from 'zod';
 
@@ -40,10 +31,11 @@ export const Route = createFileRoute('/auth_/register')({
 function RouteComponent() {
   const search = Route.useSearch();
   const [error, setError] = useState<string | false>(false);
+  // The address the finish link went to. Registration never signs in
+  // directly: the account is created from that link.
+  const [sentTo, setSentTo] = useState<string | null>(null);
 
-  const router = useRouter();
   const trpc = useTRPC();
-  const queryClient = useQueryClient();
   const { data: env } = useSuspenseQuery(
     trpc.common.getClientEnv.queryOptions(),
   );
@@ -57,13 +49,7 @@ function RouteComponent() {
           return;
         }
 
-        // Registering logs the user in, changing the authenticated identity, so
-        // invalidate the whole query cache before re-running loaders. Without
-        // this the default staleTime keeps the logged-out session data "fresh"
-        // and the UI (e.g. the header's login button) never updates.
-        await queryClient.invalidateQueries();
-        await router.invalidate();
-        await router.navigate({ to: '/' });
+        setSentTo(form.getFieldValue('email'));
       },
       onError: (error) => {
         // Ignore cancelled/aborted errors - they happen when navigating away during registration
@@ -99,6 +85,39 @@ function RouteComponent() {
       registerMutation.mutate(value);
     },
   });
+
+  if (sentTo) {
+    return (
+      <div className="border-fancy-pants rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">
+        <Text size="lg" fw={500}>
+          Check your email
+        </Text>
+        <Alert
+          title="One more step"
+          icon={<IconMail />}
+          color="green"
+          className="mt-4"
+        >
+          We sent an email to <strong>{sentTo}</strong>. Use the link in it to
+          finish creating your account. It works for 24 hours.
+        </Alert>
+        <Text size="sm" c="dimmed" className="mt-4">
+          Don&apos;t see it? Check your spam folder, or{' '}
+          <button
+            type="button"
+            className="text-blue-600 underline underline-offset-2 dark:text-blue-400"
+            onClick={() => {
+              setSentTo(null);
+              form.setFieldValue('hcaptchaToken', '');
+            }}
+          >
+            go back and check the address
+          </button>
+          .
+        </Text>
+      </div>
+    );
+  }
 
   return (
     <div className="border-fancy-pants rounded-lg bg-white p-5 shadow-sm dark:bg-zinc-900">

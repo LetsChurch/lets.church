@@ -1,10 +1,16 @@
-import { IconPhoto, IconUpload, IconX } from '@tabler/icons-react';
+import {
+  IconInfoCircle,
+  IconPhoto,
+  IconUpload,
+  IconX,
+} from '@tabler/icons-react';
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute, redirect } from '@tanstack/react-router';
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useState } from 'react';
 
 import {
   ActionIcon,
+  Alert,
   Button,
   Loader,
   Text,
@@ -19,8 +25,52 @@ import { trpcClient, useTRPC } from '@/trpc/react';
 import { preloadImage } from '@/util/image-preload';
 import { doMultipartUpload } from '@/util/multipart-upload';
 
+const EMAIL_CHANGE_RESULTS = [
+  'confirmed',
+  'expired',
+  'taken',
+  'failed',
+] as const;
+type EmailChangeResult = (typeof EMAIL_CHANGE_RESULTS)[number];
+
+// Shown after following an email-change confirmation link (/auth/verify).
+const EMAIL_CHANGE_MESSAGES: Record<
+  EmailChangeResult,
+  { title: string; message: string; color: 'green' | 'red' }
+> = {
+  confirmed: {
+    title: 'Email address changed',
+    message: 'Your new email address is confirmed and now on your account.',
+    color: 'green',
+  },
+  expired: {
+    title: 'That link has expired',
+    message:
+      'Your email address was not changed. Enter the new address again to get a new link.',
+    color: 'red',
+  },
+  taken: {
+    title: 'That address is taken',
+    message:
+      'Another account uses that address, so your email address was not changed.',
+    color: 'red',
+  },
+  failed: {
+    title: 'Something went wrong',
+    message:
+      'Your email address was not changed. Try the link again in a moment.',
+    color: 'red',
+  },
+};
+
 export const Route = createFileRoute('/_main/dashboard/account_/profile')({
   component: ProfilePage,
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { emailChange?: EmailChangeResult } =>
+    EMAIL_CHANGE_RESULTS.includes(search.emailChange as EmailChangeResult)
+      ? { emailChange: search.emailChange as EmailChangeResult }
+      : {},
   beforeLoad: async ({ context }) => {
     const hasSession = await context.queryClient.fetchQuery(
       context.trpc.common.hasValidSession.queryOptions(),
@@ -45,6 +95,8 @@ export const Route = createFileRoute('/_main/dashboard/account_/profile')({
 
 function ProfilePage() {
   const trpc = useTRPC();
+  const { emailChange } = Route.useSearch();
+  const navigate = useNavigate();
 
   const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -136,7 +188,13 @@ function ProfilePage() {
 
         // Only show success message if not processing avatar
         // (avatar processing success will be shown by the polling effect)
-        if (!isProcessingAvatar) {
+        if ('pendingEmail' in data && data.pendingEmail) {
+          showSuccess({
+            title: 'Check your new inbox',
+            message: `We sent a confirmation link to ${data.pendingEmail}. Your email address stays the same until you click it.`,
+          });
+          if (!isProcessingAvatar) resetDroppedAvatar();
+        } else if (!isProcessingAvatar) {
           showSuccess({
             title: 'Success',
             message: 'Profile updated successfully!',
@@ -144,7 +202,16 @@ function ProfilePage() {
           resetDroppedAvatar();
         }
 
-        await profileQuery.refetch();
+        // A pending change leaves the account's address as it was, so show
+        // what's saved rather than what was typed.
+        const { data: profile } = await profileQuery.refetch();
+        if (profile) {
+          form.reset({
+            fullName: profile.fullName,
+            email: profile.email,
+            username: profile.username,
+          });
+        }
       },
       onError: () => {
         showFailure({
@@ -154,6 +221,24 @@ function ProfilePage() {
       },
     }),
   );
+
+  const cancelEmailChangeMutation = useMutation(
+    trpc.account.cancelEmailChange.mutationOptions({
+      onSuccess: async () => {
+        await profileQuery.refetch();
+      },
+      onError: () => {
+        showFailure({
+          title: 'Error',
+          message: 'Could not cancel the email change, please try again!',
+        });
+      },
+    }),
+  );
+
+  const emailChangeMessage = emailChange
+    ? EMAIL_CHANGE_MESSAGES[emailChange]
+    : null;
 
   const form = useAppForm({
     defaultValues: {
@@ -199,6 +284,19 @@ function ProfilePage() {
         <div className="md:col-span-8">
           <div className="flex flex-col gap-5">
             <Title order={1}>Profile Information</Title>
+            {emailChangeMessage ? (
+              <Alert
+                title={emailChangeMessage.title}
+                icon={<IconInfoCircle />}
+                color={emailChangeMessage.color}
+                withCloseButton
+                onClose={() =>
+                  void navigate({ to: '.', search: {}, replace: true })
+                }
+              >
+                {emailChangeMessage.message}
+              </Alert>
+            ) : null}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -226,6 +324,29 @@ function ProfilePage() {
                     />
                   )}
                 </form.AppField>
+
+                {profileQuery.data.pendingEmail ? (
+                  <Alert
+                    title="Email change waiting for confirmation"
+                    icon={<IconInfoCircle />}
+                  >
+                    <Text size="sm">
+                      We sent a link to{' '}
+                      <strong>{profileQuery.data.pendingEmail}</strong>. Your
+                      email address stays {profileQuery.data.email} until you
+                      click it. The link works for 7 days.
+                    </Text>
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      className="mt-2"
+                      loading={cancelEmailChangeMutation.isPending}
+                      onClick={() => cancelEmailChangeMutation.mutate()}
+                    >
+                      Cancel email change
+                    </Button>
+                  </Alert>
+                ) : null}
 
                 <form.AppField name="username">
                   {(field) => (

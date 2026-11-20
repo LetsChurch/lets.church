@@ -32,3 +32,12 @@ export function safeRedirect(redirectTo?: string): string | undefined {
     return undefined;
   }
 }
+
+/** Whether a login redirect returns to an email verification link. */
+export function isVerifyEmailRedirect(redirectTo?: string): boolean {
+  const dest = safeRedirect(redirectTo);
+  return (
+    dest !== undefined &&
+    new URL(dest, RESOLVE_ORIGIN).pathname === '/auth/verify'
+  );
+}

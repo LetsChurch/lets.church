@@ -18,6 +18,11 @@ export type PostUserRegistrationArgs = {
   subscribeToNewsletter: boolean;
   /** Defaults to 'registration' (welcome wording). */
   verificationKind?: 'registration' | 'email-change';
+  /**
+   * False when the address is already verified (registration finished from
+   * the emailed link), so only the newsletter step runs. Defaults to true.
+   */
+  sendVerification?: boolean;
 };
 
 export async function postUserRegistrationWorkflow(
@@ -25,12 +30,13 @@ export async function postUserRegistrationWorkflow(
 ) {
   await Promise.all(
     [
-      sendVerificationEmail(
-        args.userId,
-        args.username,
-        args.email,
-        args.verificationKind ?? 'registration',
-      ),
+      args.sendVerification !== false &&
+        sendVerificationEmail(
+          args.userId,
+          args.username,
+          args.email,
+          args.verificationKind ?? 'registration',
+        ),
       args.subscribeToNewsletter && subscribeNewsletter(args.email),
     ].filter(Boolean),
   );
