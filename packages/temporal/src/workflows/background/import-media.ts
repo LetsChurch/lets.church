@@ -184,7 +184,15 @@ export async function importMediaWorkflow({
       await startChild(processImageWorkflow, {
         taskQueue,
         workflowId: `processImage:${thumbnailUploadKey}`,
-        args: [uploadRecordId, thumbnailUploadKey, 'thumbnail'],
+        // Order the imported thumbnail by when this import started, not the
+        // child run's start: a retried child would otherwise look newer than
+        // a thumbnail choice the editor made in between (see setUploadThumbnail).
+        args: [
+          uploadRecordId,
+          thumbnailUploadKey,
+          'thumbnail',
+          workflowInfo().startTime.toISOString(),
+        ],
         priority: { priorityKey: PRIORITY_IMPORT },
         parentClosePolicy: ParentClosePolicy.ABANDON,
         typedSearchAttributes: [

@@ -24,6 +24,8 @@ export async function processImageWorkflow(
   targetId: string,
   s3UploadKey: string,
   postProcess: UploadPostProcessValue,
+  // When the uploader finished (web server clock); see uploadDoneSignal.
+  requestedAt?: string,
 ) {
   const { path, blurhash, storageLocation } = await processImage(
     postProcess,
@@ -32,7 +34,12 @@ export async function processImageWorkflow(
   );
 
   if (postProcess === 'thumbnail') {
-    await setUploadThumbnail(targetId, path, blurhash);
+    // A thumbnail choice the editor made after asking for this image
+    // supersedes it. `requestedAt` is absent mid-deploy (a web pod or parent
+    // workflow from before it existed); the image is then applied unguarded
+    // and unstamped, which the upload page's poll recognizes as success. Don't
+    // substitute another time: the page only knows the one it was given.
+    await setUploadThumbnail(targetId, path, blurhash, requestedAt);
   } else if (postProcess === 'profileAvatar') {
     await setProfileAvatar(targetId, path, blurhash, storageLocation);
   } else if (postProcess === 'channelAvatar') {

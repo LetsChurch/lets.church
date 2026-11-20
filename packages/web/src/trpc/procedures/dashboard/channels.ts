@@ -54,7 +54,6 @@ import {
 } from '@/imports/series';
 import {
   finalizeMultipartUploadSchema,
-  getThumbnailResize,
   multipartUploadSchema,
 } from '@/schemas/common';
 import {
@@ -137,6 +136,7 @@ import {
   placeMediaUpload,
   recordLocation,
 } from '@/util/storage';
+import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { titleFromFileName } from '@/util/upload-title';
 import { uuidTranslator } from '@/util/uuid';
 
@@ -160,6 +160,25 @@ const moduleLogger = logger.child({
 });
 
 const MAX_GENERATED_THUMBNAILS = 1000;
+
+// Frames extracted from the video (current `screenshot_v1_NNN.jpg` and
+// legacy `NNNNN.jpg`), as opposed to an image the editor uploaded. Used both in
+// JS and as a Postgres regex (`~`), so it sticks to the common syntax.
+const VIDEO_FRAME_PATTERN = '/(screenshot_v[0-9]+_[0-9]+|[0-9]{5})\\.jpg$';
+const VIDEO_FRAME_REGEX = new RegExp(VIDEO_FRAME_PATTERN);
+
+function isVideoFrame(path: string): boolean {
+  return VIDEO_FRAME_REGEX.test(path);
+}
+
+// SET expressions that keep an uploaded-image override in
+// `customThumbnailPath` before the override is replaced, so the editor can
+// switch back to it. Older rows only have their uploaded image as the
+// override. Postgres evaluates them against the row as it was before the
+// UPDATE.
+const overrideIsUpload = sql`(${UploadRecord.overrideThumbnailPath} is not null and ${UploadRecord.overrideThumbnailPath} !~ ${VIDEO_FRAME_PATTERN})`;
+const keptCustomThumbnailPath = sql`case when ${overrideIsUpload} then ${UploadRecord.overrideThumbnailPath} else ${UploadRecord.customThumbnailPath} end`;
+const keptCustomThumbnailBlurhash = sql`case when ${overrideIsUpload} then ${UploadRecord.overrideThumbnailBlurhash} else ${UploadRecord.customThumbnailBlurhash} end`;
 
 function generatedThumbnailPath(uploadId: string, index: number) {
   return `${uploadId}/screenshot_v1_${String(index).padStart(3, '0')}.jpg`;
@@ -2377,6 +2396,8 @@ export const channelRouter = router({
             defaultThumbnailPath: UploadRecord.defaultThumbnailPath,
             overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
             storageLocation: UploadRecord.storageLocation,
+            channelDefaultThumbnailPath: Channel.defaultThumbnailPath,
+            channelDefaultThumbnailLocation: Channel.defaultThumbnailLocation,
             isFeatured: isNotNull(FeaturedUpload.uploadRecordId).mapWith(
               Boolean,
             ),
@@ -2384,6 +2405,7 @@ export const channelRouter = router({
             commentCount: sql<number>`coalesce(${commentCountSq.cnt}, 0)::int`,
           })
           .from(UploadRecord)
+          .innerJoin(Channel, eq(Channel.id, UploadRecord.channelId))
           .leftJoin(
             FeaturedUpload,
             eq(UploadRecord.id, FeaturedUpload.uploadRecordId),
@@ -2418,11 +2440,15 @@ export const channelRouter = router({
       const totalPages = Math.ceil(totalCount / input.limit);
 
       const uploadsWithThumbnails = uploads.map((upload) => {
-        const thumbnailUrl = imageUrl(
-          upload.storageLocation,
-          upload.overrideThumbnailPath ?? upload.defaultThumbnailPath,
-          getThumbnailResize('table'),
-        );
+        const thumbnailUrl = resolveThumbnailUrl({
+          storageLocation: upload.storageLocation,
+          overrideThumbnailPath: upload.overrideThumbnailPath,
+          defaultThumbnailPath: upload.defaultThumbnailPath,
+          channelDefaultThumbnailPath: upload.channelDefaultThumbnailPath,
+          channelDefaultThumbnailLocation:
+            upload.channelDefaultThumbnailLocation,
+          size: 'table',
+        });
 
         return {
           id: upload.id,
@@ -2605,6 +2631,10 @@ export const channelRouter = router({
           downloadsEnabled: true,
           defaultThumbnailPath: true,
           overrideThumbnailPath: true,
+          autoThumbnailPath: true,
+          customThumbnailPath: true,
+          useChannelDefaultThumbnail: true,
+          thumbnailChosenAt: true,
           storageLocation: true,
           thumbnailCount: true,
           uploadFinalized: true,
@@ -2635,6 +2665,8 @@ export const channelRouter = router({
             columns: {
               id: true,
               name: true,
+              defaultThumbnailPath: true,
+              defaultThumbnailLocation: true,
             },
             with: {
               memberships: {
@@ -2689,6 +2721,8 @@ export const channelRouter = router({
       const {
         defaultThumbnailPath,
         overrideThumbnailPath,
+        autoThumbnailPath,
+        customThumbnailPath,
         storageLocation,
         thumbnailCount,
         featuredUpload,
@@ -2709,11 +2743,67 @@ export const channelRouter = router({
       } = upload;
       const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
 
-      const thumbnailUrl = imageUrl(storageLocation, thumbnailPath);
+      const {
+        defaultThumbnailPath: channelDefaultThumbnailPath,
+        defaultThumbnailLocation: channelDefaultThumbnailLocation,
+        ...channelRest
+      } = upload.channel;
+      const channelDefaultThumbnailUrl = imageUrl(
+        channelDefaultThumbnailLocation,
+        channelDefaultThumbnailPath,
+      );
+      // With no thumbnail of its own the upload shows the channel default
+      // everywhere (see resolveThumbnailUrl), so preview it the same way here.
+      const hasOwnThumbnail = thumbnailPath !== null;
+      const thumbnailUrl = hasOwnThumbnail
+        ? imageUrl(storageLocation, thumbnailPath)
+        : channelDefaultThumbnailUrl;
       const overrideThumbnailUrl = imageUrl(
         storageLocation,
         overrideThumbnailPath,
       );
+      // The video's automatic frame, whether or not it's the one shown. Rows
+      // transcoded before `autoThumbnailPath` existed still hold it in
+      // `defaultThumbnailPath`.
+      const videoThumbnailUrl = imageUrl(
+        storageLocation,
+        autoThumbnailPath ?? defaultThumbnailPath,
+      );
+
+      // The editor's last uploaded image, whether or not it's the one shown.
+      // Rows from before `customThumbnailPath` only have it as the override.
+      const uploadedThumbnailPath =
+        customThumbnailPath ??
+        (overrideThumbnailPath && !isVideoFrame(overrideThumbnailPath)
+          ? overrideThumbnailPath
+          : null);
+      const uploadedThumbnailUrl = imageUrl(
+        storageLocation,
+        uploadedThumbnailPath,
+      );
+      // What the upload shows. A picked frame that is the automatic frame
+      // counts as 'video'. 'pending' = nothing of its own yet while it may
+      // still get an automatic frame (transcoding unfinished) and the editor
+      // hasn't chosen the channel default; once transcoding is done without
+      // one (audio-only, or no frame extracted) it shows the channel default.
+      const videoThumbnailPath = autoThumbnailPath ?? defaultThumbnailPath;
+      const thumbnailSource:
+        | 'uploaded'
+        | 'frame'
+        | 'video'
+        | 'channelDefault'
+        | 'pending' = overrideThumbnailPath
+        ? !isVideoFrame(overrideThumbnailPath)
+          ? 'uploaded'
+          : overrideThumbnailPath === videoThumbnailPath
+            ? 'video'
+            : 'frame'
+        : defaultThumbnailPath
+          ? 'video'
+          : uploadRest.useChannelDefaultThumbnail ||
+              uploadRest.transcodingFinishedAt
+            ? 'channelDefault'
+            : 'pending';
 
       // Generate media source URLs based on available variants
       const hasVideo = variants.some((v) => v.startsWith('VIDEO'));
@@ -2802,6 +2892,10 @@ export const channelRouter = router({
           ...uploadRest,
           thumbnailUrl,
           overrideThumbnailUrl,
+          channelDefaultThumbnailUrl,
+          videoThumbnailUrl,
+          uploadedThumbnailUrl,
+          thumbnailSource,
           generatedThumbnailsReady,
           generatedThumbnails,
           isFeatured: featuredUpload !== null,
@@ -2818,7 +2912,7 @@ export const channelRouter = router({
           debug,
         },
         channel: {
-          ...upload.channel,
+          ...channelRest,
           userMembership,
         },
       };
@@ -2867,10 +2961,16 @@ export const channelRouter = router({
       await db
         .update(UploadRecord)
         .set({
+          // Keep an uploaded image being replaced so the editor can switch
+          // back to it.
+          customThumbnailPath: keptCustomThumbnailPath,
+          customThumbnailBlurhash: keptCustomThumbnailBlurhash,
           overrideThumbnailPath: path,
           // A blurhash from a previous uploaded thumbnail would no longer
           // describe this generated frame.
           overrideThumbnailBlurhash: null,
+          useChannelDefaultThumbnail: false,
+          thumbnailChosenAt: new Date(),
           updatedAt: new Date(),
         })
         .where(eq(UploadRecord.id, upload.id));
@@ -2878,6 +2978,96 @@ export const channelRouter = router({
       return {
         thumbnailUrl: imageUrl(upload.storageLocation, path),
       };
+    }),
+
+  // Switch the upload's thumbnail to one the editor can always come back to:
+  //
+  // - `video`: the video's automatic frame.
+  // - `channelDefault`: nothing of the upload's own, so it falls back to the
+  //   channel's default. `useChannelDefaultThumbnail` keeps a later reprocess
+  //   from reinstalling an automatic default (see the background
+  //   updateUploadRecord activity).
+  // - `uploaded`: the editor's last uploaded image.
+  //
+  // Before switching, the automatic frame is preserved in `autoThumbnailPath`
+  // (older rows only have it in `defaultThumbnailPath`) and an uploaded
+  // override in `customThumbnailPath` (older rows only have it as the
+  // override), so every choice stays reversible. Generated frames stay in
+  // storage and remain selectable. Stamps `thumbnailChosenAt` so a custom
+  // image still processing from earlier doesn't overwrite this choice.
+  setThumbnailSource: channelEditProcedure
+    .input(
+      uploadQuerySchema.extend({
+        source: z.enum(['video', 'channelDefault', 'uploaded']),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const { source } = input;
+      // All SET expressions read the row as it was before this UPDATE.
+      const autoPath = sql`coalesce(${UploadRecord.autoThumbnailPath}, ${UploadRecord.defaultThumbnailPath})`;
+      const autoBlurhash = sql`case when ${UploadRecord.autoThumbnailPath} is null then ${UploadRecord.defaultThumbnailBlurhash} else ${UploadRecord.autoThumbnailBlurhash} end`;
+      const customPath = keptCustomThumbnailPath;
+      const customBlurhash = keptCustomThumbnailBlurhash;
+
+      const [updated] = await db
+        .update(UploadRecord)
+        .set({
+          autoThumbnailPath: autoPath,
+          autoThumbnailBlurhash: autoBlurhash,
+          customThumbnailPath: customPath,
+          customThumbnailBlurhash: customBlurhash,
+          overrideThumbnailPath: source === 'uploaded' ? customPath : null,
+          overrideThumbnailBlurhash:
+            source === 'uploaded' ? customBlurhash : null,
+          // An override wins over the default, so 'uploaded' leaves it alone.
+          ...(source === 'video'
+            ? {
+                defaultThumbnailPath: autoPath,
+                defaultThumbnailBlurhash: autoBlurhash,
+              }
+            : source === 'channelDefault'
+              ? { defaultThumbnailPath: null, defaultThumbnailBlurhash: null }
+              : {}),
+          useChannelDefaultThumbnail: source === 'channelDefault',
+          thumbnailChosenAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(UploadRecord.id, input.uploadId),
+            eq(UploadRecord.channelId, input.channelId),
+            // Can't switch to a thumbnail the upload doesn't have.
+            source === 'video'
+              ? sql`${autoPath} is not null`
+              : source === 'uploaded'
+                ? sql`${customPath} is not null`
+                : undefined,
+          ),
+        )
+        .returning({ id: UploadRecord.id });
+
+      if (!updated) {
+        // For 'video'/'uploaded' the row may exist without that thumbnail.
+        const exists =
+          source !== 'channelDefault' &&
+          (await db.query.UploadRecord.findFirst({
+            columns: { id: true },
+            where: (t, { and, eq }) =>
+              and(eq(t.id, input.uploadId), eq(t.channelId, input.channelId)),
+          }));
+        throw exists
+          ? new TRPCError({
+              code: 'BAD_REQUEST',
+              message:
+                source === 'video'
+                  ? 'This upload has no video thumbnail yet'
+                  : 'This upload has no uploaded thumbnail',
+            })
+          : new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'Upload not found or access denied',
+            });
+      }
     }),
 
   updateUploadRecord: channelEditProcedure
@@ -3057,14 +3247,14 @@ export const channelRouter = router({
       async ({ ctx, input: { s3UploadId, s3UploadKey, s3PartETags } }) => {
         const userId = ctx.session?.appUserId;
         invariant(userId, 'No user found');
-        await completeMultipartMediaUpload(
+        const { requestedAt } = await completeMultipartMediaUpload(
           s3UploadId,
           s3UploadKey,
           s3PartETags,
           userId,
         );
 
-        return true;
+        return { requestedAt };
       },
     ),
 

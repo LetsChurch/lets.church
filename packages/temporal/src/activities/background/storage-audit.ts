@@ -389,15 +389,25 @@ async function loadPublicExpectations(
     .select({
       defaultThumbnailPath: UploadRecord.defaultThumbnailPath,
       overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
+      autoThumbnailPath: UploadRecord.autoThumbnailPath,
+      customThumbnailPath: UploadRecord.customThumbnailPath,
       storageLocation: UploadRecord.storageLocation,
     })
     .from(UploadRecord)
     .where(
-      sql`${UploadRecord.deletedAt} is null and (left(${UploadRecord.defaultThumbnailPath}, ${len}) = ${shardPrefix} or left(${UploadRecord.overrideThumbnailPath}, ${len}) = ${shardPrefix})`,
+      sql`${UploadRecord.deletedAt} is null and (left(${UploadRecord.defaultThumbnailPath}, ${len}) = ${shardPrefix} or left(${UploadRecord.overrideThumbnailPath}, ${len}) = ${shardPrefix} or left(${UploadRecord.autoThumbnailPath}, ${len}) = ${shardPrefix} or left(${UploadRecord.customThumbnailPath}, ${len}) = ${shardPrefix})`,
     );
   for (const u of uploadThumbs) {
     addImage(u.defaultThumbnailPath, u.storageLocation);
     addImage(u.overrideThumbnailPath, u.storageLocation);
+    // The kept video frame and uploaded image the editor can switch back to
+    // (usually the same key as the default/override while shown).
+    const shown = [u.defaultThumbnailPath, u.overrideThumbnailPath];
+    for (const kept of new Set([u.autoThumbnailPath, u.customThumbnailPath])) {
+      if (!shown.includes(kept)) {
+        addImage(kept, u.storageLocation);
+      }
+    }
   }
 
   // HLS root playlist for each finalized, transcoded, live upload. Keyed under

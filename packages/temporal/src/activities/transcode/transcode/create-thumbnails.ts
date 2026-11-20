@@ -149,6 +149,11 @@ export default async function createThumbnails(
           const blurhash = await imageToBlurhash(largestThumbnail);
 
           await updateUploadRecord(uploadRecordId, {
+            // Always record the automatic frame; the displayed default is
+            // skipped while the editor has chosen the channel default (see
+            // the background updateUploadRecord activity).
+            autoThumbnailPath: key,
+            autoThumbnailBlurhash: blurhash,
             defaultThumbnailPath: key,
             defaultThumbnailBlurhash: blurhash,
           });

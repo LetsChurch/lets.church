@@ -139,6 +139,9 @@ export const channelProcedures = {
             eq(UploadRecord.visibility, 'PUBLIC'),
             isNotNull(UploadRecord.transcodingFinishedAt),
             isNull(UploadRecord.deletedAt),
+            // Skip uploads showing the channel default / no thumbnail, so the
+            // fallback is the newest upload that has one.
+            sql`coalesce(${UploadRecord.overrideThumbnailPath}, ${UploadRecord.defaultThumbnailPath}) is not null`,
           ),
         )
         .orderBy(UploadRecord.channelId, desc(UploadRecord.publishedAt))

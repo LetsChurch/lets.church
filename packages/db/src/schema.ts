@@ -1743,6 +1743,30 @@ export const UploadRecord = pgTable(
     defaultThumbnailBlurhash: text('default_thumbnail_blurhash'),
     overrideThumbnailPath: text('override_thumbnail_path'),
     overrideThumbnailBlurhash: text('override_thumbnail_blurhash'),
+    // The frame transcoding picked as this upload's automatic thumbnail, kept
+    // even while the editor shows the channel default instead (when
+    // `defaultThumbnailPath` is null) so they can switch back to it. Null on
+    // rows transcoded before this existed; `defaultThumbnailPath` then still
+    // holds the automatic frame until a revert copies it here.
+    autoThumbnailPath: text('auto_thumbnail_path'),
+    autoThumbnailBlurhash: text('auto_thumbnail_blurhash'),
+    // The editor's last uploaded custom image, kept while another thumbnail
+    // is shown so they can switch back to it. Null on rows whose upload
+    // predates this; their override (if it's an uploaded image, not a picked
+    // frame) is copied here when the editor switches away from it.
+    customThumbnailPath: text('custom_thumbnail_path'),
+    customThumbnailBlurhash: text('custom_thumbnail_blurhash'),
+    // Set when a channel editor reverts the upload to the channel's default
+    // thumbnail. Reprocessing then keeps generating frames but no longer
+    // installs an auto-generated default; picking or uploading a thumbnail
+    // clears it.
+    useChannelDefaultThumbnail: boolean('use_channel_default_thumbnail')
+      .notNull()
+      .default(false),
+    // When an editor last chose this upload's thumbnail (uploaded an image,
+    // picked a frame, or reset it). A custom image finishing processing after
+    // a later choice is discarded rather than overwriting it.
+    thumbnailChosenAt: timestamp('thumbnail_chosen_at', { precision: 3 }),
     thumbnailCount: integer('thumbnail_count'),
     lengthSeconds: doublePrecision('length_seconds'),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),

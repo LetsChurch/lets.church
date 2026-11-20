@@ -33,9 +33,13 @@ function query<Ret, Args extends unknown[], Name extends string>(
 
 export const emptySignal = signal<[], 'empty'>('empty');
 
-export const uploadDoneSignal = signal<[Array<string>, string], 'uploadDone'>(
-  'uploadDone',
-);
+// `requestedAt` (ISO) is when the uploader finished, stamped by the web
+// server; a custom upload thumbnail is discarded if an editor made a later
+// thumbnail choice. Absent from signals sent before it existed.
+export const uploadDoneSignal = signal<
+  [partETags: Array<string>, userId: string, requestedAt?: string],
+  'uploadDone'
+>('uploadDone');
 
 export const updateUploadRecordSignal = signal<
   [UploadRecordUpdateData, boolean?],

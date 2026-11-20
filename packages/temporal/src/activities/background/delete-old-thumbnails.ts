@@ -22,7 +22,10 @@ export default async function deleteOldThumbnails(id: string) {
 
   const { public: publicS3 } = await uploadRecordLocation(id);
   const keys = await all(
-    filter(publicS3.listKeys(id), (key) => /\d{5}\.jpg$/.test(key)),
+    // Legacy frames are named `<id>/NNNNN.jpg`. Anchor on the `/` so an
+    // uploaded custom image whose random name happens to end in five digits
+    // (`<id>/thumbnail-…12345.jpg`) isn't deleted with them.
+    filter(publicS3.listKeys(id), (key) => /\/\d{5}\.jpg$/.test(key)),
   );
 
   const heartbeat = throttle(

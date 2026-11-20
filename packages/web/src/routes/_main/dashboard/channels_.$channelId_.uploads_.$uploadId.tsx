@@ -15,9 +15,11 @@ import {
   IconEyeOff,
   IconFlask,
   IconLink,
+  IconMovie,
   IconPhoto,
   IconRefresh,
   IconReload,
+  IconRestore,
   IconSparkles,
   IconStar,
   IconStarFilled,
@@ -67,7 +69,11 @@ import {
 import { Dropzone } from '@/components/ui/dropzone';
 import { useAppForm } from '@/components/ui/form';
 import { controlClasses } from '@/components/ui/input';
-import { showFailure, showSuccess } from '@/components/ui/notifications';
+import {
+  showFailure,
+  showInfo,
+  showSuccess,
+} from '@/components/ui/notifications';
 import { useCopied } from '@/hooks/use-copied';
 import { idTranslator } from '@/schemas/common';
 import { uploadFormSchema } from '@/schemas/dashboard';
@@ -112,6 +118,10 @@ function formatScheduledAt(date: Date): string {
     dateStyle: 'full',
     timeStyle: 'short',
   });
+}
+
+function toTime(value: Date | string | null | undefined): number | null {
+  return value ? new Date(value).getTime() : null;
 }
 
 export const Route = createFileRoute(
@@ -294,11 +304,27 @@ function ChannelUploadPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [selectedGeneratedThumbnailIndex, setSelectedGeneratedThumbnailIndex] =
     useState<number | null>(null);
+  // Staged switch to the video's automatic frame, the channel default, or the
+  // editor's last uploaded image — applied on Save, like a dropped image or a
+  // picked frame.
+  const [thumbnailSourceTo, setThumbnailSourceTo] = useState<
+    'video' | 'channelDefault' | 'uploaded' | null
+  >(null);
   const [isProcessingThumbnail, setIsProcessingThumbnail] = useState(false);
   const [
     overrideThumbnailUrlBeforeUpload,
     setOverrideThumbnailUrlBeforeUpload,
   ] = useState<string | null>(null);
+  // When the server recorded the custom upload request. A thumbnail choice
+  // stamped after it supersedes the upload (the server discards the image),
+  // so stop waiting for it.
+  const [thumbnailRequestedAt, setThumbnailRequestedAt] = useState<
+    number | null
+  >(null);
+  // `thumbnailChosenAt` when the upload began, to recognize an image applied
+  // without a stamp (see the poll below).
+  const [thumbnailChosenAtBeforeUpload, setThumbnailChosenAtBeforeUpload] =
+    useState<number | null>(null);
   // Copied-state for the embed-code copy button — flips back after a short delay.
   const { copied: embedCopied, copy: copyEmbed } = useCopied(1000);
   const { copied: linkCopied, copy: copyLink } = useCopied(1000);
@@ -342,6 +368,7 @@ function ChannelUploadPage() {
     });
     setNewThumbnailFile(null);
     setSelectedGeneratedThumbnailIndex(null);
+    setThumbnailSourceTo(null);
   }, []);
 
   // Poll for thumbnail changes when processing
@@ -370,17 +397,42 @@ function ChannelUploadPage() {
           const currentOverrideThumbnailUrl =
             currentData.upload.overrideThumbnailUrl;
 
-          // The auto-generated default can appear while a new media upload is
-          // still processing. Wait specifically for the override to change so
-          // that event cannot be mistaken for the selected local frame.
-          if (
-            currentOverrideThumbnailUrl !== overrideThumbnailUrlBeforeUpload
-          ) {
+          // `setUploadThumbnail` stamps `thumbnailChosenAt` with exactly our
+          // `requestedAt` when it applies the image, and a later stamp means a
+          // newer thumbnail choice won (the image was discarded or replaced).
+          // Matching on the timestamp keeps another editor's pick from reading
+          // as our upload's success. A new override with no stamp at all since
+          // the upload began also counts: a worker without the timestamp guard
+          // (mid-deploy) applies the image without stamping it. (Any other
+          // editor's choice in the meantime would have stamped it.)
+          const chosenAt = toTime(currentData.upload.thumbnailChosenAt);
+          const superseded =
+            thumbnailRequestedAt !== null &&
+            chosenAt !== null &&
+            chosenAt > thumbnailRequestedAt;
+          const overrideChanged =
+            currentOverrideThumbnailUrl !== null &&
+            currentOverrideThumbnailUrl !== overrideThumbnailUrlBeforeUpload;
+          const applied =
+            (thumbnailRequestedAt !== null &&
+              chosenAt === thumbnailRequestedAt) ||
+            (overrideChanged && chosenAt === thumbnailChosenAtBeforeUpload);
+          if (applied) {
             setIsProcessingThumbnail(false);
             setOverrideThumbnailUrlBeforeUpload(null);
+            setThumbnailRequestedAt(null);
             showSuccess({
               title: 'Thumbnail Updated',
               message: 'Your thumbnail has been processed successfully!',
+            });
+          } else if (superseded) {
+            setIsProcessingThumbnail(false);
+            setOverrideThumbnailUrlBeforeUpload(null);
+            setThumbnailRequestedAt(null);
+            showInfo({
+              title: 'Thumbnail not changed',
+              message:
+                'A newer thumbnail choice was saved while your image was processing, so your image was replaced or discarded.',
             });
           }
         }
@@ -395,6 +447,8 @@ function ChannelUploadPage() {
   }, [
     isProcessingThumbnail,
     overrideThumbnailUrlBeforeUpload,
+    thumbnailRequestedAt,
+    thumbnailChosenAtBeforeUpload,
     queryClient,
     trpc,
     channelId,
@@ -437,6 +491,10 @@ function ChannelUploadPage() {
 
   const setGeneratedThumbnailMutation = useMutation(
     trpc.dashboard.channels.setGeneratedThumbnail.mutationOptions(),
+  );
+
+  const setThumbnailSourceMutation = useMutation(
+    trpc.dashboard.channels.setThumbnailSource.mutationOptions(),
   );
 
   const downloadOriginalMutation = useMutation(
@@ -684,6 +742,7 @@ function ChannelUploadPage() {
       try {
         if (newThumbnailFile) {
           setOverrideThumbnailUrlBeforeUpload(upload.overrideThumbnailUrl);
+          setThumbnailChosenAtBeforeUpload(toTime(upload.thumbnailChosenAt));
 
           const mpu =
             await trpcClient.dashboard.channels.createMultipartUpload.mutate({
@@ -700,19 +759,27 @@ function ChannelUploadPage() {
             mpu.partSize,
           );
 
-          await trpcClient.dashboard.channels.finalizeMultipartUpload.mutate({
-            channelId,
-            s3UploadKey: mpu.s3UploadKey,
-            s3UploadId: mpu.s3UploadId,
-            s3PartETags: await uploadPromise,
-          });
+          const { requestedAt } =
+            await trpcClient.dashboard.channels.finalizeMultipartUpload.mutate({
+              channelId,
+              s3UploadKey: mpu.s3UploadKey,
+              s3UploadId: mpu.s3UploadId,
+              s3PartETags: await uploadPromise,
+            });
 
+          setThumbnailRequestedAt(toTime(requestedAt));
           setIsProcessingThumbnail(true);
         } else if (selectedGeneratedThumbnailIndex !== null) {
           await setGeneratedThumbnailMutation.mutateAsync({
             channelId,
             uploadId,
             thumbnailIndex: selectedGeneratedThumbnailIndex,
+          });
+        } else if (thumbnailSourceTo) {
+          await setThumbnailSourceMutation.mutateAsync({
+            channelId,
+            uploadId,
+            source: thumbnailSourceTo,
           });
         }
 
@@ -809,7 +876,51 @@ function ChannelUploadPage() {
     (thumbnail) => thumbnail.index === selectedGeneratedThumbnailIndex,
   );
   const thumbnailPreviewUrl =
-    previewUrl ?? selectedGeneratedThumbnail?.url ?? upload.thumbnailUrl;
+    previewUrl ??
+    selectedGeneratedThumbnail?.url ??
+    (thumbnailSourceTo === 'channelDefault'
+      ? upload.channelDefaultThumbnailUrl
+      : thumbnailSourceTo === 'video'
+        ? upload.videoThumbnailUrl
+        : thumbnailSourceTo === 'uploaded'
+          ? upload.uploadedThumbnailUrl
+          : upload.thumbnailUrl);
+  const hasStagedThumbnailChange =
+    newThumbnailFile !== null ||
+    selectedGeneratedThumbnailIndex !== null ||
+    thumbnailSourceTo !== null;
+  // Which thumbnail the preview shows, staged changes first ('new' = a
+  // dropped image or local frame not saved yet). See `thumbnailSource` on
+  // getUploadRecord for the saved values.
+  const thumbnailChoice:
+    | 'new'
+    | 'frame'
+    | 'uploaded'
+    | 'video'
+    | 'channelDefault'
+    | 'pending' =
+    newThumbnailFile !== null
+      ? 'new'
+      : selectedGeneratedThumbnail
+        ? 'frame'
+        : (thumbnailSourceTo ?? upload.thumbnailSource);
+  const canUseVideoThumbnail =
+    !isProcessingThumbnail &&
+    upload.videoThumbnailUrl !== null &&
+    thumbnailChoice !== 'video';
+  const canUseUploadedThumbnail =
+    !isProcessingThumbnail &&
+    upload.uploadedThumbnailUrl !== null &&
+    thumbnailChoice !== 'uploaded';
+  // Offered until the channel default is the editor's saved choice: also
+  // while 'pending' (no thumbnail yet, e.g. a transcode that never finished)
+  // and when the upload only shows the channel default for lack of a frame.
+  // Saving it sets the flag that keeps a later reprocess from installing an
+  // automatic frame over it.
+  const canUseChannelDefaultThumbnail =
+    !isProcessingThumbnail &&
+    (thumbnailChoice !== 'channelDefault' ||
+      (thumbnailSourceTo === null && !upload.useChannelDefaultThumbnail));
 
   return (
     <div className="relative w-full">
@@ -908,6 +1019,7 @@ function ChannelUploadPage() {
                             const file = files[0];
                             if (file) {
                               setSelectedGeneratedThumbnailIndex(null);
+                              setThumbnailSourceTo(null);
                               if (previewUrl) {
                                 URL.revokeObjectURL(previewUrl);
                               }
@@ -1003,8 +1115,7 @@ function ChannelUploadPage() {
                           </div>
                         </Dropzone>
 
-                        {(newThumbnailFile ||
-                          selectedGeneratedThumbnailIndex !== null) && (
+                        {hasStagedThumbnailChange && (
                           <ActionIcon
                             className="absolute"
                             style={{ top: 4, right: 4, zIndex: 10 }}
@@ -1012,12 +1123,13 @@ function ChannelUploadPage() {
                             variant="filled"
                             color="dark"
                             onClick={resetDroppedThumbnail}
+                            aria-label="Discard thumbnail change"
                           >
                             <IconX size={14} />
                           </ActionIcon>
                         )}
 
-                        {(previewUrl || selectedGeneratedThumbnail) &&
+                        {thumbnailChoice !== 'pending' &&
                           !isProcessingThumbnail && (
                             <Text
                               size="xs"
@@ -1025,13 +1137,70 @@ function ChannelUploadPage() {
                               style={{ textAlign: 'center' }}
                               className="mt-[4px]"
                             >
-                              {previewUrl
+                              {thumbnailChoice === 'new'
                                 ? 'New uploaded thumbnail'
-                                : 'Generated thumbnail selected'}
+                                : thumbnailChoice === 'frame'
+                                  ? selectedGeneratedThumbnail
+                                    ? 'Generated thumbnail selected'
+                                    : 'Generated thumbnail'
+                                  : thumbnailChoice === 'uploaded'
+                                    ? 'Uploaded thumbnail'
+                                    : thumbnailChoice === 'video'
+                                      ? 'Video thumbnail'
+                                      : upload.channelDefaultThumbnailUrl
+                                        ? 'Channel default thumbnail'
+                                        : 'No thumbnail'}
                             </Text>
                           )}
                       </div>
                     </Tooltip>
+                    {canUseVideoThumbnail ||
+                    canUseUploadedThumbnail ||
+                    canUseChannelDefaultThumbnail ? (
+                      <div className="flex flex-col items-start gap-1">
+                        {canUseUploadedThumbnail ? (
+                          <Button
+                            variant="subtle"
+                            size="xs"
+                            leftSection={<IconPhoto size={14} />}
+                            onClick={() => {
+                              resetDroppedThumbnail();
+                              setThumbnailSourceTo('uploaded');
+                            }}
+                          >
+                            Use uploaded thumbnail
+                          </Button>
+                        ) : null}
+                        {canUseVideoThumbnail ? (
+                          <Button
+                            variant="subtle"
+                            size="xs"
+                            leftSection={<IconMovie size={14} />}
+                            onClick={() => {
+                              resetDroppedThumbnail();
+                              setThumbnailSourceTo('video');
+                            }}
+                          >
+                            Use video thumbnail
+                          </Button>
+                        ) : null}
+                        {canUseChannelDefaultThumbnail ? (
+                          <Button
+                            variant="subtle"
+                            size="xs"
+                            leftSection={<IconRestore size={14} />}
+                            onClick={() => {
+                              resetDroppedThumbnail();
+                              setThumbnailSourceTo('channelDefault');
+                            }}
+                          >
+                            {upload.channelDefaultThumbnailUrl
+                              ? 'Use channel default'
+                              : 'Remove thumbnail'}
+                          </Button>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
 
                   {localVideoThumbnails ? (
@@ -1141,6 +1310,7 @@ function ChannelUploadPage() {
                                     thumbnail.index ||
                                   (selectedGeneratedThumbnailIndex === null &&
                                     !newThumbnailFile &&
+                                    thumbnailSourceTo === null &&
                                     thumbnail.isSelected);
 
                                 return (
@@ -1393,11 +1563,7 @@ function ChannelUploadPage() {
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      disabled={
-                        !isDirty &&
-                        !newThumbnailFile &&
-                        selectedGeneratedThumbnailIndex === null
-                      }
+                      disabled={!isDirty && !hasStagedThumbnailChange}
                       onClick={() => {
                         form.reset();
                         resetDroppedThumbnail();
@@ -1410,14 +1576,12 @@ function ChannelUploadPage() {
                       size="sm"
                       className="flex-1"
                       disabled={
-                        (!isDirty &&
-                          !newThumbnailFile &&
-                          selectedGeneratedThumbnailIndex === null) ||
-                        !isValid
+                        (!isDirty && !hasStagedThumbnailChange) || !isValid
                       }
                       loading={
                         updateMutation.isPending ||
-                        setGeneratedThumbnailMutation.isPending
+                        setGeneratedThumbnailMutation.isPending ||
+                        setThumbnailSourceMutation.isPending
                       }
                       onClick={() => form.handleSubmit()}
                     >

@@ -396,9 +396,18 @@ export async function completeMultipartMediaUpload(
   partETags: Array<string>,
   userId: string,
 ) {
-  return (await client).workflow
+  // Stamped by the web server like the dashboard's thumbnail choices
+  // (`thumbnailChosenAt`), which a custom upload thumbnail is ordered against.
+  // Pods' clocks are NTP-synced, so only choices within clock skew of each
+  // other can be misordered. Returned so the uploader can tell whether a
+  // later choice superseded their image.
+  const requestedAt = new Date().toISOString();
+  await (
+    await client
+  ).workflow
     .getHandle(makeMultipartMediaUploadWorkflowId(s3UploadId, s3UploadKey))
-    .signal(uploadDoneSignal, partETags, userId);
+    .signal(uploadDoneSignal, partETags, userId, requestedAt);
+  return { requestedAt };
 }
 
 /**

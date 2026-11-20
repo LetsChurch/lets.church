@@ -70,10 +70,12 @@ export async function handleMultipartMediaUploadWorkflow(
 ) {
   let eTags: Array<string> | null = null;
   let finalizingUserId: string | null = null;
+  let requestedAt: string | undefined;
 
-  setHandler(uploadDoneSignal, (incomingETags, userId) => {
+  setHandler(uploadDoneSignal, (incomingETags, userId, incomingRequestedAt) => {
     eTags = incomingETags;
     finalizingUserId = userId;
+    requestedAt = incomingRequestedAt;
   });
 
   // Surface the live stage in the Temporal UI User Metadata tab.
@@ -156,7 +158,7 @@ export async function handleMultipartMediaUploadWorkflow(
       });
     } else {
       await startChild(processImageWorkflow, {
-        args: [targetId, s3UploadKey, postProcess],
+        args: [targetId, s3UploadKey, postProcess, requestedAt],
         workflowId: `processImage:${s3UploadKey}`,
         taskQueue: BACKGROUND_QUEUE,
         priority: { priorityKey: PRIORITY_USER },
