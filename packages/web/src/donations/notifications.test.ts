@@ -4,7 +4,7 @@ vi.mock('@letschurch/db', () => ({ db: {} }));
 vi.mock('@/temporal', () => ({ startBackground: vi.fn() }));
 
 import {
-  buildAdminDonationEmail,
+  adminGiftLabel,
   buildAdminSubscriptionNoticeEmail,
   buildAdminWebhookFailureEmail,
   buildDonorThankYouEmail,
@@ -28,7 +28,9 @@ const details: DonationEmailDetails = {
 describe('donation notification emails', () => {
   it('thanks the donor with gift details and the tax statement', () => {
     const email = buildDonorThankYouEmail(details, WEB_URL);
-    expect(email.subject).toBe("Thank you for supporting Let's Church");
+    expect(email.subject).toBe(
+      "Receipt for your $26.06 monthly gift to Let's Church",
+    );
     expect(email.text).toContain('your monthly gift');
     expect(email.text).toContain('$26.06');
     expect(email.text).toContain('October 1, 2026');
@@ -52,6 +54,7 @@ describe('donation notification emails', () => {
       { ...details, receiptUrl: 'javascript:alert(1)', frequency: 'ONE_TIME' },
       WEB_URL,
     );
+    expect(email.subject).toBe("Receipt for your $26.06 gift to Let's Church");
     expect(email.text).toContain('your gift');
     expect(email.text).not.toContain('javascript:');
     expect(email.html).not.toContain('javascript:');
@@ -64,17 +67,6 @@ describe('donation notification emails', () => {
     );
     expect(email.text.startsWith('Hello,')).toBe(true);
   });
-
-  it('summarizes the donation for the site admin', () => {
-    const email = buildAdminDonationEmail(details, WEB_URL);
-    expect(email.subject).toBe('New monthly donation: $26.06');
-    expect(email.text).toContain('Donor email: ada@example.com');
-    expect(email.text).toContain(`Donation ID: ${details.donationId}`);
-    expect(email.html).toContain(
-      'href="https://lets.church/dashboard/admin/donations"',
-    );
-    expect(email.html).not.toContain('<b>Lovelace</b>');
-  });
 });
 
 const subscriptionDetails: SubscriptionEmailDetails = {
@@ -86,6 +78,27 @@ const subscriptionDetails: SubscriptionEmailDetails = {
   donorName: 'Ada <b>Lovelace</b>',
   donorEmail: 'ada@example.com',
 };
+
+describe('admin subject labels', () => {
+  it('names the donor, amount, and frequency', () => {
+    expect(adminGiftLabel('Jane Doe', '$25.00', 'MONTHLY')).toBe(
+      "Jane Doe's $25.00 monthly",
+    );
+    expect(adminGiftLabel('Jane Doe', '$50.00', 'ONE_TIME')).toBe(
+      "Jane Doe's $50.00",
+    );
+  });
+
+  it('drops a missing name and flattens or caps a long one', () => {
+    expect(adminGiftLabel(null, '$25.00', 'YEARLY')).toBe('$25.00 yearly');
+    expect(adminGiftLabel('  ', '$25.00', 'YEARLY')).toBe('$25.00 yearly');
+    expect(adminGiftLabel('Jane\r\nBcc: x', '$1.00', 'ONE_TIME')).toBe(
+      "Jane Bcc: x's $1.00",
+    );
+    const label = adminGiftLabel('A'.repeat(80), '$1.00', 'ONE_TIME');
+    expect(label).toBe(`${'A'.repeat(39)}…'s $1.00`);
+  });
+});
 
 describe('recurring donation admin notices', () => {
   it('reports a failed payment with the retry schedule', () => {
@@ -103,7 +116,9 @@ describe('recurring donation admin notices', () => {
       subscriptionDetails,
       WEB_URL,
     );
-    expect(email.subject).toBe('Monthly donation payment failed: $26.06');
+    expect(email.subject).toBe(
+      "Action needed: Ada <b>Lovelace</b>'s $26.06 monthly charge failed",
+    );
     expect(email.text).toContain('Stripe will retry on October 5, 2026.');
     expect(email.text).toContain('Failure reason: Your card was declined.');
     expect(email.text).toContain('Attempt: 2');
@@ -130,6 +145,9 @@ describe('recurring donation admin notices', () => {
       subscriptionDetails,
       WEB_URL,
     );
+    expect(email.subject).toBe(
+      "Action needed: Ada <b>Lovelace</b>'s $26.06 monthly charge failed, no more retries",
+    );
     expect(email.text).toContain('Stripe will not retry it automatically.');
     expect(email.text).not.toContain('Failure reason');
   });
@@ -150,7 +168,9 @@ describe('recurring donation admin notices', () => {
       subscriptionDetails,
       WEB_URL,
     );
-    expect(email.subject).toBe('Monthly donation set to cancel: $26.06');
+    expect(email.subject).toBe(
+      "Ada <b>Lovelace</b>'s $26.06 monthly gift ends Nov 1",
+    );
     expect(email.text).toContain('set to cancel on November 1, 2026.');
     expect(email.text).toContain('Reason: Canceled on request');
     expect(email.text).toContain('Donor feedback: Too expensive');
@@ -172,7 +192,9 @@ describe('recurring donation admin notices', () => {
       subscriptionDetails,
       WEB_URL,
     );
-    expect(email.subject).toBe('Monthly donation canceled: $26.06');
+    expect(email.subject).toBe(
+      "Ada <b>Lovelace</b>'s $26.06 monthly gift ended",
+    );
     expect(email.text).toContain('ended on October 20, 2026.');
     expect(email.text).toContain('Reason: Payment failed');
     expect(email.text).not.toContain('Donor feedback');
@@ -189,7 +211,9 @@ describe('webhook failure admin notice', () => {
       },
       WEB_URL,
     );
-    expect(email.subject).toBe('Stripe event failed: invoice.paid');
+    expect(email.subject).toBe(
+      "Action needed: Stripe event invoice.paid didn't apply",
+    );
     expect(email.text).toContain('Event ID: evt_123');
     expect(email.text).toContain(
       'https://lets.church/dashboard/admin/donations',

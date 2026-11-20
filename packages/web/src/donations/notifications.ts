@@ -108,49 +108,8 @@ export function buildDonorThankYouEmail(
   ).html;
 
   return {
-    subject: "Thank you for supporting Let's Church",
-    text,
-    html,
-  };
-}
-
-export function buildAdminDonationEmail(
-  details: DonationEmailDetails,
-  webUrl: string,
-) {
-  const amount = formatDonationAmount(details.amountCents, details.currency);
-  const frequency = frequencyLabels[details.frequency];
-  const date = formatDate(details.donatedAt);
-  const donor = details.donorName?.trim() || 'Unknown';
-  const donorEmail = details.donorEmail ?? 'None';
-  const adminUrl = `${webUrl}/dashboard/admin/donations`;
-
-  const text = stripIndent`
-    A donation was received.
-
-    Amount: ${amount}
-    Frequency: ${frequency}
-    Date: ${date}
-    Donor: ${donor}
-    Donor email: ${donorEmail}
-    Donation ID: ${details.donationId}
-
-    Manage donations: ${adminUrl}
-  `;
-
-  const html = emailHtml(
-    'New donation received',
-    stripIndent`
-      A donation was received.
-
-      <b>Amount:</b> ${sanitizeForHtml(amount)}<br><b>Frequency:</b> ${frequency}<br><b>Date:</b> ${date}<br><b>Donor:</b> ${sanitizeForHtml(donor)}<br><b>Donor email:</b> ${sanitizeForHtml(donorEmail)}<br><b>Donation ID:</b> ${sanitizeForHtml(details.donationId)}
-
-      <a href="${sanitizeForHtml(adminUrl)}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">Manage donations</a>
-    `,
-  ).html;
-
-  return {
-    subject: `New ${frequency.toLowerCase()} donation: ${amount}`,
+    // "Receipt" so donors can find it at tax time; the amount tells gifts apart.
+    subject: `Receipt for your ${amount}${details.frequency === 'ONE_TIME' ? '' : ` ${frequency.toLowerCase()}`} gift to Let's Church`,
     text,
     html,
   };
@@ -208,6 +167,34 @@ const cancellationReasonLabels: Record<string, string> = {
   canceled_by_retention_policy: 'Retention policy',
 };
 
+function shortDate(date: Date) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  }).format(date);
+}
+
+/**
+ * "Jane Doe's $25.00 monthly" (or "$25.00 monthly" with no name) for admin
+ * subject lines, so the sender, size, and kind of gift show at a glance. The
+ * name is collapsed to one line and capped so it can't swamp the subject.
+ */
+export function adminGiftLabel(
+  donorName: string | null,
+  amount: string,
+  frequency: Frequency,
+) {
+  const name = donorName?.replace(/\s+/g, ' ').trim();
+  const shortName =
+    name && name.length > 40 ? `${name.slice(0, 39).trimEnd()}…` : name;
+  const kind =
+    frequency === 'ONE_TIME'
+      ? amount
+      : `${amount} ${frequencyLabels[frequency].toLowerCase()}`;
+  return shortName ? `${shortName}'s ${kind}` : kind;
+}
+
 function humanize(value: string) {
   const words = value.replaceAll('_', ' ');
   return words.charAt(0).toUpperCase() + words.slice(1);
@@ -243,12 +230,15 @@ export function buildAdminSubscriptionNoticeEmail(
   let subject: string;
   let noticeFields: ReadonlyArray<readonly [string, string | null]>;
   let amount = formatDonationAmount(details.amountCents, details.currency);
+  const gift = () =>
+    adminGiftLabel(details.donorName, amount, details.frequency);
 
   switch (notice.kind) {
     case 'PAYMENT_FAILED':
       amount = formatDonationAmount(notice.amountCents, notice.currency);
       title = 'Recurring donation payment failed';
-      subject = `${humanize(frequency)} donation payment failed: ${amount}`;
+      // Action needed: the donor may need to update their card.
+      subject = `Action needed: ${gift()} charge failed${notice.nextAttemptAt ? '' : ', no more retries'}`;
       summary = notice.nextAttemptAt
         ? `A recurring donation payment failed. Stripe will retry on ${formatDate(notice.nextAttemptAt)}.`
         : 'A recurring donation payment failed. Stripe will not retry it automatically.';
@@ -260,7 +250,9 @@ export function buildAdminSubscriptionNoticeEmail(
       break;
     case 'CANCELLATION_SCHEDULED':
       title = 'Recurring donation set to cancel';
-      subject = `${humanize(frequency)} donation set to cancel: ${amount}`;
+      subject = notice.cancelAt
+        ? `${gift()} gift ends ${shortDate(notice.cancelAt)}`
+        : `${gift()} gift is set to end`;
       summary = notice.cancelAt
         ? `A recurring donation is set to cancel on ${formatDate(notice.cancelAt)}.`
         : 'A recurring donation is set to cancel.';
@@ -268,7 +260,7 @@ export function buildAdminSubscriptionNoticeEmail(
       break;
     case 'ENDED':
       title = 'Recurring donation canceled';
-      subject = `${humanize(frequency)} donation canceled: ${amount}`;
+      subject = `${gift()} gift ended`;
       summary = notice.endedAt
         ? `A recurring donation ended on ${formatDate(notice.endedAt)}.`
         : 'A recurring donation ended.';
@@ -395,15 +387,14 @@ async function startDonationEmail(
 }
 
 /**
- * Send the donor a thank-you email and notify the site admin about a donation
- * that just succeeded. Failures are logged and swallowed: the ledger is
- * already committed, and Stripe redelivery is deduplicated by event id, so
- * throwing would not cause a retry.
+ * Send the donor a thank-you email for a donation that just succeeded. The
+ * site admin hears about it in the next daily digest (queued in the ledger
+ * transaction; see donationAdminDigestWorkflow). Failures are logged and
+ * swallowed: the ledger is already committed, and Stripe redelivery is
+ * deduplicated by event id, so throwing would not cause a retry.
  */
 export async function sendDonationNotifications(donationId: string) {
-  const { WEB_URL, ADMIN_EMAIL } = z
-    .object({ WEB_URL: z.url(), ADMIN_EMAIL: z.email().optional() })
-    .parse(process.env);
+  const { WEB_URL } = z.object({ WEB_URL: z.url() }).parse(process.env);
 
   let details: DonationEmailDetails | null;
   try {
@@ -437,21 +428,6 @@ export async function sendDonationNotifications(donationId: string) {
       moduleLogger.error(
         { err: asError(err), targetId: donationId },
         'Failed to send thank-you email',
-      );
-    }
-  }
-
-  if (ADMIN_EMAIL) {
-    try {
-      await startDonationEmail(
-        `donation-admin-notice:${donationId}`,
-        'Donation admin notification email',
-        { to: ADMIN_EMAIL, ...buildAdminDonationEmail(details, WEB_URL) },
-      );
-    } catch (err) {
-      moduleLogger.error(
-        { err: asError(err), targetId: donationId },
-        'Failed to send admin donation notification',
       );
     }
   }
@@ -496,7 +472,11 @@ export function buildAdminWebhookFailureEmail(
     `,
   ).html;
 
-  return { subject: `Stripe event failed: ${notice.eventType}`, text, html };
+  return {
+    subject: `Action needed: Stripe event ${notice.eventType} didn't apply`,
+    text,
+    html,
+  };
 }
 
 /**

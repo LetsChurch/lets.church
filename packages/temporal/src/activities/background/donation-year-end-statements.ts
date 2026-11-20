@@ -386,7 +386,8 @@ export async function sendDonationYearEndStatementsAdminSummary({
   await sendEmail({
     from: FROM,
     to: ADMIN_EMAIL,
-    subject: `${year} year-end giving statements${aborted ? ' STOPPED EARLY' : ''}: ${sent} sent${failed > 0 ? `, ${failed} failed` : ''}`,
+    // Action needed when the run must be started again.
+    subject: `${aborted || failed > 0 ? 'Action needed: ' : ''}${year} statements${aborted ? ' stopped early' : ''}: ${sent} sent${failed > 0 ? `, ${failed} failed` : ''}`,
     text: lines.join('\n'),
   });
 }

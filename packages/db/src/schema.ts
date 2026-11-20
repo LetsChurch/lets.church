@@ -792,6 +792,26 @@ export const DonationYearEndStatement = pgTable(
   }),
 );
 
+// Gifts that succeeded since the last daily admin digest. A row is added in the
+// ledger transaction that marks the gift SUCCEEDED and removed once a digest
+// listing it has gone out.
+export const DonationAdminDigest = pgTable(
+  'donation_admin_digest',
+  {
+    donationId: uuid('donation_id').primaryKey(),
+    queuedAt: timestamp('queued_at', { precision: 3 }).notNull().defaultNow(),
+  },
+  (DonationAdminDigest) => ({
+    donation_admin_digest_donation_fkey: foreignKey({
+      name: 'donation_admin_digest_donation_fkey',
+      columns: [DonationAdminDigest.donationId],
+      foreignColumns: [Donation.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+  }),
+);
+
 // Public "where your gift goes" breakdown on the donate page. Each category is
 // a monthly expense line set by admins.
 export const DonationBudgetCategory = pgTable(

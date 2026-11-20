@@ -47,6 +47,7 @@ export {
   getDeleteChannelProgressQuery,
 } from './delete-channel';
 export { deleteUploadWorkflow } from './delete-upload';
+export { donationAdminDigestWorkflow } from './donation-admin-digest';
 export {
   donationYearEndStatementsWorkflow,
   donationYearEndStatementWorkflow,

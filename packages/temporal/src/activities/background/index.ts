@@ -89,6 +89,10 @@ export {
   isUploadDeleted,
 } from './get-finalized-upload-key';
 export {
+  clearDonationAdminDigest,
+  sendDonationAdminDigest,
+} from './donation-admin-digest';
+export {
   listDonationYearEndStatementRecipients,
   recordDonationYearEndStatement,
   sendDonationYearEndStatement,

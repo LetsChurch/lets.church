@@ -188,29 +188,44 @@ checkouts from `/donate` with Stripe test payment details.
 ### Donation emails
 
 When a Stripe payment first reaches `SUCCEEDED` (a one-time checkout or each
-paid recurring invoice), the app sends two emails through the background
-`sendEmailWorkflow` after the ledger transaction commits
-(`packages/web/src/donations/notifications.ts`):
+paid recurring invoice), the donor gets a **thank-you receipt** ("Receipt for
+your $25.00 monthly gift to Let's Church") at their checkout email, sent
+through the background `sendEmailWorkflow` after the ledger transaction commits
+(`packages/web/src/donations/notifications.ts`): amount, frequency, date, the
+Stripe receipt link, the "no goods or services" statement and EIN, and a link
+to giving history. Skipped when the donor has no email. It is in addition to
+Stripe's own receipt email, and is sent from the webhook and from the
+confirmation page's checkout reconciliation, whichever marks the gift
+succeeded first. The workflow ID is keyed to the donation
+(`donation-thank-you:<id>`) with `REJECT_DUPLICATE`, so each gift is
+acknowledged once. The payload is encrypted so donor details stay out of
+Temporal history. Admin imports never send email.
 
-- **Donor thank-you** to the donor's checkout email: amount, frequency, date,
-  the Stripe receipt link, the "no goods or services" statement and EIN, and a
-  link to giving history. Skipped when the donor has no email.
-- **Admin notice** to `ADMIN_EMAIL` with the amount, frequency, donor name and
-  email, and donation ID. Skipped when `ADMIN_EMAIL` is unset.
+The site admin hears about gifts in one **daily digest** instead of an email
+per gift. The same ledger transaction that marks a gift succeeded adds it to
+`donation_admin_digest`, and the `donation-admin-digest` Temporal schedule runs
+`donationAdminDigestWorkflow` every day at 8:00 America/New_York. It emails
+`ADMIN_EMAIL` every queued gift (time in Eastern, amount, frequency, donor name
+and email, whether it started a recurring plan, and whether it was refunded or
+disputed since), then clears those rows in a separate activity so a database
+error never resends the digest. Days with no gifts send nothing. The subject
+reads "Gifts for Nov 19: 3 gifts, $175.00 (1 new monthly)", where the date is
+the day before the run; a gift that succeeds after midnight but before 8:00
+lands in that morning's digest. Longer digests list 100 gifts and point to the
+dashboard for the rest. When `ADMIN_EMAIL` is unset the queue is still cleared.
 
-These are in addition to Stripe's own receipt email. Both are sent from the
-webhook and from the confirmation page's checkout reconciliation, whichever
-marks the gift succeeded first. Workflow IDs are keyed to the donation
-(`donation-thank-you:<id>`, `donation-admin-notice:<id>`) with
-`REJECT_DUPLICATE`, so each gift is acknowledged once. Payloads are encrypted so
-donor details stay out of Temporal history. Admin imports never send email.
+Admin subject lines start with "Action needed:" when something needs doing
+(a failed charge, a Stripe event that didn't apply, or a year-end run that
+failed or stopped early) and otherwise name the donor, amount, and frequency,
+for example "Jane Doe's $25.00 monthly gift ends Dec 1".
 
-Recurring plans also send `ADMIN_EMAIL` a notice (only from the webhook, after
-the ledger commits) when:
+Recurring plans also send `ADMIN_EMAIL` an immediate notice (only from the
+webhook, after the ledger commits) when:
 
 - **A payment fails** (`invoice.payment_failed`, unless the invoice has since
-  been paid): amount, attempt number, Stripe's failure message, and the next
-  retry date. One email per invoice
+  been paid): "Action needed: Jane Doe's $25.00 monthly charge failed", with
+  ", no more retries" when Stripe won't try again. Amount, attempt number,
+  Stripe's failure message, and the next retry date. One email per invoice
   (`donation-payment-failed-admin-notice:<invoice id>`), not per retry.
 - **A cancellation is scheduled** (`customer.subscription.updated` whose
   `previous_attributes` show `cancel_at_period_end`/`cancel_at` turning on):

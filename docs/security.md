@@ -409,6 +409,8 @@ Year-end giving statements (`donation-year-end-statements.ts`) pass only
 account and donor ids through workflows; the activity loads the name and
 address and sends with the same encrypted payload, so neither reaches history
 or logs. A rejected address is logged by its SMTP codes only.
+The daily admin donation digest (`donation-admin-digest.ts`) is sent the same
+way: its workflow carries only donation ids.
 
 ---
 

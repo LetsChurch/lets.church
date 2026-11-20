@@ -1,5 +1,6 @@
 import {
   Donation,
+  DonationAdminDigest,
   DonationCheckout,
   DonationPaymentAdjustment,
   DonationSubscription,
@@ -75,6 +76,12 @@ async function upsertDonation(
   await reconcileDonationAdjustment(tx, donation);
   if (donation.status === 'SUCCEEDED' && previous?.status !== 'SUCCEEDED') {
     succeeded.push(donation.id);
+    // Listed in the next daily admin digest. Queued in this transaction so a
+    // gift can't be in the ledger without being reported.
+    await tx
+      .insert(DonationAdminDigest)
+      .values({ donationId: donation.id })
+      .onConflictDoNothing();
   }
 }
 

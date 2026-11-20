@@ -41,6 +41,12 @@ export const SCHEDULES: ScheduleDefinition[] = [
     spec: { cronExpressions: ['0 13 * * 1'] },
   },
   {
+    // 8:00 Eastern: the admin's digest of yesterday's gifts.
+    scheduleId: 'donation-admin-digest',
+    workflowType: 'donationAdminDigestWorkflow',
+    spec: { cronExpressions: ['0 8 * * *'], timezone: 'America/New_York' },
+  },
+  {
     // January 8, 15:00 UTC: last year's statements, after late-December bank
     // payments have settled. Start donationYearEndStatementsWorkflow by hand
     // with { year } to retry failures or backfill a year.

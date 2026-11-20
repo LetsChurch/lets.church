@@ -302,6 +302,13 @@
       "when": 1795139497212,
       "tag": "0042_registration-token",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1795140998857,
+      "tag": "0043_donation-admin-digest",
+      "breakpoints": true
     }
   ]
 }
